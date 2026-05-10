@@ -365,6 +365,11 @@ Fetch the page immediately before writing — `update_content` is whitespace-exa
 
 `Active Package` (rollup from Customers), `All Tasks` (rollup), `Counted Time` (formula), `Architecting`/`Training`/`Sync`/`Discovery` (formula classifiers)
 
+> ⚠️ **SQL date queries must use the expanded column name.** `"Call Date"` does not exist as a bare column — use `"date:Call Date:start"`:
+> ```sql
+> WHERE "date:Call Date:start" = 'YYYY-MM-DD'
+> ```
+
 ---
 
 ## Tasks — Field Reference

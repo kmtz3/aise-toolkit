@@ -5,6 +5,16 @@ Format: `## [version] — YYYY-MM-DD` followed by bullet points grouped by type.
 
 ---
 
+## [2.6.3] — 2026-05-10
+
+### Fixed
+- `agents/daily-brief.md` Step 1: `notion-get-users` now queries by **first name only** (e.g. `"klara"`) instead of full display name — Notion user search does not reliably match compound names
+- `agents/daily-brief.md` Steps 3 & 4: Sessions DB date filter now uses `"date:Call Date:start"` (the correct Notion SQL expanded column name) instead of the bare `"Call Date"` which does not exist
+- `agents/daily-brief.md` Step 8: Added Cowork delivery path — in sandbox mode, HTML is written via the Write tool and delivered via `mcp__cowork__present_files`; bash `cp`/`mkdir`/`open` remain CLI-only
+- `context/notion-schema.md`: Added ⚠️ callout under Sessions field reference warning that SQL date queries must use `"date:Call Date:start"` not `"Call Date"`
+
+---
+
 ## [2.6.2] — 2026-05-10
 
 ### Fixed

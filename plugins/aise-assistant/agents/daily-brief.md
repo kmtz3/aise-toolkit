@@ -30,7 +30,7 @@ Read tool on `~/.claude/aise-assistant.datadir`. If it returns a path without er
 
 **Option 2 — Notion profile page (Cowork, or if local files unavailable):**
 If the Read tool returns "outside this session's connected folders":
-1. Call `notion-get-users` — returns UUID, display name, email.
+1. Call `notion-get-users` with the user's **first name only** as the query (e.g. `"klara"`, not `"klara martinez"`). If no results are returned, retry with the email address from context (`klara.martinez@productboard.com`). Match the result against the known email to confirm identity.
 2. `notion-search("AISE Profile — {display_name}")` → capture the first result's page ID.
 3. `notion-fetch(page_id)` → parse the `## Identity` section for preferred name and timezone.
 
@@ -67,7 +67,14 @@ For each event collect: title, start/end datetime, attendee list (name + email d
 
 ### 3. Check prep status — today's external sessions
 
-For each of today's external customer sessions, query the Sessions DB (see `context/notion-schema.md`) filtered by `Call Date = target date`. Fetch the page body. Check whether a `📋 Prep —` toggle heading exists.
+For each of today's external customer sessions, query the Sessions DB using the expanded date column name:
+
+```sql
+SELECT * FROM "collection://29397e9c-7d4f-8052-886b-000b9e3479d7"
+WHERE "date:Call Date:start" = 'YYYY-MM-DD'
+```
+
+Use `"date:Call Date:start"` — never the bare column name `"Call Date"` (it does not exist in Notion SQL). Fetch the matching session page body. Check whether a `📋 Prep —` toggle heading exists.
 
 Badge each session:
 - Notion session found + prep toggle exists → `✅ Prep done`
@@ -76,7 +83,7 @@ Badge each session:
 
 ### 4. Check prep status — tomorrow's external sessions
 
-Same logic as step 3, but for `Call Date = tomorrow date`. For each of tomorrow's external customer sessions:
+Same logic as step 3, but filter for `"date:Call Date:start" = 'tomorrow date'`. For each of tomorrow's external customer sessions:
 
 - Found + prep exists → `✅ Prep done` — no action needed.
 - Found + no prep → `🚨 Prep needed` — queue for blocker creation (step 5).
@@ -182,16 +189,14 @@ Build a self-contained HTML file (inline CSS, no external dependencies, no CDN l
 
 ### 8. Save the file
 
-First create the output directory:
-```bash
-mkdir -p ~/Desktop/aise-assistant/briefs
-```
+Always write the HTML using the **Write tool** (not bash `cat` or redirection) so it is available for Cowork delivery.
 
-Save to: `~/Desktop/aise-assistant/briefs/daily-brief-[YYYY-MM-DD].html`
+**Delivery — Cowork vs CLI:**
+
+- **Cowork mode** (Read tool blocked / skill running in Linux sandbox): Write the HTML to a path within the current session outputs folder (e.g. the current working directory). Then call `mcp__cowork__present_files` with `{"files": [{"file_path": "<outputs_path>/daily-brief-YYYY-MM-DD.html"}]}` to deliver the file to the user's Mac. Do **not** use bash `cp`, `mkdir`, or `open` — those commands run inside the Linux sandbox and cannot reach the user's Mac filesystem.
+- **CLI mode** (Claude Code terminal, Read tool works): Use the Write tool to save to `~/Desktop/aise-assistant/briefs/daily-brief-[YYYY-MM-DD].html`. You may also run `mkdir -p ~/Desktop/aise-assistant/briefs` via bash before writing if the directory does not exist. If `--open` was passed, run `open ~/Desktop/aise-assistant/briefs/daily-brief-[YYYY-MM-DD].html`.
 
 Overwrite if a file already exists at that path (re-runs are idempotent).
-
-If `--open` was passed, run: `open ~/Desktop/aise-assistant/briefs/daily-brief-[YYYY-MM-DD].html`
 
 ### 9. Report in chat
 
