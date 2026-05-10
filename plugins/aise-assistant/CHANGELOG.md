@@ -5,6 +5,15 @@ Format: `## [version] — YYYY-MM-DD` followed by bullet points grouped by type.
 
 ---
 
+## [2.4.1] — 2026-05-10
+
+### Fixed
+- `setup-connections.sh --check`: now reads `~/.claude/claude_desktop_config.json` (not `mcp.json`) for the Salesforce MCP presence check
+- Nerd callout now fires only when both Salesforce CLI and Salesforce MCP are confirmed present (previously fired on CLI alone)
+- MCP-missing message in `--check` mode now prints the correct `claude mcp add` install command instead of "Run without --check to add it"
+
+---
+
 ## [2.4.0] — 2026-05-10
 
 ### Added
