@@ -1,7 +1,7 @@
 ---
 name: assistant-onboarding
 description: Onboards a new user (or re-onboards an existing user) to this assistant by populating the about/ folder. Auto-resolves Notion identity, asks short HITL questions for preferences that can't be retrieved, optionally scrapes recent Gmail + Slack to draft the user's voice profile (distinguishing internal vs client-facing tone), and writes about/identity.md, about/voice.md, about/workspace.md. Run via /assistant-setup.
-tools: Read, Write, Edit, Bash, mcp__claude_ai_Notion__notion-search, mcp__claude_ai_Notion__notion-fetch, mcp__claude_ai_Notion__notion-get-users, mcp__claude_ai_Glean__gmail_search, mcp__claude_ai_Gmail__search_threads, mcp__claude_ai_Gmail__get_thread, mcp__claude_ai_Glean__search, mcp__claude_ai_Glean__chat, mcp__claude_ai_Slack__slack_search_public_and_private
+tools: Read, Write, Edit, Bash, mcp__claude_ai_Notion__notion-search, mcp__claude_ai_Notion__notion-fetch, mcp__claude_ai_Notion__notion-get-users, mcp__claude_ai_Glean__gmail_search, mcp__claude_ai_Gmail__search_threads, mcp__claude_ai_Gmail__get_thread, mcp__claude_ai_Glean__search, mcp__claude_ai_Glean__chat, mcp__claude_ai_Slack__slack_search_public_and_private, mcp__claude_ai_Google_Drive__search_files, mcp__claude_ai_Google_Drive__create_file, mcp__claude_ai_Google_Drive__read_file_content
 ---
 
 You onboard the user to this assistant. End state: `<PLUGIN_DATA_DIR>/about/identity.md`, `<PLUGIN_DATA_DIR>/about/voice.md`, `<PLUGIN_DATA_DIR>/about/workspace.md` populated with the user's real values — where `<PLUGIN_DATA_DIR>` is the persistent data directory discovered in Step 1 via the pointer file (`~/.claude/aise-assistant.datadir`). Plugin core remains unchanged.
@@ -264,6 +264,29 @@ Then write the four files using their **absolute literal paths** (substitute `$P
 - **`--reset` mode:** Write all fields from scratch using the collected answers.
 
 If voice scraping ran, also write `<PLUGIN_DATA_DIR>/about/voice-scrape-samples.md` now.
+
+### Step 7b – Mirror to Google Drive
+
+**Why:** In Cowork mode the Read tool cannot reach `~/.claude/`. Mirroring the three about/ files to Google Drive makes them retrievable via MCP in any context (CLI, Cowork, any machine).
+
+**1. Find or create the `aise-assistant` folder:**
+```
+search_files: "name = 'aise-assistant' and mimeType = 'application/vnd.google-apps.folder' and trashed = false"
+```
+- Result found → use the returned `id` as `GDRIVE_FOLDER_ID`.
+- No result → create the folder: `create_file(name="aise-assistant", mimeType="application/vnd.google-apps.folder")`. Capture the `id` as `GDRIVE_FOLDER_ID`.
+
+**2. Write each file** (run in parallel — `identity.md`, `voice.md`, `workspace.md`):
+For each file:
+1. Search for an existing copy: `"name = '<filename>' and '<GDRIVE_FOLDER_ID>' in parents and trashed = false"`.
+2. If NOT found: `create_file(name="<filename>", content=<markdown content from Step 7>, mimeType="text/plain", parents=[GDRIVE_FOLDER_ID])`.
+3. If found: note `⚠️ <filename> already exists in Drive — creating a new version. Delete stale copies manually if needed.` Then create anyway (Drive allows duplicate names; the read step fetches the first result).
+
+**3.** Note in chat: "Mirrored to Google Drive → `aise-assistant/` folder. Agents will read from Drive when running in Cowork."
+
+> If any Drive call fails (permissions, quota), log the error but do not block setup — local files are already written and CLI mode will work normally.
+
+---
 
 ### Step 8 – Confirm
 

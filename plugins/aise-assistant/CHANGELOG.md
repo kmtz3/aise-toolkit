@@ -5,6 +5,12 @@ Format: `## [version] — YYYY-MM-DD` followed by bullet points grouped by type.
 
 ---
 
+## [2.5.0] — 2026-05-10
+
+### Added
+- `assistant-onboarding`: Step 7b — after writing local `about/` files, mirrors `identity.md`, `voice.md`, `workspace.md` to a `aise-assistant/` folder in Google Drive; enables Cowork sessions to retrieve personal config via Drive MCP when `~/.claude/` is inaccessible
+- `daily-brief`: Google Drive fallback in Step 1 — when Read tool returns "outside connected folders" (Cowork mode), searches for `aise-assistant/identity.md` in Drive and reads it via `read_file_content`; Notion `notion-get-users` remains the last-resort fallback
+
 ## [2.4.5] — 2026-05-10
 
 ### Fixed
