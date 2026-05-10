@@ -10,6 +10,24 @@ Two modes. Read the invocation to determine which to run.
 
 ---
 
+## ⚠️ Identity resolution — EXECUTE BEFORE ANY OTHER ACTION
+
+**Do not Glob. Do not search plugin paths. Do not guess. Follow these steps in order.**
+
+**Step A — Read the pointer file:**
+Use the Read tool on `~/.claude/aise-leadership.datadir`. The file content is `PLUGIN_DATA_DIR` — the absolute path to the plugin's persistent data directory. This is the only reliable way to locate `about/` files; the `CLAUDE_PLUGIN_DATA` env variable is a volatile temp path and must never be used.
+
+**Step B — Read identity:**
+Read `{PLUGIN_DATA_DIR}/about/identity.md` to get the current user's `notion_user_id` and display name.
+
+**If `identity.md` does not exist, or contains `<TBD>` placeholder values:**
+Call `notion-get-users`. Match the current user by the name given in the command invocation (e.g. "Klara" in `/report --aise Klara`) or by email if known. If a unique match is found, use that UUID and note in chat: "identity.md not configured — resolved identity via Notion users. Run `/assistant-setup` to set up the leadership plugin." If no match is found, list the top candidates and ask once.
+
+**Step C — Read workspace (for Notion write steps only):**
+Read `{PLUGIN_DATA_DIR}/about/workspace.md`. If the file does not exist or has `<TBD>` values, skip the Notion write step and note it in chat.
+
+---
+
 ## Template-based output
 
 When `workspace.md` specifies `Notion page` as the output format for the active cadence (currently the default for all cadences), the report is automatically written to Notion after rendering in chat — no flag required. Suppress with `--no-notion`.

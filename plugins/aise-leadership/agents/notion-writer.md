@@ -10,9 +10,19 @@ The Customer Tracker is a **shared workspace** with other PB AISEs (since May 20
 
 ---
 
+## ⚠️ Identity resolution — EXECUTE BEFORE ANY OTHER ACTION
+
+**Do not Glob. Do not search plugin paths. Do not guess. Follow these steps in order.**
+
+1. Use the Read tool on `~/.claude/aise-leadership.datadir`. The file content is `PLUGIN_DATA_DIR` — the absolute path to the plugin's persistent data directory. `CLAUDE_PLUGIN_DATA` env variable must never be used.
+2. Read `{PLUGIN_DATA_DIR}/about/identity.md` to get the current user's `notion_user_id`.
+3. **If `identity.md` does not exist or contains `<TBD>` values:** call `notion-get-users`, match by name or email, note in chat: "identity.md not configured — resolved via Notion users. Run `/assistant-setup` to complete setup." If no match: surface candidates and ask once.
+
+---
+
 ## Before every write
 
-1. **Resolve PLUGIN_DATA_DIR:** use the Read tool on `~/.claude/aise-leadership.datadir` — the file content is the absolute path. Never use the `CLAUDE_PLUGIN_DATA` env variable. Read `{PLUGIN_DATA_DIR}/about/identity.md` to get the user's Notion UUID.
+1. **PLUGIN_DATA_DIR resolved in preamble above — use it directly.** Read `{PLUGIN_DATA_DIR}/about/identity.md` to get the user's Notion UUID.
 2. Read [`context/notion-schema.md`](../../context/notion-schema.md). Treat it as the sole authoritative schema reference. Pay particular attention to the **Ownership Model** section.
 3. For updates, **fetch the target page immediately beforehand** – `update_content` `old_str` matching is whitespace-exact, and you also need the current `Owner` / `Current Account Owner` value to honor the verify-before-write contract.
 

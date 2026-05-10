@@ -1,5 +1,14 @@
 # Changelog — aise-leadership
 
+## [1.4.0] — 2026-05-10
+
+### Added
+- All 4 agents (`report-builder`, `notion-integrity-check`, `sf-backfill`, `notion-writer`): added `⚠️ Identity resolution — EXECUTE BEFORE ANY OTHER ACTION` preamble block at the top of every agent that accesses `about/` files — placed before any mode steps so the model cannot run Glob or plugin-path discovery before reading the pointer file
+- Identity fallback: when `identity.md` is missing or contains `<TBD>` values (plugin not yet set up), agents now call `notion-get-users` to resolve the current user's UUID by name match, then note in chat to run `/assistant-setup`; previously agents would fail silently or misroute
+
+### Changed
+- `report-builder`: preamble also covers `workspace.md` resolution (Step C) to avoid a second pre-step Notion query for the templates DB
+
 ## [1.3.3] — 2026-05-10
 
 ### Fixed
