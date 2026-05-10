@@ -1,7 +1,7 @@
 ---
 name: assistant-onboarding
 description: Onboards a new user (or re-onboards an existing user) to this assistant by populating the about/ folder. Auto-resolves Notion identity, asks short HITL questions for preferences that can't be retrieved, optionally scrapes recent Gmail + Slack to draft the user's voice profile (distinguishing internal vs client-facing tone), and writes about/identity.md, about/voice.md, about/workspace.md. Run via /assistant-setup.
-tools: Read, Write, Edit, Bash, mcp__claude_ai_Notion__notion-search, mcp__claude_ai_Notion__notion-fetch, mcp__claude_ai_Notion__notion-get-users, mcp__claude_ai_Glean__gmail_search, mcp__claude_ai_Gmail__search_threads, mcp__claude_ai_Gmail__get_thread, mcp__claude_ai_Glean__search, mcp__claude_ai_Glean__chat, mcp__claude_ai_Slack__slack_search_public_and_private, mcp__claude_ai_Google_Drive__search_files, mcp__claude_ai_Google_Drive__create_file, mcp__claude_ai_Google_Drive__read_file_content
+tools: Read, Write, Edit, Bash, mcp__claude_ai_Notion__notion-search, mcp__claude_ai_Notion__notion-fetch, mcp__claude_ai_Notion__notion-get-users, mcp__claude_ai_Notion__notion-create-pages, mcp__claude_ai_Notion__notion-update-page, mcp__claude_ai_Glean__gmail_search, mcp__claude_ai_Gmail__search_threads, mcp__claude_ai_Gmail__get_thread, mcp__claude_ai_Glean__search, mcp__claude_ai_Glean__chat, mcp__claude_ai_Slack__slack_search_public_and_private
 ---
 
 You onboard the user to this assistant. End state: `<PLUGIN_DATA_DIR>/about/identity.md`, `<PLUGIN_DATA_DIR>/about/voice.md`, `<PLUGIN_DATA_DIR>/about/workspace.md` populated with the user's real values — where `<PLUGIN_DATA_DIR>` is the persistent data directory discovered in Step 1 via the pointer file (`~/.claude/aise-assistant.datadir`). Plugin core remains unchanged.
@@ -69,22 +69,17 @@ If Notion responds, continue to Step 1.
 
 ### Step 1 – Detect existing state and apply mode
 
-**Get the persistent data directory.** The `SessionStart` hook writes the correct path to a fixed pointer file at the start of every session. Read it:
+**Get the current user and check existing state (two paths — run both in parallel):**
 
-```bash
-PLUGIN_DATA_DIR=$(cat "$HOME/.claude/aise-assistant.datadir" 2>/dev/null)
-if [[ -z "$PLUGIN_DATA_DIR" ]]; then
-  echo "ERROR: Plugin data directory not initialised. Restart Claude Code and try again."
-  exit 1
-fi
-echo "PLUGIN_DATA_DIR=$PLUGIN_DATA_DIR"
-echo "about/ contents:"
-ls "$PLUGIN_DATA_DIR/about/" 2>/dev/null || echo "  (empty — fresh install)"
-```
+**Path A — Notion profile page (works in CLI and Cowork):**
+1. Call `notion-get-users` — returns UUID, display name, email. Record these as `user_uuid`, `display_name`, `user_email`.
+2. Call `notion-search("AISE Profile — {display_name}")`. If a result is returned, call `notion-fetch(page_id)` to read the existing profile. Note which `## Identity`, `## Voice`, `## Workspace` sections have real content vs `<TBD>` placeholders.
 
-Use the literal `PLUGIN_DATA_DIR` path printed above for **all** Read, Write, Edit, and Bash operations in this session. The `about/ contents` line tells you immediately whether files are present (existing user) or this is a fresh install.
+**Path B — local files (Claude Code CLI only):**
+Try: `Read ~/.claude/aise-assistant.datadir` → if successful, that is `PLUGIN_DATA_DIR`. Then `Read {PLUGIN_DATA_DIR}/about/identity.md`, `voice.md`, `workspace.md`.
+If the Read tool returns "outside this session's connected folders", skip Path B silently.
 
-Use the Read tool to read `<PLUGIN_DATA_DIR>/about/identity.md`, `<PLUGIN_DATA_DIR>/about/voice.md`, `<PLUGIN_DATA_DIR>/about/workspace.md`, and `<PLUGIN_DATA_DIR>/about/tracker-memory.md` if they exist.
+**Merge state:** treat a field as already-populated if it has real content in either path. Notion profile page is authoritative when both exist and differ.
 
 **`--reset` mode:**
 1. Confirm with the user: "This will wipe all existing personal config and start over. Continue? (y/n)"
@@ -267,26 +262,50 @@ Then write the four files using their **absolute literal paths** (substitute `$P
 
 If voice scraping ran, also write `<PLUGIN_DATA_DIR>/about/voice-scrape-samples.md` now.
 
-### Step 7b – Mirror to Google Drive ⚠️ ALWAYS RUN (all modes, including already-onboarded)
+### Step 7b – Write private Notion profile page ⚠️ ALWAYS RUN (all modes, including already-onboarded)
 
-**Why:** In Cowork mode the Read tool cannot reach `~/.claude/`. Mirroring the three about/ files to Google Drive makes them retrievable via MCP in any context (CLI, Cowork, any machine).
+**Why:** The private Notion page is the authoritative store for voice and workspace preferences accessible in both CLI and Cowork contexts.
 
-**1. Find or create the `aise-assistant` folder:**
+**Page structure** — build this content:
 ```
-search_files: "name = 'aise-assistant' and mimeType = 'application/vnd.google-apps.folder' and trashed = false"
+## Identity
+Preferred name: {value}
+Display name: {value}
+Timezone: {value}
+Working hours: {value}
+Role: {value}
+Team: {value}
+Manager: {value}
+Email signature: {value}
+Accent variants: {value or "none"}
+
+## Voice
+Sign-off: {value}
+Em dashes: {value}
+Semicolons: {value}
+English variant: {value}
+Casual register: {value}
+{any specific patterns from scraping, if run}
+
+## Workspace
+Conferencing tool: {value}
+Calendly — ad-hoc: {url or "not set"}
+Calendly — architecting: {url or "not set"}
+Calendly — training: {url or "not set"}
+Slack AISE channel: {value}
+Manager: {value}
 ```
-- Result found → use the returned `id` as `GDRIVE_FOLDER_ID`.
-- No result → create the folder: `create_file(name="aise-assistant", mimeType="application/vnd.google-apps.folder")`. Capture the `id` as `GDRIVE_FOLDER_ID`.
 
-**2. Write each file** (run in parallel — `identity.md`, `voice.md`, `workspace.md`):
-For each file:
-1. Search for an existing copy: `"name = '<filename>' and '<GDRIVE_FOLDER_ID>' in parents and trashed = false"`.
-2. If NOT found: `create_file(name="<filename>", content=<markdown content from Step 7>, mimeType="text/plain", parents=[GDRIVE_FOLDER_ID])`.
-3. If found: note `⚠️ <filename> already exists in Drive — creating a new version. Delete stale copies manually if needed.` Then create anyway (Drive allows duplicate names; the read step fetches the first result).
+**1. Check for existing page:** `notion-search("AISE Profile — {display_name}")`.
 
-**3.** Note in chat: "Mirrored to Google Drive → `aise-assistant/` folder. Agents will read from Drive when running in Cowork."
+**2a. If NOT found:** call `notion-create-pages` with:
+- `parent: { type: "workspace", workspace: true }` — this creates a **private page** visible only to the current user, in their Private sidebar section. Do not use a database or shared parent.
+- Title: `AISE Profile — {display_name}`
+- Body: the structured content above
 
-> If any Drive call fails (permissions, quota), log the error but do not block setup — local files are already written and CLI mode will work normally.
+**2b. If found:** call `notion-update-page` on the existing page to overwrite its content with the current values.
+
+**3.** Output in chat: "Profile page written to Notion (private): [page URL]"
 
 ---
 

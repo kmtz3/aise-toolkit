@@ -5,6 +5,19 @@ Format: `## [version] — YYYY-MM-DD` followed by bullet points grouped by type.
 
 ---
 
+## [2.6.0] — 2026-05-10
+
+### Added
+- `assistant-onboarding` Step 7b: after writing local `about/` files, creates or updates a **private Notion profile page** (`AISE Profile — {display_name}`) in the user's Private sidebar section; page stores Identity, Voice, and Workspace sections; visible only to the current user, not teammates
+- `assistant-onboarding` Step 1 Path A: checks for existing Notion profile page via `notion-search` + `notion-fetch` before querying local files; treats Notion as authoritative when both sources differ
+
+### Changed
+- `assistant-onboarding`: removed all Google Drive sync from Step 7b (replaced by Notion private page); Drive tools removed from agent tools list
+- `daily-brief` Step 1: Option 2 resolver changed from Google Drive (`search_files` + `read_file_content`) to Notion profile page (`notion-get-users` + `notion-search` + `notion-fetch`); Drive tools removed from agent tools list; Option 3 fallback updated to "AISE Profile page not found" messaging
+- `CLAUDE.md` path resolver: Cowork mode now reads from Notion private profile page instead of Google Drive or osascript; osascript references removed throughout
+
+---
+
 ## [2.5.2] — 2026-05-10
 
 ### Fixed

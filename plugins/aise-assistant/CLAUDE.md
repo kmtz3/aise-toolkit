@@ -6,7 +6,10 @@ This file is always loaded. Keep it short — it points at the detail.
 
 **Personal layer.** Anything user-specific (name, Notion user ID, voice, sign-offs, language preferences, workspace specifics) lives in `<PLUGIN_DATA_DIR>/about/` — outside the plugin directory, persisting across plugin updates. **Note:** this directory is deleted on plugin uninstall; re-run `/assistant-setup` after a full reinstall. Read those files before producing anything on the user's behalf. If the files have placeholder values or are missing, prompt the user to run `/assistant-setup`.
 
-> **Path resolver.** The `$CLAUDE_PLUGIN_DATA` shell env var resolves to a volatile temp path in all contexts — do not use it to locate personal files. The `SessionStart` hook discovers the real persistent directory and writes it to `~/.claude/aise-assistant.datadir` at the start of every session. To get the correct path in any Bash or osascript call: `PLUGIN_DATA_DIR=$(cat "$HOME/.claude/aise-assistant.datadir")`. In file references throughout this document, `<PLUGIN_DATA_DIR>` means that resolved path. The plugin's own `about/` directory (at the plugin root) contains only templates and a README — never personal data.
+> **Path resolver — two modes:**
+> - **Claude Code CLI:** use the **Read tool** on `~/.claude/aise-assistant.datadir` — file content is `PLUGIN_DATA_DIR`, the path to the persistent `about/` directory. `<PLUGIN_DATA_DIR>` in file references means that resolved path.
+> - **Cowork (Read tool blocked):** call `notion-get-users` for identity (UUID, name, email); call `notion-search("AISE Profile — {display_name}")` + `notion-fetch` for voice and workspace preferences — the private profile page written by `/assistant-setup`.
+> - Never use `$CLAUDE_PLUGIN_DATA` — volatile temp path.
 
 **Address the user by name.** In chat output, refer to the user by the `Display name` (or informal first name) from `<PLUGIN_DATA_DIR>/about/identity.md`, not as "the user" or "you" alone. Use it naturally where it lands — opening a message, calling out an action item, or surfacing a question — but don't force it. Agent spec files use generic language ("the user") so they work for any installer; the personalized address is a runtime behavior.
 
@@ -18,7 +21,7 @@ Read these when the task touches their subject. Don't duplicate their content he
 
 ### Per-user (always read first when user values are needed)
 
-> **Finding these files:** `<PLUGIN_DATA_DIR>` is the path in `~/.claude/aise-assistant.datadir` (written by the SessionStart hook). In Bash: `PLUGIN_DATA_DIR=$(cat "$HOME/.claude/aise-assistant.datadir")`. In Cowork osascript: derive via `cat "$HOME/.claude/aise-assistant.datadir"` inside the shell script.
+> **Finding these files — CLI:** Read `~/.claude/aise-assistant.datadir` to get `PLUGIN_DATA_DIR`. **Cowork:** `notion-get-users` for identity; `notion-search("AISE Profile — {display_name}") → notion-fetch` for voice + workspace.
 
 | File | When to read |
 |---|---|
