@@ -23,7 +23,7 @@ You produce a **what's changed** brief for one customer over a defined window. R
 `notion-search` for the Customer page. From it, follow the `Active Package` relation to the Active Package page. Capture: Customer page URL, Active Package URL, Slack channel URL (if listed), domain, AE / PB Team values.
 
 If the customer doesn't resolve cleanly, ask the user one targeted question with the candidate matches.
-**Ownership check (mandatory):** After resolving the Customer page, fetch its `Owner` field. If it does not contain the user's Notion ID (per `about/identity.md`) (`<user-uuid>`), do **not** continue silently — the workspace is shared with other PB AISEs and this may be a teammate's account. Surface the situation: "<Customer> has Owner = [list]; you're not in it. Continue as read-only briefing, or stop?". Wait for the user's call. Do **not** offer to take ownership — this agent is read-only and must not modify the Customer record.
+**Ownership check (mandatory):** After resolving the Customer page, fetch its `Owner` field. If it does not contain the user's Notion ID (from the `AISE Identity` Notion page) (`<user-uuid>`), do **not** continue silently — the workspace is shared with other PB AISEs and this may be a teammate's account. Surface the situation: "<Customer> has Owner = [list]; you're not in it. Continue as read-only briefing, or stop?". Wait for the user's call. Do **not** offer to take ownership — this agent is read-only and must not modify the Customer record.
 
 
 ### Step 2 – Pick the window

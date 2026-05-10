@@ -55,7 +55,7 @@ Read the procedure in `agents/report-builder.md` → **`--aise` mode** and execu
 **What it does:** Queries all Notion customers owned by the target AISE, pulls the active package and most recent + next session for each, builds an attention queue (gaps, renewals, credits exhausted), and renders a portfolio table and velocity summary.
 
 Target resolution:
-- `me` or no argument → use current user's UUID (from `about/identity.md`)
+- `me` or no argument → use current user's UUID (from the `AISE Identity` Notion page)
 - Named teammate (e.g. "Alex Doe") → call `notion-get-users`, match by display name, get their UUID. If ambiguous, list candidates and ask once.
 
 This mode reads accounts owned by the target AISE — it does NOT apply the current-user ownership guard (this is intentionally cross-account for management visibility).

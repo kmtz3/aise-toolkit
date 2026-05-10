@@ -7,7 +7,7 @@ Run bulk account setup for all accounts owned by the specified user.
 
 Read the procedure in `agents/bulk-account-setup.md` and execute it inline as the main assistant — do not try to spawn `bulk-account-setup` as a subagent (custom agents in this plugin are procedure documents, not registered subagent types). The steps:
 
-1. **Resolve the target user** — blank / "me" = current user from `about/identity.md`; a teammate name = resolve via `notion-get-users` to their Notion UUID. In delegated mode (target ≠ operator), surface a notice that all ownership writes will use the target user's UUID, not the operator's.
+1. **Resolve the target user** — blank / "me" = current user from the `AISE Identity` Notion page; a teammate name = resolve via `notion-get-users` to their Notion UUID. In delegated mode (target ≠ operator), surface a notice that all ownership writes will use the target user's UUID, not the operator's.
 
 2. **Query all Customers** where `Owner LIKE '%<target_uuid>%'` in the Customers DB.
 

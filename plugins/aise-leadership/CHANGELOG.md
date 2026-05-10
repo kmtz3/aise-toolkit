@@ -1,5 +1,17 @@
 # Changelog — aise-leadership
 
+## [1.6.2] — 2026-05-10
+
+### Fixed
+- `context/notion-schema.md`: rewrote Identity resolution procedure — removed pointer-file and glob-fallback steps; Notion lookup (`notion-get-users` + `AISE Identity` page) is now the sole resolver
+- `agents/notion-writer.md`: replaced all `about/identity.md` references with `AISE Identity` Notion page
+- `skills/report/SKILL.md`: `me` target resolution updated to reference `AISE Identity` Notion page
+- `skills/assistant-setup/SKILL.md`: description updated — removed "writes the about/ folder"
+- `context/communication-style-guide.md`, `context/project-instructions.md`, `context/notion-writer-playbook.md`: updated all `about/voice.md` pointers to `AISE Leadership Preferences` Notion page
+- `CLAUDE.md`: communication-style-guide table row updated — `about/voice.md` → `AISE Leadership Preferences` Notion page
+
+---
+
 ## [1.6.1] — 2026-05-10
 
 ### Fixed

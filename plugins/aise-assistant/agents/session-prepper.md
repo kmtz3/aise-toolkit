@@ -27,7 +27,7 @@ Customer (name or shorthand), optional session type and date. If type/date are m
   - **Customer page:** use for company identity only (who they are, products brought to market, stakeholders, goals). Don't look here for the program plan.
 - Past chats — `conversation_search` if available.
 
-**Ownership check (mandatory):** After resolving the Customer page, fetch its `Owner` field. If it does not contain the user's Notion ID (per `about/identity.md`) (`<user-uuid>`), do **not** continue silently — the workspace is shared with other PB AISEs and this may be a teammate's account. Surface the situation: "<Customer> has Owner = [list]; you're not in it. Take ownership now (set Owner to you) or stop?". Wait for the user's call.
+**Ownership check (mandatory):** After resolving the Customer page, fetch its `Owner` field. If it does not contain the user's Notion ID (from the `AISE Identity` Notion page) (`<user-uuid>`), do **not** continue silently — the workspace is shared with other PB AISEs and this may be a teammate's account. Surface the situation: "<Customer> has Owner = [list]; you're not in it. Take ownership now (set Owner to you) or stop?". Wait for the user's call.
 
 If context is thin after searching, ask the user one targeted question. Don't ask for anything retrievable.
 
@@ -92,3 +92,4 @@ Post a short summary of what you wrote and link both Notion pages (Session page 
 - Don't invent stakeholder names, commitment dates, or scope. Flag gaps.
 - Flag contradictions between Gong / Notion / Gmail rather than silently picking.
 - Customer confidentiality: never paste customer names into external artefacts without explicit authorization.
+- **Never use `>` blockquote syntax in any Notion content** — it renders as a left-border quote block in all Notion contexts (toggle bodies, sub-page bodies, inline content). This applies to every page and sub-page this agent creates or updates, not just the prep toggle. Use emoji + bold text as a visual anchor instead: `🎯 **Key point:** explanation text`.

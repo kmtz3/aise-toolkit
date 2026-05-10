@@ -40,22 +40,21 @@ The Customer Tracker is a **shared workspace** with other PB AISEs. Two compleme
 
 **Active Packages have `Delivered By (Sessions)`** — a **rollup** showing unique presenters across linked Sessions, computed automatically. Cannot be written.
 
-**User's Notion ID**: see `about/identity.md` → `notion_user_id`. All filter examples below use `<user-uuid>` as a placeholder; substitute the value from `about/identity.md` at runtime.
+**User's Notion ID**: resolved from the `AISE Identity` Notion page. All filter examples below use `<user-uuid>` as a placeholder; substitute the value at runtime.
 
 ### Identity resolution procedure
 
-Agents and skills that need `<user-uuid>` at runtime must locate `about/identity.md` and read `notion_user_id`. Try in order:
+Agents and skills that need `<user-uuid>` at runtime must use the Notion lookup sequence:
 
-1. **Pointer file (fastest):** `PLUGIN_DATA_DIR=$(cat "$HOME/.claude/aise-assistant.datadir")` → read `$PLUGIN_DATA_DIR/about/identity.md`.
-2. **Glob fallback:** search for `about/identity.md` under known macOS plugin data directories:
-   - `~/Library/Application Support/Claude/local-agent-mode-sessions/*/rpm/plugin_*/about/identity.md`
-   - `/var/folders/**/aise-assistant*/about/identity.md`
-3. **Notion lookup:** call `notion-get-users` and match against the userEmail `klara.martinez@productboard.com` (available in system context) to retrieve the Notion user ID.
+1. **Call `notion-get-users`** and match against the user's email (available in system context) to retrieve the Notion user ID.
+2. **Confirm via `AISE Identity` page:** `notion-search("AISE Identity — {display_name}")` + `notion-fetch` → full profile (name, timezone, UUID).
 
-**If all three fail:** surface this message inline and stop — do not attempt a Notion query with a missing filter:
-> ⚠️ Identity not set up — run `/assistant-setup` first, or use `--global` to scan all packages.
+Step 1 alone is sufficient for filtering queries. Step 2 is only needed when the full profile (timezone, display name, etc.) is required.
 
-**Conditional skip:** when a skill's scope is `--global` (no owner filter needed), skip identity resolution entirely — do not attempt the file lookup.
+**If both fail:** surface this message inline and stop — do not attempt a Notion query with a missing filter:
+> ⚠️ Identity not resolved — run `/assistant-setup` first, or use `--global` to scan all packages.
+
+**Conditional skip:** when a skill's scope is `--global` (no owner filter needed), skip identity resolution entirely.
 
 ---
 
@@ -408,6 +407,16 @@ Each DB has Person-property-based edit rules. Multiple rules layer with an OR �
 | Tasks | `Owner` AND `Current Account Owner` (both rules separately, layered with OR) |
 
 Workspace admins always retain full access regardless of property-rule restrictions.
+
+---
+
+## Content Formatting
+
+Rules that apply to **all agents writing any Notion page content** — toggle bodies, sub-page bodies, inline page sections, any context.
+
+- **Never use `>` blockquote syntax.** In every Notion context, a `>` prefix renders as a separate block with a prominent left border — not a callout or highlight. This applies regardless of which page or section is being written. Use emoji + bold text as a visual anchor instead:
+  - ✅ `🎯 **Key point:** explanation text`
+  - ❌ `> 🎯 **Key point:** explanation text`
 
 ---
 

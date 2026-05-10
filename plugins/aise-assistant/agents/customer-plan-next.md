@@ -29,7 +29,7 @@ Pin down three pages before doing anything else:
   - Contract end date → time pressure.
 - **Sessions** — Sessions DB filtered by this Customer. Partition into: `Delivered`, `In progress`, `Planned` (already booked), and any in `Prep` status. Delivered sessions form the program history; Planned sessions are already committed — do not re-propose them.
 
-**Ownership check (mandatory).** Fetch the Customer page `Owner` field. If it does not contain the user's Notion ID (from `about/identity.md`), surface: "*\<Customer\>* has Owner = [list]; you're not in it. Continue as read-only planning, or stop?" Wait for the user's call before proceeding.
+**Ownership check (mandatory).** Fetch the Customer page `Owner` field. If it does not contain the user's Notion ID (from the `AISE Identity` Notion page), surface: "*\<Customer\>* has Owner = [list]; you're not in it. Continue as read-only planning, or stop?" Wait for the user's call before proceeding.
 
 ### 2. Pull current-state context (in parallel)
 

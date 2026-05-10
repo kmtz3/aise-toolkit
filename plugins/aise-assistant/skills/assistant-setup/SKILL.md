@@ -1,6 +1,6 @@
 ---
 name: assistant-setup
-description: Onboard a new user (or re-onboard yourself) to this assistant. Resolves Notion identity, asks short HITL questions about voice + workspace preferences, optionally scrapes recent Gmail and Slack to draft your voice profile, and writes the about/ folder. Run on first install of the plugin or when handing the assistant off to a teammate.
+description: Onboard a new user (or re-onboard yourself) to this assistant. Resolves Notion identity, asks short HITL questions about voice + workspace preferences, optionally scrapes recent Gmail and Slack to draft your voice profile, and writes private Notion profile pages. Run on first install of the plugin or when handing the assistant off to a teammate.
 ---
 
 Set up the assistant for the current user.

@@ -144,12 +144,12 @@ Summary: [n] total findings. [n] auto-fixable with `--fix`.
 
 ### Step 5 – Apply fixes if --fix is passed
 
-For each 🟨 propagation drift item: write `Current Account Owner = the user's Notion ID (per `about/identity.md`)` on the affected record.
+For each 🟨 propagation drift item: write `Current Account Owner = the user's Notion ID (from the `AISE Identity` Notion page)` on the affected record.
 
 For each 🟦 field hygiene item:
 - Active Package name mismatch: if `Start Date`, linked Customer name, and linked Master Package name are all resolvable, auto-fix by writing the corrected `Name` in the format `{Year} – {Customer Name} | {Master Package}`. If any relation is null, surface and skip.
 - Task with null `Customers`: do NOT auto-fix. Surface for the user's decision (which customer to link).
-- Session with null `Delivered By` on an account the user owns: set to the user's Notion ID (per `about/identity.md`), but flag in the report that this is an assumption.
+- Session with null `Delivered By` on an account the user owns: set to the user's Notion ID (from the `AISE Identity` Notion page), but flag in the report that this is an assumption.
 - Session Planned but past-dated: do NOT auto-fix. Surface for the user's decision (mark Delivered, reschedule, or cancel).
 - Session with null `Consumed Package` (Delivered, not Do-not-count): find the AP for that customer whose `Start Date` ≤ session `Call Date` ≤ `End Date`. If exactly one match exists, auto-fix by setting `Consumed Package` to that AP. If zero or multiple matches, surface for user decision.
 - Task with null `Consumed Package` (open, not Do-not-count, not internal): apply the date-matching rule from `context/notion-schema.md` § Create a Task. (1) if task has `Source Call`, inherit that session's `Consumed Package`. (2) Otherwise find the customer's AP covering the task's `Due Date` or today. If found, auto-fix. If not, surface for user decision.

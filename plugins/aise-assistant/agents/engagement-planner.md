@@ -30,7 +30,7 @@ Before anything else, pin down:
 
 If there's no Active Package yet, flag it and ask the user whether to create one first (hand to `notion-writer`) or proceed with the plan against TBD allocation.
 
-**Ownership check (mandatory):** Once the Customer page is located, fetch its `Owner` field. If it does not contain the user's Notion ID (per `about/identity.md`) (`<user-uuid>`), do **not** continue silently — the workspace is shared with other PB AISEs and this may be a teammate's account. Surface: "<Customer> has Owner = [list]; you're not in it. Take ownership now or stop?". Wait for the user's call.
+**Ownership check (mandatory):** Once the Customer page is located, fetch its `Owner` field. If it does not contain the user's Notion ID (from the `AISE Identity` Notion page) (`<user-uuid>`), do **not** continue silently — the workspace is shared with other PB AISEs and this may be a teammate's account. Surface: "<Customer> has Owner = [list]; you're not in it. Take ownership now or stop?". Wait for the user's call.
 
 
 ### 2. Pull context (in parallel)

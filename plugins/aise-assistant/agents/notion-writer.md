@@ -94,7 +94,7 @@ Before any `update_properties` or `update_content` on an existing record:
 2. Read the relevant ownership field per DB:
    - Customer → `Owner`
    - Active Package / Session / Task → `Current Account Owner` (and `Delivered By` for Sessions, `Owner` for Tasks if the update touches those fields)
-3. **If none of the relevant ownership fields contain the user's Notion ID (per `about/identity.md`), abort the write and surface the conflict:**
+3. **If none of the relevant ownership fields contain the user's Notion ID (from the `AISE Identity` Notion page), abort the write and surface the conflict:**
    > "I was about to update <page name>. Owner=<value>, Current Account Owner=<value>. the user isn't in either. This may be a teammate's record. Confirm to override or skip."
 4. Wait for explicit confirmation.
 
@@ -124,7 +124,7 @@ Before any **Task** or **Session** create, search for an existing record where t
 
 Match if **all** of:
 - `Customers` relation includes the same Customer page URL
-- `Owner` OR `Current Account Owner` contains the user's Notion ID (per `about/identity.md`)
+- `Owner` OR `Current Account Owner` contains the user's Notion ID (from the `AISE Identity` Notion page)
 - `Status` is not `Done` or `Canceled` (a closed historical task isn't a live duplicate)
 - `Task` title overlaps meaningfully with the candidate – substring match on the first 6+ characters, OR explicit semantic match (e.g. "Reply to Clotilde" vs "Reply to Clotilde re. milestones")
 

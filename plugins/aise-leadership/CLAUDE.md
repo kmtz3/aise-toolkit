@@ -35,7 +35,7 @@ This file is always loaded. It points at the detail — don't duplicate it here.
 |---|---|
 | [context/pb-aise-reference-guide.md](context/pb-aise-reference-guide.md) | Program structure, session types, PB data model, licensing, credit model, common risks |
 | [context/notion-schema.md](context/notion-schema.md) | Customer Tracker database schema, IDs, field formats, known gotchas |
-| [context/communication-style-guide.md](context/communication-style-guide.md) | AISE-comms patterns. Personal preferences override via `about/voice.md`. |
+| [context/communication-style-guide.md](context/communication-style-guide.md) | AISE-comms patterns. Personal preferences override via the `AISE Leadership Preferences` Notion page (Voice section). |
 | [context/notion-writer-playbook.md](context/notion-writer-playbook.md) | How to write Notion page content |
 
 > **context/ is shared locally.** The `context/` directory is sourced from `plugins/aise-assistant/` in this monorepo and synced via `scripts/sync-context.sh`. Never edit files in `context/` directly — make changes in `plugins/aise-assistant/context/` and sync here.

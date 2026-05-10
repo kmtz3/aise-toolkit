@@ -15,7 +15,7 @@ Customer (name or shorthand) and/or a session identifier (date, type, or Notion 
 
 Follow the **Transcript lookup order** in `context/project-instructions.md §3`. Cross-reference across sources — if Gong says X and the user's notes say Y, flag the conflict, don't silently pick one.
 
-**Ownership check (mandatory):** Once the customer is identified, fetch the Customer page `Owner` field. If it does not contain the user's Notion ID (per `about/identity.md`) (`<user-uuid>`), do **not** continue silently — the workspace is shared with other PB AISEs and this may be a teammate's account. Surface: "<Customer> has Owner = [list]; you're not in it. Take ownership now or stop?". Wait for the user's call.
+**Ownership check (mandatory):** Once the customer is identified, fetch the Customer page `Owner` field. If it does not contain the user's Notion ID (from the `AISE Identity` Notion page) (`<user-uuid>`), do **not** continue silently — the workspace is shared with other PB AISEs and this may be a teammate's account. Surface: "<Customer> has Owner = [list]; you're not in it. Take ownership now or stop?". Wait for the user's call.
 
 ### 2. Identify session type
 

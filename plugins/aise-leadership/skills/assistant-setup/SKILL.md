@@ -1,6 +1,6 @@
 ---
 name: assistant-setup
-description: Onboard a new user (or re-onboard yourself) to this assistant. Resolves Notion identity, auto-discovers the AISE team roster, asks short HITL questions about voice + workspace preferences, and writes the about/ folder plus private Notion profile pages. Run on first install or when handing off to a teammate.
+description: Onboard a new user (or re-onboard yourself) to this assistant. Resolves Notion identity, auto-discovers the AISE team roster, asks short HITL questions about voice + workspace preferences, and writes private Notion profile pages. Run on first install or when handing off to a teammate.
 ---
 
 Set up the assistant for the current user.

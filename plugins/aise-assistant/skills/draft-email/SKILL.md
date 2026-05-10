@@ -26,7 +26,7 @@ If the user later says "send it", that's a separate explicit request.
 
    Before drafting a sentence, you should be able to state: what was agreed, what's outstanding, what this recipient owes or is owed, what tone the thread uses.
 
-3. **Draft in the user's voice (per `about/voice.md`)** per `context/communication-style-guide.md`. Warm + direct, American English, bold labels over headers, bullets for lists, em-dashes sparingly, signature block `the user / AI Success Engineer (AISE) | Productboard`. For ongoing architecting / working cadence: reference *what we agreed* + *what's next* + the ask. Never frame as a first-touch sales reach-out.
+3. **Draft in the user's voice (per the `AISE Assistant Preferences` Notion page, Voice section)** per `context/communication-style-guide.md`. Warm + direct, American English, bold labels over headers, bullets for lists, em-dashes sparingly, signature block `the user / AI Success Engineer (AISE) | Productboard`. For ongoing architecting / working cadence: reference *what we agreed* + *what's next* + the ask. Never frame as a first-touch sales reach-out.
 
 4. **Don't invent** — dates, commitments, scope, names. If something load-bearing is missing, flag as `[FILL IN: ...]` and call it out in the report.
 

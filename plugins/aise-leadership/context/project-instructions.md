@@ -28,7 +28,7 @@ These are the canonical references for how I run sessions and think about the wo
 |---|---|
 | `pb-aise-reference-guide.md` | Program structure, session-by-session "what good looks like" standards, Productboard data model, architecture rules, seat licensing, integrations landscape, setup checklists, common risks. **The default reference for anything about PB architecture, sessions, or methodology.** |
 | `context/score-cards.md` | Detailed scorecards for each session type (Discovery, Spark, Foundations, Insights, Prioritization, Roadmaps, Success Planning, QBR). Use when scoring a session, prepping a session to hit scorecard criteria, or diagnosing a weak session. |
-| `context/communication-style-guide.md` (universal) + `about/voice.md` (personal overlay) | How the user writes. Voice, tone, structure, email vs Slack patterns, handling uncertainty. **Always apply when drafting or rewriting anything the user will send.** Personal voice file wins where the two differ. |
+| `context/communication-style-guide.md` (universal) + `AISE Leadership Preferences` Notion page, Voice section (personal overlay) | How the user writes. Voice, tone, structure, email vs Slack patterns, handling uncertainty. **Always apply when drafting or rewriting anything the user will send.** Personal Notion preferences win where the two differ. |
 
 ---
 
@@ -177,7 +177,7 @@ Tracker schema is fully documented in `context/notion-schema.md`. See that file 
 
 ## 6. Communication Style — Defaults
 
-Applied to every customer-facing or internal draft. Universal patterns live in `context/communication-style-guide.md`; personal overrides (sign-offs, em-dash rule, English variant, casual register, forbidden phrases) live in `about/voice.md` and win where they differ.
+Applied to every customer-facing or internal draft. Universal patterns live in `context/communication-style-guide.md`; personal overrides (sign-offs, em-dash rule, English variant, casual register, forbidden phrases) live in the `AISE Leadership Preferences` Notion page (Voice section) and win where they differ.
 
 - **Customer / senior stakeholder**: semi-formal, friendly, calm, outcome-focused. No slang.
 - **Internal cross-functional**: slightly more candid and technical.

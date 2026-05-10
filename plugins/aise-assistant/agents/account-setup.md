@@ -163,7 +163,7 @@ Also set these **page properties** from Salesforce data (not page body):
 | Start Date | From contract/renewal data — flag if unknown |
 | End Date | From contract/renewal data — flag if unknown |
 | ARR | From Salesforce — flag if `<omitted />` |
-| **Current Account Owner** | Mirror `Customer.Owner` exactly — same predecessor-handoff logic. Always include the user's Notion ID (per `about/identity.md`). The Resync button on the Customer page maintains this afterwards. |
+| **Current Account Owner** | Mirror `Customer.Owner` exactly — same predecessor-handoff logic. Always include the user's Notion ID (from the `AISE Identity` Notion page). The Resync button on the Customer page maintains this afterwards. |
 
 **C. Active Package page body — account history summary**
 
@@ -226,7 +226,7 @@ After the user approves (or says "just do it"), write in this order:
 - **Customer confidentiality** — don't pass deal size, ARR, or internal strategy to external artefacts.
 - **No Tasks for historical sessions** — PB-side tasks are for future actions only. Don't create Task records when backfilling past sessions.
 - **Don't duplicate sessions** — before creating a Session record, check whether one already exists in the Sessions DB for this customer on the same date. If it does, skip it.
-- **`Customer.Owner` is the canonical ownership write.** Set it correctly and the Resync button (or this agent's API-equivalent sweep) propagates `Current Account Owner` to all descendants. user Notion ID: see `about/identity.md` `<user-uuid>`. Missing or wrong `Customer.Owner` is a silent invisibility bug downstream.
+- **`Customer.Owner` is the canonical ownership write.** Set it correctly and the Resync button (or this agent's API-equivalent sweep) propagates `Current Account Owner` to all descendants. User Notion ID: resolve from the `AISE Identity` Notion page. Missing or wrong `Customer.Owner` is a silent invisibility bug downstream.
 - **Set `Current Account Owner = <user-uuid>` on the new Active Package on create.** The Resync button hasn't fired yet at create time, so the field would otherwise be null. Same principle for any Tasks created during setup.
 - **Verify-before-update on the Customer page.** If the page already has an `Owner` and the user isn't in it, surface the conflict before writing — this is a teammate's account or a stale handoff. Defer to `notion-writer.md` for the verify-before-write contract; this agent's writes go through it.
 - **After `Customer.Owner` is written, run the propagation step.** Either click the Resync button manually (preferred — it's deterministic) OR walk the linked Sessions/Tasks/Active Package and write `Current Account Owner` via API. Don't leave the descendants stale — the user's filtered queries depend on them being in sync.

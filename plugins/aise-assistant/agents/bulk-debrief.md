@@ -23,7 +23,7 @@ No required arguments. Optional:
 
 ### 1. Determine the target date
 
-Compute "yesterday": the calendar day immediately before today. Use the user's time zone from `about/workspace.md`. If `--date` was passed, use that date instead. Do not skip weekends — use the literal previous calendar day.
+Compute "yesterday": the calendar day immediately before today. Use the user's time zone from the `AISE Assistant Preferences` Notion page (Workspace section). If `--date` was passed, use that date instead. Do not skip weekends — use the literal previous calendar day.
 
 ### 2. Pull all calendar events for the target date
 
@@ -55,7 +55,7 @@ For each external-confirmed event:
 
 **A. Identify the customer:**
 1. Extract company names from non-PB attendee email domains (e.g., `@acme.com` → Acme). Also scan the event title for company names.
-2. Query Notion Customers DB (see `context/notion-schema.md`) filtered by `Owner = <user-uuid>` (from `about/identity.md`), matching the extracted company name.
+2. Query Notion Customers DB (see `context/notion-schema.md`) filtered by `Owner = <user-uuid>` (from the `AISE Identity` Notion page), matching the extracted company name.
 3. Single confident match → proceed. Multiple or ambiguous matches → surface candidates in the opening plan and ask the user to resolve before queuing. No match → mark **unmatched**, do not create a Customer record.
 
 **B. Identify the Session record:**

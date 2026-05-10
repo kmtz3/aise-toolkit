@@ -5,6 +5,17 @@ Format: `## [version] — YYYY-MM-DD` followed by bullet points grouped by type.
 
 ---
 
+## [2.8.2] — 2026-05-10
+
+### Fixed
+- `context/notion-schema.md`: rewrote Identity resolution procedure — removed pointer-file and glob-fallback steps; Notion lookup (`notion-get-users` + `AISE Identity` page) is now the sole resolver
+- All agents and skills: replaced every stale `about/identity.md`, `about/voice.md`, and `about/workspace.md` reference with the canonical Notion page equivalent (`AISE Identity`, `AISE Assistant Preferences` Voice section, `AISE Assistant Preferences` Workspace section)
+- `context/communication-style-guide.md`, `context/project-instructions.md`, `context/notion-writer-playbook.md`: updated all `about/voice.md` pointers to `AISE Assistant Preferences` Notion page
+- `skills/assistant-help/SKILL.md`: Personal config section rewritten to describe Notion pages instead of local `about/` files
+- `CLAUDE.md`: updated agent table entries for `email-drafter` and `assistant-onboarding`, and `/assistant-setup` command description — removed local file references
+
+---
+
 ## [2.8.1] — 2026-05-10
 
 ### Fixed

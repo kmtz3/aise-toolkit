@@ -29,7 +29,7 @@ description: Quick reference of all available commands grouped by workflow stage
 
 **Otherwise (default — no flag, or help-intent phrasing):**
 
-Output the help reference below verbatim, formatted as inline markdown in chat. Address the user by their `Display name` from `about/identity.md` if available; otherwise use a generic greeting.
+Output the help reference below verbatim, formatted as inline markdown in chat. Address the user by their `Display name` from the `AISE Identity` Notion page if available; otherwise use a generic greeting.
 
 ---
 
@@ -165,13 +165,13 @@ Commands are grouped by family. Type `/<family>` (or `/<family>-`) in autocomple
 
 ## Personal config
 
-Your identity, voice preferences, and workspace specifics live in `about/`:
+Your identity, voice preferences, and workspace specifics live in private Notion pages:
 
-- `about/identity.md` — name, Notion user ID, role, time zone
-- `about/voice.md` — sign-offs, language quirks, casual register
-- `about/workspace.md` — Slack patterns, Calendly URLs, internal coordinators
+- **`AISE Identity — {display_name}`** — name, Notion user ID, role, time zone
+- **`AISE Assistant Preferences — {display_name}`** (Voice section) — sign-offs, language quirks, casual register
+- **`AISE Assistant Preferences — {display_name}`** (Workspace section) — Slack patterns, Calendly URLs, internal coordinators
 
-To change them: edit directly, or run `/assistant-setup --update` for a guided drift check.
+To change them: run `/assistant-setup` for a guided re-onboarding, or edit the Notion pages directly.
 
 ## Where things live
 
@@ -181,7 +181,7 @@ To change them: edit directly, or run `/assistant-setup --update` for a guided d
 | **`context/notion-schema.md`** | DB schema, field formats, query patterns |
 | **`context/score-cards.md`** | Per-session scorecards (Discovery, Foundations, Insights, Prioritization, Roadmaps, Spark, Success Planning, QBR) |
 | **`context/pb-aise-reference-guide.md`** | Session methodology — "what good looks like" per session type |
-| **`context/communication-style-guide.md`** | Universal AISE comms patterns; `about/voice.md` overrides |
+| **`context/communication-style-guide.md`** | Universal AISE comms patterns; `AISE Assistant Preferences` Notion page (Voice section) overrides |
 | **`templates/session-kdds/`** | Customer-facing KDD anchor templates per A-session type |
 | **`<PLUGIN_DATA_DIR>/about/tracker-memory.md`** | Cross-customer observations only — per-user, written by `context-keeper` (Notion is SSOT for everything else) |
 
