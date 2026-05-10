@@ -71,7 +71,7 @@ This file is always loaded. It points at the detail — don't duplicate it here.
 | Command | Purpose |
 |---|---|
 | `/assistant-setup` | Onboard or re-onboard (Notion identity, voice, workspace). Run on first install. |
-| `/assistant-help` | Full command reference. |
+| `/assistant-help [--whatsnew]` | Full command reference. `--whatsnew` (or "what's new?") reads the CHANGELOG and surfaces the latest version changes instead. |
 | `/assistant-remember <correction>` | Capture a correction or new rule into context files and memory. |
 | `/assistant-improvement` | After a skill run with issues, analyze what went wrong and output a copyable coding-agent prompt naming the exact plugin, files, and fixes needed. No writes — output only. |
 | `/aise-context` | Load operating context (use at session start if context seems stale). |

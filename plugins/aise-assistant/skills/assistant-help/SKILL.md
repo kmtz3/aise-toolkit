@@ -1,7 +1,33 @@
 ---
 name: assistant-help
-description: Quick reference of all available commands grouped by workflow stage, plus flag reference for multi-mode commands and links to deeper docs. Run anytime you forget what's available or want a refresher.
+description: Quick reference of all available commands grouped by workflow stage, plus flag reference for multi-mode commands and links to deeper docs. Run anytime you forget what's available or want a refresher. Pass --whatsnew (or ask "what's new") to see the latest version changes instead.
 ---
+
+## Mode detection
+
+| Flag | Natural language equivalents |
+|---|---|
+| (no flag) | "help", "what can you do", "show commands", "list commands", "what's available" |
+| `--whatsnew` | "what's new", "what changed", "what was updated", "latest changes", "changelog", "new version", "what did you add", "what's in the latest version" |
+
+**If `--whatsnew` is passed, or the user's phrasing matches the natural language equivalents above:**
+
+1. Read `CHANGELOG.md` at the plugin root.
+2. Find the most recent MAJOR or MINOR version entry. If there are PATCH entries dated after it, include those too.
+3. Output in chat (do not output the full command reference):
+
+   > **What's new in aise-assistant [version]** — [date]
+   > [bullet points from that entry, preserving the Added / Changed / Fixed grouping]
+   >
+   > _(If PATCH entries exist after the latest MINOR/MAJOR, list them below under a "Also fixed" heading.)_
+   >
+   > _Run `/assistant-help` for the full command reference._
+
+4. Stop — do not continue to the help reference below.
+
+---
+
+**Otherwise (default — no flag, or help-intent phrasing):**
 
 Output the help reference below verbatim, formatted as inline markdown in chat. Address the user by their `Display name` from `about/identity.md` if available; otherwise use a generic greeting.
 

@@ -131,7 +131,7 @@ Grouped by family. Type `/<family>-` in autocomplete to see siblings.
 | Command | Purpose |
 |---|---|
 | `/assistant-setup [--scrape-voice] [--reset]` | Onboard the current user (or re-onboard) to this assistant. Resolves Notion identity automatically, asks short HITL questions for preferences, optionally scrapes Gmail + Slack to draft a voice profile, writes `about/identity.md`, `about/voice.md`, `about/workspace.md`. Run on first install or when handing off to a teammate. |
-| `/assistant-help` | Quick reference of all available commands grouped by workflow stage, plus suggested order around a customer session and pointers to deeper docs. Run anytime you forget what's available. |
+| `/assistant-help [--whatsnew]` | Quick reference of all available commands grouped by workflow stage, plus suggested order around a customer session and pointers to deeper docs. `--whatsnew` (or "what's new?") reads the CHANGELOG and surfaces the latest version changes instead. |
 | `/assistant-remember <correction>` | Manually invoke the context-keeper to update context files / memory. |
 | `/assistant-improvement` | After a skill run with issues, analyze what went wrong and output a single copyable coding-agent prompt naming the exact plugin, files, and fixes needed. No writes — output only. |
 | `/aise-context` | Load the AISE assistant operating context — role definition, ground rules, command registry, and agent index. Invoke at the start of any session if context seems missing or stale. |
