@@ -1,5 +1,13 @@
 # Changelog — aise-leadership
 
+## [1.2.1] — 2026-05-10
+
+### Fixed
+- `setup-connections.sh --check`: now reads `~/.claude/claude_desktop_config.json` for the Salesforce MCP presence check
+- Nerd callout now fires only when both Salesforce CLI and Salesforce MCP are confirmed present
+- MCP-missing message in `--check` mode now prints the correct `claude mcp add` install command
+- Banner string corrected from `aise-assistant` to `aise-leadership`
+
 ## [1.2.0] — 2026-05-10
 
 ### Added
