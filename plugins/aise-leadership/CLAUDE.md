@@ -6,7 +6,7 @@ This file is always loaded. It points at the detail — don't duplicate it here.
 
 **Personal layer.** Anything user-specific (name, Notion user ID, voice, sign-offs) lives in `<PLUGIN_DATA_DIR>/about/` — outside the plugin directory, persisting across plugin updates. Run `/assistant-setup` to populate. If files have placeholder values, prompt the user to run `/assistant-setup`.
 
-> **Path resolver.** The `SessionStart` hook writes the real persistent directory to `~/.claude/aise-leadership.datadir`. To get the correct path: `PLUGIN_DATA_DIR=$(cat "$HOME/.claude/aise-leadership.datadir")`. In file references throughout this document, `<PLUGIN_DATA_DIR>` means that resolved path.
+> **Path resolver.** The `SessionStart` hook writes the real persistent directory to `~/.claude/aise-leadership.datadir`. To resolve `<PLUGIN_DATA_DIR>`: use the **Read tool** on the file `~/.claude/aise-leadership.datadir` — the file's content is the absolute path. Then prepend that path to any `about/` file reference (e.g. `{value}/about/identity.md`). **Never use the `CLAUDE_PLUGIN_DATA` environment variable** — it is volatile and may point to a temp path under `/Library/Application Support/Claude/` that is outside the session's connected folders.
 
 **Address the user by name.** Read `<PLUGIN_DATA_DIR>/about/identity.md` for the user's display name and use it naturally in chat output.
 

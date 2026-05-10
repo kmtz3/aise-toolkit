@@ -43,7 +43,9 @@ If `--template <name>` is passed explicitly, that template is used regardless of
 
 ### Step 1 — Resolve identity and customer
 
-Read `about/identity.md` to get the current user's `notion_user_id` and display name.
+**Resolve PLUGIN_DATA_DIR first:** use the Read tool on `~/.claude/aise-leadership.datadir` — the file content is the absolute path. Never use the `CLAUDE_PLUGIN_DATA` env variable.
+
+Read `{PLUGIN_DATA_DIR}/about/identity.md` to get the current user's `notion_user_id` and display name.
 
 Search Notion for the Customer page. From it, follow the `Active Package` relation. Capture:
 - Customer page URL and ID
@@ -187,11 +189,11 @@ Output as inline markdown. Bold labels, no header-heavy formatting. Match the us
 
 Run this step unless `--no-notion` was passed.
 
-1. Read `about/workspace.md`. If `Per-cadence format preferences` shows `Notion page` for the relevant cadence (or if cadence is unspecified and any row shows `Notion page`), proceed. Otherwise skip.
+1. `PLUGIN_DATA_DIR` was already resolved in Step 1. Read `{PLUGIN_DATA_DIR}/about/workspace.md`. If `Per-cadence format preferences` shows `Notion page` for the relevant cadence (or if cadence is unspecified and any row shows `Notion page`), proceed. Otherwise skip.
 
-2. Read the `Notion templates DB ID` from `about/workspace.md`. If the value is null, empty, or starts with `<TBD`, skip and note in chat: "Templates DB not configured — skipping Notion write. Set via `/assistant-setup --update`." Do not error.
+2. Read the `Notion templates DB ID` from `{PLUGIN_DATA_DIR}/about/workspace.md`. If the value is null, empty, or starts with `<TBD`, skip and note in chat: "Templates DB not configured — skipping Notion write. Set via `/assistant-setup --update`." Do not error.
 
-3. Call `notion-fetch` on the **Templates DB URL** from `about/workspace.md` (not the `collection://` form — only `notion-fetch` exposes the `<templates>` block).
+3. Call `notion-fetch` on the **Templates DB URL** from `{PLUGIN_DATA_DIR}/about/workspace.md` (not the `collection://` form — only `notion-fetch` exposes the `<templates>` block).
 
 4. **Select best-fit template** (case-insensitive substring match against template `name`):
    - Prefer templates whose name contains: "account", "customer", or "snapshot"
@@ -213,7 +215,9 @@ Run this step unless `--no-notion` was passed.
 
 ### Step 1 — Resolve the target AISE
 
-Read `about/identity.md` to get the current user's Notion UUID and display name.
+**Resolve PLUGIN_DATA_DIR first:** use the Read tool on `~/.claude/aise-leadership.datadir` — the file content is the absolute path. Never use the `CLAUDE_PLUGIN_DATA` env variable.
+
+Read `{PLUGIN_DATA_DIR}/about/identity.md` to get the current user's Notion UUID and display name.
 
 - **`me` or no argument** → target = current user's UUID
 - **Named teammate** → call `notion-get-users`. Match by display name (case-insensitive, partial match OK). If exactly one match: use that UUID. If multiple: list them with roles and ask once. If none: ask for clarification.
@@ -359,11 +363,11 @@ Signal column key: ✅ = on track (session in last 30 days + next scheduled), �
 
 Run this step unless `--no-notion` was passed.
 
-1. Read `about/workspace.md`. If `Per-cadence format preferences` shows `Notion page` for the relevant cadence (or if cadence is unspecified and any row shows `Notion page`), proceed. Otherwise skip.
+1. `PLUGIN_DATA_DIR` was already resolved in Step 1. Read `{PLUGIN_DATA_DIR}/about/workspace.md`. If `Per-cadence format preferences` shows `Notion page` for the relevant cadence (or if cadence is unspecified and any row shows `Notion page`), proceed. Otherwise skip.
 
-2. Read the `Notion templates DB ID` from `about/workspace.md`. If the value is null, empty, or starts with `<TBD`, skip and note in chat: "Templates DB not configured — skipping Notion write. Set via `/assistant-setup --update`." Do not error.
+2. Read the `Notion templates DB ID` from `{PLUGIN_DATA_DIR}/about/workspace.md`. If the value is null, empty, or starts with `<TBD`, skip and note in chat: "Templates DB not configured — skipping Notion write. Set via `/assistant-setup --update`." Do not error.
 
-3. Call `notion-fetch` on the **Templates DB URL** from `about/workspace.md` (not the `collection://` form — only `notion-fetch` exposes the `<templates>` block).
+3. Call `notion-fetch` on the **Templates DB URL** from `{PLUGIN_DATA_DIR}/about/workspace.md` (not the `collection://` form — only `notion-fetch` exposes the `<templates>` block).
 
 4. **Select best-fit template** (case-insensitive substring match against template `name`):
    - Prefer templates whose name contains: "portfolio", "team brief", "aise", or "weekly"
