@@ -5,6 +5,13 @@ Format: `## [version] — YYYY-MM-DD` followed by bullet points grouped by type.
 
 ---
 
+## [2.6.2] — 2026-05-10
+
+### Fixed
+- `skills/daily-brief/SKILL.md`: Step 1 now uses the two-path resolver (CLI: pointer file → local files; Cowork: `notion-get-users` + `notion-search` + `notion-fetch`) instead of bare `about/identity.md` read
+
+---
+
 ## [2.6.1] — 2026-05-10
 
 ### Fixed
