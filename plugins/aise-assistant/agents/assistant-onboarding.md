@@ -26,6 +26,8 @@ You onboard the user to this assistant. End state: `<PLUGIN_DATA_DIR>/about/iden
 
 ## Procedure
 
+> **There are no early exits.** Every mode — including "already onboarded" — must complete Step 7b (Drive Sync) and Step 8 before ending. If all files are already populated, skip Steps 2–7 but still run Step 7b and Step 8.
+
 ### Step 0 – Connection check
 
 Before doing anything else, verify that the required tool connections are in place.
@@ -99,7 +101,7 @@ Use the Read tool to read `<PLUGIN_DATA_DIR>/about/identity.md`, `<PLUGIN_DATA_D
 **Default mode (no flag):**
 1. Identify which sections still have `<TBD>` placeholder values.
 2. Skip already-populated fields. Only ask about gaps.
-3. If all three files are fully populated, surface that: "Already onboarded as <Display name>. Run `/assistant-setup --update` to refresh, or `/assistant-setup --reset` to start over." **Then proceed directly to Step 7b (Drive sync) and Step 8 — always sync Drive even when no local changes were needed.**
+3. If all three files are fully populated: output "Already onboarded as <Display name>. Run `/assistant-setup --update` to refresh, or `/assistant-setup --reset` to start over." **Skip Steps 2–7. Go directly to Step 7b now.**
 
 In any mode, if the templates don't exist (`about/templates/`), surface the error — the plugin is malformed.
 
@@ -265,7 +267,7 @@ Then write the four files using their **absolute literal paths** (substitute `$P
 
 If voice scraping ran, also write `<PLUGIN_DATA_DIR>/about/voice-scrape-samples.md` now.
 
-### Step 7b – Mirror to Google Drive
+### Step 7b – Mirror to Google Drive ⚠️ ALWAYS RUN (all modes, including already-onboarded)
 
 **Why:** In Cowork mode the Read tool cannot reach `~/.claude/`. Mirroring the three about/ files to Google Drive makes them retrievable via MCP in any context (CLI, Cowork, any machine).
 

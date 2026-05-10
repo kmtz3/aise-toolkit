@@ -5,6 +5,11 @@ Format: `## [version] — YYYY-MM-DD` followed by bullet points grouped by type.
 
 ---
 
+## [2.5.2] — 2026-05-10
+
+### Fixed
+- `assistant-onboarding`: added a hard "no early exits" rule at the top of the procedure; "already onboarded" default-mode path now explicitly says "Skip Steps 2–7, go directly to Step 7b" instead of a soft suggestion; Step 7b heading now marked `⚠️ ALWAYS RUN`
+
 ## [2.5.1] — 2026-05-10
 
 ### Fixed
