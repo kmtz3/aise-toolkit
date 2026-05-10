@@ -1,5 +1,17 @@
 # Changelog — aise-leadership
 
+## [1.3.0] — 2026-05-10
+
+### Added
+- `report-builder`: `/report` now automatically writes each report to a Notion page after rendering in chat; suppress with `--no-notion`
+- `report-builder`: best-fit template auto-selection by name match — `--aise` prefers "portfolio"/"team brief"/"aise"/"weekly"; `--customer` prefers "account"/"customer"/"snapshot"
+- `report-builder`: presales and lapsed-contract accounts are now pre-filtered from 🔴/🟠/🟡 attention queue flags in `--aise` mode; appear in the queue under ℹ️ (Presales always; lapsed within 180 days only)
+- `report-builder`: `--customer` mode Step 4 now checks Active Package liveness before raising ⚠️/🔴 cadence flags; presales/lapsed accounts get ℹ️ Signals instead
+
+### Changed
+- `report-builder`: "Template-based output" section reframed from optional to the default behavior
+- `report-builder`: added `notion-create-pages` to the agent's tool list; guardrails updated from "Read-only" to "Mostly read-only"
+
 ## [1.2.2] — 2026-05-10
 
 ### Fixed
