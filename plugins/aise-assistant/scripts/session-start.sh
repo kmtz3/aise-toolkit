@@ -1,33 +1,28 @@
 #!/usr/bin/env bash
-# session-start.sh — called by the SessionStart hook at the start of every session.
+# session-start.sh — writes the real plugin data directory to
+# ~/.claude/aise-assistant.datadir so agents can resolve it with one Read call.
 #
-# Goal: write the real persistent data directory to ~/.claude/aise-assistant.datadir
-# so agents can read it with a single Read-tool call (never via $CLAUDE_PLUGIN_DATA,
-# which is volatile in Claude Code CLI).
+# $CLAUDE_PLUGIN_DATA is set by the Claude plugin runtime whenever a hook runs.
+# It always resolves to the correct persistent data directory for the installed
+# plugin, regardless of what directory suffix Claude appends to the plugin ID
+# (e.g. aise-assistant-aise-local). Use it as the primary source of truth.
 #
-# Context awareness:
-#   Claude Code CLI  — $CLAUDE_PLUGIN_DATA is a volatile temp path.
-#                      Real data lives at ~/.claude/plugins/data/aise-assistant*/
-#   Cowork / Desktop — $CLAUDE_PLUGIN_DATA IS the persistent, accessible data dir.
-#                      ~/.claude/plugins/data/ does not exist in the Linux sandbox.
-#
-# Discovery order:
-#   0. $CLAUDE_PLUGIN_DATA already has identity.md  → Cowork, already set up
-#   1. ~/.claude/plugins/data/aise-assistant*/ with identity.md → CLI, already set up
-#   2. installed_plugins.json name derivation → CLI, fresh install
-#   3. Any existing aise-assistant* data dir → CLI fallback
-#   4. Prefer $CLAUDE_PLUGIN_DATA if set (Cowork fresh), else CLI default
+# The fallback discovery (steps 1–4) handles edge cases where the hook is
+# invoked outside the normal plugin runtime (e.g. manual testing).
 
 set -euo pipefail
 
 PLUGIN_DATA_DIR=""
 
-# 0. Cowork / Desktop: $CLAUDE_PLUGIN_DATA is the real data dir when identity.md is there
+# 0. Primary: $CLAUDE_PLUGIN_DATA is set by the plugin runtime to the real data dir,
+#    handling any suffix Claude appends to the plugin ID (e.g. aise-assistant-aise-local).
+#    Use it when identity.md already lives there (populated install).
+#    Fresh installs fall through to step 4 which also prefers $CLAUDE_PLUGIN_DATA.
 if [[ -n "${CLAUDE_PLUGIN_DATA:-}" ]] && [[ -f "${CLAUDE_PLUGIN_DATA}/about/identity.md" ]]; then
   PLUGIN_DATA_DIR="$CLAUDE_PLUGIN_DATA"
 fi
 
-# 1. CLI: find any aise-assistant-* data dir that already has identity.md
+# 1. Fallback: find any aise-assistant-* data dir that already has identity.md
 if [[ -z "$PLUGIN_DATA_DIR" ]]; then
   for d in "$HOME/.claude/plugins/data/aise-assistant"*/; do
     [[ -d "$d" ]] || continue
@@ -35,7 +30,7 @@ if [[ -z "$PLUGIN_DATA_DIR" ]]; then
   done
 fi
 
-# 2. CLI: derive the name from installed_plugins.json
+# 2. Fallback: derive the name from installed_plugins.json
 if [[ -z "$PLUGIN_DATA_DIR" ]]; then
   PLUGIN_DATA_DIR=$(python3 - <<'PYEOF' 2>/dev/null
 import json, re, os
@@ -52,13 +47,13 @@ PYEOF
 )
 fi
 
-# 3. CLI: any existing aise-assistant* data dir
+# 3. Fallback: any existing aise-assistant* data dir
 if [[ -z "$PLUGIN_DATA_DIR" ]]; then
   PLUGIN_DATA_DIR=$(ls -d "$HOME/.claude/plugins/data/aise-assistant"* 2>/dev/null | head -1 || true)
 fi
 
-# 4. Final fallback: prefer $CLAUDE_PLUGIN_DATA (Cowork fresh install) over a
-#    Linux-VM home path that agents can't reach.
+# 4. Final fallback: prefer $CLAUDE_PLUGIN_DATA (Cowork fresh install, or any install
+#    where Claude appended a suffix to the plugin ID) over a generic default path.
 if [[ -z "$PLUGIN_DATA_DIR" ]]; then
   if [[ -n "${CLAUDE_PLUGIN_DATA:-}" ]] && [[ -d "${CLAUDE_PLUGIN_DATA}" ]]; then
     PLUGIN_DATA_DIR="$CLAUDE_PLUGIN_DATA"

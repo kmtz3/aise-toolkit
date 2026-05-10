@@ -5,6 +5,11 @@ Format: `## [version] — YYYY-MM-DD` followed by bullet points grouped by type.
 
 ---
 
+## [2.4.5] — 2026-05-10
+
+### Fixed
+- `session-start.sh`: added step 0 (use `$CLAUDE_PLUGIN_DATA` when `about/identity.md` already exists there — populated install with any directory suffix) and changed step 4 final fallback to prefer `$CLAUDE_PLUGIN_DATA` over a generic default path (fresh install with any suffix); pointer file now always contains a path accessible in the current execution context
+
 ## [2.4.4] — 2026-05-10
 
 ### Fixed
