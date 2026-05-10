@@ -1,0 +1,14 @@
+# Cross-Customer Observations
+
+> **Scope**: Cross-customer patterns and learnings only. Per-customer state and the active-engagements list are queried live from Notion (filtered by `Customer.Owner`); do not cache customer-specific state here.
+>
+> Add entries when you observe a pattern that spans ≥2 customers and would help any future session with similar accounts — risks that recur, success moves that generalise, architecture decisions that come up repeatedly, etc.
+>
+> **Format per entry:**
+> - **Pattern:** one-line description of the observation
+> - **Source:** customer category and/or session type (no customer names)
+> - **Action:** what to do differently or watch for
+
+---
+
+_No cross-customer observations recorded yet._

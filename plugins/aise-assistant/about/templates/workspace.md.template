@@ -1,0 +1,62 @@
+# Workspace — environment specifics
+
+> Workspace-specific context that varies per user. Internal coordinators, default conferencing tool, Slack channel patterns, customer access notes. Read by agents when constructing communications or scheduling.
+
+## Conferencing
+
+- **Default tool:** `<TBD — Microsoft Teams / Zoom / Google Meet / Other>`
+- **Secondary:** `<TBD>`
+- **Tertiary:** `<TBD>`
+- **Customer pages in Notion** carry a `Preferred Conferencing` field — always honor that over the default.
+
+## Calendly link patterns
+
+- **Office Hours / Ad-Hoc Sync** (flexible): `<TBD>`
+- **Architecting Session** (60 min): `<TBD>`
+- **Enablement / Training Session**: `<TBD>`
+- `<TBD — add other recurring event types as needed>`
+
+## Internal Slack channels — coordination
+
+| Channel | Use |
+|---|---|
+| `<TBD>` | `<TBD>` |
+| `<TBD>` | `<TBD>` |
+
+## Customer Slack channel naming
+
+Productboard-wide convention — same for all AISEs, never user-specific:
+
+- **External shared channel with customer (client-facing):** `#ext-{customer}`
+- **Internal channel about the customer:** `#accounts-{customer}`
+- **Coverage:** Not every customer has dedicated Slack channels. When channels are absent, default to follow-up emails.
+
+## Internal coordinators (recurring people the user works with)
+
+- **AE pool the user works with most often:** `<TBD — names>`
+- **Renewal Manager:** `<TBD — varies by account / your default>`
+- **Direct manager:** `<TBD>`
+
+## Preferred customer follow-up patterns
+
+- **After every delivered session:** `<TBD — e.g. Gmail draft per universal style guide; saved to drafts, never sent automatically>`
+- **Architecting sessions specifically:** `<TBD>`
+
+## Calendar conventions
+
+- **Prep blocks:** `<TBD — naming pattern, e.g. "Prep <Customer>" or "[PREP] <Customer> <Session>">`
+- **Customer sessions:** `<TBD — title format>`
+- **Internal focus:** `<TBD>`
+
+## Notion writing conventions
+
+- **Working Notes** on Active Package page = source of truth for per-customer state.
+- **Prep briefs** go inside a `📋 Prep — YYYY-MM-DD` toggle on the Session page.
+- **KDD sub-pages** (architecting sessions only) = child pages of the Session page, titled `KDDs — <Session ID> <Name>`.
+- **Tasks** — every Task must have a `Customers` relation set. For internal/non-customer-specific tasks, point to the Productboard customer record at `https://www.notion.so/29997e9c7d4f80e6a011f053bdec1ab5`.
+
+## Accounts the user has explicit context about
+
+The full list of currently-owned accounts is queried live from Notion (`Customer.Owner LIKE '%<user-uuid>%'`). For inherited accounts with rich handover context, see the `🧠 Working Notes` toggle on the Active Package page in Notion.
+
+Cross-customer patterns and observations are kept in [`context/tracker-memory.md`](../context/tracker-memory.md).

@@ -1,0 +1,66 @@
+# Voice — personal preferences
+
+> The user's personal communication style. Read alongside [`context/communication-style-guide.md`](../context/communication-style-guide.md) (universal AISE-comms methodology). This file overrides the universal guide where they differ.
+
+## Language
+
+- **Variant:** `<TBD — US / UK / Australian / "Match the customer's spelling" / Other>`
+- **Substitutions to apply:**
+  - `<TBD — list any spelling pairs the user wants enforced, e.g. UK→US: "programme → program", "organise → organize", etc. Leave empty if none.>`
+
+## Punctuation
+
+- **Em dashes (—):** `<TBD — OK / use spaced en dashes ( – ) instead / break sentences>`
+- **Semicolons in prose:** `<TBD — OK / avoid (recommended for clear writing)>`
+
+## Sign-offs
+
+### Email
+
+| Audience | Default sign-off |
+|---|---|
+| Customer / senior stakeholder | `<TBD — e.g. "Best,", "Best regards,", "Thanks,">` |
+| Internal / cross-functional | `<TBD>` |
+| Acknowledgement / appreciation | `<TBD — e.g. "Thank you!", "Much appreciated!">` |
+
+### Slack
+
+- Customer external channel: `<TBD>`
+- Internal team channel: `<TBD>`
+- DM: `<TBD>`
+
+## Tone overrides
+
+The universal guide is the baseline. The user's specific overlays:
+
+- `<TBD — note any particular flavor, e.g. "warmer than default", "more direct internally", "minimal hedging">`
+- **Avoids these filler words:** `<TBD — list, e.g. "genuinely", "honestly", "straightforward">`
+
+## Casual register (Slack DMs, close colleagues)
+
+OK to use:
+- `<TBD — list any shorthand the user is comfortable with, e.g. "qq", "tbh", "lol", "TY">`
+
+Not OK:
+- `<TBD — list anything off-limits, e.g. profanity, heavy sarcasm, decorative emojis>`
+
+## Length defaults
+
+- **Match length to complexity** — short asks get short responses, no padding.
+- **Casual messages:** `<TBD — a few sentences max / longer is fine>`
+- **Reports / explanations:** `<TBD — prose-first / lists where essential>`
+- **Customer follow-up emails:** `<TBD — high signal medium detail / fully detailed>`
+
+## Specific patterns the user uses
+
+- `<TBD — populate from /assistant-setup voice scrape, or fill manually. Examples: "'Best,' as default email sign-off", "'qq:' prefix for fast questions in DMs">`
+
+## Specific patterns the user avoids
+
+- `<TBD — populate from voice scrape or manually. Examples: "Just wanted to follow up", "I hope this finds you well", "Per my last email">`
+
+## Style review checklist
+
+Before finalizing any draft, confirm:
+
+- `<TBD — populate based on choices above. Examples: "US English", "no em dashes", "no semicolons", "sign-off matches audience", "name spelled correctly">`

@@ -1,0 +1,10 @@
+{
+  "name": "aise-assistant",
+  "version": "2.1.0",
+  "private": true,
+  "scripts": {
+    "pack": "bash scripts/package.sh",
+    "pack:out": "bash scripts/package.sh --out dist",
+    "validate": "bash scripts/validate.sh"
+  }
+}

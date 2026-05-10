@@ -1,0 +1,43 @@
+# Workspace — environment specifics
+
+> Leadership-specific config: report templates, team output preferences, Gong call scoping, and internal coordination. Read by agents when generating reports, querying across the AISE team, or filtering Gong calls.
+
+## Report Templates
+
+- **Notion templates DB ID:** `<TBD — Notion database ID; set via /assistant-setup>`
+- **Templates DB URL:** `<TBD — full Notion URL for reference>`
+
+### Per-cadence format preferences
+
+| Cadence | Output format | Default template name |
+|---|---|---|
+| Weekly | `<TBD — chat summary / HTML on Desktop / Notion page>` | `<TBD — e.g. "Weekly Team Brief">` |
+| Monthly | `<TBD — chat summary / HTML on Desktop / Notion page>` | `<TBD — e.g. "Monthly Leadership Report">` |
+| Quarterly | `<TBD — chat summary / HTML on Desktop / Notion page>` | `<TBD — e.g. "Quarterly Business Review">` |
+
+> **How templates work:** At report time, the assistant queries the templates DB, finds the matching page by name, reads its H2/H3 headings as a structure skeleton, and fills in data under each section. Headings should be descriptive (e.g. `## Team Velocity`, `## At-Risk Accounts`) so the assistant knows what data to populate. If no template is specified, the assistant lists available templates from the DB and asks which to use.
+
+## Gong call scoping
+
+Calls are filtered by host (any email from `team-roster.md`) **and** any of the title keywords below (case-insensitive):
+
+```
+<TBD — customise as needed, comma-separated>
+```
+
+Default (pre-populated by /assistant-setup — adjust freely):
+`Onboarding, Architecture, Architecting, Enablement, Check-in, Check in, QBR, Workshop, Training`
+
+## Internal Slack channels
+
+| Channel | Use |
+|---|---|
+| `<TBD>` | AISE team coordination |
+| `<TBD>` | Leadership / management |
+| `<TBD>` | Customer Success org-wide |
+
+## Internal coordinators
+
+- **Own manager / skip-level:** `<TBD>`
+- **Commercial / renewal partner:** `<TBD>`
+- **PS Ops / planning contact:** `<TBD>`

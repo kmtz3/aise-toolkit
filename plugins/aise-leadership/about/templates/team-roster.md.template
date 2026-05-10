@@ -1,0 +1,16 @@
+# Team Roster
+
+> The AISEs on this leader's direct team. Populated by /assistant-setup via auto-discovery from the Customer Tracker; update via /assistant-setup --update or edit directly. Re-run /assistant-setup --update to re-validate Notion user IDs after org changes.
+
+## Team Members
+
+| Name | Email | Notion User ID | Active |
+|---|---|---|---|
+| `<TBD>` | `<TBD>` | `<TBD>` | Yes |
+
+## How this is used
+
+- **Notion query scoping:** team-wide reports filter `Customer.Owner` by any UUID in the Active rows above.
+- **Gong host filtering:** session searches filter by host email matching any Active email above.
+- **Per-AISE reports** (`/report --aise <name>`): filter by that AISE's UUID only.
+- **Scorecard roll-ups:** iterate over Active rows and aggregate session data per AISE.

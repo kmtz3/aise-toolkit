@@ -1,0 +1,37 @@
+# Identity
+
+> The user the assistant is operating on behalf of. Read at the start of any agent run that needs personal values (Notion filters, ownership writes, name in drafts, etc.).
+
+## Name
+
+- **Display name:** `<TBD — your full name as it should appear in writing>`
+- **Common variants in pulled context:** `<TBD — any accent or spelling variants in transcripts that should be stripped, e.g. accented form, nickname, etc. Leave empty if none.>`
+- **First name (informal):** `<TBD — what to call you in casual chat output>`
+- **Always write as:** `<TBD — the canonical spelling>`
+
+## Email
+
+- **Primary:** `<TBD — your work email>`
+
+## Notion
+
+- **User ID:** `<TBD — auto-resolved by /assistant-setup>`
+- **Used in queries as:** `Owner LIKE '%<your-uuid>%'` (or the appropriate field — `Current Account Owner`, `Delivered By`, etc. per the schema in [`context/notion-schema.md`](../context/notion-schema.md))
+- **Stored on read with prefix:** `["user://<your-uuid>"]`. Filter with `LIKE '%<bare-uuid>%'` to match either form.
+
+## Role
+
+- **Title:** `<TBD — e.g. AI Success Engineer (AISE), Account Executive>`
+- **Team:** `<TBD — your org / team / function>`
+- **Region:** `<TBD>`
+- **Working language:** `<TBD>`
+
+## Time zone
+
+- **Primary:** `<TBD — IANA timezone, e.g. Europe/Prague, America/New_York>`
+- **Working hours:** `<TBD — local hours, e.g. 09:00 – 18:00>`
+- **Customers across:** `<TBD — regions you cover>`
+
+## Connectors / tools the assistant uses on the user's behalf
+
+- `<TBD — list connected tools: Gmail, Calendar, Notion, Slack, Glean, Salesforce, etc.>`

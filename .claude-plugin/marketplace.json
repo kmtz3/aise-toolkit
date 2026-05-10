@@ -1,0 +1,20 @@
+{
+  "name": "aise-toolkit",
+  "description": "Productboard AISE toolset — onboarding co-pilot for individual AISEs and portfolio visibility for AISE leadership.",
+  "owner": {
+    "name": "Klara Martinez",
+    "email": "klara.martinez@productboard.com"
+  },
+  "plugins": [
+    {
+      "name": "aise-assistant",
+      "description": "End-to-end customer onboarding co-pilot for Productboard AI Success Engineers (AISEs).",
+      "source": "./plugins/aise-assistant"
+    },
+    {
+      "name": "aise-leadership",
+      "description": "Portfolio visibility and account health co-pilot for Productboard AISE leadership.",
+      "source": "./plugins/aise-leadership"
+    }
+  ]
+}
