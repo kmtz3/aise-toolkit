@@ -2,7 +2,7 @@
 
 Portfolio visibility and account health co-pilot for Productboard AISE leadership.
 
-Install this plugin if you're a **manager, Head of AISE, or VP CS** — not an individual AISE. For the individual AISE co-pilot (session prep, debrief, follow-ups), install [aise-assistant](https://github.com/kmtz3/aise-assistant) instead.
+Install this plugin if you're a **manager, Head of AISE, or VP CS** — not an individual AISE. For the individual AISE co-pilot (session prep, debrief, follow-ups), install [aise-assistant](https://github.com/kmtz3/aise-toolkit) instead.
 
 ---
 
@@ -19,7 +19,7 @@ Install this plugin if you're a **manager, Head of AISE, or VP CS** — not an i
 ## Install
 
 1. Open **Claude Code (Cowork)** → Settings → Extensions → Add Plugin
-2. Enter the GitHub repo: `kmtz3/aise-leadership`
+2. Enter the GitHub repo: `kmtz3/aise-toolkit`
 3. Install and restart Cowork
 4. Run `/aise-leadership:assistant-setup` to complete onboarding (Notion identity + preferences)
 
@@ -45,7 +45,7 @@ Then try:
 
 ## Shared knowledge base
 
-The `context/` directory (schema, reference guide, style guide) is shared with [aise-assistant](https://github.com/kmtz3/aise-assistant) and synced via `git checkout`. Changes to the knowledge base happen in aise-assistant and are pulled here — never edit `context/` files directly in this repo.
+The `context/` directory (schema, reference guide, style guide) is shared with `plugins/aise-assistant/` in this monorepo and synced via `scripts/sync-context.sh`. Changes to the knowledge base happen in `plugins/aise-assistant/context/` and are pulled here — never edit `context/` files directly in this repo.
 
 ---
 

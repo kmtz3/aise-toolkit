@@ -40,6 +40,7 @@ Here is the full command reference for the **aise-leadership** plugin.
 |---|---|
 | `/assistant-setup` | Onboard or re-onboard to this assistant — resolves your Notion identity, sets voice preferences, workspace details. Run on first install. |
 | `/assistant-remember <correction>` | Capture a correction, new rule, or changed fact into context files and memory. |
+| `/assistant-improvement` | After a skill run with issues, analyze what went wrong and output a copyable coding-agent prompt naming the exact plugin, files, and fixes needed. No writes — output only. |
 | `/aise-context` | Load the assistant's operating context (role, ground rules, command registry). Run at the start of any session if context seems stale. |
 
 ---

@@ -1,5 +1,11 @@
 # Changelog — aise-leadership
 
+## [1.0.3] — 2026-05-10
+
+### Added
+- Ported `/assistant-improvement` from aise-assistant — analyze a previous skill run for issues and output a copyable coding-agent prompt with exact plugin, files, and fixes
+- Updated `port-to-leadership.md`: version bump is now confirm-gated (PATCH default, no auto-MAJOR)
+
 ## [1.0.2] — 2026-05-10
 
 ### Fixed
@@ -27,4 +33,4 @@
 - `/assistant-remember` — context-keeper invocation for corrections and new rules
 - `/aise-context` — operating context loader
 - `/commit` — version-bumping commit skill that syncs `context/` from aise-assistant before committing
-- `context/` shared with [aise-assistant](https://github.com/kmtz3/aise-assistant) via `scripts/sync-context.sh`
+- `context/` shared with [aise-assistant](https://github.com/kmtz3/aise-toolkit) via `scripts/sync-context.sh`

@@ -133,6 +133,7 @@ Commands are grouped by family. Type `/<family>` (or `/<family>-`) in autocomple
 |---|---|
 | **Correct the assistant** (style nit, new rule, fact change) | `/assistant-remember <correction>` (invokes context-keeper) |
 | **Automate a new recurring task** | `/assistant-automate <task description>` (drafts a new agent + command) |
+| **Generate a fix prompt after a bad skill run** | `/assistant-improvement` — analyzes what went wrong and outputs a copyable coding-agent prompt |
 | **(Re-)onboard yourself or a teammate** to this assistant | `/assistant-setup [--update \| --reset \| --scrape-voice]` |
 | **This help reference** | `/assistant-help` |
 

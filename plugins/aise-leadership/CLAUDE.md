@@ -33,7 +33,7 @@ This file is always loaded. It points at the detail — don't duplicate it here.
 | [context/communication-style-guide.md](context/communication-style-guide.md) | AISE-comms patterns. Personal preferences override via `about/voice.md`. |
 | [context/notion-writer-playbook.md](context/notion-writer-playbook.md) | How to write Notion page content |
 
-> **context/ is shared upstream.** The `context/` directory is sourced from [aise-assistant](https://github.com/kmtz3/aise-assistant) and synced via `scripts/sync-context.sh`. Never edit files in `context/` directly — make changes in aise-assistant and sync here.
+> **context/ is shared locally.** The `context/` directory is sourced from `plugins/aise-assistant/` in this monorepo and synced via `scripts/sync-context.sh`. Never edit files in `context/` directly — make changes in `plugins/aise-assistant/context/` and sync here.
 
 ---
 
@@ -73,6 +73,7 @@ This file is always loaded. It points at the detail — don't duplicate it here.
 | `/assistant-setup` | Onboard or re-onboard (Notion identity, voice, workspace). Run on first install. |
 | `/assistant-help` | Full command reference. |
 | `/assistant-remember <correction>` | Capture a correction or new rule into context files and memory. |
+| `/assistant-improvement` | After a skill run with issues, analyze what went wrong and output a copyable coding-agent prompt naming the exact plugin, files, and fixes needed. No writes — output only. |
 | `/aise-context` | Load operating context (use at session start if context seems stale). |
 
 Full spec per skill in [`skills/`](skills/).
@@ -103,7 +104,7 @@ When the user corrects behavior, adds a rule, or confirms a non-obvious choice �
 
 ## context/ sync
 
-The `context/` directory is sourced from [aise-assistant](https://github.com/kmtz3/aise-assistant). To pull the latest:
+The `context/` directory is sourced from `plugins/aise-assistant/` in this monorepo. To pull the latest:
 
 ```bash
 bash scripts/sync-context.sh

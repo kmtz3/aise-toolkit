@@ -201,7 +201,28 @@ Applied to every customer-facing or internal draft. Universal patterns live in `
 
 ---
 
-## 8. Output Format Defaults
+## 8. Notion Patterns — Operational Tips
+
+### Database templates
+
+Notion database templates (created via the "New template" button in the UI) are **not returned by SQL queries** (`notion-query-data-sources`). To discover and use them:
+
+1. **Discover:** call `notion-fetch` with the **database page URL** (e.g. `https://www.notion.so/workspace/My-DB-abc123`). Do NOT use the `collection://` data source URL — that returns schema only, not templates.
+2. **Read the `<templates>` block** in the response:
+   ```
+   <templates>
+     <template id="35c97e9c-7d4f-8074-abf7-c7b48886faf6" name="Weekly Team Brief" default="false"/>
+   </templates>
+   ```
+3. **Read a template's content** by calling `notion-fetch(template_id)` — works exactly like fetching a page.
+4. **Update a template's content** via `notion-update-page(template_id, ...)` — same as any page update.
+5. **Create a page pre-populated from a template** via `notion-create-pages` with the `template_id` parameter set to the template's UUID.
+
+The `default_page_template` field in `data-source-state` shows which template (if any) is applied automatically when clicking "New".
+
+---
+
+## 9. Output Format Defaults
 
 - **Inline in chat** for most asks (prep briefs, summaries, follow-up drafts, analysis).
 - **Files in `~/Desktop/aise-assistant/briefs/`** (HTML briefings, daily briefs) or **`~/Desktop/aise-assistant/diagrams/<customer>/`** (diagrams) when producing output the user needs to open immediately. Use the appropriate subfolder: `briefs/` for session-facing and daily output, `diagrams/` for visual artefacts. Create the subdirectory if it doesn't exist.
