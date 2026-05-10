@@ -7,7 +7,7 @@ Generate a daily briefing page for **$ARGUMENTS** (defaults to today).
 
 Read the procedure in `agents/daily-brief.md` and execute it inline as the main assistant — do not try to spawn `daily-brief` as a subagent (custom agents in this plugin are procedure documents, not registered subagent types). The steps:
 
-1. Resolve user identity — follow the two-path resolver in Step 1 of `agents/daily-brief.md` exactly (CLI: Read `~/.claude/aise-assistant.datadir` → local files; Cowork: `notion-get-users` + `notion-search("AISE Profile — {display_name}")` + `notion-fetch`). Parse name, timezone, and Notion UUID. Compute today and tomorrow's date windows.
+1. Resolve user identity — follow the two-path resolver in Step 1 of `agents/daily-brief.md` exactly (CLI: Read `~/.claude/aise-assistant.datadir` → local files; Cowork: `notion-get-users` + `notion-search("AISE Identity — {display_name}")` + `notion-fetch`). Parse name, timezone, and Notion UUID. Compute today and tomorrow's date windows.
 2. Pull both days' calendar events; classify each (external customer session, internal, focus block).
 3. For today's external sessions: check Notion for a prep brief and badge accordingly.
 4. For tomorrow's external sessions: flag any missing prep and auto-create a focus block on today's calendar (skip with `--no-blocks`).
