@@ -1,5 +1,22 @@
 # Changelog — aise-leadership
 
+## [1.5.0] — 2026-05-10
+
+### Added
+- `agents/assistant-onboarding.md`: added `mcp__claude_ai_Notion__notion-create-pages` and `mcp__claude_ai_Notion__notion-update-page` to tools frontmatter
+- `agents/assistant-onboarding.md` Step 7b (new): writes 4-page private Notion hierarchy — parent `AISE Profile`, child `AISE Identity` (shared with aise-assistant), child `AISE Leadership Preferences` (Voice + Workspace), child `AISE Leadership Team Roster` (markdown table from Step 2.5); always runs, never creates `AISE Assistant Preferences`
+- `agents/assistant-onboarding.md`: no-early-exit rule at top of Procedure — all modes including "already onboarded" must run Step 7b and Step 8
+
+### Changed
+- `agents/assistant-onboarding.md` Step 1: added Path A (Notion — CLI + Cowork) before existing bash resolver (now Path B); Path A searches `AISE Identity`, `AISE Leadership Preferences`, and `AISE Leadership Team Roster` pages; Notion pages authoritative when both paths differ; "already onboarded" default-mode path now skips to Step 7b instead of exiting
+- `agents/report-builder.md` preamble: replaced 3-step CLI-only identity resolution with CLI (Step A) + Cowork (Step B: `AISE Identity` + `AISE Leadership Preferences` + `AISE Leadership Team Roster`) + proceed (Step C) pattern
+- `agents/notion-writer.md`, `agents/notion-integrity-check.md`, `agents/sf-backfill.md` preambles: updated to Step A (CLI pointer file) + Step B (Cowork: `notion-get-users` + `AISE Identity` search/fetch) + Step C pattern
+- `skills/assistant-setup/SKILL.md`: replaced with clean delegation-only file (stripped all osascript and Cowork file-writing instructions; now delegates entirely to `agents/assistant-onboarding.md`)
+- `skills/aise-context/SKILL.md`: restructured to two-path identity resolution (CLI: read pointer file + about/ files; Cowork: `notion-get-users` + `AISE Identity` + `AISE Leadership Preferences` + `AISE Leadership Team Roster`)
+- `CLAUDE.md`: replaced osascript Cowork path with Notion-based path (`notion-get-users` + `AISE Identity` + `AISE Leadership Preferences` + `AISE Leadership Team Roster`); removed all osascript references
+
+---
+
 ## [1.4.1] — 2026-05-10
 
 ### Fixed

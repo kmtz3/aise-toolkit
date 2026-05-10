@@ -71,9 +71,10 @@ If Notion responds, continue to Step 1.
 
 **Get the current user and check existing state (two paths — run both in parallel):**
 
-**Path A — Notion profile page (works in CLI and Cowork):**
+**Path A — Notion profile pages (works in CLI and Cowork):**
 1. Call `notion-get-users` — returns UUID, display name, email. Record these as `user_uuid`, `display_name`, `user_email`.
-2. Call `notion-search("AISE Profile — {display_name}")`. If a result is returned, call `notion-fetch(page_id)` to read the existing profile. Note which `## Identity`, `## Voice`, `## Workspace` sections have real content vs `<TBD>` placeholders.
+2. Call `notion-search("AISE Identity — {display_name}")`. If a result is returned, call `notion-fetch(page_id)` → parse all identity fields. Note which are `<TBD>` vs populated.
+3. Call `notion-search("AISE Assistant Preferences — {display_name}")`. If a result is returned, call `notion-fetch(page_id)` → parse Voice + Workspace sections. Note gaps.
 
 **Path B — local files (Claude Code CLI only):**
 Try: `Read ~/.claude/aise-assistant.datadir` → if successful, that is `PLUGIN_DATA_DIR`. Then `Read {PLUGIN_DATA_DIR}/about/identity.md`, `voice.md`, `workspace.md`.
@@ -262,13 +263,16 @@ Then write the four files using their **absolute literal paths** (substitute `$P
 
 If voice scraping ran, also write `<PLUGIN_DATA_DIR>/about/voice-scrape-samples.md` now.
 
-### Step 7b – Write private Notion profile page ⚠️ ALWAYS RUN (all modes, including already-onboarded)
+### Step 7b – Write private Notion profile pages ⚠️ ALWAYS RUN (all modes, including already-onboarded)
 
-**Why:** The private Notion page is the authoritative store for voice and workspace preferences accessible in both CLI and Cowork contexts.
+**Why:** The private Notion pages are the authoritative store for preferences accessible in both CLI and Cowork contexts.
 
-**Page structure** — build this content:
+**1. Ensure parent page exists:**
+`notion-search("AISE Profile — {display_name}")` — if found, capture the page ID as `parent_id`; if not found, call `notion-create-pages` with `parent: { type: "workspace", workspace: true }`, title `AISE Profile — {display_name}`, empty body. Capture the returned ID as `parent_id`.
+
+**2. Ensure Identity child:**
+`notion-search("AISE Identity — {display_name}")` — if found, call `notion-update-page(page_id, content)` with current values; if not found, call `notion-create-pages` with `parent: { type: "page_id", page_id: parent_id }`, title `AISE Identity — {display_name}`, body:
 ```
-## Identity
 Preferred name: {value}
 Display name: {value}
 Timezone: {value}
@@ -276,16 +280,20 @@ Working hours: {value}
 Role: {value}
 Team: {value}
 Manager: {value}
-Email signature: {value}
+Email: {value}
 Accent variants: {value or "none"}
+```
 
+**3. Ensure Assistant Preferences child:**
+`notion-search("AISE Assistant Preferences — {display_name}")` — if found, `notion-update-page`; if not found, `notion-create-pages` with `parent: { type: "page_id", page_id: parent_id }`, title `AISE Assistant Preferences — {display_name}`, body:
+```
 ## Voice
 Sign-off: {value}
 Em dashes: {value}
 Semicolons: {value}
 English variant: {value}
 Casual register: {value}
-{any specific patterns from scraping, if run}
+{specific patterns from scraping, if run}
 
 ## Workspace
 Conferencing tool: {value}
@@ -296,16 +304,9 @@ Slack AISE channel: {value}
 Manager: {value}
 ```
 
-**1. Check for existing page:** `notion-search("AISE Profile — {display_name}")`.
+**Never create or touch `AISE Leadership Preferences — {display_name}` or `AISE Leadership Team Roster — {display_name}`.**
 
-**2a. If NOT found:** call `notion-create-pages` with:
-- `parent: { type: "workspace", workspace: true }` — this creates a **private page** visible only to the current user, in their Private sidebar section. Do not use a database or shared parent.
-- Title: `AISE Profile — {display_name}`
-- Body: the structured content above
-
-**2b. If found:** call `notion-update-page` on the existing page to overwrite its content with the current values.
-
-**3.** Output in chat: "Profile page written to Notion (private): [page URL]"
+**4.** Output in chat: "Profile pages written to Notion (private): [AISE Profile ↗] → [Identity ↗] [Assistant Preferences ↗]"
 
 ---
 

@@ -8,7 +8,9 @@ This file is always loaded. Keep it short — it points at the detail.
 
 > **Path resolver — two modes:**
 > - **Claude Code CLI:** use the **Read tool** on `~/.claude/aise-assistant.datadir` — file content is `PLUGIN_DATA_DIR`, the path to the persistent `about/` directory. `<PLUGIN_DATA_DIR>` in file references means that resolved path.
-> - **Cowork (Read tool blocked):** call `notion-get-users` for identity (UUID, name, email); call `notion-search("AISE Profile — {display_name}")` + `notion-fetch` for voice and workspace preferences — the private profile page written by `/assistant-setup`.
+> - **Cowork (Read tool blocked):** call `notion-get-users` for UUID + display name; then:
+>   - `notion-search("AISE Identity — {display_name}")` + `notion-fetch` → name, timezone, UUID (always)
+>   - `notion-search("AISE Assistant Preferences — {display_name}")` + `notion-fetch` → voice + workspace (only when needed for drafting)
 > - Never use `$CLAUDE_PLUGIN_DATA` — volatile temp path.
 
 **Address the user by name.** In chat output, refer to the user by the `Display name` (or informal first name) from `<PLUGIN_DATA_DIR>/about/identity.md`, not as "the user" or "you" alone. Use it naturally where it lands — opening a message, calling out an action item, or surfacing a question — but don't force it. Agent spec files use generic language ("the user") so they work for any installer; the personalized address is a runtime behavior.
@@ -21,7 +23,7 @@ Read these when the task touches their subject. Don't duplicate their content he
 
 ### Per-user (always read first when user values are needed)
 
-> **Finding these files — CLI:** Read `~/.claude/aise-assistant.datadir` to get `PLUGIN_DATA_DIR`. **Cowork:** `notion-get-users` for identity; `notion-search("AISE Profile — {display_name}") → notion-fetch` for voice + workspace.
+> **Finding these files — CLI:** Read `~/.claude/aise-assistant.datadir` to get `PLUGIN_DATA_DIR`. **Cowork:** `notion-get-users` for identity (UUID + name); `notion-search("AISE Identity — {display_name}") → notion-fetch` for name/timezone/UUID; `notion-search("AISE Assistant Preferences — {display_name}") → notion-fetch` for voice + workspace.
 
 | File | When to read |
 |---|---|

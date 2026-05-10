@@ -21,9 +21,14 @@ You read from Notion, write only when `--fix` is explicitly passed and only for 
 
 **Do not Glob. Do not search plugin paths. Do not guess. Follow these steps in order.**
 
-1. Use the Read tool on `~/.claude/aise-leadership.datadir`. The file content is `PLUGIN_DATA_DIR` — the absolute path to the plugin's persistent data directory. `CLAUDE_PLUGIN_DATA` env variable must never be used.
-2. Read `{PLUGIN_DATA_DIR}/about/identity.md` to get the current user's `notion_user_id`.
-3. **If `identity.md` does not exist or contains `<TBD>` values:** call `notion-get-users`, match by name or email, note in chat: "identity.md not configured — resolved via Notion users. Run `/assistant-setup` to complete setup." If no match: surface candidates and ask once.
+**Step A (CLI):**
+Use the Read tool on `~/.claude/aise-leadership.datadir`. The file content is `PLUGIN_DATA_DIR` — the absolute path to the plugin's persistent data directory. `CLAUDE_PLUGIN_DATA` env variable must never be used. Read `{PLUGIN_DATA_DIR}/about/identity.md` to get the current user's `notion_user_id`. If `identity.md` does not exist or contains `<TBD>` values, continue with Step B.
+
+**Step B (Cowork — if Read blocked, or Step A files unavailable):**
+1. Call `notion-get-users` → UUID, display name.
+2. `notion-search("AISE Identity — {display_name}")` → `notion-fetch` → parse name, timezone, UUID.
+
+**Step C:** Proceed with resolved values. If no UUID is resolved, note in chat: "AISE Identity page not found — run `/assistant-setup` to complete setup." Surface candidates from `notion-get-users` and ask once if needed.
 
 ---
 

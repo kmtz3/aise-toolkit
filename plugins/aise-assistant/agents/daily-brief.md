@@ -28,14 +28,14 @@ No required arguments. Optional:
 **Option 1 — local files (Claude Code CLI):**
 Read tool on `~/.claude/aise-assistant.datadir`. If it returns a path without error, that is `PLUGIN_DATA_DIR`. Read `{PLUGIN_DATA_DIR}/about/identity.md`.
 
-**Option 2 — Notion profile page (Cowork, or if local files unavailable):**
+**Option 2 — Notion identity page (Cowork, or if local files unavailable):**
 If the Read tool returns "outside this session's connected folders":
-1. Call `notion-get-users` with the user's **first name only** as the query (e.g. `"klara"`, not `"klara martinez"`). If no results are returned, retry with the email address from context (`klara.martinez@productboard.com`). Match the result against the known email to confirm identity.
-2. `notion-search("AISE Profile — {display_name}")` → capture the first result's page ID.
-3. `notion-fetch(page_id)` → parse the `## Identity` section for preferred name and timezone.
+1. Call `notion-get-users` → returns UUID, display name.
+2. `notion-search("AISE Identity — {display_name}")` → capture the first result's page ID.
+3. `notion-fetch(page_id)` → parse the page for preferred name and timezone.
 
 **Option 3 — Notion identity-only fallback:**
-If the profile page is not found: use UUID and display name from `notion-get-users`. Default timezone to `Europe/Prague`. Note in the brief: "AISE Profile page not found — run `/assistant-setup` to configure."
+If the identity page is not found: use UUID and display name from `notion-get-users`. Default timezone to `Europe/Prague`. Note in the brief: "AISE Identity page not found — run `/assistant-setup` to configure."
 
 Parse from identity.md:
 - First name (for the greeting header).

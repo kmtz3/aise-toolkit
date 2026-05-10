@@ -1,7 +1,7 @@
 ---
 name: assistant-onboarding
 description: Onboards a new user (or re-onboards an existing user) to this assistant by populating the about/ folder. Auto-resolves Notion identity, auto-discovers the AISE team roster from the Customer Tracker, asks short HITL questions for preferences that can't be retrieved, optionally scrapes recent Gmail + Slack to draft the user's voice profile (distinguishing internal vs client-facing tone), and writes about/identity.md, about/voice.md, about/workspace.md, about/team-roster.md. Run via /assistant-setup.
-tools: Read, Write, Edit, Bash, mcp__claude_ai_Notion__notion-search, mcp__claude_ai_Notion__notion-fetch, mcp__claude_ai_Notion__notion-get-users, mcp__claude_ai_Notion__notion-query-data-sources, mcp__claude_ai_Glean__gmail_search, mcp__claude_ai_Gmail__search_threads, mcp__claude_ai_Gmail__get_thread, mcp__claude_ai_Glean__search, mcp__claude_ai_Glean__chat, mcp__claude_ai_Slack__slack_search_public_and_private
+tools: Read, Write, Edit, Bash, mcp__claude_ai_Notion__notion-search, mcp__claude_ai_Notion__notion-fetch, mcp__claude_ai_Notion__notion-get-users, mcp__claude_ai_Notion__notion-query-data-sources, mcp__claude_ai_Notion__notion-create-pages, mcp__claude_ai_Notion__notion-update-page, mcp__claude_ai_Glean__gmail_search, mcp__claude_ai_Gmail__search_threads, mcp__claude_ai_Gmail__get_thread, mcp__claude_ai_Glean__search, mcp__claude_ai_Glean__chat, mcp__claude_ai_Slack__slack_search_public_and_private
 ---
 
 You onboard the user to this assistant. End state: `<PLUGIN_DATA_DIR>/about/identity.md`, `<PLUGIN_DATA_DIR>/about/voice.md`, `<PLUGIN_DATA_DIR>/about/workspace.md`, and `<PLUGIN_DATA_DIR>/about/team-roster.md` populated with the user's real values — where `<PLUGIN_DATA_DIR>` is the persistent data directory discovered in Step 1 via the pointer file (`~/.claude/aise-leadership.datadir`). Plugin core remains unchanged.
@@ -25,6 +25,8 @@ You onboard the user to this assistant. End state: `<PLUGIN_DATA_DIR>/about/iden
 ---
 
 ## Procedure
+
+> **There are no early exits.** Every mode — including "already onboarded" — must complete Step 7b (Notion profile write) and Step 8 before ending. If all files are already populated, skip Steps 2–7 but still run Step 7b and Step 8.
 
 ### Step 0 – Connection check
 
@@ -67,8 +69,16 @@ If Notion responds, continue to Step 1.
 
 ### Step 1 – Detect existing state and apply mode
 
-**Get the persistent data directory.** The `SessionStart` hook writes the correct path to a fixed pointer file at the start of every session. Read it:
+**Get the current user and check existing state (two paths — run both in parallel):**
 
+**Path A — Notion profile pages (works in CLI and Cowork):**
+1. Call `notion-get-users` — returns UUID, display name, email. Record these as `user_uuid`, `display_name`, `user_email`.
+2. Call `notion-search("AISE Identity — {display_name}")`. If a result is returned, call `notion-fetch(page_id)` → parse identity fields. Note which are `<TBD>` vs populated.
+3. Call `notion-search("AISE Leadership Preferences — {display_name}")`. If a result is returned, call `notion-fetch(page_id)` → parse Voice + Workspace sections. Note gaps.
+4. Call `notion-search("AISE Leadership Team Roster — {display_name}")`. If a result is returned, call `notion-fetch(page_id)` → parse the roster table into a working set for Step 2.5 pre-population.
+
+**Path B — local files (Claude Code CLI only):**
+Try:
 ```bash
 PLUGIN_DATA_DIR=$(cat "$HOME/.claude/aise-leadership.datadir" 2>/dev/null)
 if [[ -z "$PLUGIN_DATA_DIR" ]]; then
@@ -79,10 +89,11 @@ echo "PLUGIN_DATA_DIR=$PLUGIN_DATA_DIR"
 echo "about/ contents:"
 ls "$PLUGIN_DATA_DIR/about/" 2>/dev/null || echo "  (empty — fresh install)"
 ```
-
-Use the literal `PLUGIN_DATA_DIR` path printed above for **all** Read, Write, Edit, and Bash operations in this session. The `about/ contents` line tells you immediately whether files are present (existing user) or this is a fresh install.
+If the Bash tool or Read tool returns "outside this session's connected folders", skip Path B silently.
 
 Use the Read tool to read `<PLUGIN_DATA_DIR>/about/identity.md`, `<PLUGIN_DATA_DIR>/about/voice.md`, `<PLUGIN_DATA_DIR>/about/workspace.md`, and `<PLUGIN_DATA_DIR>/about/tracker-memory.md` if they exist.
+
+**Merge state:** treat a field as already-populated if it has real content in either path. Notion profile pages are authoritative when both exist and differ.
 
 **`--reset` mode:**
 1. Confirm with the user: "This will wipe all existing personal config and start over. Continue? (y/n)"
@@ -99,7 +110,7 @@ Use the Read tool to read `<PLUGIN_DATA_DIR>/about/identity.md`, `<PLUGIN_DATA_D
 **Default mode (no flag):**
 1. Identify which sections still have `<TBD>` placeholder values.
 2. Skip already-populated fields. Only ask about gaps.
-3. If all three files are fully populated, surface that and exit cleanly: "Already onboarded as <Display name>. Run `/assistant-setup --update` to refresh, or `/assistant-setup --reset` to start over."
+3. If all fields are fully populated: output "Already onboarded as <Display name>. Run `/assistant-setup --update` to refresh, or `/assistant-setup --reset` to start over." **Skip Steps 2–7. Go directly to Step 7b now.**
 
 In any mode, if the templates don't exist (`about/templates/`), surface the error — the plugin is malformed.
 
@@ -306,6 +317,63 @@ Then write the five files using their **absolute literal paths** (substitute `$P
 - **`--reset` mode:** Write all fields from scratch using the collected answers.
 
 If voice scraping ran, also write `<PLUGIN_DATA_DIR>/about/voice-scrape-samples.md` now.
+
+### Step 7b – Write private Notion profile pages ⚠️ ALWAYS RUN
+
+**1. Ensure parent page exists:**
+`notion-search("AISE Profile — {display_name}")` — if found, capture the page ID as `parent_id`; if not found, call `notion-create-pages` with `parent: { type: "workspace", workspace: true }`, title `AISE Profile — {display_name}`, empty body. Capture the returned ID as `parent_id`. (Check first to avoid duplicates that aise-assistant may have already created.)
+
+**2. Ensure Identity child:**
+`notion-search("AISE Identity — {display_name}")` — if found, call `notion-update-page(page_id, content)` with current identity values; if not found, call `notion-create-pages` with `parent: { type: "page_id", page_id: parent_id }`, title `AISE Identity — {display_name}`, body:
+```
+Preferred name: {value}
+Display name: {value}
+Timezone: {value}
+Working hours: {value}
+Role: {value}
+Team: {value}
+Manager: {value}
+Email: {value}
+Accent variants: {value or "none"}
+```
+This page is shared with aise-assistant — always write current values regardless of which plugin created it.
+
+**3. Ensure Leadership Preferences child:**
+`notion-search("AISE Leadership Preferences — {display_name}")` — if found, `notion-update-page`; if not found, `notion-create-pages` with `parent: { type: "page_id", page_id: parent_id }`, title `AISE Leadership Preferences — {display_name}`, body:
+```
+## Voice
+Sign-off: {value}
+Em dashes: {value}
+Semicolons: {value}
+English variant: {value}
+Casual register: {value}
+{specific patterns from scraping, if run}
+
+## Workspace
+Conferencing tool: {value}
+Slack AISE channel: {value}
+Slack leadership channel: {value}
+Slack CS org channel: {value}
+Manager: {value}
+Commercial partner: {value}
+PS Ops contact: {value}
+Gong session keywords: {value}
+Report output format — weekly: {value}
+Report output format — monthly: {value}
+Report output format — quarterly: {value}
+```
+
+**4. Ensure Team Roster child:**
+`notion-search("AISE Leadership Team Roster — {display_name}")` — if found, `notion-update-page`; if not found, `notion-create-pages` with `parent: { type: "page_id", page_id: parent_id }`, title `AISE Leadership Team Roster — {display_name}`, body = the confirmed roster table from Step 2.5:
+```
+| Name | Email | Notion User ID | Active |
+|---|---|---|---|
+| {name} | {email} | {uuid} | Yes/No |
+```
+
+**Never create or touch `AISE Assistant Preferences — {display_name}`.**
+
+Output: "Profile pages written to Notion (private): [AISE Profile ↗] → [Identity ↗] [Leadership Preferences ↗] [Team Roster ↗]"
 
 ### Step 8 – Confirm
 

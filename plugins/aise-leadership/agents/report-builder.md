@@ -14,17 +14,16 @@ Two modes. Read the invocation to determine which to run.
 
 **Do not Glob. Do not search plugin paths. Do not guess. Follow these steps in order.**
 
-**Step A — Read the pointer file:**
-Use the Read tool on `~/.claude/aise-leadership.datadir`. The file content is `PLUGIN_DATA_DIR` — the absolute path to the plugin's persistent data directory. This is the only reliable way to locate `about/` files; the `CLAUDE_PLUGIN_DATA` env variable is a volatile temp path and must never be used.
+**Step A (CLI):**
+Use the Read tool on `~/.claude/aise-leadership.datadir`. The file content is `PLUGIN_DATA_DIR`. Read `{PLUGIN_DATA_DIR}/about/identity.md` and `{PLUGIN_DATA_DIR}/about/workspace.md` and `{PLUGIN_DATA_DIR}/about/team-roster.md`. `CLAUDE_PLUGIN_DATA` env variable must never be used.
 
-**Step B — Read identity:**
-Read `{PLUGIN_DATA_DIR}/about/identity.md` to get the current user's `notion_user_id` and display name.
+**Step B (Cowork — if Read blocked):**
+1. Call `notion-get-users` → UUID, display name.
+2. `notion-search("AISE Identity — {display_name}")` → `notion-fetch` → parse name, timezone, UUID.
+3. `notion-search("AISE Leadership Preferences — {display_name}")` → `notion-fetch` → parse workspace fields.
+4. `notion-search("AISE Leadership Team Roster — {display_name}")` → `notion-fetch` → parse roster table (used to scope Notion queries to the leader's team).
 
-**If `identity.md` does not exist, or contains `<TBD>` placeholder values:**
-Call `notion-get-users`. Match the current user by the name given in the command invocation (e.g. "Klara" in `/report --aise Klara`) or by email if known. If a unique match is found, use that UUID and note in chat: "identity.md not configured — resolved identity via Notion users. Run `/assistant-setup` to set up the leadership plugin." If no match is found, list the top candidates and ask once.
-
-**Step C — Read workspace (for Notion write steps only):**
-Read `{PLUGIN_DATA_DIR}/about/workspace.md`. If the file does not exist or has `<TBD>` values, skip the Notion write step and note it in chat.
+**Step C:** Proceed with resolved values. If any page is not found in Step B, note the gap in chat and prompt the user to run `/assistant-setup`.
 
 ---
 

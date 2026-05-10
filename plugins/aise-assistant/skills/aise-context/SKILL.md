@@ -16,7 +16,8 @@ Read the following to load full operating context before doing any work:
 
 **Cowork (Read tool blocked):**
 1. Call `notion-get-users` → UUID, display name, email.
-2. `notion-search("AISE Profile — {display_name}")` → `notion-fetch(page_id)` → parse `## Identity`, `## Voice`, `## Workspace` sections.
+2. `notion-search("AISE Identity — {display_name}")` → `notion-fetch(page_id)` → parse identity fields (name, timezone, UUID).
+3. `notion-search("AISE Assistant Preferences — {display_name}")` → `notion-fetch(page_id)` → parse Voice + Workspace sections.
 
 If neither path returns data: prompt the user to run `/assistant-setup` before continuing.
 

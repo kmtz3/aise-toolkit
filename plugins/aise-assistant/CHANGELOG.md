@@ -5,6 +5,18 @@ Format: `## [version] — YYYY-MM-DD` followed by bullet points grouped by type.
 
 ---
 
+## [2.7.0] — 2026-05-10
+
+### Changed
+- `agents/assistant-onboarding.md` Step 1 Path A: replaced single `AISE Profile` page search with three separate searches — `AISE Identity — {display_name}` (identity fields) and `AISE Assistant Preferences — {display_name}` (Voice + Workspace); both work in CLI and Cowork
+- `agents/assistant-onboarding.md` Step 7b: replaced single `AISE Profile` Notion page write with a 3-page hierarchy — parent `AISE Profile`, child `AISE Identity`, child `AISE Assistant Preferences`; parent created with `workspace` parent type (private); children created with `page_id` parent pointing to the parent; never touches `AISE Leadership Preferences` or `AISE Leadership Team Roster` pages
+- `agents/daily-brief.md` Step 1 Option 2: updated Notion profile lookup to use `AISE Identity — {display_name}` page instead of `AISE Profile`; simplified to `notion-get-users` + identity page search only (Preferences page not needed for brief)
+- `agents/daily-brief.md` Step 1 Option 3 fallback message updated to reference `AISE Identity page`
+- `CLAUDE.md`: Cowork path resolver updated to use `AISE Identity` + `AISE Assistant Preferences` page names; "Finding these files" row updated to match
+- `skills/aise-context/SKILL.md`: Cowork resolver updated to search `AISE Identity` and `AISE Assistant Preferences` instead of `AISE Profile`
+
+---
+
 ## [2.6.3] — 2026-05-10
 
 ### Fixed

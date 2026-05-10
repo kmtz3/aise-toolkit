@@ -8,10 +8,11 @@ This file is always loaded. It points at the detail — don't duplicate it here.
 
 > **Path resolver.** The `SessionStart` hook writes the real persistent directory to `~/.claude/aise-leadership.datadir`. To resolve `<PLUGIN_DATA_DIR>`:
 > - **Claude Code CLI:** use the **Read tool** on `~/.claude/aise-leadership.datadir` — the file's content is the absolute path.
-> - **Cowork (Read tool blocked):** use osascript — `do shell script "cat $HOME/.claude/aise-leadership.datadir"` — which runs natively on the Mac and can always reach `~/.claude/`. The `Control your Mac` MCP exposes this as `mcp__Control_your_Mac__osascript`.
+> - **Cowork (Read tool blocked):** call `notion-get-users` for UUID + display name; then:
+>   - `notion-search("AISE Identity — {display_name}")` + `notion-fetch` → name, timezone, UUID (always)
+>   - `notion-search("AISE Leadership Preferences — {display_name}")` + `notion-fetch` → voice + workspace (when needed)
+>   - `notion-search("AISE Leadership Team Roster — {display_name}")` + `notion-fetch` → team roster (when scoping queries to team)
 > - **Never use the `CLAUDE_PLUGIN_DATA` environment variable** — it is volatile and outside connected folders in most contexts.
->
-> Once `PLUGIN_DATA_DIR` is resolved, use the same two-path pattern for each `about/` file: Read tool first; if blocked, osascript `do shell script "cat {PLUGIN_DATA_DIR}/about/identity.md"`.
 
 **Address the user by name.** Read `<PLUGIN_DATA_DIR>/about/identity.md` for the user's display name and use it naturally in chat output.
 
@@ -21,7 +22,7 @@ This file is always loaded. It points at the detail — don't duplicate it here.
 
 ### Per-user (always read first when user values are needed)
 
-> **Finding these files:** `<PLUGIN_DATA_DIR>` is the path in `~/.claude/aise-leadership.datadir`. In CLI Bash: `PLUGIN_DATA_DIR=$(cat "$HOME/.claude/aise-leadership.datadir")`. In Cowork: osascript `do shell script "cat $HOME/.claude/aise-leadership.datadir"` (Read tool is blocked in Cowork — see path resolver above).
+> **Finding these files — CLI:** Read `~/.claude/aise-leadership.datadir` → `PLUGIN_DATA_DIR`. **Cowork:** `notion-get-users` for identity; `notion-search("AISE Identity — {display_name}") → notion-fetch` for name/timezone/UUID; `notion-search("AISE Leadership Preferences — {display_name}") → notion-fetch` for voice + workspace; `notion-search("AISE Leadership Team Roster — {display_name}") → notion-fetch` for team roster.
 
 | File | When to read |
 |---|---|
