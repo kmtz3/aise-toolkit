@@ -1,5 +1,10 @@
 # Changelog — aise-leadership
 
+## [1.4.1] — 2026-05-10
+
+### Fixed
+- `CLAUDE.md`: added Cowork osascript fallback to the path resolver — when Read tool is blocked, use `mcp__Control_your_Mac__osascript` with `do shell script "cat $HOME/.claude/aise-leadership.datadir"` to reach `~/.claude/`; matches the pattern already working in aise-assistant; added "Finding these files" note to the per-user table identical to aise-assistant's
+
 ## [1.4.0] — 2026-05-10
 
 ### Added

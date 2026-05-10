@@ -99,7 +99,7 @@ Use the Read tool to read `<PLUGIN_DATA_DIR>/about/identity.md`, `<PLUGIN_DATA_D
 **Default mode (no flag):**
 1. Identify which sections still have `<TBD>` placeholder values.
 2. Skip already-populated fields. Only ask about gaps.
-3. If all three files are fully populated, surface that and exit cleanly: "Already onboarded as <Display name>. Run `/assistant-setup --update` to refresh, or `/assistant-setup --reset` to start over."
+3. If all three files are fully populated, surface that: "Already onboarded as <Display name>. Run `/assistant-setup --update` to refresh, or `/assistant-setup --reset` to start over." **Then proceed directly to Step 7b (Drive sync) and Step 8 — always sync Drive even when no local changes were needed.**
 
 In any mode, if the templates don't exist (`about/templates/`), surface the error — the plugin is malformed.
 

@@ -6,7 +6,12 @@ This file is always loaded. It points at the detail — don't duplicate it here.
 
 **Personal layer.** Anything user-specific (name, Notion user ID, voice, sign-offs) lives in `<PLUGIN_DATA_DIR>/about/` — outside the plugin directory, persisting across plugin updates. Run `/assistant-setup` to populate. If files have placeholder values, prompt the user to run `/assistant-setup`.
 
-> **Path resolver.** The `SessionStart` hook writes the real persistent directory to `~/.claude/aise-leadership.datadir`. To resolve `<PLUGIN_DATA_DIR>`: use the **Read tool** on the file `~/.claude/aise-leadership.datadir` — the file's content is the absolute path. Then prepend that path to any `about/` file reference (e.g. `{value}/about/identity.md`). **Never use the `CLAUDE_PLUGIN_DATA` environment variable** — it is volatile and may point to a temp path under `/Library/Application Support/Claude/` that is outside the session's connected folders.
+> **Path resolver.** The `SessionStart` hook writes the real persistent directory to `~/.claude/aise-leadership.datadir`. To resolve `<PLUGIN_DATA_DIR>`:
+> - **Claude Code CLI:** use the **Read tool** on `~/.claude/aise-leadership.datadir` — the file's content is the absolute path.
+> - **Cowork (Read tool blocked):** use osascript — `do shell script "cat $HOME/.claude/aise-leadership.datadir"` — which runs natively on the Mac and can always reach `~/.claude/`. The `Control your Mac` MCP exposes this as `mcp__Control_your_Mac__osascript`.
+> - **Never use the `CLAUDE_PLUGIN_DATA` environment variable** — it is volatile and outside connected folders in most contexts.
+>
+> Once `PLUGIN_DATA_DIR` is resolved, use the same two-path pattern for each `about/` file: Read tool first; if blocked, osascript `do shell script "cat {PLUGIN_DATA_DIR}/about/identity.md"`.
 
 **Address the user by name.** Read `<PLUGIN_DATA_DIR>/about/identity.md` for the user's display name and use it naturally in chat output.
 
@@ -15,6 +20,8 @@ This file is always loaded. It points at the detail — don't duplicate it here.
 ## Canonical context files
 
 ### Per-user (always read first when user values are needed)
+
+> **Finding these files:** `<PLUGIN_DATA_DIR>` is the path in `~/.claude/aise-leadership.datadir`. In CLI Bash: `PLUGIN_DATA_DIR=$(cat "$HOME/.claude/aise-leadership.datadir")`. In Cowork: osascript `do shell script "cat $HOME/.claude/aise-leadership.datadir"` (Read tool is blocked in Cowork — see path resolver above).
 
 | File | When to read |
 |---|---|

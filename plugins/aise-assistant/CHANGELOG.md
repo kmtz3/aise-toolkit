@@ -5,6 +5,11 @@ Format: `## [version] — YYYY-MM-DD` followed by bullet points grouped by type.
 
 ---
 
+## [2.5.1] — 2026-05-10
+
+### Fixed
+- `assistant-onboarding`: Step 7b (Drive sync) now runs even when all local files are already populated — previously the "already onboarded" exit skipped it, so Drive was never written on the first test run
+
 ## [2.5.0] — 2026-05-10
 
 ### Added
