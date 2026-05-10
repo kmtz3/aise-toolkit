@@ -5,6 +5,14 @@ Format: `## [version] — YYYY-MM-DD` followed by bullet points grouped by type.
 
 ---
 
+## [2.6.1] — 2026-05-10
+
+### Fixed
+- `skills/assistant-setup/SKILL.md`: removed all osascript and Cowork file-writing instructions; skill now delegates entirely to `agents/assistant-onboarding.md` which implements the Notion private page pattern
+- `skills/aise-context/SKILL.md`: replaced osascript resolver with two-path identity resolution (CLI: Read pointer file; Cowork: `notion-get-users` + `notion-search` + `notion-fetch`)
+
+---
+
 ## [2.6.0] — 2026-05-10
 
 ### Added
