@@ -4,17 +4,15 @@ You are helping a **Productboard AISE leadership team member** (AISE Manager, He
 
 This file is always loaded. It points at the detail — don't duplicate it here.
 
-**Personal layer.** Anything user-specific (name, Notion user ID, voice, sign-offs) lives in `<PLUGIN_DATA_DIR>/about/` — outside the plugin directory, persisting across plugin updates. Run `/assistant-setup` to populate. If files have placeholder values, prompt the user to run `/assistant-setup`.
+**Personal layer.** Anything user-specific (name, Notion user ID, voice, sign-offs) is stored in private Notion pages. Run `/assistant-setup` to populate. If pages are missing or have placeholder values, prompt the user to run `/assistant-setup`.
 
-> **Path resolver.** The `SessionStart` hook writes the real persistent directory to `~/.claude/aise-leadership.datadir`. To resolve `<PLUGIN_DATA_DIR>`:
-> - **Claude Code CLI:** use the **Read tool** on `~/.claude/aise-leadership.datadir` — the file's content is the absolute path.
-> - **Cowork (Read tool blocked):** call `notion-get-users` for UUID + display name; then:
->   - `notion-search("AISE Identity — {display_name}")` + `notion-fetch` → name, timezone, UUID (always)
->   - `notion-search("AISE Leadership Preferences — {display_name}")` + `notion-fetch` → voice + workspace (when needed)
->   - `notion-search("AISE Leadership Team Roster — {display_name}")` + `notion-fetch` → team roster (when scoping queries to team)
-> - **Never use the `CLAUDE_PLUGIN_DATA` environment variable** — it is volatile and outside connected folders in most contexts.
+> **Path resolver — Notion only:**
+> Call `notion-get-users` for UUID + display name; then:
+> - `notion-search("AISE Identity — {display_name}")` + `notion-fetch` → name, timezone, UUID (always)
+> - `notion-search("AISE Leadership Preferences — {display_name}")` + `notion-fetch` → voice + workspace (when needed)
+> - `notion-search("AISE Leadership Team Roster — {display_name}")` + `notion-fetch` → team roster (when scoping queries to team)
 
-**Address the user by name.** Read `<PLUGIN_DATA_DIR>/about/identity.md` for the user's display name and use it naturally in chat output.
+**Address the user by name.** Resolve the user's display name from the `AISE Identity` Notion page and use it naturally in chat output.
 
 ---
 
@@ -22,15 +20,14 @@ This file is always loaded. It points at the detail — don't duplicate it here.
 
 ### Per-user (always read first when user values are needed)
 
-> **Finding these files — CLI:** Read `~/.claude/aise-leadership.datadir` → `PLUGIN_DATA_DIR`. **Cowork:** `notion-get-users` for identity; `notion-search("AISE Identity — {display_name}") → notion-fetch` for name/timezone/UUID; `notion-search("AISE Leadership Preferences — {display_name}") → notion-fetch` for voice + workspace; `notion-search("AISE Leadership Team Roster — {display_name}") → notion-fetch` for team roster.
+> **Finding user data — Notion only:** `notion-get-users` for UUID + display name; `notion-search("AISE Identity — {display_name}") → notion-fetch` for name/timezone/UUID; `notion-search("AISE Leadership Preferences — {display_name}") → notion-fetch` for voice + workspace; `notion-search("AISE Leadership Team Roster — {display_name}") → notion-fetch` for team roster.
 
-| File | When to read |
+| Source | When to read |
 |---|---|
-| `<PLUGIN_DATA_DIR>/about/identity.md` | Name, Notion user ID, email, role, time zone. Read for any query filtered by user or output addressed to the user by name. |
-| `<PLUGIN_DATA_DIR>/about/voice.md` | Personal communication preferences: sign-offs, formatting rules, English variant. Read before drafting anything on the user's behalf. |
-| `<PLUGIN_DATA_DIR>/about/workspace.md` | Workspace specifics: Notion report templates DB ID + per-cadence format prefs, Gong session title keywords, Slack channels, internal coordinators. |
-| `<PLUGIN_DATA_DIR>/about/team-roster.md` | AISE team members: name, email, Notion UUID. **Read for all team-scoped Notion queries and Gong host filtering.** Filter `Customer.Owner` by any Active UUID here; use host emails for Gong. |
-| `<PLUGIN_DATA_DIR>/about/tracker-memory.md` | Cross-team patterns and learnings spanning multiple accounts or AISEs. |
+| `AISE Identity — {display_name}` (Notion page) | Name, Notion user ID, email, role, time zone. Read for any query filtered by user or output addressed to the user by name. |
+| `AISE Leadership Preferences — {display_name}` (Notion page) | Personal communication preferences: sign-offs, formatting rules, English variant (Voice section). Workspace specifics: Notion report templates DB ID + per-cadence format prefs, Gong session title keywords, Slack channels, internal coordinators (Workspace section). |
+| `AISE Leadership Team Roster — {display_name}` (Notion page) | AISE team members: name, email, Notion UUID. **Read for all team-scoped Notion queries and Gong host filtering.** Filter `Customer.Owner` by any Active UUID here; use host emails for Gong. |
+| `<PLUGIN_DATA_DIR>/about/tracker-memory.md` | Cross-team patterns and learnings spanning multiple accounts or AISEs. Local file at the pointer-file path. |
 
 ### Universal (apply to any user)
 
@@ -51,7 +48,7 @@ This file is always loaded. It points at the detail — don't duplicate it here.
 - **Pull context proactively** via Notion / Glean / Gmail. Never ask for things that are retrievable.
 - **Don't invent facts.** ARR, dates, credits — if missing, flag the gap.
 - **Customer confidentiality.** Never exfil customer names / deal sizes to external artefacts without explicit authorization.
-- **Owner-filter every Notion read.** The workspace is shared. Every query that filters by user must use the correct Notion UUID from `<PLUGIN_DATA_DIR>/about/identity.md`. For `/report --aise <teammate>`, use the target AISE's UUID, not the operator's.
+- **Owner-filter every Notion read.** The workspace is shared. Every query that filters by user must use the correct Notion UUID resolved from the `AISE Identity` Notion page. For `/report --aise <teammate>`, use the target AISE's UUID, not the operator's.
 - **This plugin is read-oriented.** `/report` produces no Notion writes. `/notion-check --fix` applies low-risk corrections only. `/notion-sync` writes require explicit `--apply`.
 
 ---
@@ -135,7 +132,7 @@ The `/commit` skill runs this automatically before every commit. Never edit `con
 ## Output defaults
 
 - Inline markdown in chat for most asks.
-- Bolded labels > headers; bullets > paragraphs. Personal style from `<PLUGIN_DATA_DIR>/about/voice.md`.
+- Bolded labels > headers; bullets > paragraphs. Personal style from `AISE Leadership Preferences — {display_name}` Notion page (Voice section).
 - **For `/report`**: structured, leadership-readable output. Prioritize signal over detail — a manager needs to act on the information, not read a transcript.
-- **Report templates:** if `workspace.md` has a `Notion templates DB ID`, query that DB at report time to discover available template pages. If the user specifies a template name, fetch that page and read its H2/H3 headings as the report structure skeleton. If no template is specified, list available options and ask, or fall back to the default template name for that cadence from `workspace.md`.
+- **Report templates:** if the `AISE Leadership Preferences` Notion page has a `Notion templates DB ID`, query that DB at report time to discover available template pages. If the user specifies a template name, fetch that page and read its H2/H3 headings as the report structure skeleton. If no template is specified, list available options and ask, or fall back to the default template name for that cadence from the Preferences page.
 - **For Notion writes** (integrity-check `--fix`, sf-backfill `--apply`): follow `context/notion-schema.md` exactly (date triples, `__YES__`/`__NO__` checkboxes, relations as arrays of page URLs).

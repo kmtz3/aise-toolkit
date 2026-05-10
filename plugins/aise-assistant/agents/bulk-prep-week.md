@@ -20,8 +20,7 @@ Not your job: prep sessions that already have a `📋 Prep` toggle; confirm or s
 
 - Default: today through today + 7 calendar days.
 - If `--week YYYY-MM-DD` is provided, use that Monday → following Sunday (inclusive).
-- **Resolve PLUGIN_DATA_DIR first:** use the Read tool on `~/.claude/aise-assistant.datadir` — the file content is the absolute path. Never use the `CLAUDE_PLUGIN_DATA` env variable.
-- Read `{PLUGIN_DATA_DIR}/about/identity.md` to get the user's Notion user ID and email domain.
+- **Resolve identity:** Call `notion-get-users` → get UUID and `display_name`. Then `notion-search("AISE Identity — {display_name}")` + `notion-fetch(page_id)` → parse `notion_user_id`, name, email domain. If not found, prompt the user to run `/assistant-setup` and stop.
 - Parse `--skip` and `--force` values into two lists for use in later steps.
 
 ### 2. Pull calendar events

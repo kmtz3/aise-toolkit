@@ -5,6 +5,20 @@ Format: `## [version] — YYYY-MM-DD` followed by bullet points grouped by type.
 
 ---
 
+## [2.8.0] — 2026-05-10
+
+### Changed
+- `agents/assistant-onboarding.md`: removed Path B (local file read via `~/.claude/aise-assistant.datadir`) from Step 1 — Notion-only resolver now; removed Step 7 (local `about/` file writes via Bash mkdir + Write tool) entirely — Notion profile pages are the only output; updated `--reset` mode to not delete local files; updated frontmatter description, end-state line, and Step 8 report to reference Notion pages instead of local files; guardrails updated to reflect Notion-only output
+- `agents/bulk-account-setup.md`: replaced PLUGIN_DATA_DIR Step A resolver with Notion-only resolver (`notion-get-users` + `AISE Identity` page)
+- `agents/bulk-prep-week.md`: replaced PLUGIN_DATA_DIR Step A resolver with Notion-only resolver
+- `agents/daily-brief.md`: merged Option 1 (CLI local file) + Option 2 (Cowork Notion) + Option 3 (fallback) into a single universal Notion-only identity resolution path
+- `agents/diagram-builder.md`: replaced PLUGIN_DATA_DIR resolver in Content rules with Notion-only resolver
+- `agents/notion-ask.md` Step 4.1: removed Step A (local file read), Step B is now the sole resolver renamed to "Resolve identity"
+- `CLAUDE.md`: path resolver note updated to Notion-only (removed CLI pointer-file path); per-user file table rows updated to reference `AISE Identity` and `AISE Assistant Preferences` Notion pages; `tracker-memory.md` row kept pointing to local file; Install/upgrade section updated; Output defaults updated
+- `skills/aise-context/SKILL.md`: removed CLI section, Notion-only resolver
+
+---
+
 ## [2.7.1] — 2026-05-10
 
 ### Fixed

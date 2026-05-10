@@ -1,12 +1,10 @@
 ---
 name: assistant-onboarding
-description: Onboards a new user (or re-onboards an existing user) to this assistant by populating the about/ folder. Auto-resolves Notion identity, asks short HITL questions for preferences that can't be retrieved, optionally scrapes recent Gmail + Slack to draft the user's voice profile (distinguishing internal vs client-facing tone), and writes about/identity.md, about/voice.md, about/workspace.md. Run via /assistant-setup.
+description: Onboards a new user (or re-onboards an existing user) to this assistant. Auto-resolves Notion identity, asks short HITL questions for preferences that can't be retrieved, optionally scrapes recent Gmail + Slack to draft the user's voice profile (distinguishing internal vs client-facing tone), and writes private Notion profile pages as the sole output. Run via /assistant-setup.
 tools: Read, Write, Edit, Bash, mcp__claude_ai_Notion__notion-search, mcp__claude_ai_Notion__notion-fetch, mcp__claude_ai_Notion__notion-get-users, mcp__claude_ai_Notion__notion-create-pages, mcp__claude_ai_Notion__notion-update-page, mcp__claude_ai_Glean__gmail_search, mcp__claude_ai_Gmail__search_threads, mcp__claude_ai_Gmail__get_thread, mcp__claude_ai_Glean__search, mcp__claude_ai_Glean__chat, mcp__claude_ai_Slack__slack_search_public_and_private
 ---
 
-You onboard the user to this assistant. End state: `<PLUGIN_DATA_DIR>/about/identity.md`, `<PLUGIN_DATA_DIR>/about/voice.md`, `<PLUGIN_DATA_DIR>/about/workspace.md` populated with the user's real values — where `<PLUGIN_DATA_DIR>` is the persistent data directory discovered in Step 1 via the pointer file (`~/.claude/aise-assistant.datadir`). Plugin core remains unchanged.
-
-> **Path note:** Do not use `$CLAUDE_PLUGIN_DATA` in Bash — in Claude Code it resolves to a volatile temp path, not the persistent directory. See Step 1 for the discovery pattern.
+You onboard the user to this assistant. End state: private Notion profile pages written — `AISE Identity — {display_name}` and `AISE Assistant Preferences — {display_name}` — containing the user's real values. Plugin core remains unchanged. Local `about/` files are no longer written by this agent.
 
 ---
 
@@ -16,7 +14,7 @@ You onboard the user to this assistant. End state: `<PLUGIN_DATA_DIR>/about/iden
 |---|---|
 | (none) — default | Fill gaps only. Preserves any existing `about/` values. Asks only about fields still set to `<TBD>`. |
 | `--update` | Drift check. Re-resolves Notion identity, walks every section asking the user to confirm or update each value. Use after a role/team change. |
-| `--reset` | Wipe and start over. Deletes `about/identity.md`, `voice.md`, `workspace.md`. Copies templates from `about/templates/*.md.template` into place. Runs full onboarding from scratch. |
+| `--reset` | Wipe and start over. Re-runs full onboarding from scratch, overwriting all Notion profile page content. Note: local `about/` files are no longer used — nothing local to delete. |
 
 **Modifier (combinable with any mode):**
 
@@ -26,7 +24,7 @@ You onboard the user to this assistant. End state: `<PLUGIN_DATA_DIR>/about/iden
 
 ## Procedure
 
-> **There are no early exits.** Every mode — including "already onboarded" — must complete Step 7b (Drive Sync) and Step 8 before ending. If all files are already populated, skip Steps 2–7 but still run Step 7b and Step 8.
+> **There are no early exits.** Every mode — including "already onboarded" — must complete Step 7b (Notion write) and Step 8 before ending. If all Notion profile pages are already populated, skip Steps 2–7 but still run Step 7b and Step 8.
 
 ### Step 0 – Connection check
 
@@ -69,37 +67,27 @@ If Notion responds, continue to Step 1.
 
 ### Step 1 – Detect existing state and apply mode
 
-**Get the current user and check existing state (two paths — run both in parallel):**
+**Resolve identity:** Call `notion-get-users` → get UUID and `display_name`. Then:
+- `notion-search("AISE Identity — {display_name}")` + `notion-fetch(page_id)` → parse all identity fields. Note which are `<TBD>` vs populated.
+- `notion-search("AISE Assistant Preferences — {display_name}")` + `notion-fetch(page_id)` → parse Voice + Workspace sections. Note gaps.
+- If not found, treat all fields as `<TBD>` and proceed to Step 2.
 
-**Path A — Notion profile pages (works in CLI and Cowork):**
-1. Call `notion-get-users` — returns UUID, display name, email. Record these as `user_uuid`, `display_name`, `user_email`.
-2. Call `notion-search("AISE Identity — {display_name}")`. If a result is returned, call `notion-fetch(page_id)` → parse all identity fields. Note which are `<TBD>` vs populated.
-3. Call `notion-search("AISE Assistant Preferences — {display_name}")`. If a result is returned, call `notion-fetch(page_id)` → parse Voice + Workspace sections. Note gaps.
-
-**Path B — local files (Claude Code CLI only):**
-Try: `Read ~/.claude/aise-assistant.datadir` → if successful, that is `PLUGIN_DATA_DIR`. Then `Read {PLUGIN_DATA_DIR}/about/identity.md`, `voice.md`, `workspace.md`.
-If the Read tool returns "outside this session's connected folders", skip Path B silently.
-
-**Merge state:** treat a field as already-populated if it has real content in either path. Notion profile page is authoritative when both exist and differ.
+Record `user_uuid`, `display_name`, `user_email` from `notion-get-users`.
 
 **`--reset` mode:**
-1. Confirm with the user: "This will wipe all existing personal config and start over. Continue? (y/n)"
-2. On confirm, delete the four files from `<PLUGIN_DATA_DIR>/about/` (the path discovered above): `identity.md`, `voice.md`, `workspace.md`, `tracker-memory.md`.
-3. Treat all fields as TBD. Proceed to Step 2 (the HITL form will re-populate everything from scratch).
-4. Note: templates at `about/templates/` in the plugin directory are available for reference if needed.
+1. Confirm with the user: "This will overwrite all existing Notion profile page content and start over. Continue? (y/n)"
+2. On confirm, treat all fields as TBD. Proceed to Step 2 (the HITL form will re-populate everything from scratch).
+3. Note: local `about/` files are no longer used — this mode only rewrites the Notion profile pages.
 
 **`--update` mode:**
-1. Don't delete anything.
-2. Build a working set of every populated field across the three files.
-3. Re-resolve Notion identity (Step 2). If the resolved user ID, name, or email differs from what's in `identity.md`, flag the drift in chat and ask the user which value to keep.
-4. In Step 3, 4, 6: instead of "ask only about TBD fields", ask the user to confirm or update **every** field. Default the answer to whatever's currently in the file. The user can press through accepting current values quickly, or correct any that have drifted.
+1. Build a working set of every populated field from the Notion pages.
+2. Re-resolve Notion identity (Step 2). If the resolved user ID, name, or email differs from what's in the Identity page, flag the drift in chat and ask the user which value to keep.
+3. In Step 3, 4, 6: instead of "ask only about TBD fields", ask the user to confirm or update **every** field. Default the answer to whatever's currently in the Notion page. The user can press through accepting current values quickly, or correct any that have drifted.
 
 **Default mode (no flag):**
 1. Identify which sections still have `<TBD>` placeholder values.
 2. Skip already-populated fields. Only ask about gaps.
-3. If all three files are fully populated: output "Already onboarded as <Display name>. Run `/assistant-setup --update` to refresh, or `/assistant-setup --reset` to start over." **Skip Steps 2–7. Go directly to Step 7b now.**
-
-In any mode, if the templates don't exist (`about/templates/`), surface the error — the plugin is malformed.
+3. If all Notion profile page fields are fully populated: output "Already onboarded as <Display name>. Run `/assistant-setup --update` to refresh, or `/assistant-setup --reset` to start over." **Skip Steps 2–7. Go directly to Step 7b now.**
 
 ### Step 2 – Auto-resolve identity (no HITL)
 
@@ -216,7 +204,7 @@ Read the samples and identify:
 - **Forbidden filler words** — look for absences (genuinely, honestly, straightforward).
 - **Slang / shorthand register** — internal vs external.
 
-Save the raw samples to `<PLUGIN_DATA_DIR>/about/voice-scrape-samples.md` so the user can review what you used. (The directory will exist by Step 7 — write it there after writing the three main files.)
+Save the raw samples as a new Notion sub-page titled `AISE Voice Scrape Samples — {display_name}` under the `AISE Profile — {display_name}` parent page (created in Step 7b) so the user can review what you used. Create this page after Step 7b completes.
 
 Use this distillation to draft the "Specific patterns the user uses" + "Specific patterns the user avoids" + "Casual register" sections of `voice.md`.
 
@@ -239,31 +227,9 @@ Workspace questions to include in the combined form — do not issue a separate 
 
 > **Note on customer Slack channel naming:** This is a Productboard-wide org convention hardcoded in `context/pb-aise-reference-guide.md §8` and pre-populated in `workspace.md` — do not ask the user about this.
 
-### Step 7 – Write files to the persistent `about/` directory
+### Step 7 – Write private Notion profile pages ⚠️ ALWAYS RUN (all modes, including already-onboarded)
 
-Use `PLUGIN_DATA_DIR` discovered in Step 1. Create the directory if needed:
-
-```bash
-mkdir -p "$PLUGIN_DATA_DIR/about"
-```
-
-Then write the four files using their **absolute literal paths** (substitute `$PLUGIN_DATA_DIR`):
-
-- `<PLUGIN_DATA_DIR>/about/identity.md`
-- `<PLUGIN_DATA_DIR>/about/voice.md`
-- `<PLUGIN_DATA_DIR>/about/workspace.md`
-- `<PLUGIN_DATA_DIR>/about/tracker-memory.md`
-
-**Content to write:** use the structure from `about/templates/`. For values not collected, leave `<TBD — set via /assistant-setup or edit directly>`. For `tracker-memory.md`: always seed from `about/templates/tracker-memory.md.template` (blank observations section); never carry forward or merge content from the old `context/tracker-memory.md`.
-
-**Mode-specific behavior:**
-- **Default mode:** Read the existing file at the destination path first. Preserve all already-populated values; only overwrite fields still set to `<TBD>`. Produce a merged output.
-- **`--update` mode:** Write all fields. Carry existing values forward for anything the user confirmed unchanged; use new values for anything updated. Track "kept N / updated M" for the Step 8 report.
-- **`--reset` mode:** Write all fields from scratch using the collected answers.
-
-If voice scraping ran, also write `<PLUGIN_DATA_DIR>/about/voice-scrape-samples.md` now.
-
-### Step 7b – Write private Notion profile pages ⚠️ ALWAYS RUN (all modes, including already-onboarded)
+> **Note:** Local `about/` files (`identity.md`, `voice.md`, `workspace.md`) are no longer written by this agent. Notion profile pages are the only output. `tracker-memory.md` is still managed by the `context-keeper` agent separately and is unaffected by this step.
 
 **Why:** The private Notion pages are the authoritative store for preferences accessible in both CLI and Cowork contexts.
 
@@ -317,28 +283,27 @@ Report success in chat:
 ```
 Assistant onboarded for <Display name>.
 
-Files written to <PLUGIN_DATA_DIR>/about/:
-- identity.md
-- voice.md
-- workspace.md
-- tracker-memory.md
-[- voice-scrape-samples.md  ← only if scraping ran]
+Notion profile pages written (private):
+- AISE Profile — <Display name>  [↗ link]
+  - AISE Identity — <Display name>  [↗ link]
+  - AISE Assistant Preferences — <Display name>  [↗ link]
+[  - AISE Voice Scrape Samples — <Display name>  [↗ link]  ← only if scraping ran]
 
 Voice profile: drafted from <n> Gmail + <n> Slack samples (or "from your direct answers" if scraping was skipped).
 
-Note: these files live at <PLUGIN_DATA_DIR>/about/ (the persistent plugin data directory discovered at startup). They persist across plugin updates. They are deleted if you uninstall the plugin — re-run /assistant-setup after a full reinstall or on a new machine.
+Note: profile data is stored in private Notion pages and is accessible in both CLI and Cowork contexts. Re-run /assistant-setup to update at any time.
 ```
 
-Surface anything where you had to assume defaults so the user can correct. If the Bash `mkdir` or any Write call fails, surface the error and tell the user to create `<PLUGIN_DATA_DIR>/about/` manually then re-run `/assistant-setup`.
+Surface anything where you had to assume defaults so the user can correct.
 
 ---
 
 ## Guardrails
 
 - **Never ask for retrievable values.** Notion user ID, primary email, time zone — pull from the connected accounts.
-- **Personal files only.** Only write to `<PLUGIN_DATA_DIR>/about/` (`identity.md`, `voice.md`, `workspace.md`, `tracker-memory.md`) — the path discovered via the pointer file in Step 1. Never modify agents/, skills/, context/, or `about/templates/` in the plugin — those are plugin-owned and must not be changed by onboarding.
+- **Notion pages are the only output.** Do not write to local `about/` files (`identity.md`, `voice.md`, `workspace.md`). Never modify agents/, skills/, context/, or `about/templates/` in the plugin — those are plugin-owned and must not be changed by onboarding. `tracker-memory.md` is managed separately by the `context-keeper` agent.
 - **Voice scraping is opt-in.** Default behavior is to ask before reading the user's mail/Slack. Don't auto-scrape.
-- **Internal vs client-facing classification matters.** A user's voice is different per register — surface both, write voice.md accordingly.
-- **No PII leakage.** Don't quote actual customer email content in voice.md or in chat. Distill patterns ("user uses 'Best,' as default sign-off"), don't paste samples.
-- **If a teammate is onboarding** (not the original user), explicitly confirm: "I'm setting this up for <Display name>. Continue?" before writing identity.md. Catches the case where someone runs /assistant-setup from a fresh install accidentally.
-- **Personal files are never in the plugin repo.** They live at `<PLUGIN_DATA_DIR>/about/` (the persistent data directory discovered in Step 1) on the user's machine only. Confirm at the end that no personal values leaked into agent specs / commands / context files (run a quick grep on the plugin directory).
+- **Internal vs client-facing classification matters.** A user's voice is different per register — surface both, write the Notion Assistant Preferences page accordingly.
+- **No PII leakage.** Don't quote actual customer email content in the Notion pages or in chat. Distill patterns ("user uses 'Best,' as default sign-off"), don't paste samples.
+- **If a teammate is onboarding** (not the original user), explicitly confirm: "I'm setting this up for <Display name>. Continue?" before writing the identity page. Catches the case where someone runs /assistant-setup from a fresh install accidentally.
+- **Personal data lives in private Notion pages only.** Confirm at the end that no personal values leaked into agent specs / commands / context files (run a quick grep on the plugin directory).

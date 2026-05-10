@@ -12,7 +12,7 @@ Not your job: creating net-new Customer records, running `/customer-plan --full`
 
 ## Inputs
 
-- **Target user** (positional): "me" or blank → current user (from `about/identity.md`). A teammate name (e.g. "Alex Doe") → resolve to that person's Notion user ID.
+- **Target user** (positional): "me" or blank → current user (resolved via Notion). A teammate name (e.g. "Alex Doe") → resolve to that person's Notion user ID.
 - `--skip <customer>` — exclude a named customer from this run.
 - `--force <customer>` — include a customer even if it appears already set up.
 - `--dry-run` — discovery and queue presentation only; no writes of any kind.
@@ -23,10 +23,11 @@ Not your job: creating net-new Customer records, running `/customer-plan --full`
 
 ### 1. Identify the operator and the target user
 
-**Resolve PLUGIN_DATA_DIR first:** use the Read tool on `~/.claude/aise-assistant.datadir` — the file content is the absolute path. Never use the `CLAUDE_PLUGIN_DATA` env variable.
+**Resolve identity:** Call `notion-get-users` → get UUID and `display_name`. Then:
+- `notion-search("AISE Identity — {display_name}")` + `notion-fetch(page_id)` → parse `notion_user_id`, name, email, timezone.
+- If not found, prompt the user to run `/assistant-setup` and stop.
 
-Read `{PLUGIN_DATA_DIR}/about/identity.md`:
-- **Operator** = the person running this command (always from `{PLUGIN_DATA_DIR}/about/identity.md`). Their name appears in chat output; their UUID is used for nothing else.
+- **Operator** = the person running this command (resolved above). Their name appears in chat output; their UUID is used for nothing else.
 - **Target user** = whose accounts to set up.
   - Blank, "me", or omitted → `target_user = operator` (same UUID, same name, same email).
   - Teammate name given → call `notion-get-users` and find by name match. If multiple match, list candidates and ask for disambiguation before proceeding. Resolve to `target_uuid` + `target_name`.

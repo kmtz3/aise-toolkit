@@ -23,26 +23,18 @@ No required arguments. Optional:
 
 ### 1. Read user context
 
-**Resolve identity (try in order — stop at first success):**
-
-**Option 1 — local files (Claude Code CLI):**
-Read tool on `~/.claude/aise-assistant.datadir`. If it returns a path without error, that is `PLUGIN_DATA_DIR`. Read `{PLUGIN_DATA_DIR}/about/identity.md`.
-
-**Option 2 — Notion identity page (Cowork, or if local files unavailable):**
-If the Read tool returns "outside this session's connected folders":
+**Resolve identity:**
 1. Call `notion-get-users` → returns UUID, display name.
 2. `notion-search("AISE Identity — {display_name}")` → capture the first result's page ID.
 3. `notion-fetch(page_id)` → parse the page for preferred name and timezone.
+4. If the identity page is not found: use UUID and display name from `notion-get-users`. Default timezone to `Europe/Prague`. Note in the brief: "AISE Identity page not found — run `/assistant-setup` to configure."
 
-**Option 3 — Notion identity-only fallback:**
-If the identity page is not found: use UUID and display name from `notion-get-users`. Default timezone to `Europe/Prague`. Note in the brief: "AISE Identity page not found — run `/assistant-setup` to configure."
-
-Parse from identity.md:
+Parse from the identity page:
 - First name (for the greeting header).
 - Time zone (IANA, for correct midnight-to-midnight windows).
 - Notion user UUID (for Tasks query).
 
-If `identity.md` still contains `<TBD` values, skip the Notion steps and note it in the output. Prompt the user to run `/assistant-setup`.
+If the identity page contains `<TBD` values, note it in the output and prompt the user to run `/assistant-setup`.
 
 Compute:
 - **Target date** — today in the user's local time zone (or `--date` override). This is the "today" window.
@@ -125,7 +117,7 @@ Record: customer name, created slot (start–end), event ID.
 ### 6. Pull open Notion Tasks
 
 Query the Tasks DB (ID from `context/notion-schema.md`) filtered by:
-- `Owner = <user-uuid>` (from `about/identity.md`)
+- `Owner = <user-uuid>` (resolved in Step 1)
 - `Status` is not `Done` and not `Cancelled`
 
 For each task collect: title, Customer relation (display name), Due date, Priority (if the field exists), Status, Notion page URL.

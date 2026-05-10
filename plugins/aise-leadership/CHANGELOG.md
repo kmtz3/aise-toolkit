@@ -1,5 +1,19 @@
 # Changelog — aise-leadership
 
+## [1.6.0] — 2026-05-10
+
+### Changed
+- `agents/assistant-onboarding.md`: removed Path B (local file read via `~/.claude/aise-leadership.datadir`) from Step 1 — Notion-only resolver now; removed Step 7 (local `about/` file writes) entirely — Notion profile pages are the only output; updated `--reset` mode to not delete local files; updated frontmatter description, end-state line, and Step 8 report to reference Notion pages; guardrails updated to reflect Notion-only output
+- `agents/notion-ask.md` Step 4.1: removed Step A (local file read), Step B is now the sole resolver renamed to "Resolve identity"
+- `agents/notion-writer.md`: removed Step A (local file read) from identity resolution preamble; "Before every write" and ownership contract updated to reference Notion identity page instead of `identity.md`
+- `agents/notion-integrity-check.md`: removed Step A (local file read) from identity resolution preamble; Step 1 updated to use preamble-resolved UUID; all `about/identity.md` references replaced with `AISE Identity` Notion page references
+- `agents/sf-backfill.md`: removed Step A (local file read) from identity resolution preamble; Step 1 PLUGIN_DATA_DIR block removed
+- `agents/report-builder.md`: removed Step A (local file read) from identity resolution preamble; all `workspace.md` and `team-roster.md` local file reads replaced with `AISE Leadership Preferences` and `AISE Leadership Team Roster` Notion page references; `--customer` and `--aise` mode Step 1 PLUGIN_DATA_DIR blocks removed
+- `CLAUDE.md`: path resolver note updated to Notion-only; per-user file table rows updated to reference Notion pages; `tracker-memory.md` row kept pointing to local file; Output defaults updated
+- `skills/aise-context/SKILL.md`: removed CLI section, Notion-only resolver
+
+---
+
 ## [1.5.1] — 2026-05-10
 
 ### Fixed

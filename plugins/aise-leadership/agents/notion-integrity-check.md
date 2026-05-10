@@ -21,14 +21,10 @@ You read from Notion, write only when `--fix` is explicitly passed and only for 
 
 **Do not Glob. Do not search plugin paths. Do not guess. Follow these steps in order.**
 
-**Step A (CLI):**
-Use the Read tool on `~/.claude/aise-leadership.datadir`. The file content is `PLUGIN_DATA_DIR` — the absolute path to the plugin's persistent data directory. `CLAUDE_PLUGIN_DATA` env variable must never be used. Read `{PLUGIN_DATA_DIR}/about/identity.md` to get the current user's `notion_user_id`. If `identity.md` does not exist or contains `<TBD>` values, continue with Step B.
-
-**Step B (Cowork — if Read blocked, or Step A files unavailable):**
+**Resolve identity:**
 1. Call `notion-get-users` → UUID, display name.
 2. `notion-search("AISE Identity — {display_name}")` → `notion-fetch` → parse name, timezone, UUID.
-
-**Step C:** Proceed with resolved values. If no UUID is resolved, note in chat: "AISE Identity page not found — run `/assistant-setup` to complete setup." Surface candidates from `notion-get-users` and ask once if needed.
+3. If no UUID is resolved, note in chat: "AISE Identity page not found — run `/assistant-setup` to complete setup." Surface candidates from `notion-get-users` and ask once if needed.
 
 ---
 
@@ -38,9 +34,7 @@ Use the Read tool on `~/.claude/aise-leadership.datadir`. The file content is `P
 
 ### Step 1 – Determine scope
 
-**Resolve PLUGIN_DATA_DIR first:** use the Read tool on `~/.claude/aise-leadership.datadir` — the file content is the absolute path. Never use the `CLAUDE_PLUGIN_DATA` env variable.
-
-user Notion ID: read from `{PLUGIN_DATA_DIR}/about/identity.md` `<user-uuid>`.
+user Notion ID: resolved from `AISE Identity — {display_name}` in the preamble above (`<user-uuid>`).
 
 If `--customer` is supplied, resolve to a single Customer page URL via `notion-search`. Verify `Owner` contains the user before continuing.
 
@@ -150,12 +144,12 @@ Summary: [n] total findings. [n] auto-fixable with `--fix`.
 
 ### Step 5 – Apply fixes if --fix is passed
 
-For each 🟨 propagation drift item: write `Current Account Owner = the user's Notion ID (per `about/identity.md`)` on the affected record.
+For each 🟨 propagation drift item: write `Current Account Owner = the user's Notion ID (resolved from the `AISE Identity` Notion page)` on the affected record.
 
 For each 🟦 field hygiene item:
 - Active Package name mismatch: if `Start Date`, linked Customer name, and linked Master Package name are all resolvable, auto-fix by writing the corrected `Name` in the format `{Year} – {Customer Name} | {Master Package}`. If any relation is null, surface and skip.
 - Task with null `Customers`: do NOT auto-fix. Surface for the user's decision (which customer to link).
-- Session with null `Delivered By` on an account the user owns: set to the user's Notion ID (per `about/identity.md`), but flag in the report that this is an assumption.
+- Session with null `Delivered By` on an account the user owns: set to the user's Notion ID (resolved from the `AISE Identity` Notion page), but flag in the report that this is an assumption.
 - Session Planned but past-dated: do NOT auto-fix. Surface for the user's decision (mark Delivered, reschedule, or cancel).
 - Session with null `Consumed Package` (Delivered, not Do-not-count): find the AP for that customer whose `Start Date` ≤ session `Call Date` ≤ `End Date`. If exactly one match exists, auto-fix by setting `Consumed Package` to that AP. If zero or multiple matches, surface for user decision.
 - Task with null `Consumed Package` (open, not Do-not-count, not internal): apply the date-matching rule from `context/notion-schema.md` § Create a Task. (1) if task has `Source Call`, inherit that session's `Consumed Package`. (2) Otherwise find the customer's AP covering the task's `Due Date` or today. If found, auto-fix. If not, surface for user decision.

@@ -20,14 +20,10 @@ You sync Salesforce opportunity data (ARR and contract end dates) into Notion Ac
 
 **Do not Glob. Do not search plugin paths. Do not guess. Follow these steps in order.**
 
-**Step A (CLI):**
-Use the Read tool on `~/.claude/aise-leadership.datadir`. The file content is `PLUGIN_DATA_DIR` — the absolute path to the plugin's persistent data directory. `CLAUDE_PLUGIN_DATA` env variable must never be used. Read `{PLUGIN_DATA_DIR}/about/identity.md` to get the current user's `notion_user_id`. If `identity.md` does not exist or contains `<TBD>` values, continue with Step B.
-
-**Step B (Cowork — if Read blocked, or Step A files unavailable):**
+**Resolve identity:**
 1. Call `notion-get-users` → UUID, display name.
 2. `notion-search("AISE Identity — {display_name}")` → `notion-fetch` → parse name, timezone, UUID.
-
-**Step C:** Proceed with resolved values. If no UUID is resolved, note in chat: "AISE Identity page not found — run `/assistant-setup` to complete setup." Surface candidates from `notion-get-users` and ask once if needed.
+3. If no UUID is resolved, note in chat: "AISE Identity page not found — run `/assistant-setup` to complete setup." Surface candidates from `notion-get-users` and ask once if needed.
 
 ---
 
@@ -37,10 +33,8 @@ Use the Read tool on `~/.claude/aise-leadership.datadir`. The file content is `P
 
 Read `context/notion-schema.md` to confirm database IDs and field names.
 
-**Resolve PLUGIN_DATA_DIR first:** use the Read tool on `~/.claude/aise-leadership.datadir` — the file content is the absolute path. Never use the `CLAUDE_PLUGIN_DATA` env variable.
-
 Determine the target owner UUID:
-- Default: use the current user's UUID from `{PLUGIN_DATA_DIR}/about/identity.md`.
+- Default: use the current user's UUID resolved from `AISE Identity — {display_name}` in the preamble above.
 - If `--owner <name>` is supplied: call `notion-get-users`, match the name, and extract the UUID. If the match is ambiguous (multiple results), list candidates and ask the user to confirm before proceeding. If the resolved UUID differs from the current user's UUID, print a warning and wait for acknowledgement:
   > ⚠️ Running sf-backfill for **[resolved name]**'s packages — this will touch their Active Packages, not yours. Confirm?
 

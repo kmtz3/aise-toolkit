@@ -83,12 +83,9 @@ Run a live check **only when**:
 **Procedure:**
 
 1. **Resolve identity** (needed for owner-scoped queries):
-
-   **Step A (CLI):** Use the Read tool on `~/.claude/aise-leadership.datadir`. The file content is `PLUGIN_DATA_DIR`. Read `{PLUGIN_DATA_DIR}/about/identity.md` → extract `notion_user_id`. If the file does not exist or contains `<TBD>` values, continue with Step B.
-
-   **Step B (Cowork — if Read blocked or identity missing):**
    1. Call `notion-get-users` → UUID, display name.
    2. `notion-search("AISE Identity — {display_name}")` → `notion-fetch(page_id)` → parse `notion_user_id` from the page body.
+   3. If the identity page is not found, prompt the user to run `/assistant-setup` and stop.
 
 2. **Find the customer** if named: search Notion for the customer page, confirm the match.
 

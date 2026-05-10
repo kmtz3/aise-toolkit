@@ -211,5 +211,5 @@ Return in chat:
 - Seed all names, systems, and descriptions from pulled customer context — never fabricate
 - "Shared dependency" card at the bottom of the grid when a cross-system dependency applies (e.g. Salesforce company matching across integrations)
 - American English throughout
-- **Resolve PLUGIN_DATA_DIR first** (if not already done): use the Read tool on `~/.claude/aise-assistant.datadir` — the file content is the absolute path. Never use the `CLAUDE_PLUGIN_DATA` env variable.
-- Read `{PLUGIN_DATA_DIR}/about/identity.md` for the user's name (strip any accent variants documented there)
+- **Resolve identity** (if not already done): Call `notion-get-users` → get UUID and `display_name`. Then `notion-search("AISE Identity — {display_name}")` + `notion-fetch(page_id)` → parse the user's preferred name and accent variants.
+- Use the user's preferred name (stripped of accent variants documented in the identity page) for any attribution in the diagram.

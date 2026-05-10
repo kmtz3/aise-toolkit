@@ -14,20 +14,16 @@ The Customer Tracker is a **shared workspace** with other PB AISEs (since May 20
 
 **Do not Glob. Do not search plugin paths. Do not guess. Follow these steps in order.**
 
-**Step A (CLI):**
-Use the Read tool on `~/.claude/aise-leadership.datadir`. The file content is `PLUGIN_DATA_DIR` — the absolute path to the plugin's persistent data directory. `CLAUDE_PLUGIN_DATA` env variable must never be used. Read `{PLUGIN_DATA_DIR}/about/identity.md` to get the current user's `notion_user_id`. If `identity.md` does not exist or contains `<TBD>` values, continue with Step B.
-
-**Step B (Cowork — if Read blocked, or Step A files unavailable):**
+**Resolve identity:**
 1. Call `notion-get-users` → UUID, display name.
 2. `notion-search("AISE Identity — {display_name}")` → `notion-fetch` → parse name, timezone, UUID.
-
-**Step C:** Proceed with resolved values. If no UUID is resolved, note in chat: "AISE Identity page not found — run `/assistant-setup` to complete setup." Surface candidates from `notion-get-users` and ask once if needed.
+3. If no UUID is resolved, note in chat: "AISE Identity page not found — run `/assistant-setup` to complete setup." Surface candidates from `notion-get-users` and ask once if needed.
 
 ---
 
 ## Before every write
 
-1. **PLUGIN_DATA_DIR resolved in preamble above — use it directly.** Read `{PLUGIN_DATA_DIR}/about/identity.md` to get the user's Notion UUID.
+1. **Identity resolved in preamble above — use it directly.** The user's Notion UUID was parsed from `AISE Identity — {display_name}` in the identity resolution step.
 2. Read [`context/notion-schema.md`](../../context/notion-schema.md). Treat it as the sole authoritative schema reference. Pay particular attention to the **Ownership Model** section.
 3. For updates, **fetch the target page immediately beforehand** – `update_content` `old_str` matching is whitespace-exact, and you also need the current `Owner` / `Current Account Owner` value to honor the verify-before-write contract.
 
@@ -37,7 +33,7 @@ Use the Read tool on `~/.claude/aise-leadership.datadir`. The file content is `P
 
 > _Derived from `context/notion-schema.md` § Ownership Model — that file is the authoritative source. If anything here conflicts with the schema, trust the schema and update this section._
 
-the user's Notion user ID: `<user-uuid>` (read at runtime from `{PLUGIN_DATA_DIR}/about/identity.md` — PLUGIN_DATA_DIR resolved via Step 1 above). Person values are written as `'["<user-uuid>"]'` and stored as `["user://<user-uuid>"]` on read. Filter with `LIKE '%<user-uuid>%'` to match either form.
+the user's Notion user ID: `<user-uuid>` (resolved at runtime from the `AISE Identity — {display_name}` Notion page in the identity resolution step above). Person values are written as `'["<user-uuid>"]'` and stored as `["user://<user-uuid>"]` on read. Filter with `LIKE '%<user-uuid>%'` to match either form.
 
 ### Per-DB on-create rules
 
