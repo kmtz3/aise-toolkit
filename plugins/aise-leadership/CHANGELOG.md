@@ -1,5 +1,13 @@
 # Changelog — aise-leadership
 
+## [1.6.1] — 2026-05-10
+
+### Fixed
+- `agents/notion-writer.md`, `agents/sf-backfill.md`, `agents/notion-integrity-check.md`: unified "not found" handling — each now outputs "AISE Identity page not found — run `/assistant-setup` to configure your profile." and stops; previously noted the gap in chat and asked once if needed
+- `agents/report-builder.md`: same — "not found" path now stops instead of noting the gap and continuing
+
+---
+
 ## [1.6.0] — 2026-05-10
 
 ### Changed

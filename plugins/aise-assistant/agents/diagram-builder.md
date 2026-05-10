@@ -211,5 +211,5 @@ Return in chat:
 - Seed all names, systems, and descriptions from pulled customer context — never fabricate
 - "Shared dependency" card at the bottom of the grid when a cross-system dependency applies (e.g. Salesforce company matching across integrations)
 - American English throughout
-- **Resolve identity** (if not already done): Call `notion-get-users` → get UUID and `display_name`. Then `notion-search("AISE Identity — {display_name}")` + `notion-fetch(page_id)` → parse the user's preferred name and accent variants.
+- **Resolve identity** (if not already done): Call `notion-get-users` → get UUID and `display_name`. Then `notion-search("AISE Identity — {display_name}")` + `notion-fetch(page_id)` → parse the user's preferred name and accent variants. If the identity page is not found, output "AISE Identity page not found — run `/assistant-setup` to configure your profile." and stop.
 - Use the user's preferred name (stripped of accent variants documented in the identity page) for any attribution in the diagram.

@@ -27,7 +27,7 @@ No required arguments. Optional:
 1. Call `notion-get-users` → returns UUID, display name.
 2. `notion-search("AISE Identity — {display_name}")` → capture the first result's page ID.
 3. `notion-fetch(page_id)` → parse the page for preferred name and timezone.
-4. If the identity page is not found: use UUID and display name from `notion-get-users`. Default timezone to `Europe/Prague`. Note in the brief: "AISE Identity page not found — run `/assistant-setup` to configure."
+4. If the identity page is not found: output "AISE Identity page not found — run `/assistant-setup` to configure your profile." and stop.
 
 Parse from the identity page:
 - First name (for the greeting header).

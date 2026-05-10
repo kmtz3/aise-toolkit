@@ -20,7 +20,7 @@ Two modes. Read the invocation to determine which to run.
 3. `notion-search("AISE Leadership Preferences — {display_name}")` → `notion-fetch` → parse workspace fields (Notion templates DB ID, per-cadence format prefs, Gong keywords, Slack channels).
 4. `notion-search("AISE Leadership Team Roster — {display_name}")` → `notion-fetch` → parse roster table (used to scope Notion queries to the leader's team).
 
-If any page is not found, note the gap in chat and prompt the user to run `/assistant-setup`.
+If any page is not found, output "AISE Identity page not found — run `/assistant-setup` to configure your profile." and stop.
 
 ---
 

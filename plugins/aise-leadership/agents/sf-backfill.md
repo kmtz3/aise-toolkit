@@ -23,7 +23,7 @@ You sync Salesforce opportunity data (ARR and contract end dates) into Notion Ac
 **Resolve identity:**
 1. Call `notion-get-users` → UUID, display name.
 2. `notion-search("AISE Identity — {display_name}")` → `notion-fetch` → parse name, timezone, UUID.
-3. If no UUID is resolved, note in chat: "AISE Identity page not found — run `/assistant-setup` to complete setup." Surface candidates from `notion-get-users` and ask once if needed.
+3. If the identity page is not found, output "AISE Identity page not found — run `/assistant-setup` to configure your profile." and stop.
 
 ---
 

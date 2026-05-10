@@ -5,6 +5,19 @@ Format: `## [version] — YYYY-MM-DD` followed by bullet points grouped by type.
 
 ---
 
+## [2.8.1] — 2026-05-10
+
+### Fixed
+- `agents/notion-integrity-check.md`: added `notion-get-users` to tools frontmatter; added Notion-only identity resolution preamble; replaced stale `about/identity.md` UUID reference with preamble-resolved UUID
+- `agents/notion-writer.md`: same — tools, preamble, and all `about/identity.md` references updated; preamble now the sole identity source before every write
+- `agents/sf-backfill.md`: same — added `notion-get-users` + `notion-search` to tools; added preamble; Step 1 UUID reference updated
+- All agents (aise-assistant + aise-leadership): unified "not found" handling — every agent now outputs "AISE Identity page not found — run `/assistant-setup` to configure your profile." and stops; previously some agents noted the gap and continued with defaults, others asked once if needed
+- `agents/daily-brief.md`: identity not-found path now stops instead of defaulting to `Europe/Prague` timezone and continuing
+- `agents/diagram-builder.md`: added not-found stop to the identity resolution block
+- `skills/daily-brief/SKILL.md`: updated resolver description from two-path (CLI + Cowork) to Notion-only to match current agent behavior
+
+---
+
 ## [2.8.0] — 2026-05-10
 
 ### Changed

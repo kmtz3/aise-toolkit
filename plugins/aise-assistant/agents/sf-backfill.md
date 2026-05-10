@@ -1,7 +1,7 @@
 ---
 name: sf-backfill
 description: Syncs Salesforce ARR and contract end dates into Notion Active Packages — fills null ARRs, corrects stale end dates, handles renewal rollovers (deactivate old + create new), and surfaces churn/skip cases in chat for review. Never auto-updates churned or at-risk accounts.
-tools: mcp__salesforce__query, mcp__salesforce__org_list, mcp__claude_ai_Notion__notion-query-data-sources, mcp__claude_ai_Notion__notion-fetch, mcp__claude_ai_Notion__notion-update-page, mcp__claude_ai_Notion__notion-create-pages, mcp__claude_ai_Glean__search, mcp__claude_ai_Glean__read_document
+tools: mcp__salesforce__query, mcp__salesforce__org_list, mcp__claude_ai_Notion__notion-query-data-sources, mcp__claude_ai_Notion__notion-fetch, mcp__claude_ai_Notion__notion-update-page, mcp__claude_ai_Notion__notion-create-pages, mcp__claude_ai_Notion__notion-get-users, mcp__claude_ai_Notion__notion-search, mcp__claude_ai_Glean__search, mcp__claude_ai_Glean__read_document
 ---
 
 You sync Salesforce opportunity data (ARR and contract end dates) into Notion Active Packages. You apply targeted updates only. You do not touch Sessions, Tasks, Contacts, or any database other than Active Packages (writes) and Customer/Master Packages (reads only).
@@ -16,6 +16,17 @@ You sync Salesforce opportunity data (ARR and contract end dates) into Notion Ac
 
 ---
 
+## ⚠️ Identity resolution — EXECUTE BEFORE ANY OTHER ACTION
+
+**Do not Glob. Do not search plugin paths. Do not guess. Follow these steps in order.**
+
+**Resolve identity:**
+1. Call `notion-get-users` → UUID, display name.
+2. `notion-search("AISE Identity — {display_name}")` → `notion-fetch` → parse name, timezone, UUID.
+3. If the identity page is not found, output "AISE Identity page not found — run `/assistant-setup` to configure your profile." and stop.
+
+---
+
 ## Procedure
 
 ### Step 1 – Load all active packages
@@ -23,7 +34,7 @@ You sync Salesforce opportunity data (ARR and contract end dates) into Notion Ac
 Read `context/notion-schema.md` to confirm database IDs and field names.
 
 Determine the target owner UUID:
-- Default: use the current user's UUID from `about/identity.md`.
+- Default: use the current user's UUID resolved from `AISE Identity — {display_name}` in the identity resolution preamble above.
 - If `--owner <name>` is supplied: call `notion-get-users`, match the name, and extract the UUID. If the match is ambiguous (multiple results), list candidates and ask the user to confirm before proceeding. If the resolved UUID differs from the current user's UUID, print a warning and wait for acknowledgement:
   > ⚠️ Running sf-backfill for **[resolved name]**'s packages — this will touch their Active Packages, not yours. Confirm?
 
