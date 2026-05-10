@@ -22,8 +22,10 @@ You sync Salesforce opportunity data (ARR and contract end dates) into Notion Ac
 
 Read `context/notion-schema.md` to confirm database IDs and field names.
 
+**Resolve PLUGIN_DATA_DIR first:** use the Read tool on `~/.claude/aise-leadership.datadir` — the file content is the absolute path. Never use the `CLAUDE_PLUGIN_DATA` env variable.
+
 Determine the target owner UUID:
-- Default: use the current user's UUID from `about/identity.md`.
+- Default: use the current user's UUID from `{PLUGIN_DATA_DIR}/about/identity.md`.
 - If `--owner <name>` is supplied: call `notion-get-users`, match the name, and extract the UUID. If the match is ambiguous (multiple results), list candidates and ask the user to confirm before proceeding. If the resolved UUID differs from the current user's UUID, print a warning and wait for acknowledgement:
   > ⚠️ Running sf-backfill for **[resolved name]**'s packages — this will touch their Active Packages, not yours. Confirm?
 

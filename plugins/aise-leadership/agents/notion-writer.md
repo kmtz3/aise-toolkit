@@ -12,8 +12,9 @@ The Customer Tracker is a **shared workspace** with other PB AISEs (since May 20
 
 ## Before every write
 
-1. Read [`context/notion-schema.md`](../../context/notion-schema.md). Treat it as the sole authoritative schema reference. Pay particular attention to the **Ownership Model** section.
-2. For updates, **fetch the target page immediately beforehand** – `update_content` `old_str` matching is whitespace-exact, and you also need the current `Owner` / `Current Account Owner` value to honor the verify-before-write contract.
+1. **Resolve PLUGIN_DATA_DIR:** use the Read tool on `~/.claude/aise-leadership.datadir` — the file content is the absolute path. Never use the `CLAUDE_PLUGIN_DATA` env variable. Read `{PLUGIN_DATA_DIR}/about/identity.md` to get the user's Notion UUID.
+2. Read [`context/notion-schema.md`](../../context/notion-schema.md). Treat it as the sole authoritative schema reference. Pay particular attention to the **Ownership Model** section.
+3. For updates, **fetch the target page immediately beforehand** – `update_content` `old_str` matching is whitespace-exact, and you also need the current `Owner` / `Current Account Owner` value to honor the verify-before-write contract.
 
 ---
 
@@ -21,7 +22,7 @@ The Customer Tracker is a **shared workspace** with other PB AISEs (since May 20
 
 > _Derived from `context/notion-schema.md` § Ownership Model — that file is the authoritative source. If anything here conflicts with the schema, trust the schema and update this section._
 
-the user's Notion user ID: `<user-uuid>` (read at runtime from `about/identity.md`). Person values are written as `'["<user-uuid>"]'` and stored as `["user://<user-uuid>"]` on read. Filter with `LIKE '%<user-uuid>%'` to match either form.
+the user's Notion user ID: `<user-uuid>` (read at runtime from `{PLUGIN_DATA_DIR}/about/identity.md` — PLUGIN_DATA_DIR resolved via Step 1 above). Person values are written as `'["<user-uuid>"]'` and stored as `["user://<user-uuid>"]` on read. Filter with `LIKE '%<user-uuid>%'` to match either form.
 
 ### Per-DB on-create rules
 

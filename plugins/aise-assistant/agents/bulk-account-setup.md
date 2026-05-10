@@ -23,8 +23,10 @@ Not your job: creating net-new Customer records, running `/customer-plan --full`
 
 ### 1. Identify the operator and the target user
 
-Read `about/identity.md`:
-- **Operator** = the person running this command (always from `about/identity.md`). Their name appears in chat output; their UUID is used for nothing else.
+**Resolve PLUGIN_DATA_DIR first:** use the Read tool on `~/.claude/aise-assistant.datadir` — the file content is the absolute path. Never use the `CLAUDE_PLUGIN_DATA` env variable.
+
+Read `{PLUGIN_DATA_DIR}/about/identity.md`:
+- **Operator** = the person running this command (always from `{PLUGIN_DATA_DIR}/about/identity.md`). Their name appears in chat output; their UUID is used for nothing else.
 - **Target user** = whose accounts to set up.
   - Blank, "me", or omitted → `target_user = operator` (same UUID, same name, same email).
   - Teammate name given → call `notion-get-users` and find by name match. If multiple match, list candidates and ask for disambiguation before proceeding. Resolve to `target_uuid` + `target_name`.

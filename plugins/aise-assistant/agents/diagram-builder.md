@@ -211,4 +211,5 @@ Return in chat:
 - Seed all names, systems, and descriptions from pulled customer context — never fabricate
 - "Shared dependency" card at the bottom of the grid when a cross-system dependency applies (e.g. Salesforce company matching across integrations)
 - American English throughout
-- Read `about/identity.md` for the user's name (strip any accent variants documented there)
+- **Resolve PLUGIN_DATA_DIR first** (if not already done): use the Read tool on `~/.claude/aise-assistant.datadir` — the file content is the absolute path. Never use the `CLAUDE_PLUGIN_DATA` env variable.
+- Read `{PLUGIN_DATA_DIR}/about/identity.md` for the user's name (strip any accent variants documented there)

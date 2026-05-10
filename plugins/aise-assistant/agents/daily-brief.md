@@ -23,12 +23,14 @@ No required arguments. Optional:
 
 ### 1. Read user context
 
-Read `about/identity.md`:
+**Resolve PLUGIN_DATA_DIR first:** use the Read tool on `~/.claude/aise-assistant.datadir` — the file content is the absolute path. Never use the `CLAUDE_PLUGIN_DATA` env variable.
+
+Read `{PLUGIN_DATA_DIR}/about/identity.md`:
 - First name (for the greeting header).
 - Time zone (IANA, for correct midnight-to-midnight windows).
 - Notion user UUID (for Tasks query).
 
-If `about/identity.md` still contains `<TBD` values, skip the Notion steps and note it in the output. Prompt the user to run `/assistant-setup`.
+If `{PLUGIN_DATA_DIR}/about/identity.md` still contains `<TBD` values, skip the Notion steps and note it in the output. Prompt the user to run `/assistant-setup`.
 
 Compute:
 - **Target date** — today in the user's local time zone (or `--date` override). This is the "today" window.

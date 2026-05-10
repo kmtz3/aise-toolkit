@@ -23,7 +23,9 @@ You read from Notion, write only when `--fix` is explicitly passed and only for 
 
 ### Step 1 – Determine scope
 
-user Notion ID: see `about/identity.md` `<user-uuid>`.
+**Resolve PLUGIN_DATA_DIR first:** use the Read tool on `~/.claude/aise-leadership.datadir` — the file content is the absolute path. Never use the `CLAUDE_PLUGIN_DATA` env variable.
+
+user Notion ID: read from `{PLUGIN_DATA_DIR}/about/identity.md` `<user-uuid>`.
 
 If `--customer` is supplied, resolve to a single Customer page URL via `notion-search`. Verify `Owner` contains the user before continuing.
 

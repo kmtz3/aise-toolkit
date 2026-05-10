@@ -1,5 +1,10 @@
 # Changelog — aise-leadership
 
+## [1.3.2] — 2026-05-10
+
+### Fixed
+- `notion-integrity-check`, `sf-backfill`, `notion-writer`: added explicit PLUGIN_DATA_DIR resolver — Read `~/.claude/aise-leadership.datadir` before any `about/identity.md` access; consistent with the fix already applied to `report-builder` in v1.3.1
+
 ## [1.3.1] — 2026-05-10
 
 ### Fixed
