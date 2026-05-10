@@ -1,22 +1,41 @@
 #!/usr/bin/env bash
 # session-start.sh — called by the SessionStart hook at the start of every session.
 #
-# $CLAUDE_PLUGIN_DATA is volatile in Claude Code (resolves to a temp path, not the
-# persistent ~/.claude/plugins/data/ directory). We discover the real persistent
-# directory here and write it to a fixed pointer file that agents and scripts can
-# read with a single `cat`.
+# Goal: write the real persistent data directory to ~/.claude/aise-leadership.datadir
+# so agents can read it with a single Read-tool call (never via $CLAUDE_PLUGIN_DATA,
+# which is volatile in Claude Code CLI).
+#
+# Context awareness:
+#   Claude Code CLI  — $CLAUDE_PLUGIN_DATA is a volatile temp path.
+#                      Real data lives at ~/.claude/plugins/data/aise-leadership*/
+#   Cowork / Desktop — $CLAUDE_PLUGIN_DATA IS the persistent, accessible data dir.
+#                      ~/.claude/plugins/data/ does not exist in the Linux sandbox.
+#
+# Discovery order:
+#   0. $CLAUDE_PLUGIN_DATA already has identity.md  → Cowork, already set up
+#   1. ~/.claude/plugins/data/aise-leadership*/ with identity.md → CLI, already set up
+#   2. installed_plugins.json name derivation → CLI, fresh install
+#   3. Any existing aise-leadership* data dir → CLI fallback
+#   4. Prefer $CLAUDE_PLUGIN_DATA if set (Cowork fresh), else CLI default
 
 set -euo pipefail
 
 PLUGIN_DATA_DIR=""
 
-# 1. Find any aise-leadership-* data dir that already has identity.md
-for d in "$HOME/.claude/plugins/data/aise-leadership"*/; do
-  [[ -d "$d" ]] || continue
-  [[ -f "${d}about/identity.md" ]] && PLUGIN_DATA_DIR="${d%/}" && break
-done
+# 0. Cowork / Desktop: $CLAUDE_PLUGIN_DATA is the real data dir when identity.md is there
+if [[ -n "${CLAUDE_PLUGIN_DATA:-}" ]] && [[ -f "${CLAUDE_PLUGIN_DATA}/about/identity.md" ]]; then
+  PLUGIN_DATA_DIR="$CLAUDE_PLUGIN_DATA"
+fi
 
-# 2. No populated dir — derive the name from installed_plugins.json
+# 1. CLI: find any aise-leadership-* data dir that already has identity.md
+if [[ -z "$PLUGIN_DATA_DIR" ]]; then
+  for d in "$HOME/.claude/plugins/data/aise-leadership"*/; do
+    [[ -d "$d" ]] || continue
+    [[ -f "${d}about/identity.md" ]] && PLUGIN_DATA_DIR="${d%/}" && break
+  done
+fi
+
+# 2. CLI: derive the name from installed_plugins.json
 if [[ -z "$PLUGIN_DATA_DIR" ]]; then
   PLUGIN_DATA_DIR=$(python3 - <<'PYEOF' 2>/dev/null
 import json, re, os
@@ -33,16 +52,23 @@ PYEOF
 )
 fi
 
-# 3. Any existing aise-leadership* data dir
+# 3. CLI: any existing aise-leadership* data dir
 if [[ -z "$PLUGIN_DATA_DIR" ]]; then
   PLUGIN_DATA_DIR=$(ls -d "$HOME/.claude/plugins/data/aise-leadership"* 2>/dev/null | head -1 || true)
 fi
 
-# 4. Final default
-PLUGIN_DATA_DIR="${PLUGIN_DATA_DIR:-$HOME/.claude/plugins/data/aise-leadership}"
+# 4. Final fallback: prefer $CLAUDE_PLUGIN_DATA (Cowork fresh install) over a
+#    Linux-VM home path that agents can't reach.
+if [[ -z "$PLUGIN_DATA_DIR" ]]; then
+  if [[ -n "${CLAUDE_PLUGIN_DATA:-}" ]] && [[ -d "${CLAUDE_PLUGIN_DATA}" ]]; then
+    PLUGIN_DATA_DIR="$CLAUDE_PLUGIN_DATA"
+  else
+    PLUGIN_DATA_DIR="$HOME/.claude/plugins/data/aise-leadership"
+  fi
+fi
 
 # Create about/ and write the pointer file
-mkdir -p "$PLUGIN_DATA_DIR/about"
+mkdir -p "$PLUGIN_DATA_DIR/about" 2>/dev/null || true
 printf '%s' "$PLUGIN_DATA_DIR" > "$HOME/.claude/aise-leadership.datadir"
 
 # Warn if identity.md still has placeholder values (setup not yet run)

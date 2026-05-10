@@ -1,5 +1,10 @@
 # Changelog — aise-leadership
 
+## [1.3.3] — 2026-05-10
+
+### Fixed
+- `session-start.sh`: added step 0 (use `$CLAUDE_PLUGIN_DATA` when `about/identity.md` already exists there — Cowork populated) and changed final fallback to prefer `$CLAUDE_PLUGIN_DATA` over a Linux-VM home path (Cowork fresh install); pointer file now always contains a path accessible in the current execution context
+
 ## [1.3.2] — 2026-05-10
 
 ### Fixed
