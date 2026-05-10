@@ -1,5 +1,13 @@
 # Changelog — aise-leadership
 
+## [1.2.2] — 2026-05-10
+
+### Fixed
+- `setup-connections.sh`: refactored SF detection into helper functions (`_sf_in_config`, `_find_sf`, `_sf_auth_ok`) for more robust Salesforce CLI and MCP presence checking
+- SF binary lookup now searches multiple candidate paths beyond `$PATH`
+- SF auth check now reads credential files directly without requiring Node on PATH
+- Banner string corrected back to `aise-leadership` (had been overwritten with `aise-assistant`)
+
 ## [1.2.1] — 2026-05-10
 
 ### Fixed

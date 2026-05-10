@@ -5,6 +5,15 @@ Format: `## [version] — YYYY-MM-DD` followed by bullet points grouped by type.
 
 ---
 
+## [2.4.2] — 2026-05-10
+
+### Fixed
+- `setup-connections.sh`: refactored SF detection into helper functions (`_sf_in_config`, `_find_sf`, `_sf_auth_ok`) for more robust Salesforce CLI and MCP presence checking
+- SF binary lookup now searches multiple candidate paths beyond `$PATH` (npm global, homebrew, `.local/share`, etc.)
+- SF auth check now reads credential files directly (`~/.sfdx/*.json`, `~/.sf/credentials.json`) without requiring Node on PATH
+
+---
+
 ## [2.4.1] — 2026-05-10
 
 ### Fixed
