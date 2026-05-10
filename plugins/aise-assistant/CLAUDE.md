@@ -195,6 +195,16 @@ Default: **confirm the diff before writing**. The user can override with "just d
 
 ---
 
+## Proactive improvement nudge
+
+At the end of any skill run, if you notice efficiency gaps — redundant tool calls, context that had to be discovered at runtime (could be pre-loaded), sub-optimal tool routing, or steps that required mid-run correction — add a one-line nudge at the bottom of your response:
+
+> **Spotted a possible skill improvement.** Want me to run `/assistant-improvement` to generate a fix prompt you can send to the plugin admin?
+
+Keep it brief and specific. Only surface it when you have a concrete observation — not as a generic close to every run.
+
+---
+
 ## Output defaults
 
 - Inline markdown in chat for most asks.

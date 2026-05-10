@@ -1,5 +1,10 @@
 # Changelog — aise-leadership
 
+## [1.2.0] — 2026-05-10
+
+### Added
+- Proactive improvement nudge — after any skill run where efficiency gaps are observed (redundant tool calls, missing pre-loadable context, sub-optimal routing, mid-run corrections), Claude surfaces a one-line prompt suggesting the user run `/assistant-improvement` and send the output to the plugin admin
+
 ## [1.1.0] — 2026-05-10
 
 ### Added

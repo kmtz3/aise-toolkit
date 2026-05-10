@@ -102,6 +102,16 @@ When the user corrects behavior, adds a rule, or confirms a non-obvious choice �
 
 ---
 
+## Proactive improvement nudge
+
+At the end of any skill run, if you notice efficiency gaps — redundant tool calls, context that had to be discovered at runtime (could be pre-loaded), sub-optimal tool routing, or steps that required mid-run correction — add a one-line nudge at the bottom of your response:
+
+> **Spotted a possible skill improvement.** Want me to run `/assistant-improvement` to generate a fix prompt you can send to the plugin admin?
+
+Keep it brief and specific. Only surface it when you have a concrete observation — not as a generic close to every run.
+
+---
+
 ## context/ sync
 
 The `context/` directory is sourced from `plugins/aise-assistant/` in this monorepo. To pull the latest:
