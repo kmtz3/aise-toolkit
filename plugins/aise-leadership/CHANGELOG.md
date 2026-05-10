@@ -1,5 +1,13 @@
 # Changelog — aise-leadership
 
+## [1.5.1] — 2026-05-10
+
+### Fixed
+- `agents/notion-ask.md` Step 4.1: replaced broken Bash `cat` resolver (Bash not in tools list) with two-path Read tool resolver — Step A reads `~/.claude/aise-leadership.datadir` + `identity.md`; Step B falls back to `notion-get-users` + `notion-search("AISE Identity — {display_name}")` + `notion-fetch` for Cowork compatibility
+- `agents/notion-ask.md` Step 4.1: corrected wrong pointer file name (`aise-assistant.datadir` → `aise-leadership.datadir`) — copy-paste bug from the aise-assistant agent that would have caused identity queries to resolve to the wrong user context
+
+---
+
 ## [1.5.0] — 2026-05-10
 
 ### Added

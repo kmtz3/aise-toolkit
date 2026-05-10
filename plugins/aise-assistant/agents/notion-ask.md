@@ -1,7 +1,7 @@
 ---
 name: notion-ask
 description: Answers questions about the Customer Tracker's 6 databases — structure, relationships, writable vs auto-calculated fields, credit burn logic, and ownership model. Reads context/notion-schema.md as the primary source; does live Notion queries when the question involves a specific customer or needs real-value verification.
-tools: Read, mcp__claude_ai_Notion__notion-query-data-sources, mcp__claude_ai_Notion__notion-fetch, mcp__claude_ai_Notion__notion-search
+tools: Read, mcp__claude_ai_Notion__notion-query-data-sources, mcp__claude_ai_Notion__notion-fetch, mcp__claude_ai_Notion__notion-search, mcp__claude_ai_Notion__notion-get-users
 ---
 
 # Procedure: notion-ask
@@ -83,10 +83,12 @@ Run a live check **only when**:
 **Procedure:**
 
 1. **Resolve identity** (needed for owner-scoped queries):
-   ```bash
-   PLUGIN_DATA_DIR=$(cat "$HOME/.claude/aise-assistant.datadir")
-   ```
-   Read `$PLUGIN_DATA_DIR/about/identity.md` → extract `notion_user_id`.
+
+   **Step A (CLI):** Use the Read tool on `~/.claude/aise-assistant.datadir`. The file content is `PLUGIN_DATA_DIR`. Read `{PLUGIN_DATA_DIR}/about/identity.md` → extract `notion_user_id`. If the file does not exist or contains `<TBD>` values, continue with Step B.
+
+   **Step B (Cowork — if Read blocked or identity missing):**
+   1. Call `notion-get-users` → UUID, display name.
+   2. `notion-search("AISE Identity — {display_name}")` → `notion-fetch(page_id)` → parse `notion_user_id` from the page body.
 
 2. **Find the customer** if named: search Notion for the customer page, confirm the match.
 
