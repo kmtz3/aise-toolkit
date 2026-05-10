@@ -239,25 +239,31 @@ Note: this mode does NOT apply the current-user ownership guard — it's intenti
 ### Step 2 — Pull all owned customers
 
 ```sql
-SELECT Customer, "Owner", "Current package"
+SELECT Customer, "Owner", "Account Status"
 FROM "collection://29397e9c-7d4f-8067-b290-000b1c2d57e1"
 WHERE Owner LIKE '%[target-uuid]%'
 ORDER BY Customer ASC
+-- "Current package" is a Formulas 2.0 field and absent from the SQLite table.
+-- Active package is determined via the Step 3 Active Packages query, not this query.
 ```
 
 If no customers found, report: "No customers found owned by [name] in the Customer Tracker."
 
 ### Step 3 — Enrich each customer (parallel)
 
+**Deriving customer page IDs:** The Customers SQL query does not expose page URLs. Instead, parse customer IDs from the Active Package `Customer` relation field, which contains full Notion page URLs (`["https://www.notion.so/<32-char-hex-id>"]`). Extract the 32-char hex segment and use it in all downstream `LIKE '%<id>%'` filters. For customers with no Active Package (e.g. Presales, Not started without an AP): use `notion-search("<customer name>") + notion-fetch` to retrieve the page URL and extract the ID.
+
 For each customer, in parallel:
 
 **Active Package:**
 ```sql
 SELECT Name, ARR, Status, "Active?", "date:Start Date:start", "date:End Date:start",
-       "Master Package", "Sessions Remaining", "Sessions Delivered"
+       "Master Package", Customer
 FROM "collection://29697e9c-7d4f-8031-9f76-000b7e932b36"
 WHERE Customer LIKE '%[customer-id]%'
   AND "Active?" = '__YES__'
+-- "Sessions Remaining" and "Sessions Delivered" are rollup/formula fields absent from the SQLite table.
+-- Credits are reconstructed from the Master Packages and Sessions batch queries below.
 ```
 
 **Most recent Delivered session:**
@@ -277,6 +283,7 @@ SELECT Name, Type, "date:Call Date:start"
 FROM "collection://29397e9c-7d4f-8052-886b-000b9e3479d7"
 WHERE Customers LIKE '%[customer-id]%'
   AND "Call Status" = 'Planned'
+  AND "date:Call Date:start" >= '[today]'
 ORDER BY "date:Call Date:start" ASC
 LIMIT 1
 ```
@@ -289,7 +296,41 @@ WHERE Customers LIKE '%[customer-id]%'
   AND Status NOT IN ('Done', 'Cancelled')
 ```
 
+Run these two credit queries once per report run (not per customer), in parallel with the per-customer enrichment above:
+
+**Batch query A — Contracted credits (Master Packages):**
+```sql
+SELECT url, Name, "Architecting Sessions", "Training Sessions"
+FROM "collection://29397e9c-7d4f-8079-b9d6-000bd95ee92f"
+-- Fetch all; join to APs at runtime via AP["Master Package"] = MP.url
+-- Total Credit = MP["Architecting Sessions"] + MP["Training Sessions"]
+```
+
+**Batch query B — Consumed credits (Sessions):**
+```sql
+SELECT "Consumed Package",
+  SUM(CASE WHEN Type = '🏗️ Architecting' THEN 1 ELSE 0 END) AS arch_consumed,
+  SUM(CASE WHEN Type = '🎓 Training' THEN 1 ELSE 0 END) AS train_consumed
+FROM "collection://29397e9c-7d4f-8052-886b-000b9e3479d7"
+WHERE "Current Account Owner" LIKE '%[target-uuid]%'
+  AND "Call Status" = 'Delivered'
+  AND "Do not count" != '__YES__'
+  AND Type IN ('🏗️ Architecting', '🎓 Training')
+GROUP BY "Consumed Package"
+-- Join to AP rows via Sessions["Consumed Package"] LIKE '%[ap-url-id]%'
+-- Consumed Credit = arch_consumed + train_consumed
+-- Balance Credit = Total Credit - Consumed Credit
+```
+
+**Joining credits to portfolio rows:**
+- Match Batch A to each AP via `AP["Master Package"] URL = MP.url`.
+- Match Batch B to each AP by extracting the 32-char hex ID from the AP's `url` field and checking `"Consumed Package" LIKE '%<ap-id>%'`.
+- Portfolio table Credits column: `[Balance Credit] rem. ([Consumed Credit]/[Total Credit])` — e.g. `6 rem. (4/10)`.
+- If an AP has no linked Master Package (null `Master Package` field): render credits as `—` and flag in the attention queue under `🟡 No active package`.
+
 If a customer has no Active Package (Active? = YES), treat ARR as `—` and flag in the attention queue.
+
+**Shared-contract packages:** If `AP["Customer"]` contains more than one URL, the package is shared. Show one portfolio table row per customer. Display the package ARR on each row with an asterisk (e.g. `$614K*`). Add a table footnote: `*Shared contract — ARR is total package value, not per-customer allocation.` For the report header ARR total, count the package ARR **once** regardless of how many customers it covers, and note the number of entities covered.
 
 ### Step 4 — Build the attention queue
 
@@ -302,14 +343,16 @@ For accounts excluded by this guard:
 - **Portfolio table:** include them with signal `ℹ️` and a note in the Signal column — "Presales" or "Contract ended [YYYY-MM-DD]". Never ⚠️ or 🔴.
 - **Attention queue:** add only under the ℹ️ category below, and only if Status = `Presales` OR End Date was within the last 180 days. Accounts with contracts that ended more than 180 days ago and no Presales status: omit from the queue entirely.
 
+**Stale planned sessions:** A Planned session with `date:Call Date:start` earlier than today is stale — treat it as absent. A stale planned session does NOT satisfy the `🟠 Gap` condition. Only a future-dated Planned session qualifies. (The Next Planned session query already filters to `>= today`, so any result from that query is by definition valid.)
+
 For each **eligible** customer (active, non-presales, non-lapsed), evaluate (all flags independent):
 
 | Flag | Condition | Label |
 |---|---|---|
 | 🔴 Stale | No delivered session in `--days` (default 30) AND no planned session | `No session in N days — none scheduled` |
 | 🟠 Gap | No delivered session in `--days` AND a planned session exists | `No session in N days (next: [date])` |
-| 🟠 Quota exhausted | Sessions Remaining = 0 AND Status ≠ `Service Quota Used` | `0 credits remaining — check package status` |
-| 🟡 Low credits | Sessions Remaining ≤ 2 AND Status = `Adopting` or `Activating` | `[N] credits remaining` |
+| 🟠 Quota exhausted | Balance Credit = 0 AND Status ≠ `Service Quota Used` | `0 credits remaining — check package status` |
+| 🟡 Low credits | Balance Credit ≤ 2 AND Status = `Adopting` or `Activating` | `[N] credits remaining` |
 | 🟡 Renewal soon | End Date ≤ today + renewals window (default 90 days) | `Contract ends [date] ($ARR)` |
 | 🟡 No active package | No Active Package with Active? = YES | `No active package found` |
 | ℹ️ Service Quota Used | Status = `Service Quota Used` AND no planned session | `Quota used — no sync scheduled` |

@@ -26,6 +26,7 @@ Customer (name or shorthand), optional session type and date. If type/date are m
   - **🧠 Working Notes:** read the `🧠 Working Notes` toggle from the Active Package page body. This holds current program state, open risks, customer terminology, and mid-program discoveries. Treat it as the authoritative operational context — weigh it alongside (not below) Gong and Gmail.
   - **Customer page:** use for company identity only (who they are, products brought to market, stakeholders, goals). Don't look here for the program plan.
 - Past chats — `conversation_search` if available.
+- **Tracker Memory (Notion):** Find the `AISE Identity — {display_name}` page and check for a "Tracker Memory" child page in its blocks. If it exists, read it. Look for patterns whose session type, program phase, or risk profile matches this session or customer context. Surface any applicable patterns in the prep brief under a brief "**Patterns from past accounts**" callout — one line per pattern, actionable implication only. If no Tracker Memory page exists, skip silently.
 
 **Ownership check (mandatory):** After resolving the Customer page, fetch its `Owner` field. If it does not contain the user's Notion ID (from the `AISE Identity` Notion page) (`<user-uuid>`), do **not** continue silently — the workspace is shared with other PB AISEs and this may be a teammate's account. Surface the situation: "<Customer> has Owner = [list]; you're not in it. Take ownership now (set Owner to you) or stop?". Wait for the user's call.
 

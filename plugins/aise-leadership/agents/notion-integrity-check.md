@@ -90,7 +90,7 @@ Process the working set and bucket findings into these categories:
 
 **🟥 Critical drift (require human judgment, never auto-fix):**
 
-- **Orphan Active Package** — `Active? = __YES__` but `Customer` relation is null. (We've seen this once before.)
+- **Orphan Active Package** — `Active? = __YES__` but `Customer` relation is null. This is a data quality error: the package cannot roll up ARR, cannot be synced via sf-backfill, and is invisible to all customer-scoped queries. Surface the AP name and URL and require manual fix. (Pattern observed: "SAP SE Premium Plus" found orphaned May 2026.)
 - **Multiple Active Packages with `Active? = YES` for one customer** — should be exactly one. Check via: `"Customer"` LIKE customer-page-id AND `"Active?" = '__YES__'`, count > 1. The Customer's `Current package` formula silently shows only the first — the others burn credit invisibly. Requires human judgment to decide which is the true current package.
 - **Customer.Owner ≠ Active Package.Current Account Owner** for the linked AP — propagation drift, but if the package shows a different AISE than the customer, it might be a handoff in flight. Surface for human review.
 - **Customer the user owns has no Active Package at all** — usually indicates the Customer page exists but the engagement record was never created.

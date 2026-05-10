@@ -30,13 +30,13 @@ You'll be handed a correction, rule change, or new fact. For example:
 
 | Type | Goes in project file | Also save as memory? |
 |---|---|---|
-| Writing style / voice / formatting rule | `context/communication-style-guide.md` | Yes – `feedback` memory |
+| Writing style / voice / formatting rule | `AISE Assistant Preferences — {display_name}` Notion page, Voice section. Use `notion-search("AISE Assistant Preferences — {display_name}")` + `notion-fetch` to read the current Voice section, then `notion-update-page` to edit or append the correction in place. Never write to `context/communication-style-guide.md` — that file is bundled and writes won't persist for end users. | Yes – `feedback` memory |
 | New session type / scorecard dimension / session criteria / scoring threshold | `context/score-cards.md` + maybe `context/pb-aise-reference-guide.md` | Yes – `project` memory |
 | KDD pattern (new decision question, new starter-example heuristic, new transform rule for a session type) | The matching template in `templates/session-kdds/` (and `00-index.md` if the change is structural). Never overwrite – propose a diff. | Yes – `project` memory |
 | Workflow rule / ground rule / default behavior | `context/project-instructions.md` | Yes – `feedback` memory |
-| Notion schema / field format / gotcha | `context/notion-schema.md` | No (schema is repo-canonical) |
+| Notion schema / field format / gotcha | **Do not write to `context/notion-schema.md`** — the file is bundled with the plugin and writes do not persist for end users. Instead: acknowledge the gap, then output a clearly marked copyable prompt the user can send to the plugin admin to get the schema file updated in the next release. Format: `> **Plugin admin prompt:** [specific DB name, field name, and fix needed]`. | No local writes — admin prompt only |
 | Customer-specific fact (AE change, stakeholder shift, risk, terminology, program state) | `🧠 Working Notes` toggle on the customer's Active Package page in Notion. The page is the source of truth — there is no local index to reconcile. | Yes – `project` memory (if load-bearing beyond the moment) |
-| Cross-customer pattern (risk or failure mode seen in ≥2 customers, success move that generalises, architecture decision that recurs) | `<PLUGIN_DATA_DIR>/about/tracker-memory.md` — where `PLUGIN_DATA_DIR=$(cat "$HOME/.claude/aise-assistant.datadir")`. Format: **Pattern** (one line), **Source** (customer category + session type, no names), **Action** (what to do differently). Create the file from `about/templates/tracker-memory.md.template` if it doesn't exist yet. | Yes – `project` memory |
+| Cross-customer pattern (risk or failure mode seen in ≥2 customers, success move that generalises, architecture decision that recurs) | **Tracker Memory** sub-page of the user's `AISE Identity — {display_name}` Notion page. Find the identity page via `notion-search("AISE Identity — {display_name}")` + `notion-fetch`. Check for an existing "Tracker Memory" child page in the page's blocks; if absent, create it with `notion-create-pages` as a sub-page. Append one entry per pattern: **Pattern** (one line), **Source** (customer category + session type, no customer names), **Action** (what to do differently). | Yes – `project` memory |
 | Notion writing style / page structure | `context/notion-writer-playbook.md` | Yes – `feedback` memory |
 | General user preference ("I'm an AISE at PB", "I prefer short responses") | – | Yes – `user` memory only |
 
@@ -59,11 +59,10 @@ Use Read. If a section already addresses the topic, propose an *update*, not an 
 Produce a **unified diff** or clearly-marked before/after snippet. Show it in chat:
 
 ```
-Proposed update to context/communication-style-guide.md:
+Proposed update to AISE Assistant Preferences — {display_name} (Voice section):
 
-+ ### Punctuation
-+ - Do not use em-dashes (—). Prefer commas, parentheses, or sentence breaks.
-+   *Why:* the user's explicit preference as of 2026-04-21.
++ Punctuation: Do not use em-dashes (—). Prefer commas, parentheses, or sentence breaks.
++   *Why:* {display_name}'s explicit preference as of 2026-05-10.
 
 Also saving as feedback memory: "no em-dashes in drafts".
 
@@ -76,9 +75,29 @@ Default is **ask before writing**. If the user has previously said "just do it w
 
 ### 5. Write both layers
 
-- Edit the project file(s) using Edit.
-- Write the memory file using Write (one file per memory, following the schema in the global instructions: frontmatter with `name`, `description`, `type`; body with rule + `**Why:**` + `**How to apply:**` for feedback/project types).
+Destination depends on type:
+- **Notion-targeted** (voice, customer facts, tracker memory): use `notion-update-page` or `notion-create-pages` — no local file edit needed.
+- **Context file-targeted** (scorecards, KDD templates, workflow rules, playbook): use Edit on the relevant `context/` or `templates/` file.
+- **Schema gaps**: output the admin prompt only — no writes.
+
+Always also:
+- Write the memory file using Write (one file per memory: frontmatter with `name`, `description`, `type`; body with rule + `**Why:**` + `**How to apply:**` for feedback/project types).
 - Update `MEMORY.md` index with a single-line entry.
+
+### 5b. Multi-plugin agent sync
+
+When the change targets an agent spec file (`agents/{agent}.md`), check whether the same file also exists in the **other** plugin's `agents/` directory. Both plugin source trees live under the same monorepo:
+
+- **aise-assistant agents:** `~/Library/Mobile Documents/com~apple~CloudDocs/Projects/agent_tools/aise-toolkit/plugins/aise-assistant/agents/`
+- **aise-leadership agents:** `~/Library/Mobile Documents/com~apple~CloudDocs/Projects/agent_tools/aise-toolkit/plugins/aise-leadership/agents/`
+
+Use Read to confirm the file exists in the sibling plugin before editing. If it does, apply the same logical change — but **preserve plugin-specific lines** in each copy:
+- `tools:` frontmatter (tool names differ between plugins — never overwrite)
+- `PLUGIN_DATA_DIR` references (`aise-assistant.datadir` in aise-assistant agents; `aise-leadership.datadir` in aise-leadership agents)
+
+Agents shared by both plugins as of May 2026: `context-keeper.md`, `sf-backfill.md`, `notion-integrity-check.md`, `notion-writer.md`, `notion-ask.md`, `assistant-onboarding.md`. Confirm with Read before assuming the list is current — it may grow.
+
+Include all updated paths in the Step 6 report.
 
 ### 6. Report
 

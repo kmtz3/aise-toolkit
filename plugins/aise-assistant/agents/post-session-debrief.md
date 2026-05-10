@@ -229,6 +229,20 @@ Score each dimension (0-5) based on what the source material shows. Return the e
 
 Chat only. Do not write to any Notion record.
 
+**After scoring — check Tracker Memory and surface new patterns:**
+
+1. **Read Tracker Memory:** Find the `AISE Identity — {display_name}` page and check for a "Tracker Memory" child page. If it exists, read it. Use any matching patterns to enrich the "Improvement tips" block above — e.g. if the same scorecard dimension has been weak before, cite the prior pattern and the suggested fix.
+
+2. **Identify new patterns worth logging:** Look for any of the following in this session's output:
+   - A scorecard dimension scoring ≤2 that you've seen before in another account's session notes.
+   - A risk, failure mode, or success move that generalises beyond this customer.
+   - An architecture or workflow decision that recurs across accounts.
+
+   If any match, surface in chat:
+   > "This looks like a cross-customer pattern — [one-line description]. Log it to Tracker Memory so future session preps and debriefs can draw on it? (y / no)"
+   
+   If confirmed, invoke `agents/context-keeper.md` to write the pattern to the Tracker Memory sub-page. The context-keeper will create the sub-page if it doesn't exist yet.
+
 ### 12. Update the Customer page if account-notable content surfaced
 
 Review the source material for anything that should update the Customer page (company identity, stakeholders, goals, toolstack) — not session-specific content, which belongs on the Session page.

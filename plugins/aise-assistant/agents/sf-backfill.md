@@ -53,6 +53,8 @@ The Customer Tracker workspace is shared — never run without the Owner filter.
 
 If `--customer` is supplied, filter after fetching by matching customer name. Build a working list of packages with: page URL, Customer page URL, Master Package URL, ARR, End Date, Status.
 
+**After fetching, immediately flag any Active Package where `Customer` relation is null.** These are orphaned packages that cannot be processed. Add them to a "needs manual fix" list — they will be surfaced in the Step 8 report and must not be processed further in this run.
+
 ### Step 2 – Resolve customer names
 
 For each active package, call `notion-fetch` on the Customer page URL to get the company name (title property is `Customer` on Customer pages). Cache — don't refetch the same customer twice.
@@ -130,13 +132,17 @@ Extract from results:
 **ARR:**
 1. Use `Account_ARR__c` from the Account record if non-zero — this is the dedicated ARR field.
 2. If `Account_ARR__c` = 0 or null, derive from the opp: `Amount / (Subscription_Term__c / 12)`. This handles multi-year TCV deals correctly.
-3. Flag in the report when the derived value is used so the user can verify.
+3. **If `Account_ARR__c` = $0 and no recent Closed Won opp is found:** before classifying as Unknown, check the Notion Customer page for a `Parent Company` value (or an SFDC URL pointing to a parent account). If a parent is identified, query the parent Account's opps in Salesforce before giving up. This handles sub-entity accounts (e.g. Xactware) where all deals are booked under the parent (e.g. Verisk Analytics).
+4. Flag in the report when the derived value is used so the user can verify.
 
 **Account status — classify as one of:**
 - `Active` — recent Closed Won opp exists, or open renewal opp present
-- `Churned` — Closed Lost opp present, or `Planning_to_Churn__c = true` on the Account
-- `At-Risk` — `Renewal_Risk__c` = "Planning to Churn" or similar risk value
-- `Unknown` — no Closed Won opp found at all
+- `Churned` — any of the following is sufficient, even if others are false:
+  - A Closed Lost renewal opp exists (`Type = 'Renewal'`, `IsClosed = true`, `IsWon = false`) — this is a standalone churn signal regardless of `Planning_to_Churn__c`
+  - `Planning_to_Churn__c = true` on the Account
+  - `Renewal_Risk__c = "Planning to Churn"` (also counts as At-Risk; classify as Churned if paired with a Closed Lost renewal)
+- `At-Risk` — `Renewal_Risk__c` indicates churn risk but no Closed Lost renewal opp yet
+- `Unknown` — no Closed Won opp found at all (after parent-account fallback if applicable — see ARR step 3 above)
 
 ### Step 4 – Classify and determine action
 
@@ -206,6 +212,8 @@ After all writes:
 - Flagged — churn/at-risk [n] — [company + reason]
 - Already in sync [n] — count only
 - Conflicts logged [n] — [company, Notion date, SF date] — the user decides
+- **Name format issues [n]** — Active Packages whose names do not follow `YEAR – Company | Tier` — [list: AP name, page URL]. These require manual rename to prevent ARR drift going unnoticed.
+- **Null-Customer packages [n]** — orphaned Active Packages with no Customer relation — [list: AP name, page URL]. These require manual fix before they can be synced.
 
 ---
 
@@ -213,7 +221,7 @@ After all writes:
 
 - **ARR source priority:** `Account_ARR__c` (Account) → `Amount / (Subscription_Term__c / 12)` (derived from opp). The `Amount` field is not consistently ACV — it is TCV for multi-year deals. Always derive when `Account_ARR__c` is absent. Flag derived values in the report.
 - **End date source priority is non-negotiable.** Start of open renewal opp > close of last Closed Won. Never use auto-renewal opp close date as current contract end.
-- **Churned and at-risk: flag only.** Zero Notion writes. Includes Closed Lost opp, "Planning to Churn" renewal risk, or any account the user has flagged as churning.
+- **Churned and at-risk: flag only.** Zero Notion writes. A Closed Lost renewal opp (`Type = 'Renewal'`, `IsClosed = true`, `IsWon = false`) is a standalone churn signal — classify as Churned even when `Planning_to_Churn__c = false`. Also includes "Planning to Churn" renewal risk, or any account the user has flagged as churning.
 - **Never overwrite a future Notion end date with an earlier SF date.** Log the conflict.
 - **Do not create Tasks** from this workflow.
 - **Flag ambiguity instead of guessing.** Multiple open opps, conflicting amounts — surface it in the report.

@@ -27,7 +27,7 @@ This file is always loaded. It points at the detail — don't duplicate it here.
 | `AISE Identity — {display_name}` (Notion page) | Name, Notion user ID, email, role, time zone. Read for any query filtered by user or output addressed to the user by name. |
 | `AISE Leadership Preferences — {display_name}` (Notion page) | Personal communication preferences: sign-offs, formatting rules, English variant (Voice section). Workspace specifics: Notion report templates DB ID + per-cadence format prefs, Gong session title keywords, Slack channels, internal coordinators (Workspace section). |
 | `AISE Leadership Team Roster — {display_name}` (Notion page) | AISE team members: name, email, Notion UUID. **Read for all team-scoped Notion queries and Gong host filtering.** Filter `Customer.Owner` by any Active UUID here; use host emails for Gong. |
-| `<PLUGIN_DATA_DIR>/about/tracker-memory.md` | Cross-team patterns and learnings spanning multiple accounts or AISEs. Local file at the pointer-file path. |
+| **Tracker Memory** Notion sub-page (child of `AISE Identity — {display_name}`) | Cross-team patterns and learnings spanning multiple accounts or AISEs. Find via `notion-search("AISE Identity — {display_name}") → notion-fetch` then look for a "Tracker Memory" child page in the page's blocks. If absent, it hasn't been created yet — only create it when logging a new pattern. Written by `context-keeper`. |
 
 ### Universal (apply to any user)
 
@@ -68,6 +68,7 @@ This file is always loaded. It points at the detail — don't duplicate it here.
 |---|---|
 | `/notion-ask <question>` | Answer questions about the 6 Customer Tracker databases — structure, fields, credit burn logic. |
 | `/notion-check [--customer <name>] [--fix]` | Walk Notion for ownership and data drift. Read-only by default; `--fix` applies low-risk corrections. |
+| `/notion-fix [--owner <aise-name>] [--customer <name>] [--past <period>] [--fix] [--dry-run]` | Portfolio-wide hunt for sessions marked Planned past their Call Date and open tasks past due or due this week. Default scope: whole workspace. Narrow with `--owner <aise-name>`. Searches Gmail, Gong, and Glean for evidence; reports 🟢/🟡/🔴 per item grouped by AISE. `--fix` applies corrections with per-item confirmation. |
 | `/notion-sync --sf [--apply]` | Sync Salesforce ARR and contract end dates into Active Packages. |
 | `/notion-sync --renewals [--days N] [--dry-run]` | Flag packages ending within N days not yet marked as Renewal. |
 
@@ -92,6 +93,7 @@ Full spec per skill in [`skills/`](skills/).
 | `report-builder` | Executes `/report`. Two modes: `--customer` (account snapshot) and `--aise` (portfolio summary). Read-only. |
 | `notion-ask` | Executes `/notion-ask`. Reads `context/notion-schema.md` as the canonical source; does live Notion queries when a specific customer is named. |
 | `notion-integrity-check` | Executes `/notion-check`. Walks Notion records for ownership and data drift. |
+| `notion-completion-fix` | Executes `/notion-fix`. Portfolio scope: whole workspace by default; `--owner <aise-name>` narrows to one AISE. Queries planned past-date sessions and open past-due/this-week tasks, searches Gmail/Gong/Glean for evidence, groups findings by AISE owner, and applies corrections with per-item confirmation when `--fix` is passed. `Delivered By` is always set to the account-owning AISE, never the operator. |
 | `sf-backfill` | Executes `/notion-sync --sf`. Queries SF opp data, applies ARR/date updates, flags churn/skip cases in chat. |
 | `notion-writer` | Notion create/update utility — used by integrity-check `--fix` and sf-backfill `--apply`. |
 | `context-keeper` | Watches for corrections and new rules, proposes diffs, writes both context files and memory. Invoke liberally. |
