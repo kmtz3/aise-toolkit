@@ -410,6 +410,16 @@ Workspace admins always retain full access regardless of property-rule restricti
 
 ---
 
+## Content Formatting
+
+Rules that apply to **all agents writing any Notion page content** — toggle bodies, sub-page bodies, inline page sections, any context.
+
+- **Never use `>` blockquote syntax.** In every Notion context, a `>` prefix renders as a separate block with a prominent left border — not a callout or highlight. This applies regardless of which page or section is being written. Use emoji + bold text as a visual anchor instead:
+  - ✅ `🎯 **Key point:** explanation text`
+  - ❌ `> 🎯 **Key point:** explanation text`
+
+---
+
 ## Known Gotchas
 
 - **Formulas referencing other formulas can't be updated via MCP.** Any `ALTER COLUMN "X" SET FORMULA(...)` on Active Packages fields that read from another formula (Total Credit, Consumed Credit, Delivered, Balance Credit) returns a type error. Edit in the Notion UI.

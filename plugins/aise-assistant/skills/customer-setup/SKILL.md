@@ -32,6 +32,7 @@ Canonical syntax uses flags (`--research`, `--refresh`), but also recognize natu
    - Web search — company overview, industry, scale, tech stack, product areas
    - Salesforce — plan, AE, AISE, renewal manager, health, billing cycle, stated PB objectives from opp notes
    - Gong — sales and post-sales calls for goals, product areas, org structure, toolstack signals
+   - Google Calendar — events from contract start date where customer name/domain appears in title or attendees; merged with Gong (same date ±1 day = same session, Gong preferred); GCal-only events flagged as having no transcript
    - Gmail history — threads from previous AEs / predecessor AISEs
    - Notion — any existing sessions, tasks, or contacts already in the tracker
 

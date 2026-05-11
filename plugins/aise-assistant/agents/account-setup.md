@@ -1,7 +1,7 @@
 ---
 name: account-setup
 description: Use when the user is newly assigned to a customer (handover, new account, or inherited account with no active Notion setup). Detects whether the customer has post-sales history, researches the company, pulls Gong + Gmail history from any previous owners, finds the right Master Package, then proposes and writes the Customer page update, Active Package creation with a history summary, and (if history exists) individual Session records backfilled from all relevant Gong/Notion calls. Invoked by `/customer-setup`.
-tools: Read, Grep, Glob, WebSearch, mcp__claude_ai_Notion__notion-search, mcp__claude_ai_Notion__notion-fetch, mcp__claude_ai_Notion__notion-query-data-sources, mcp__claude_ai_Notion__notion-create-pages, mcp__claude_ai_Notion__notion-update-page, mcp__claude_ai_Glean__search, mcp__claude_ai_Glean__gmail_search, mcp__claude_ai_Glean__meeting_lookup, mcp__claude_ai_Glean__read_document, mcp__claude_ai_Gmail__search_threads, mcp__claude_ai_Gmail__get_thread
+tools: Read, Grep, Glob, WebSearch, mcp__claude_ai_Notion__notion-search, mcp__claude_ai_Notion__notion-fetch, mcp__claude_ai_Notion__notion-query-data-sources, mcp__claude_ai_Notion__notion-create-pages, mcp__claude_ai_Notion__notion-update-page, mcp__claude_ai_Glean__search, mcp__claude_ai_Glean__gmail_search, mcp__claude_ai_Glean__meeting_lookup, mcp__claude_ai_Glean__read_document, mcp__claude_ai_Gmail__search_threads, mcp__claude_ai_Gmail__get_thread, mcp__claude_ai_Google_Calendar__list_events, mcp__claude_ai_Google_Calendar__get_event
 ---
 
 You are the **account-setup** agent. The user has just been assigned to a customer — either a brand-new account or one inherited from another AISE — and needs the Notion Customer page populated and an Active Package created so she can get to work.
@@ -101,6 +101,7 @@ Make all of these calls simultaneously:
 
 **History from previous owners:**
 - **Gong transcripts:** follow steps 1-2 of the **Transcript lookup order** in `context/project-instructions.md §3` — `meeting_lookup` is step 1 but often returns empty for inherited accounts, so fall through to the `app:gong` search immediately if it does. For the step-2 search, use `app:gong "[Customer Name]"` — **quote the customer name** to scope results to this account only; an unquoted search returns all Gong calls. From each result object, extract the `id` field and pass it to `read_document` to fetch the full transcript — do not pass a URL string. Don't read or grep the raw search results blob.
+- **Google Calendar:** `Google_Calendar__list_events` from contract start date (`Service_Start_Date__c` from Salesforce; default to 18 months if unknown) through today. Filter events where: (a) customer name appears in the event title (case-insensitive), OR (b) at least one attendee email matches the customer's domain. Customer domain: read from Salesforce `Website` field or contact emails on the Customer page; derive as lowercased company name + `.com` as fallback. For each matching event: capture title, date, duration, attendee list. **Cross-reference with Gong results:** an event on the same date ±1 day as a Gong call is the same session — keep Gong as primary, attach GCal attendees as supplementary context. GCal-only events (no Gong match) are still valid candidate sessions; carry them forward with `source: GCal only`.
 - **Gmail (self-mode only):** `Gmail search_threads` with `[customer-domain] newer_than:730d` — pull up to 30 threads, sorted by date. **Skip this step in delegated mode** — `Gmail__search_threads` is scoped to the operator's mailbox and will always return empty for a teammate's customer emails. Use only `Glean:gmail_search` in that case.
 - `Glean gmail_search` with `from:[previous-aise-email] [customer-name]` if the previous AISE is known. In delegated mode, also search `from:[target-user-email] [customer-name]` to find emails the target user sent about this account.
 - `Glean search` — any Slack threads, Salesforce notes, Drive docs about this customer.
@@ -185,6 +186,7 @@ List each session you'll create in the Sessions DB. For each:
 - **Brief** — 2–3 sentences on what was covered
 - **Next steps agreed** — bullet list of commitments or follow-ups identified in the call
 - **Delivered By** — set to the actual presenter's user ID where it can be resolved cleanly (e.g. predecessor AISE via `notion-get-users` on their email). If the presenter is unknown, leave `Delivered By` blank and flag the session in the report so the user can backfill manually. Don't default historical sessions to the user — that misrepresents who delivered them.
+- **Source** — note whether the record comes from Gong (transcript available), GCal+Gong (calendar event matched to transcript), or GCal only (no transcript). For GCal-only sessions: leave session notes blank and include `📅 GCal only — no transcript found. Add notes manually.` in the record body.
 - **Current Account Owner** — leave blank. The Sessions-side automation fills it from `Customers.Owner` automatically when the relation is set on create. (For backfilled sessions where the automation may not have fired, the Resync button on the Customer page in the next step takes care of it.)
 - **Consumed Package** — date-matching mandatory: query the customer's Active Packages and find the one whose `Start Date`–`End Date` covers this session's `Call Date`. For historical backfill this is often an older inactive package. If multiple packages exist, pick the one whose date range covers the session date. If no package's range covers the date, leave `Consumed Package` empty and flag the session in the report. Never assign by recency alone.
 
@@ -244,6 +246,8 @@ When scanning Gong calls, **include** a session if it meets any of these:
 - Call is an internal PB-only sync (no customer present)
 
 When in doubt — include the session and flag it in the proposal with a note so the user can decide.
+
+**GCal-only events (no Gong match):** Apply the same standard above, but also exclude if the event title is entirely generic (`sync`, `catch-up`, `intro`, `check-in`, `1:1`) with no AISE in the attendees. When ambiguous — include and flag.
 
 ---
 

@@ -5,6 +5,19 @@ Format: `## [version] — YYYY-MM-DD` followed by bullet points grouped by type.
 
 ---
 
+## [2.10.0] — 2026-05-11
+
+### Added
+- `agents/session-backfill.md`: new agent for backfilling historical post-sales sessions from GCal + Gong + Notion meeting notes for already-configured customers; bootstraps missing Active Package from Salesforce if needed
+- `skills/session-backfill/SKILL.md`: new `/session-backfill` command with single-customer and `--bulk mine` modes; includes `--since`, `--dry-run` flags and natural language equivalents
+- `CLAUDE.md`: added `/session-backfill` entries to the command table and agent registry
+
+### Changed
+- `agents/account-setup.md`: added Google Calendar to the session discovery step (GCal events matched by customer name/domain, merged with Gong by date ±1 day); GCal-only sessions flagged in the proposal with a no-transcript note; added `Source` field to the session creation schema; added filter rule for generic GCal-only event titles
+- `skills/customer-setup/SKILL.md`: documented Google Calendar as a discovery source in the `--research` mode context block
+
+---
+
 ## [2.8.2] — 2026-05-10
 
 ### Fixed

@@ -143,7 +143,7 @@ Every task page body must include a "best shot" scaffold so the user can act imm
 | Task type | Scaffold |
 |---|---|
 | "File product request" | Three paragraphs: **Problem** (what the customer is experiencing), **Current workaround or process** (how they're managing today), **Desired outcome** (what they want PB to do). Seed from session notes/transcript. |
-| "Reply to [person]" / "Send [email/Slack]" | **Draft reply** section with a full message draft in the user's voice (per the `AISE Leadership Preferences` Notion page, Voice section) per `communication-style-guide.md`. |
+| "Reply to [person]" / "Send [email/Slack]" | **Draft reply** section with a full message draft in the user's voice (per the `AISE Assistant Preferences` Notion page, Voice section) per `communication-style-guide.md`. |
 | "Draft [document/artifact]" | **Starter outline** with key sections or a first draft. |
 | All other tasks | **Suggested approach** with 2–4 bullet steps toward completing the task. |
 
