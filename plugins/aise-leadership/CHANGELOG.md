@@ -1,5 +1,12 @@
 # Changelog — aise-leadership
 
+## [1.8.0] — 2026-05-11
+
+### Removed
+- `skills/commit/SKILL.md`: removed `/commit` as a user-facing skill — moved to dev-only `.claude/commands/commit.md` in the toolkit root
+
+---
+
 ## [1.6.2] — 2026-05-10
 
 ### Fixed
