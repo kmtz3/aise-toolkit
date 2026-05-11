@@ -5,6 +5,21 @@ Format: `## [version] — YYYY-MM-DD` followed by bullet points grouped by type.
 
 ---
 
+## [2.11.0] — 2026-05-11
+
+### Added
+- `context/notion-schema.md`: added `Gong call` (url) and `Spark conversation` (checkbox) to Sessions writable fields; added `Related Tasks` (relation → Tasks DB) to Sessions writable fields; added `Parent Company` (text) to Customers writable fields for parent-child/shared-contract accounts
+- `agents/post-session-debrief.md`: set `Gong call` URL and evaluate `Spark conversation` on every session update (step 3); link new Tasks to session via `Related Tasks` after create
+- `agents/session-summarizer.md`: set `Gong call` and `Spark conversation` in Notion update step; populate `Related Tasks` on Session when creating Tasks
+- `agents/session-backfill.md`: include `Gong call` and `Spark conversation` in session create field list
+- `agents/account-setup.md`: include `Gong call` and `Spark conversation` in session backfill creates; check for parent company during research and set `Parent Company` on Customer create
+- `agents/notion-writer.md`: document `Gong call` and `Spark conversation` rules in Sessions project-specific section
+
+### Fixed
+- `context/notion-schema.md`: removed stale fields (`Next Call (raw)`, `Counted/Real` from Customers read-only; `Packages → Master Packages` from Customers writable; `Source Session` rollup from Tasks read-only); corrected `All Packages` from "rollup" to "relation"; added undocumented read-only fields (`P-Score`, `Package Tier` on Customers; `Services Tier`, `Tier (formula)`, `Package Tier` on Active Packages)
+
+---
+
 ## [2.10.0] — 2026-05-11
 
 ### Added

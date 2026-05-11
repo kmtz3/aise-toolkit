@@ -276,12 +276,13 @@ Fetch the page immediately before writing — `update_content` is whitespace-exa
 | `SFDC` | url | Salesforce account URL |
 | `Slack Channel` | url | Customer Slack channel URL |
 | `Domain` | url | Customer domain |
+| `Parent Company` | text | Parent company name for child accounts that share a contract (e.g. "SAP SE" for SAP-family accounts). Populate during account setup / research when the customer is part of a corporate group where multiple entities share one Active Package. |
 | `Main Contact` | relation (limit 1) | → Contacts DB |
 | `Contacts` | relation | → Contacts DB |
 | `Calls` | relation | → Sessions DB (back-relation — auto-updated when Sessions.Customers is set) |
 | `Tasks` | relation | → Tasks DB (back-relation — auto-updated when Tasks.Customers is set) |
+| `All Packages` | relation | → Active Packages DB (back-relation — auto-updated when Active Package.Customer is set; the full history of all APs ever linked to this account) |
 | `Figma File` | relation | → Figma Files DB (`29497e9c-7d4f-80ab-b37f-000bbe6452ba`) |
-| `Packages` | relation | → Master Packages DB |
 | `Files & media` | file | Attachments |
 
 **Account Status — definitions:**
@@ -304,7 +305,7 @@ Fetch the page immediately before writing — `update_content` is whitespace-exa
 
 ### Read-only (rollups / formulas — never write these)
 
-`ARR`, `Days Left`, `Days Till Renewal`, `Next Call`, `Next Call (raw)`, `Next Steps`, `Delivered`, `Counted/Real`, `Package Status`, `Start Date (Current Pkg)`, `End Date (Current Pkg)`, `∑ Architecting`, `∑ Credit`, `∑ Time`, `∑ Training`, `All packages` (rollup — all APs ever linked via the `Customer` relation on the AP side), `Current package` (formula — the AP with `Active? = YES`; first found if multiple active)
+`ARR`, `Days Left`, `Days Till Renewal`, `Next Call`, `Next Steps`, `Delivered`, `Package Status`, `P-Score`, `Package Tier`, `Start Date (Current Pkg)`, `End Date (Current Pkg)`, `∑ Architecting`, `∑ Credit`, `∑ Time`, `∑ Training`, `Master Package` (rollup from Active Packages.Master Package), `Current package` (formula — the AP with `Active? = YES`; first found if multiple active)
 
 ---
 
@@ -331,11 +332,12 @@ Fetch the page immediately before writing — `update_content` is whitespace-exa
 
 ### Read-only formulas (never write — edit in Notion UI if needed)
 
-`Total Credit`, `Consumed Credit`, `Balance Credit`, `Delivered`, `Total Architecting`, `Total Training`, `Left Architecting`, `Left Training`, `Left Days`, `∑ Credit`, `∑ Architecting`, `∑ Training`, `∑ Time`
+`Total Credit`, `Consumed Credit`, `Balance Credit`, `Delivered`, `Total Architecting`, `Total Training`, `Left Architecting`, `Left Training`, `Left Days`, `Services Tier`, `Tier (formula)`, `∑ Credit`, `∑ Architecting`, `∑ Training`, `∑ Time`
 
 ### Read-only rollups (auto-computed from relations)
 
 - `Architecting Sessions`, `Training Sessions` (from Master Package)
+- `Package Tier` (rollup of `Master Package.Tier` — used for reporting; not writable)
 - `Delivered Architecting`, `Delivered Training`, `Session Time` (from Sessions)
 - `Tasks Time` (from Tasks)
 - **`Delivered By (Sessions)`** — unique-list rollup of `Sessions.Delivered By`. Shows everyone who has presented a Session burning credit from this Active Package. Useful for handoff narratives and "who's worked on this engagement" reporting. Cannot be written.
@@ -359,6 +361,9 @@ Fetch the page immediately before writing — `update_content` is whitespace-exa
 | `Current Account Owner` | person (multi) | Mirror of `Customer.Owner`. Auto-filled by the Sessions-side automation when `Customers` relation is set, then maintained by the Resync button on subsequent Customer Owner edits. Treat as derived. |
 | `Delivered By` | person (multi) | The actual presenter(s) for this specific session. Set explicitly on create / when marking a session Delivered. For stand-ins or co-presented sessions, list everyone. |
 | `Next Steps` | rich_text | Free-form summary written into the session page during summary workflows |
+| `Gong call` | url | Gong recording URL for this session. Write as `"userDefined:Gong call": "<url>"`. Set whenever a Gong transcript is found — during debrief, summarizer, or backfill. |
+| `Spark conversation` | checkbox | `__YES__` if the session included Productboard Spark AI positioning or use-case discussion. Tracked for KPI reporting. Set during debrief / summarizer from transcript evidence; `__NO__` by default on backfill unless the transcript confirms Spark was discussed. |
+| `Related Tasks` | relation | → Tasks DB. Direct relation to tasks generated from this session. Also auto-populated when a Task's `Source Call` is set to this session (Notion bidirectional sync), but agents should set it explicitly when creating tasks from the session to ensure the link is immediate. |
 
 ### Read-only
 
@@ -391,7 +396,7 @@ Fetch the page immediately before writing — `update_content` is whitespace-exa
 
 ### Read-only
 
-`Counted Time` (formula), `Source Session` (rollup), `Created Date`, `Last Edited`
+`Counted Time` (formula), `Created Date`, `Last Edited`
 
 ---
 

@@ -77,6 +77,8 @@ Then update the Session record properties:
 - `Delivered By` → set to the actual presenter(s). For sessions led by the user: `["<user-uuid>"]`. For co-presented or stand-in calls, list everyone who delivered.
 - `Next Steps` field — set to the 1-3 highest-priority next actions (PB-side, declarative format).
 - `Consumed Package` → apply the date-matching rule: assign the Active Package whose `Start Date`–`End Date` covers this session's `Call Date`. If the current `Active? = YES` package does not cover the date, query the customer's packages for an older one that does. If none cover the date, leave the field empty. Never assign by recency alone.
+- `Gong call` → if a Gong URL was identified during transcript lookup (step 2), set it now: `"userDefined:Gong call": "<url>"`.
+- `Spark conversation` → scan the transcript/notes for evidence that Productboard Spark AI was discussed (positioning, use cases, demos, customer questions about Spark). Set `__YES__` if confirmed; `__NO__` otherwise. This is a KPI field — always evaluate it, never leave it blank.
 - Do **not** write to `Current Account Owner` — it's auto-maintained from `Customers.Owner` by the Sessions automation + Customer Resync button. Treat as derived.
 
 Follow `context/notion-schema.md` for all field formats. Write directly — no approval step.
@@ -100,6 +102,7 @@ From the extracted PB-side action items (step 2), for each item assigned to the 
 - Title: active-voice, specific, outcome-oriented.
 - `Customers` relation: this customer's page URL.
 - `Source Call` relation: this session's page URL.
+- **After creating each Task**, also update the Session page: add the new Task page URL to the Session's `Related Tasks` relation. This links the task back to the session explicitly (Notion's bidirectional sync eventually does this, but setting it immediately keeps the page accurate during the same run).
 - `Owner`: the user as creator — `["<user-uuid>"]`.
 - `Current Account Owner`: the user — `["<user-uuid>"]`. (The Resync button on the Customer page would propagate this on subsequent Owner edits, but on initial create the button hasn't fired so set explicitly.)
 - Both fields are mandatory since the May 2026 shared-workspace + revamp; missing either makes the Task invisible to the user's filtered queries.

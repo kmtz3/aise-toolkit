@@ -1,5 +1,12 @@
 # Changelog — aise-leadership
 
+## [1.8.1] — 2026-05-11
+
+### Fixed
+- `context/notion-schema.md`: synced from aise-assistant — new session fields (`Gong call`, `Spark conversation`, `Related Tasks`), `Parent Company` on Customers, stale field removals, and undocumented read-only field additions
+
+---
+
 ## [1.8.0] — 2026-05-11
 
 ### Removed

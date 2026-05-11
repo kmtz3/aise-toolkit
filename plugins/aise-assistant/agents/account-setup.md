@@ -45,7 +45,7 @@ Search the Customers DB (see `context/notion-schema.md`) by name.
 **If the Customer page exists:** capture its URL and proceed.
 
 **If the Customer page does not exist** (and mode is `baseline` or `--research`):
-1. Create it via `notion-create-pages` with parent = Customers DB (`29397e9c-7d4f-8067-b290-000b1c2d57e1`). Set `Customer` (title) and `Owner = ["<user-uuid>"]`.
+1. Create it via `notion-create-pages` with parent = Customers DB (`29397e9c-7d4f-8067-b290-000b1c2d57e1`). Set `Customer` (title) and `Owner = ["<user-uuid>"]`. If the company is a subsidiary or division of a parent group (identified from Salesforce or web research), also set `Parent Company` (text) to the parent company name.
 2. Immediately apply the New Customer template: `notion-update-page` with `command: apply_template, template_id: 29397e9c7d4f8005b04bef3858ece3e0`. This gives the page its icon and pre-populates the body sections.
 3. Fetch the page back (`notion-fetch`) to capture the current body — you'll need the exact section headings and placeholder text as `old_str` anchors for `update_content` writes in Step 5.
 
@@ -189,6 +189,8 @@ List each session you'll create in the Sessions DB. For each:
 - **Source** — note whether the record comes from Gong (transcript available), GCal+Gong (calendar event matched to transcript), or GCal only (no transcript). For GCal-only sessions: leave session notes blank and include `📅 GCal only — no transcript found. Add notes manually.` in the record body.
 - **Current Account Owner** — leave blank. The Sessions-side automation fills it from `Customers.Owner` automatically when the relation is set on create. (For backfilled sessions where the automation may not have fired, the Resync button on the Customer page in the next step takes care of it.)
 - **Consumed Package** — date-matching mandatory: query the customer's Active Packages and find the one whose `Start Date`–`End Date` covers this session's `Call Date`. For historical backfill this is often an older inactive package. If multiple packages exist, pick the one whose date range covers the session date. If no package's range covers the date, leave `Consumed Package` empty and flag the session in the report. Never assign by recency alone.
+- **Gong call** — if the session source is a Gong recording, include the Gong URL: `"userDefined:Gong call": "<url>"`. Leave blank for GCal-only sessions.
+- **Spark conversation** — set `__YES__` if the Gong transcript confirms Productboard Spark AI was discussed (positioning, use cases, customer questions). Set `__NO__` for GCal-only sessions or transcripts with no Spark signal.
 
 If a session already exists in the Sessions DB for this customer and date, skip it — don't duplicate.
 
@@ -263,7 +265,7 @@ Fetch the Customer page (`notion-fetch`). Parse the body to extract every H2 hea
 
 Run all of these simultaneously:
 
-- **Web search** — company overview, products, industry, scale, HQ, revenue/ownership, recent news. Aim for 5–6 crisp facts per topic. Also search for tech stack, integrations, tools (look for "tech stack", "tools", engineering blog, job postings).
+- **Web search** — company overview, products, industry, scale, HQ, revenue/ownership, recent news. Aim for 5–6 crisp facts per topic. Also search for tech stack, integrations, tools (look for "tech stack", "tools", engineering blog, job postings). **Check if the company is part of a corporate group** (subsidiary, division, or brand of a parent) — if so, note the parent company name for the `Parent Company` field on the Customer page.
 - **Salesforce** — opp notes, use cases, stated objectives for buying PB, product areas mentioned in the deal.
 - **Gong** — sales and post-sales calls. Look for: stated goals, product areas of interest, how their product org is structured, what tools they use, pain points. Use `app:gong "[Customer Name]"` (quoted) + `read_document` per result.
 - **Existing Notion sessions** — scan session notes for any product area, toolstack, or org structure mentions the AISE has captured live with the customer.

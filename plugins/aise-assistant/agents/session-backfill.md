@@ -152,7 +152,7 @@ If `--dry-run`: report and stop — do not proceed to Step 7.
 For each approved session, in date order per customer:
 
 1. `notion-create-pages` in Sessions DB (verify ID from `context/notion-schema.md`).
-   - Fields: `Session` (title), `Call Date`, `Type`, `Customer` (relation), `Consumed Package` (if matched), `Delivered By` (if resolved), `Status = Delivered`.
+   - Fields: `Session` (title), `Call Date`, `Type`, `Customer` (relation), `Consumed Package` (if matched), `Delivered By` (if resolved), `Status = Delivered`, `Gong call` (if source is Gong — write as `"userDefined:Gong call": "<url>"`), `Spark conversation` (`__YES__` if the transcript confirms Spark AI positioning/use cases were discussed, `__NO__` otherwise — infer from transcript where available, default `__NO__` for GCal-only sessions).
 2. Apply session template: `notion-update-page` with `command: apply_template` — template ID from `context/notion-schema.md` § Session Templates.
 3. Write into the `📋 Prep — [date]` toggle body:
    - Gong / GCal+Gong: 2–3 sentence brief + Gong call link.

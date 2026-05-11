@@ -39,8 +39,10 @@ Execute each write and return a clearly-labeled block: "**Notion updates applied
 
 - Update Session page: set `Call Status = Delivered`, append summary to page body.
 - Set `Consumed Package` on Session: find the Active Package whose `Start Date`–`End Date` covers the session's `Call Date` (current or historical). If the current `Active? = YES` package does not cover the date, look for an older inactive one for the same customer. If no package covers the date, leave empty and flag in the proposal.
+- Set `Gong call`: if the transcript source is a Gong recording, write its URL as `"userDefined:Gong call": "<url>"`.
+- Set `Spark conversation`: scan the transcript/notes for evidence of Productboard Spark AI discussion (positioning, use cases, customer questions). Set `__YES__` if confirmed; `__NO__` otherwise. Always evaluate — never skip.
 - Update Customer page body: add decisions to decisions log, update stakeholder list.
-- Create Tasks (PB-side only): one per action item assigned to the user. Include title, customer relation, priority, due date if stated.
+- Create Tasks (PB-side only): one per action item assigned to the user. Include title, customer relation, `Source Call` (this session's URL), priority, due date if stated. After each Task create, update the Session's `Related Tasks` relation to include the new Task URL.
 - **Update 🧠 Working Notes** on the Active Package page: mark session as delivered in **Program state**, append any new risks/flags to **Open risks**, add new terminology to **Terminology**, and log discoveries or unresolved carry-forwards under **Discoveries / carry-forwards**. Spec in `context/notion-writer-playbook.md` Operation 6.
 - **Do NOT** create Tasks for customer-side action items — they live in the summary and any follow-up email.
 
