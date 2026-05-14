@@ -1,5 +1,13 @@
 # Changelog — aise-leadership
 
+## [1.8.2] — 2026-05-14
+
+### Fixed
+- `agents/notion-writer.md`: corrected the `userDefined:` prefix rule — apply it only to properties literally named `URL` or `id`; all other URL-typed properties use the property name directly with no prefix
+- `context/notion-schema.md`, `context/score-cards.md`: synced from aise-assistant (userDefined: prefix correction + new Sync / Office Hours scorecard)
+
+---
+
 ## [1.8.1] — 2026-05-11
 
 ### Fixed

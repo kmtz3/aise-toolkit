@@ -5,6 +5,19 @@ Format: `## [version] — YYYY-MM-DD` followed by bullet points grouped by type.
 
 ---
 
+## [2.12.0] — 2026-05-14
+
+### Added
+- `context/score-cards.md`: new `🗣️ Sync / Office Hours` scorecard for recurring customer syncs and lightweight check-ins (lower-ceremony than Architecting / QBR — measures responsiveness, momentum, early risk surfacing)
+
+### Fixed
+- `agents/notion-writer.md`, `context/notion-schema.md`, `agents/post-session-debrief.md`: corrected the `userDefined:` prefix rule — apply it only to properties literally named `URL` or `id`; all other URL-typed properties (`Gong call`, `SFDC`, `Slack Channel`, `Domain`) use the property name directly with no prefix
+- `agents/post-session-debrief.md`: added duplicate-session detection after Session resolution (same Customer + same `Call Date`) that marks duplicates as `Canceled` + `Do not count` and links them to the kept session
+- `agents/post-session-debrief.md`, `agents/email-drafter.md`: added timezone parsing guidance for times pulled from email/`.ics` bodies — cross-verify against Calendar events, render both zones in customer-facing drafts
+- `agents/post-session-debrief.md`: documented the Gmail-MCP draft-replacement caveat — no `update_draft` / `delete_draft` exists, so corrections require creating a new draft and trashing the old one manually
+
+---
+
 ## [2.11.0] — 2026-05-11
 
 ### Added

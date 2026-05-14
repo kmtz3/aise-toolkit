@@ -2173,3 +2173,223 @@ F) Explicit confirmation from the customer on the plan and expectations.
 2 = Generic close with weak linkage to review content.
 1 = "We'll follow up" only.
 0 = No close.
+
+---
+
+# 🗣️ Sync / Office Hours
+
+Use for `🗣️ Sync` sessions (recurring customer syncs, office hours, lightweight check-ins). Lower-ceremony than Architecting / QBR — the bar is responsiveness, momentum, and surfacing risk early, not formal framing.
+
+## 1) Lightweight agenda framing and time check (0–5)
+
+**Ask a question**
+
+"Did the AISE open with a short, customer-aware agenda and a time check, without over-engineering the framing?"
+
+**Instruction guide**
+
+Definition. Must include:
+
+A) Time check (duration confirmed).
+B) Quick agenda or shape for the session (topics the AISE expects to cover, even if loose).
+C) Invitation for the customer to add or reorder topics.
+D) Connection to last sync or to any open items carried forward.
+E) Tone calibrated to "working session" not "formal review" — no over-structured deck for a 30-min sync.
+
+**Scoring**
+
+5 = A, B, C, D, E explicit and customer confirms / reorders.
+4 = A, B, C, D explicit, tone calibration is fine but customer input not solicited.
+3 = Exactly 3 elements explicit.
+2 = Exactly 2 elements explicit.
+1 = Only 1 element explicit.
+0 = None.
+
+---
+
+## 2) Active listening and customer-voice ratio (0–5)
+
+**Ask a question**
+
+"Did the AISE let the customer drive enough of the conversation, listen actively, and resist filling silence with PB monologue?"
+
+**Instruction guide**
+
+Definition. To score high, the AISE must:
+
+A) Let the customer speak at least as much as the AISE (rough talk-time parity or customer-heavier).
+B) Use open questions rather than leading or yes/no questions for substantive topics.
+C) Reflect / paraphrase back to confirm understanding before responding.
+D) Resist jumping straight to a PB feature pitch when the customer raises a problem.
+E) Sit with silence when the customer is thinking — no rescue talking.
+
+**Scoring**
+
+5 = Covers A to E; customer voice dominates and AISE responses are grounded in what was just said.
+4 = Covers A to D; reflection/paraphrase is present but uneven.
+3 = AISE listens but talks more than the customer, or interprets eagerly.
+2 = AISE-led conversation with limited customer space.
+1 = Monologue dominated by AISE.
+0 = Customer barely speaks.
+
+---
+
+## 3) Decisions captured live (0–5)
+
+**Ask a question**
+
+"Were decisions reached during the sync named, confirmed, and captured in the moment — not deferred to a follow-up?"
+
+**Instruction guide**
+
+Definition. To score high, the AISE must:
+
+A) Identify when a decision is being made (vs. a discussion still in progress).
+B) State the decision back to the room for confirmation.
+C) Note the rationale briefly (what trade-off was accepted).
+D) Capture the decision in writing on the call (Notion, shared doc, or chat).
+E) Distinguish decisions from open items / parking-lot topics.
+
+**Scoring**
+
+5 = Covers A to E; decisions are explicit, confirmed, and written down live.
+4 = Covers A to D; capture happens but rationale is thin.
+3 = Decisions land verbally but aren't all captured.
+2 = Decisions blur with discussion; capture is partial.
+1 = "We agreed" statements without confirmation or capture.
+0 = No decisions named.
+
+---
+
+## 4) Action items with owner + timing on the call (0–5)
+
+**Ask a question**
+
+"Did the AISE close out action items with a named owner and concrete timing before moving on — not after the call?"
+
+**Instruction guide**
+
+Definition. Each action item should have:
+
+A) A specific outcome (not "look into X").
+B) A named owner (PB-side or customer-side person, not "the team").
+C) A timing commitment (day, week, or "by next sync" — not "soon").
+D) Customer confirmation of customer-side ownership (not assumed).
+E) Written down live — visible to both sides during the call.
+
+**Scoring**
+
+5 = Every action item covers A to E live on the call.
+4 = Most items cover A to D; written capture happens after the call.
+3 = Most items have owner + timing, but specificity or capture is uneven.
+2 = Owners assigned, timing vague — or vice versa.
+1 = "We'll figure it out" placeholders only.
+0 = No action items closed.
+
+---
+
+## 5) Risk surfacing and early-warning detection (0–5)
+
+**Ask a question**
+
+"Did the AISE pick up on early-warning signals — quiet stakeholders, scope drift, adoption gaps, frustration cues — and surface them constructively?"
+
+**Instruction guide**
+
+Definition. To score high, the AISE must:
+
+A) Notice quiet / disengaged participants and invite them in.
+B) Pick up on hedging language, dropped commitments, or vague answers about adoption.
+C) Name a risk explicitly when one is detected (not soft-pedal it).
+D) Ask diagnostic follow-up questions rather than accepting surface answers.
+E) Decide whether the risk needs immediate escalation, a follow-up session, or just a watch-flag — and act accordingly.
+
+**Scoring**
+
+5 = Covers A to E; at least one real risk is surfaced and routed.
+4 = Covers A to D; routing decision is less explicit.
+3 = AISE notices signals but doesn't fully name or diagnose them.
+2 = Signals are present in the call but the AISE moves past them.
+1 = AISE actively rationalizes warning signs away.
+0 = No risk awareness shown despite obvious signals.
+
+---
+
+## 6) Stakeholder mapping and engagement check (0–5)
+
+**Ask a question**
+
+"Did the AISE confirm or update the stakeholder picture — who's still engaged, who's new, who's missing — without making it feel like an interrogation?"
+
+**Instruction guide**
+
+Definition. To score high, the AISE must (as relevant):
+
+A) Acknowledge new attendees, capture their role and goals.
+B) Note who from the expected stakeholder set is absent and why.
+C) Surface any quiet exit / churn signals (champion changing role, sponsor disengaged).
+D) Update the working stakeholder map (Customer page Contacts) after the call.
+E) Decide whether re-engagement, intro session, or executive touch is needed.
+
+**Scoring**
+
+5 = Covers A to E with concrete updates to the stakeholder model.
+4 = Covers A to D; routing/decision step is weaker.
+3 = Stakeholder topic is touched but not systematically.
+2 = Only acknowledges who is in the room, no map update.
+1 = New attendee not even named/captured.
+0 = Not addressed despite stakeholder change.
+
+---
+
+## 7) Forward momentum and next-step concreteness (0–5)
+
+**Ask a question**
+
+"Did the sync end with concrete forward momentum — a named next step that the customer can act on, not a vague 'we'll regroup'?"
+
+**Instruction guide**
+
+Definition. To score high, the AISE must close with:
+
+A) A summary of decisions and action items just confirmed.
+B) The specific next step the customer should expect (or take) before the next sync.
+C) Date / cadence for the next sync confirmed (not "we'll find time").
+D) The PB-side commitment named explicitly with timing.
+E) An explicit check that the customer feels the session was useful and the next step is right.
+
+**Scoring**
+
+5 = A to E explicit; momentum is concrete and confirmed.
+4 = A to D explicit; usefulness check skipped.
+3 = Next step exists but is loose, or next sync isn't booked.
+2 = Vague close — "we'll be in touch".
+1 = No next step.
+0 = Sync ends mid-topic.
+
+---
+
+## 8) Connectivity, time management, and recovery (0–5)
+
+**Ask a question**
+
+"Did the AISE manage time, handle interruptions / connectivity issues, and recover gracefully when the session went off-plan?"
+
+**Instruction guide**
+
+Definition. To score high, the AISE must:
+
+A) Keep an eye on the clock and surface time pressure before it becomes a problem.
+B) Park topics that won't fit rather than rushing them.
+C) Handle connectivity issues (audio, video, late joiners) without losing the thread.
+D) Adapt when the customer brings an unplanned urgent topic — without abandoning the agenda silently.
+E) Close on time (or check explicitly before running over).
+
+**Scoring**
+
+5 = Covers A to E; session ends cleanly with no rushed wrap-up.
+4 = Covers A to D; ending is slightly rushed.
+3 = Time is managed loosely; one or two topics rushed.
+2 = Session runs over without acknowledgement, or core topics dropped.
+1 = Chaotic time management.
+0 = Session derailed with no recovery.

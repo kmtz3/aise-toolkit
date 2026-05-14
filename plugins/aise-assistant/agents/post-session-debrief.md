@@ -31,6 +31,8 @@ Identify the session record before doing anything else.
 
 If nothing resolves after searching, ask the user once: "Couldn't locate a session for [customer] — drop the Notion URL or the date?"
 
+**Duplicate detection.** After locating the target Session page, run a SQL filter on the Sessions DB for the same `Customers` relation + same `date:Call Date:start` (date portion only). If more than one record is returned, surface all matches in chat with status + URL, pick the most-complete one as the target (prefer `Delivered` → `In progress` → `Planned`), and update the others with `Call Status = Canceled` + `Do not count = __YES__` + `Next Steps = "Duplicate of <kept-session-url>"`.
+
 ### 2. Read `agents/session-summarizer.md` and execute its procedure inline with these inputs:
 
 - Customer name, session ID, session page URL.
@@ -42,6 +44,8 @@ It will:
 Capture its full structured output. This is the raw material for every subsequent step.
 
 Do not proceed past this step if the summarizer returned no source material and the user hasn't provided any. Surface the gap.
+
+**Timezone parsing for calendar / invite times.** When a time is extracted from an email body (especially a forwarded `.ics`), do **not** assume the time is in the recipient's timezone. Always cross-verify against the corresponding Google Calendar event (`list_events` / `get_event`) which carries an explicit IANA timezone. If no matching Calendar event exists, check the forwarder's known timezone (from the Customer page Working Notes, signature, or `Contacts` record). If still ambiguous, ask once — do not silently pick the recipient's TZ. When writing times into Notion or customer-facing drafts, always render **both zones**: `15:00–15:45 CET / 18:30–19:15 IST`.
 
 ### 3. Write session notes to the Notion Session page
 
@@ -77,7 +81,7 @@ Then update the Session record properties:
 - `Delivered By` → set to the actual presenter(s). For sessions led by the user: `["<user-uuid>"]`. For co-presented or stand-in calls, list everyone who delivered.
 - `Next Steps` field — set to the 1-3 highest-priority next actions (PB-side, declarative format).
 - `Consumed Package` → apply the date-matching rule: assign the Active Package whose `Start Date`–`End Date` covers this session's `Call Date`. If the current `Active? = YES` package does not cover the date, query the customer's packages for an older one that does. If none cover the date, leave the field empty. Never assign by recency alone.
-- `Gong call` → if a Gong URL was identified during transcript lookup (step 2), set it now: `"userDefined:Gong call": "<url>"`.
+- `Gong call` → if a Gong URL was identified during transcript lookup (step 2), set it now: `"Gong call": "<url>"`. Do **not** use the `userDefined:` prefix here — that prefix is reserved for properties literally named `URL` or `id`.
 - `Spark conversation` → scan the transcript/notes for evidence that Productboard Spark AI was discussed (positioning, use cases, demos, customer questions about Spark). Set `__YES__` if confirmed; `__NO__` otherwise. This is a KPI field — always evaluate it, never leave it blank.
 - Do **not** write to `Current Account Owner` — it's auto-maintained from `Customers.Owner` by the Sessions automation + Customer Resync button. Treat as derived.
 
@@ -122,6 +126,8 @@ Customer-side action items do NOT get Tasks. They live in the session notes and 
 The draft should follow `context/communication-style-guide.md`. The agent will determine the recipient from the Contacts relation on the Customer page (primary contact or program sponsor).
 
 If there is a known external Slack channel with this customer, note in chat that a Slack version may be useful — but do not auto-draft it. the user can trigger `/draft-followup slack` separately.
+
+**Draft replacement caveat.** Gmail MCP has no `update_draft` or `delete_draft` tool. If a draft needs correction after creation (e.g. user spots a fact error during the chat review), create a new draft and surface both IDs in the final report — the user must trash the stale draft manually in Gmail.
 
 ### 7. Draft an internal Slack debrief message
 

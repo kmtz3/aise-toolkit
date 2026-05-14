@@ -151,7 +151,7 @@ Sessions are unique per (customer, date) so the bar is lower – any match defau
 - **Multi-select**: JSON array string – `'["Fintech"]'`.
 - **Relations**: array of full Notion page URLs, even for limit-1 fields.
 - **Person (Owner / Current Account Owner / Delivered By)**: JSON array of user IDs on write. Stored with `user://` prefix on read; filter queries with `LIKE '%<bare-uuid>%'`.
-- **URL/id properties**: prefix with `userDefined:`.
+- **URL/id properties**: only prefix with `userDefined:` when the property name is literally `URL` or `id` (case-insensitive reserved keywords). All other URL-typed properties (`Gong call`, `SFDC`, `Slack Channel`, `Domain`, etc.) use the property name directly with no prefix.
 - **Numbers**: JS numbers, not strings.
 - **Title on Customers**: `Customer`. **Title on Tasks**: `Task`.
 - **Rollups and formulaResult fields**: read-only, never write. This includes `Delivered By (Sessions)` on Active Packages.

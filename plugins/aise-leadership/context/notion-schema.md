@@ -91,7 +91,7 @@ For SQL: `"collection://<id>"` as the table name.
 
 **Title on Tasks** — property name is `Task`.
 
-**URL/ID properties** — prefix with `userDefined:` e.g. `"userDefined:URL"`, `"userDefined:id"`.
+**URL/ID properties** — only prefix with `userDefined:` when the property name is literally `URL` or `id` (case-insensitive reserved keywords). Examples that need the prefix: `"userDefined:URL": "..."`, `"userDefined:id": "..."`. Examples that do **not** need the prefix: `"Gong call": "..."`, `"SFDC": "..."`, `"Slack Channel": "..."`, `"Domain": "..."`. When in doubt, omit the prefix; the API error will tell you to add it.
 
 **Numbers** — JS numbers, not strings: `"ARR": 47000`.
 
@@ -361,7 +361,7 @@ Fetch the page immediately before writing — `update_content` is whitespace-exa
 | `Current Account Owner` | person (multi) | Mirror of `Customer.Owner`. Auto-filled by the Sessions-side automation when `Customers` relation is set, then maintained by the Resync button on subsequent Customer Owner edits. Treat as derived. |
 | `Delivered By` | person (multi) | The actual presenter(s) for this specific session. Set explicitly on create / when marking a session Delivered. For stand-ins or co-presented sessions, list everyone. |
 | `Next Steps` | rich_text | Free-form summary written into the session page during summary workflows |
-| `Gong call` | url | Gong recording URL for this session. Write as `"userDefined:Gong call": "<url>"`. Set whenever a Gong transcript is found — during debrief, summarizer, or backfill. |
+| `Gong call` | url | Gong recording URL for this session. Write as `"Gong call": "<url>"` (no `userDefined:` prefix — that's reserved for properties literally named `URL` or `id`). Set whenever a Gong transcript is found — during debrief, summarizer, or backfill. |
 | `Spark conversation` | checkbox | `__YES__` if the session included Productboard Spark AI positioning or use-case discussion. Tracked for KPI reporting. Set during debrief / summarizer from transcript evidence; `__NO__` by default on backfill unless the transcript confirms Spark was discussed. |
 | `Related Tasks` | relation | → Tasks DB. Direct relation to tasks generated from this session. Also auto-populated when a Task's `Source Call` is set to this session (Notion bidirectional sync), but agents should set it explicitly when creating tasks from the session to ensure the link is immediate. |
 

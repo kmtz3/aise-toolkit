@@ -49,6 +49,8 @@ Don't stop after one search. If the first pass turns up nothing, broaden: the cu
 
 Before drafting, you should be able to state: *what was agreed*, *what's outstanding*, *what this specific recipient owes or is owed*, *what tone the thread has been using*.
 
+**Timezone parsing for calendar / invite times.** When a time is extracted from an email body (especially a forwarded `.ics`), do **not** assume the time is in the recipient's timezone. Always cross-verify against the corresponding Google Calendar event (`list_events` / `get_event`) which carries an explicit IANA timezone. If no matching Calendar event exists, check the forwarder's known timezone (from the Customer page Working Notes, signature, or `Contacts` record). If still ambiguous, ask once — do not silently pick the recipient's TZ. When writing times into Notion or customer-facing drafts, always render **both zones**: `15:00–15:45 CET / 18:30–19:15 IST`.
+
 If — after real searching — context is still thin on something load-bearing (e.g., a promised deliverable the user never mentioned), ask one targeted question. Don't ask for anything retrievable.
 
 ### 3. Gather the email specifics
