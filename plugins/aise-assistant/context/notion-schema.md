@@ -329,6 +329,7 @@ Fetch the page immediately before writing — `update_content` is whitespace-exa
 - `Renewal` — set **90 days before the contract end date** to flag an upcoming renewal. On confirmed renewal: if customer ARR remains **≥ $30K (AISE threshold)**, create a new Active Package for the new term and set the prior package `Active? = NO`. If ARR drops **below $30K**, use `Contracted to Scale` on the Customer instead. If the contract end date passes without renewal action, transition to `Package Expired`.
 - `Package Expired` — the only terminal state. Set `Active? = NO`. Use when the contract lapses (not just when sessions are exhausted).
 - `Service Quota Used` — all contracted sessions consumed, but AISE ownership continues. Keep `Active? = YES` if recurring syncs/QBRs are ongoing. Do not flag `Service Quota Used + Active? = YES` as a contradiction.
+- **There is no `No services` Status option on this DB.** For AISE-No-Services / Complimentary engagements, use `Adopting` on the currently active package and `Package Expired` on all historical packages. The no-services state is expressed via the **Customer page** `Account Status = Active (no Services)` + `Master Package = AISE No Services` on the package — never on Active Package `Status`.
 
 ### Read-only formulas (never write — edit in Notion UI if needed)
 

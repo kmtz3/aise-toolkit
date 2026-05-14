@@ -5,6 +5,20 @@ Format: `## [version] — YYYY-MM-DD` followed by bullet points grouped by type.
 
 ---
 
+## [2.15.0] — 2026-05-14
+
+### Changed
+- `agents/account-setup.md` Step 2: SOQL now pulls **all** Closed-Won opps for the account (ordered ASC, no `LIMIT 1`) and collapses expansion/co-term opps by matching service dates — establishes the contract-year set used to build one Active Package per year
+- `agents/account-setup.md` Step 3: Master Package mapping is now **per contract year** (not global). Null `Services_Plan__c` fallback is deterministic — ARR ≥ $30K defaults to `AISE No Services`; ARR < $30K asks `Complimentary` vs `AISE No Services` (Complimentary rare, exception only)
+- `agents/account-setup.md` Step 4.B: replaced single-package logic with one Active Package per contract year — current year `Active? = YES`, historical years `Active? = NO` + `Status = Package Expired`. AISE-No-Services / Complimentary engagements use `Adopting` (current) / `Package Expired` (historical) — never `No services` (not a valid enum)
+- `agents/account-setup.md` Step 5.2: history toggle (`📋 Account History — inherited [YYYY-MM-DD]`) is now **mandatory** for inherited customers — appended to existing template content via `update_content`, never replacing; skipping requires explicit opt-out
+- `agents/account-setup.md` Guardrails: `Current Account Owner` write-on-create now applies to **every** Active Package created (current + all historical), not just the new active one — prevents historical packages from being invisible to owner-filtered views
+
+### Fixed
+- `context/notion-schema.md` § Active Package Status: clarified that there is no `No services` option on the Status field; the no-services state is expressed via Customer `Account Status = Active (no Services)` + `Master Package = AISE No Services`
+
+---
+
 ## [2.14.0] — 2026-05-14
 
 ### Changed

@@ -59,7 +59,7 @@ Check whether an Active Package already exists for this customer:
 SELECT * FROM "collection://29697e9c-7d4f-8031-9f76-000b7e932b36"
 WHERE "Customer" LIKE '%[customer-page-id]%'
 ```
-If one exists and `Active? = __YES__`, flag it — don't create a second one without the user's explicit say-so.
+If one exists and `Active? = __YES__`, flag it — don't create a second active package without the user's explicit say-so. Multiple historical packages (`Active? = __NO__`) are expected for customers with multi-year SF history; only the current contract year should be `__YES__`.
 
 ### 2. Research in parallel
 
@@ -84,7 +84,7 @@ Make all of these calls simultaneously:
   LIMIT 5
   ```
 
-  **Most recent Opportunity (for plan/services details):**
+  **All Closed-Won Opportunities (one Active Package per contract year):**
   ```sql
   SELECT Id, Name, Amount, CloseDate, StageName, Type,
          Services_Plan__c, Service_Start_Date__c, Service_End_Date__c,
@@ -93,11 +93,12 @@ Make all of these calls simultaneously:
   WHERE Account.Name LIKE '%[Customer Name]%'
     AND IsClosed = true
     AND StageName = 'Closed Won'
-  ORDER BY CloseDate DESC
-  LIMIT 1
+  ORDER BY Service_Start_Date__c ASC
   ```
 
-  Extract: CS tier, account owner, success manager, AI Success Engineer (AISE), renewal manager, Vitally health, billing cycle, ARR, services plan, contract start/end dates. Flag any that are null.
+  Walk the full history — don't `LIMIT 1`. We need every Closed-Won opp so we can build one Active Package per contract year (see Step 4.B). **Collapse expansion / co-term opps into the same contract year:** sum `Amount` across opps whose `Service_Start_Date__c` *and* `Service_End_Date__c` match. The resulting set of distinct (start, end) ranges defines the contract years.
+
+  Extract: CS tier, account owner, success manager, AI Success Engineer (AISE), renewal manager, Vitally health, billing cycle, ARR, services plan (per year), contract start/end dates (per year). Flag any that are null.
 
 **History from previous owners:**
 - **Gong transcripts:** follow steps 1-2 of the **Transcript lookup order** in `context/project-instructions.md §3` — `meeting_lookup` is step 1 but often returns empty for inherited accounts, so fall through to the `app:gong` search immediately if it does. For the step-2 search, use `app:gong "[Customer Name]"` — **quote the customer name** to scope results to this account only; an unquoted search returns all Gong calls. From each result object, extract the `id` field and pass it to `read_document` to fetch the full transcript — do not pass a URL string. Don't read or grep the raw search results blob.
@@ -117,9 +118,9 @@ After pulling all Gong results, **apply the session relevance filter** (see Guar
 
 ### 3. Map the Master Package
 
-From the Salesforce `servicesplan` field, map to the Master Packages DB (see `context/notion-schema.md`):
+From the Salesforce `Services_Plan__c` field on each contract-year opportunity, map to the Master Packages DB (see `context/notion-schema.md`). Map **per opportunity year** — Master Package can differ across historical years (e.g. 2024 Camunda used `Onboarding` while 2025+ uses `AISE No Services`). Never assume the current Master Package applies to all historical years; propose each year independently in chat.
 
-| Salesforce servicesplan | Master Package name |
+| Salesforce `Services_Plan__c` | Master Package name |
 |---|---|
 | `Services-Tier1-*` | Tier 1 Services |
 | `Services-Tier2-*` | Tier 2 Services |
@@ -128,9 +129,11 @@ From the Salesforce `servicesplan` field, map to the Master Packages DB (see `co
 | `Premier-*` | Premier |
 | `Onboarding-*` | Onboarding |
 
-If the mapping is ambiguous or the `servicesplan` is missing, flag it and ask the user to confirm before proceeding. Query the Master Packages DB to get the exact page URL for the relation.
+**Fallback when `Services_Plan__c` is null** (deterministic, not "ask the user"):
+- Account ARR ≥ **$30,000 USD** → default to **AISE No Services** (Notion URL: `https://www.notion.so/34b97e9c7d4f803f9643d0163945398c`). Still surface in the proposal — propose, don't write silently.
+- Account ARR < **$30,000 USD** → flag as ambiguous and ask the user to pick: **Complimentary** or **AISE No Services**. Complimentary is rarely used; only when an explicit exception has been made.
 
-Note: some Master Packages are marked `Type: Old` — this may still be the correct SKU. Flag it for the user's awareness but don't block on it.
+Query the Master Packages DB to get the exact page URL for each year's relation. Some Master Packages are marked `Type: Old` — flag for awareness but don't block.
 
 ### 4. Draft the proposals
 
@@ -152,19 +155,25 @@ Also set these **page properties** from Salesforce data (not page body):
   - If the predecessor's user ID can't be resolved cleanly, default to `Owner = ["<user-uuid>"]` and flag the predecessor's name in chat for the user to add manually.
   - **After updating `Customer.Owner`, click the `Resync Owner to descendants` button** on the Customer page (or have the agent walk and update linked records via API). This propagates the change to `Current Account Owner` on every linked Session, Task, and Active Package. The user should manually click the button after every Owner change going forward.
 
-**B. Active Package record**
+**B. Active Package records — one per contract year**
 
-| Field | Value |
-|---|---|
-| Name | `{Year} – {Customer Name} | {Master Package}` (en-dash with spaces, pipe with spaces; year = contract start year). Example: `2025 – Acme Corp | Essential Services`. |
-| `Customer` | [relation to Customer page — always set; sole customer relation, never cleared] |
-| Master Package | [relation — confirmed from step 3] |
-| Status | `Activating` (if engagement underway), `Preparing` (if just starting), or `Not started` |
-| Active? | `__YES__` |
-| Start Date | From contract/renewal data — flag if unknown |
-| End Date | From contract/renewal data — flag if unknown |
-| ARR | From Salesforce — flag if `<omitted />` |
-| **Current Account Owner** | Mirror `Customer.Owner` exactly — same predecessor-handoff logic. Always include the user's Notion ID (from the `AISE Identity` Notion page). The Resync button on the Customer page maintains this afterwards. |
+For existing customers with historical SF opps, propose **one Active Package per contract year** from the Step 2 SOQL walk. The current year (the one whose `Service_Start_Date__c`–`Service_End_Date__c` covers today) is the live package; all earlier years are historical. This is the only way historical Sessions can have a correctly date-matched `Consumed Package` (see § Sessions, Step 4.D, line referencing the date-matching rule).
+
+For each contract year, propose:
+
+| Field | Value (current year) | Value (historical years) |
+|---|---|---|
+| Name | `{Year} – {Customer Name} \| {Master Package}` (en-dash with spaces, pipe with spaces; year = contract start year). Example: `2025 – Acme Corp \| Essential Services`. | Same format, with that year's start year. |
+| `Customer` | [relation to Customer page — always set; sole customer relation, never cleared] | Same. |
+| Master Package | [relation — confirmed from Step 3 **for that year's `Services_Plan__c`**] | Per-year mapping — may differ from current (e.g. `Onboarding` in 2024, `AISE No Services` in 2025). |
+| Status | `Activating` (engagement underway), `Preparing` (just starting), or `Not started`. **AISE-No-Services / Complimentary engagement special case:** use `Adopting` for the currently active package — there is no `No services` option on this DB. | `Package Expired` for all closed years. **AISE-No-Services special case:** also `Package Expired` (the only terminal state). Never write `No services` — it is not a valid enum on this DB. |
+| Active? | `__YES__` | `__NO__` |
+| Start Date | `Service_Start_Date__c` of the current-year opp(s). Flag if unknown. | `Service_Start_Date__c` of that year's opp(s). |
+| End Date | `Service_End_Date__c` of the current-year opp(s). Flag if unknown. | `Service_End_Date__c` of that year's opp(s). |
+| ARR | Sum of `Amount` across all opps in that contract year (expansion + co-term collapsed per Step 2). Flag if `<omitted />`. | Same — historical year's ARR, not the current ARR. |
+| **Current Account Owner** | Mirror `Customer.Owner` exactly — same predecessor-handoff logic. Always include the user's Notion ID (from the `AISE Identity` Notion page). The Resync button on the Customer page maintains this afterwards. | **Same — set on every historical package too.** The Resync button only fires on `Customer.Owner` edits, so null `Current Account Owner` on historical packages would silently exclude them from owner-filtered views. |
+
+> **The "no services" naming trap.** The Customer page's `Account Status` field has an option `Active (no Services)` — this is where the no-services state is expressed (on the Customer record), combined with `Master Package = AISE No Services` on the package. The Active Package `Status` field does **not** have a `No services` option (valid values: `Not started`, `Preparing`, `Activating`, `Adopting`, `Renewal`, `Service Quota Used`, `Package Expired`). Never attempt to write `No services` to Active Package Status.
 
 **C. Active Package page body — account history summary**
 
@@ -200,7 +209,7 @@ Per the notion-writer-playbook: **Active Packages are financial ledger records �
 
 After the user approves (or says "just do it"), write in this order:
 1. **Customer page** — if newly created in Step 1, the template is already applied. In `--research` mode, write into each discovered section using `update_content`, using the exact heading text and placeholder text fetched in Step 1 as `old_str` anchors. Do not hardcode expected section names — use what the page actually contains.
-2. Create the Active Package record (`notion-create-pages`, parent = Active Packages DB — see `context/notion-schema.md` for ID). After creating, immediately apply the Active Package template (`notion-update-page`, `command: apply_template`, `template_id: 29697e9c7d4f806fb251df6f1d20bf88`) to place the standard structural toggles. Then write the account history summary inside the `📋 Account History` toggle using `update_content`.
+2. Create the Active Package record(s) (`notion-create-pages`, parent = Active Packages DB — see `context/notion-schema.md` for ID). Create one per approved contract year — current and all historical. After each create, immediately apply the Active Package template (`notion-update-page`, `command: apply_template`, `template_id: 29697e9c7d4f806fb251df6f1d20bf88`) to place the standard structural toggles. Then, **on the current (active) package**, fetch the page body and **append** the `📋 Account History — inherited [YYYY-MM-DD]` toggle (or `📋 Account History — new account [YYYY-MM-DD]` for new customers) at the bottom of the existing template content using `update_content` — anchor on the last block of the template body as `old_str`; `new_str` = original last block + the new toggle. Write the account history summary inside that toggle. **This step is mandatory** for inherited customers; do not skip it because the template has its own structure — append, don't replace. Skipping requires explicit user opt-out in chat. Historical packages do not need a history toggle.
 3. **Existing customer mode only:** Create one Session record per relevant session in the Sessions DB (`notion-create-pages`, parent = Sessions DB). After each create, immediately apply the matching Notion template (`notion-update-page`, `command: apply_template` — see `context/notion-schema.md` § Session Templates). Then fill in the template sections from the Gong call content: write a brief summary (2–3 sentences) and the source link inside the `📋 Prep — [date]` toggle body; populate **Decisions**, **Risks / Blockers**, **Action Items**, and **Next Steps** from the transcript where applicable. Never create PB-side Tasks for historical sessions.
 
 ### 6. Report in chat
@@ -231,7 +240,7 @@ After the user approves (or says "just do it"), write in this order:
 - **No Tasks for historical sessions** — PB-side tasks are for future actions only. Don't create Task records when backfilling past sessions.
 - **Don't duplicate sessions** — before creating a Session record, check whether one already exists in the Sessions DB for this customer on the same date. If it does, skip it.
 - **`Customer.Owner` is the canonical ownership write.** Set it correctly and the Resync button (or this agent's API-equivalent sweep) propagates `Current Account Owner` to all descendants. User Notion ID: resolve from the `AISE Identity` Notion page. Missing or wrong `Customer.Owner` is a silent invisibility bug downstream.
-- **Set `Current Account Owner = <user-uuid>` on the new Active Package on create.** The Resync button hasn't fired yet at create time, so the field would otherwise be null. Same principle for any Tasks created during setup.
+- **Set `Current Account Owner = [<user-uuid>]` on every Active Package created during setup — current and all historical.** The Resync button only fires on `Customer.Owner` edits, so without an explicit write at create time, historical packages would stay null and disappear from owner-filtered views. Same principle for any backfilled Sessions and any Tasks created during setup.
 - **Verify-before-update on the Customer page.** If the page already has an `Owner` and the user isn't in it, surface the conflict before writing — this is a teammate's account or a stale handoff. Defer to `notion-writer.md` for the verify-before-write contract; this agent's writes go through it.
 - **After `Customer.Owner` is written, run the propagation step.** Either click the Resync button manually (preferred — it's deterministic) OR walk the linked Sessions/Tasks/Active Package and write `Current Account Owner` via API. Don't leave the descendants stale — the user's filtered queries depend on them being in sync.
 

@@ -1,5 +1,12 @@
 # Changelog — aise-leadership
 
+## [1.9.1] — 2026-05-14
+
+### Fixed
+- `context/notion-schema.md`: synced from aise-assistant — clarification that the Active Package `Status` field has no `No services` option; the no-services state is expressed via Customer `Account Status = Active (no Services)` + `Master Package = AISE No Services`
+
+---
+
 ## [1.9.0] — 2026-05-14
 
 ### Changed
