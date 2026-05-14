@@ -13,6 +13,7 @@ Read the procedure in `agents/session-prepper.md` and execute it inline as the m
 4. Draft a prep brief: customer context, goals, KDDs to drive, open items, risks, suggested agenda, questions to ask.
 5. Find the Notion Session page (create one if missing) and append the brief inside a collapsible toggle heading `📋 Prep — YYYY-MM-DD` so real session notes can go underneath.
 6. **If the session is `🏗️ Architecting`**, also build the customer-facing KDD doc (title, agenda, outcome, action items, per-KDD starter examples + blank decision tables) per `templates/session-kdds/00-index.md`, and create it as a **sub-page of the Session page** titled `KDDs — [Session ID] [Name]`. Ready to copy-paste into the customer's space.
-7. Report back with links (Session page + KDD sub-page when created) and any gaps or contradictions surfaced.
+7. **(Optional) For Discovery and Kick-off sessions** — when requested by the user or proactively offered for these large-format sessions, generate an HTML visual session flow artifact via `show_widget`. Structure: numbered phases (Intro → Upfront Contract with 5 elements → Agenda Topics → Closing), each with time allocation, color-coded cards, and key pointers. This is a visual run sheet, not a replacement for the Notion prep.
+8. Report back with links (Session page + KDD sub-page when created, visual artifact when generated) and any gaps or contradictions surfaced.
 
 Do NOT ask the user for context that's retrievable. Search first, ask once if something is genuinely missing.

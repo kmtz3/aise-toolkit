@@ -1,6 +1,6 @@
 {
   "name": "aise-assistant",
-  "version": "2.15.0",
+  "version": "2.16.0",
   "description": "End-to-end customer onboarding co-pilot for Productboard AI Success Engineers (AISEs) — prep, deliver, summarize, follow up, plan, and keep Notion in sync. Ships universal agents, slash commands grouped by family (customer-*, session-*, draft-*, notion-*, assistant-*), schemas, and KDD templates plus an /assistant-setup onboarding flow that personalizes each install.",
   "author": {
     "name": "Klara Martinez"

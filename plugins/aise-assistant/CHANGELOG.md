@@ -5,6 +5,18 @@ Format: `## [version] — YYYY-MM-DD` followed by bullet points grouped by type.
 
 ---
 
+## [2.16.0] — 2026-05-14
+
+### Changed
+- `session-prepper` calendar lookup now lists all events for the day and scans titles for the customer name as a substring (with/without spaces) — text-search param is unreliable for compound/run-together names.
+- Customer DB lookups in `session-prepper` now mandate fuzzy `LIKE '%keyword%'` matching; exact equality on customer name is forbidden.
+- Explicit rule against including rollup/formula fields (`ARR`, `Counted Time`, `Needs sync?`) in `query_data_sources` SELECT clauses.
+
+### Added
+- `session-prepper` Step 5a — mandatory verification gate after creating a new Session page: re-fetch and confirm the `Customers` relation is populated; retry with a standalone `update_properties` call if empty. Blocks all further writes until confirmed.
+- `session-prepper` Step 2 pre-read materials sub-step and Step 4 **Pre-read highlights** brief section — extracts content from customer-shared PPTs/docs with source refs and 🎯 pointers, grouped by theme for live-call skimmability.
+- `session-prep` skill + `session-prepper` Step 7 — optional HTML visual session-flow artifact for Discovery / Kick-off sessions (Intro → Upfront Contract → Agenda Topics → Closing).
+
 ## [2.15.0] — 2026-05-14
 
 ### Changed
