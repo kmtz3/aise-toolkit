@@ -1,6 +1,6 @@
 ---
 name: assistant-improvement
-description: Analyze the previous skill run in this conversation for issues, errors, or workarounds — then output a single, copyable coding-agent prompt that names the exact plugin, files, and fixes needed. No tools, no writes — output only.
+description: Analyze the previous skill run in this conversation for issues, errors, workarounds, AND user preferences about how the flow should go — then output a single, copyable coding-agent prompt that names the exact plugin, files, and fixes needed. No tools, no writes — output only.
 ---
 
 The user has just finished a skill run that had problems and wants a fix prompt they can send to a coding agent.
@@ -18,9 +18,11 @@ Scan backwards through the conversation to find the most recent slash command in
 
 ---
 
-## Step 2 — Identify failure modes
+## Step 2 — Identify failure modes AND preference signals
 
-Look for the following signals in the skill run:
+Look for two categories of signal in the skill run.
+
+### 2a — Failures, errors, workarounds
 
 | Signal | What it indicates |
 |---|---|
@@ -33,15 +35,32 @@ Look for the following signals in the skill run:
 | Tool call failed silently and agent didn't recover | Missing fallback in the procedure |
 | Agent wrote to the wrong Notion field / DB | Schema misread — points at `context/notion-schema.md` or the agent file |
 
-List each failure mode with:
+### 2b — Preference signals (nuances about *how* the flow should go)
+
+These are quieter than failures — the run may have completed fine, but the user expressed a preference about sequencing, depth, format, tool routing, or interaction style that isn't yet encoded in the skill/agent.
+
+| Signal | What it indicates |
+|---|---|
+| User asked to reorder steps ("do X before Y") | Sequencing preference — bake into the procedure |
+| User asked to skip, shorten, or expand a step | Depth / scope preference — adjust default behaviour or add a flag |
+| User asked for a different output shape (grouping, headings, level of detail) | Output spec preference — update agent's output section |
+| User specified a tool/source preference ("check Gong first, not Glean") | Tool-routing preference — update the agent's search strategy |
+| User asked to stop confirming (or start confirming) a class of action | Interaction-style preference — update confirmation gates |
+| User validated a non-obvious choice ("yes, bundling these was right") | **Positive signal** — harden the choice into the procedure so it's not re-decided next time |
+| User reframed the goal of the skill mid-run | Skill-purpose drift — may need a description/scope update |
+
+### 2c — List each signal
+
+For each signal from 2a or 2b, capture:
 - **What happened** (quote or paraphrase from the conversation)
-- **What should have happened** (infer from context or the command's stated purpose)
+- **What should have happened, or what the user prefers** (infer from context or the command's stated purpose)
+- **Category**: `failure` or `preference`
 
 ---
 
-## Step 3 — Map each issue to source files
+## Step 3 — Map each signal to source files
 
-For each issue, identify the file(s) most likely responsible. Use this structure:
+For each signal (failure or preference), identify the file(s) most likely responsible. Use this structure:
 
 ```
 Plugin root: plugins/aise-assistant/
@@ -54,12 +73,13 @@ Plugin root: plugins/aise-assistant/
 └── templates/session-kdds/              ← KDD templates per session type
 ```
 
-Match each issue to the right layer:
-- **Wrong step sequence / missing step** → `skills/<name>/SKILL.md`
-- **Wrong tool strategy, wrong search, wrong output format** → `agents/<name>.md`
+Match each signal to the right layer:
+- **Wrong step sequence / missing step / sequencing or scope preference** → `skills/<name>/SKILL.md`
+- **Wrong tool strategy, wrong search, wrong output format / tool-routing or output-shape preference** → `agents/<name>.md`
 - **Wrong field, wrong DB, wrong ownership rule** → `context/notion-schema.md`
 - **Wrong assumption about the workflow or session type** → `context/project-instructions.md` or `context/pb-aise-reference-guide.md`
-- **Tone / format regression** → `context/communication-style-guide.md`
+- **Tone / format regression or voice preference** → `context/communication-style-guide.md` (or the user's `AISE Assistant Preferences` Notion page if it's personal voice)
+- **Interaction-style preference (confirmation gates, default verbosity)** → typically the agent file, sometimes `CLAUDE.md` if it's cross-skill
 
 If the agent file for the failing skill doesn't exist yet (i.e. the skill has no dedicated agent and runs inline), note that.
 
@@ -71,30 +91,36 @@ Format the output as a single, self-contained markdown block the user can copy a
 
 The prompt must give the coding agent:
 1. **Which plugin** and **which files to edit** (exact relative paths from the plugin root)
-2. **What went wrong** in each issue (brief, precise)
-3. **What the fix should be** (concrete instruction — not "improve X", but "add step N after step M that does Y")
+2. **What went wrong, or what the user prefers** in each signal (brief, precise — flag whether it's a failure or a preference)
+3. **What the fix should be** (concrete instruction — not "improve X", but "add step N after step M that does Y", or "change default in agent to Z")
 4. **Enough context** for the coding agent to act without reading the full conversation
+
+Group signals into two sections — **Failures** and **Preferences to encode** — so the coding agent can prioritize. If a category is empty, omit its section.
 
 **Output format:**
 
 ````
-# Fix Prompt — /[command-name] — [YYYY-MM-DD]
+# Improvement Prompt — /[command-name] — [YYYY-MM-DD]
 
 **Plugin:** `plugins/aise-assistant`
 
-## Issues found in the previous run
+## Failures found in the previous run
 
-### Issue 1: [short label]
+### Failure 1: [short label]
 **File:** `skills/<name>/SKILL.md` (or `agents/<name>.md`, etc.)
 **What happened:** [1–2 sentences from the run]
 **Fix:** [specific, actionable instruction — quote or add the exact text if you can]
 
-### Issue 2: [short label]
-**File:** `...`
-**What happened:** ...
-**Fix:** ...
+[repeat for each failure]
 
-[repeat for each issue]
+## Preferences to encode
+
+### Preference 1: [short label]
+**File:** `agents/<name>.md` (or wherever it belongs)
+**What the user prefers:** [1–2 sentences — sequencing, depth, format, tool routing, interaction style, or a positive confirmation worth hardening]
+**Change:** [specific, actionable instruction — e.g. "in the Discovery step, default to Gong before Glean", or "remove the per-task confirmation gate; confirm once at the batch level"]
+
+[repeat for each preference]
 
 ## Context for the coding agent
 [Any excerpts, field names, agent names, or background that would otherwise require the coding agent to re-read the whole conversation. Keep it concise — signal only.]
@@ -106,7 +132,7 @@ The prompt must give the coding agent:
 
 Output the prompt block in chat, preceded by a one-line summary:
 
-> "Found N issue(s) in the `/[command]` run. Here's the fix prompt — copy it and send to your coding agent:"
+> "Found N signal(s) in the `/[command]` run (X failure(s), Y preference(s)). Here's the improvement prompt — copy it and send to your coding agent:"
 
 Then the prompt block.
 

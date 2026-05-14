@@ -5,6 +5,13 @@ Format: `## [version] — YYYY-MM-DD` followed by bullet points grouped by type.
 
 ---
 
+## [2.14.0] — 2026-05-14
+
+### Changed
+- `skills/assistant-improvement/SKILL.md`: now captures **preference signals** (sequencing, depth, output shape, tool routing, interaction style, positive confirmations of non-obvious choices) in addition to failures. Step 2 split into `2a — Failures` and `2b — Preferences`; Step 3 maps preferences to source layers; Step 4 output groups signals into `Failures` and `Preferences to encode` sections so the coding agent can prioritize. Skill description and final summary line updated.
+
+---
+
 ## [2.13.0] — 2026-05-14
 
 ### Added
