@@ -55,6 +55,10 @@ Read (or grep for relevant sections):
 - [`context/pb-aise-reference-guide.md`](../../context/pb-aise-reference-guide.md) — phase map, setup checklists, common risks.
 - [`context/score-cards.md`](../../context/score-cards.md) — session-design principles that shape the A-session outputs column.
 
+### 4.5 Fetch voice preferences (mandatory before drafting)
+
+Resolve the user via `notion-get-users` (per `context/notion-schema.md § Identity resolution procedure`), then `notion-search("AISE Assistant Preferences — {display_name}")` + `notion-fetch`. Read the **Voice** section and apply every rule to the plan prose (phase descriptions, session rationales, risks, asks). Pull fresh — don't rely on memorized rules. If the page can't be found, warn inline and fall back to `context/communication-style-guide.md`.
+
 ### 5. Draft the plan
 
 Build in the order the guide prescribes: **goals → milestones → phases → sessions → parallel streams**. Use the output-format template verbatim. Constraints:

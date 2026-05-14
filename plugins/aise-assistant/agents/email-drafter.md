@@ -60,6 +60,12 @@ If — after real searching — context is still thin on something load-bearing 
 - **CC** — only if the existing thread has a cc list or the user explicitly asks. Default no cc.
 - **New thread vs reply** — default to new thread unless the context shows an active exchange to continue.
 
+### 3.5 Fetch voice preferences (mandatory before drafting)
+
+Resolve the user via `notion-get-users` (per `context/notion-schema.md § Identity resolution procedure`), then `notion-search("AISE Assistant Preferences — {display_name}")` + `notion-fetch`. Read the **Voice** section in full and apply every rule to the draft below. Always pull fresh — don't rely on memorized rules. If the page can't be found, warn inline and fall back to `context/communication-style-guide.md`.
+
+If invoked inline from another agent (`post-session-debrief`, `bulk-debrief`, etc.) that already passed the Voice section as input, use that verbatim and skip the fetch.
+
 ### 4. Draft the body — in the user's voice (per the `AISE Assistant Preferences` Notion page, Voice section)
 
 Apply [`context/communication-style-guide.md`](../../context/communication-style-guide.md). Voice checklist:

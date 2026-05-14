@@ -177,6 +177,14 @@ Tracker schema is fully documented in `context/notion-schema.md`. See that file 
 
 ## 6. Communication Style — Defaults
 
+### Mandatory pre-draft step
+
+Before producing ANY draft (email, Slack message, session notes, task scaffolds, Notion page body, KDD doc, internal debrief, program plan), resolve the user via `notion-get-users` (per `context/notion-schema.md § Identity resolution procedure`), then `notion-search("AISE Assistant Preferences — {display_name}")` + `notion-fetch`. Read the **Voice** section and apply its rules. Always pull fresh — do not rely on memorized rules or cached summaries.
+
+This applies to every drafting workflow: `email-drafter`, `post-session-debrief`, `session-summarizer`, `session-prepper`, `kdd-builder`, `engagement-planner`, and ad-hoc drafts. Orchestrating agents (e.g. `post-session-debrief`) should fetch once and pass the Voice section verbatim into inline sub-procedures so they don't re-fetch.
+
+If the Preferences page can't be found, warn inline and fall back to `context/communication-style-guide.md` defaults.
+
 Applied to every customer-facing or internal draft. Universal patterns live in `context/communication-style-guide.md`; personal overrides (sign-offs, em-dash rule, English variant, casual register, forbidden phrases) live in the `AISE Assistant Preferences` Notion page (Voice section) and win where they differ.
 
 - **Customer / senior stakeholder**: semi-formal, friendly, calm, outcome-focused. No slang.

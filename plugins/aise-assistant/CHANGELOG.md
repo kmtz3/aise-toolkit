@@ -5,6 +5,18 @@ Format: `## [version] — YYYY-MM-DD` followed by bullet points grouped by type.
 
 ---
 
+## [2.13.0] — 2026-05-14
+
+### Added
+- `agents/post-session-debrief.md`: new mandatory **Step 1b** — fetch the `AISE Assistant Preferences` Voice section before any drafting; pass it verbatim into inline `session-summarizer` / `email-drafter` / `kdd-builder` so they don't re-fetch
+- `agents/email-drafter.md`, `agents/session-summarizer.md`, `agents/kdd-builder.md`, `agents/engagement-planner.md`: new mandatory voice-fetch step before drafting begins — always pulls fresh from Notion, falls back to `context/communication-style-guide.md` if the page is missing
+- `context/project-instructions.md` §6: new **Mandatory pre-draft step** codifying the voice-fetch rule across every drafting workflow
+
+### Fixed
+- `agents/post-session-debrief.md` Step 13: documented Notion-flavored markdown rules for Active Package body writes — `<details><summary>` for collapsibles (tab-indented children), native `<table>` for tabular data, no pipe tables, no `\n` literals in `new_str`. Prevents the page rendering as one unreadable escaped blob.
+
+---
+
 ## [2.12.0] — 2026-05-14
 
 ### Added

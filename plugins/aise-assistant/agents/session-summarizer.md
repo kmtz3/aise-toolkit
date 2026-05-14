@@ -33,6 +33,12 @@ Produce markdown with bolded labels:
 - **Stakeholder changes** — new names, role changes, sentiment shifts
 - **Source** — where the notes/transcript came from (Gong link, Notion URL, Gmail thread)
 
+### 3.5 Fetch voice preferences (mandatory before any write)
+
+Resolve the user via `notion-get-users` (per `context/notion-schema.md § Identity resolution procedure`), then `notion-search("AISE Assistant Preferences — {display_name}")` + `notion-fetch`. Read the **Voice** section and apply every rule to the session-notes body, next-steps phrasing, and any draft text that lands in Notion. Always pull fresh — don't rely on memorized rules. If the page is missing, fall back to `context/communication-style-guide.md` and warn inline.
+
+If invoked inline from `post-session-debrief` (or another orchestrator) that already passed the Voice section as input, use that verbatim and skip the fetch.
+
 ### 4. Write Notion updates
 
 Execute each write and return a clearly-labeled block: "**Notion updates applied**" listing what was written. Writes:

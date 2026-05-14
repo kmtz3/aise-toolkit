@@ -1,5 +1,12 @@
 # Changelog — aise-leadership
 
+## [1.8.3] — 2026-05-14
+
+### Fixed
+- `context/project-instructions.md`: synced from aise-assistant — new Mandatory pre-draft step (fetch `AISE Assistant Preferences` Voice section before any draft, always pull fresh)
+
+---
+
 ## [1.8.2] — 2026-05-14
 
 ### Fixed

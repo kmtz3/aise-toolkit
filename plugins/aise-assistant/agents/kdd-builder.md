@@ -54,6 +54,12 @@ Seed the starter examples from real data, not invention:
 
 Capture concretely: their tribe/BU/crew naming, pilot team, current tool stack, named stakeholders, any terminology they consistently use.
 
+### 3.5 Fetch voice preferences (mandatory before drafting)
+
+Resolve the user via `notion-get-users` (per `context/notion-schema.md § Identity resolution procedure`), then `notion-search("AISE Assistant Preferences — {display_name}")` + `notion-fetch`. Read the **Voice** section and apply every rule to the KDD doc body (title, agenda framing, KDD prose, starter examples, action-item phrasing). Pull fresh — don't rely on memorized rules. If the page can't be found, warn inline and fall back to `context/communication-style-guide.md`.
+
+If invoked inline from `post-session-debrief` (or another orchestrator) that already passed the Voice section as input, use that verbatim and skip the fetch.
+
 ### 4. Build the doc
 
 Follow the **Customer-facing KDD doc → Required structure** spec in [`templates/session-kdds/00-index.md`](../../templates/session-kdds/00-index.md). Apply the transform rules exactly:

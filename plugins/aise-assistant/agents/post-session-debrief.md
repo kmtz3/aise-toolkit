@@ -31,6 +31,14 @@ Identify the session record before doing anything else.
 
 If nothing resolves after searching, ask the user once: "Couldn't locate a session for [customer] — drop the Notion URL or the date?"
 
+### 1b. Fetch voice preferences (mandatory before any drafting)
+
+Resolve the user via `notion-get-users` (per `context/notion-schema.md § Identity resolution procedure`), then `notion-search("AISE Assistant Preferences — {display_name}")` + `notion-fetch`. Read the **Voice** section. Apply all rules to every piece of written output produced in this run — session notes, task body scaffolds, email draft, internal Slack debrief, KDD doc, next-session planning notes, Customer page updates, and Active Package working notes.
+
+Always pull fresh — do not rely on memorized rules or `context/communication-style-guide.md` alone. If the Preferences page is not found, warn the user inline and fall back to the universal style guide.
+
+Pass the Voice section verbatim into the inline executions of `session-summarizer`, `email-drafter`, and `kdd-builder` so they apply the same rules without re-fetching.
+
 **Duplicate detection.** After locating the target Session page, run a SQL filter on the Sessions DB for the same `Customers` relation + same `date:Call Date:start` (date portion only). If more than one record is returned, surface all matches in chat with status + URL, pick the most-complete one as the target (prefer `Delivered` → `In progress` → `Planned`), and update the others with `Call Status = Canceled` + `Do not count = __YES__` + `Next Steps = "Duplicate of <kept-session-url>"`.
 
 ### 2. Read `agents/session-summarizer.md` and execute its procedure inline with these inputs:
@@ -312,6 +320,14 @@ Find or create the `🧠 Working Notes` toggle on the Active Package page (spec 
 - **Discoveries / carry-forwards** — log unresolved questions, deferred topics, or new signals (e.g., org changes, tool changes, scope shifts) that should influence future sessions.
 
 Apply all three changes (A, B, C) via `notion-writer` directly — no approval step.
+
+**Formatting rule (mandatory) for Active Package body writes.** Notion does not render standard markdown for collapsibles or tables in page bodies — pipe-delimited tables render as escaped text, and `\n` literals inside `new_str` render as backslash-n. When using `replace_content` / `update_content` on the Active Package page:
+
+- Use Notion-flavored markdown, not standard markdown.
+- Use `<details><summary>**heading**</summary>` for collapsible sections (🧠 Working Notes, 🗺️ Program Plan, Next steps). Content inside the toggle must be tab-indented.
+- Use native `<table>` elements (with `<tr>`/`<td>`) for tabular data — never pipe tables.
+- Never construct `new_str` as a single-line string with `\n` escapes. Use real multi-line strings with actual line breaks.
+- If you haven't already in this run, fetch `notion://docs/enhanced-markdown-spec` before writing page-body content.
 
 ---
 
