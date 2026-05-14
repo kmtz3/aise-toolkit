@@ -1,5 +1,12 @@
 # Changelog — aise-leadership
 
+## [1.9.0] — 2026-05-14
+
+### Changed
+- `skills/assistant-improvement/SKILL.md`: now captures **preference signals** (sequencing, depth, output shape, tool routing, interaction style, positive confirmations of non-obvious choices) in addition to failures. Step 2 split into `2a — Failures` and `2b — Preferences`; Step 3 maps preferences to source layers; Step 4 output groups signals into `Failures` and `Preferences to encode` sections so the coding agent can prioritize. Mirrors the aise-assistant v2.14.0 change.
+
+---
+
 ## [1.8.3] — 2026-05-14
 
 ### Fixed
