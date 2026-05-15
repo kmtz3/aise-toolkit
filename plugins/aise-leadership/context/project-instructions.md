@@ -56,17 +56,26 @@ When I reference a customer by name or shorthand ("the Acme discovery call", "my
 
 Also search past conversations (`conversation_search`) — I may have worked on this customer before in a prior chat.
 
+**No redundant searches.** Before issuing a `notion-search`, check whether the same or semantically equivalent query has already been issued in the current session. If the entity was already found (page ID retrieved), go directly to `notion-fetch(page_id)` — do not re-issue the search. Cache the first-result page ID in working memory for the remainder of the session.
+
+**Oversized Glean results — skip Read, go to bash.** When a `Glean:search` result is saved to a temp file and the error message states the file's token count (or the count exceeds 25,000 tokens), do **not** attempt `Read` with progressively smaller `limit` values — if the total token count exceeds 25,000, `Read` will always fail regardless of limit. Switch directly to `mcp__workspace__bash` with a targeted `grep` or `python3` extraction command.
+
 ### Transcript lookup order
 
 When finding notes or a transcript for a specific session, try these sources in order. Never ask the user to paste what you can retrieve.
 
-1. **Glean `meeting_lookup`** — primary; Gong recordings and transcripts surface here. For inherited accounts not yet in the user's calendar, this often returns empty — fall through to step 2 immediately rather than retrying.
-2. **Glean `search` with `app:gong`** + `read_document` — search Glean with `app:gong` + customer name. From each result object, extract the `id` field and pass it to `read_document` to retrieve the full transcript. Do not pass a URL string to `read_document` — only the `id` from the search result object.
-3. **Notion `query-meeting-notes`** — Notion's meeting notes database.
-4. **Notion search** — check the Session page body for notes dropped in manually, plus adjacent pages ("Follow-up", customer account page).
-5. **Glean `gmail_search`** / Gmail `search_threads` — follow-up threads sometimes contain recap notes.
-6. **Glean `search` + `chat`** — fallback general search on customer + date.
-7. If everything above fails, ask the user once: "Couldn't find notes/transcript for [session]. Drop a link or paste?"
+1. **Glean `meeting_lookup`** — primary; Gong recordings and transcripts surface here. For inherited accounts not yet in the user's calendar, this often returns empty — fall through to step 2 immediately rather than retrying. Use a narrow date range (±2 days around the session date).
+2. **Glean `search` with `app:gong`** + `read_document` — search Glean with `app:gong` + customer name + session date. From each result object, extract the `id` field and pass it to `read_document` to retrieve the full transcript. Do not pass a URL string to `read_document` — only the `id` from the search result object.
+   - **If the first `app:gong` search returns no relevant results:** immediately retry using a known attendee's email address or full name as the search anchor instead of the account name. For inherited accounts the Gong account name is often the parent or legal entity (e.g. "North American Bancard"), not the product or team name — a known participant email is a more reliable anchor.
+   - **Broad `Glean:search` without `app:` scoping** is a last resort, not the first call. Always try `meeting_lookup` → `app:gong` scoped search → participant-email retry before falling through to unscoped search.
+3. **Notion session page — `Gong call` property and body.** After fetching the Session page, check both the `Gong call` property field **and** the page body for a Gong call URL (`https://us-71146.app.gong.io/call?id=<numeric_id>`).
+   - **Do not treat a Gong URL as a terminal result.** Extract the numeric call ID from the `id=` query parameter and call `Glean:read_document(id=<call_id>)` to retrieve the full transcript.
+   - **Cleanup step:** if the Gong URL is found in the page body but the `Gong call` property field is blank, write the URL back to the `Gong call` property via `notion-update-page` before continuing.
+4. **Notion `query-meeting-notes`** — Notion's meeting notes database.
+5. **Notion search** — check adjacent pages ("Follow-up", customer account page) for notes dropped in manually.
+6. **Glean `gmail_search`** / Gmail `search_threads` — follow-up threads sometimes contain recap notes.
+7. **Glean `search` + `chat`** — unscoped fallback, last resort.
+8. If everything above fails, ask the user once: "Couldn't find notes/transcript for [session]. Drop a link or paste?"
 
 Cross-reference across sources. If Gong says X and user notes say Y, flag the conflict — don't silently pick one.
 
@@ -113,7 +122,13 @@ When I share call notes, a transcript, or a brain dump from a session:
    - **Request / pain point:** [what was said, paraphrased neutrally]
    - **Context:** [who raised it, in what session, what the underlying need was]
    - **Priority signal:** [how urgently or frequently it came up, if stated]
-   One block per distinct piece of feedback. Do **not** write this to Notion — the user reviews and routes product feedback manually.
+   One block per distinct piece of feedback.
+
+   **Submission (default: act, don't just format).** After presenting the block, check whether `feedback_create_notes` (Productboard MCP) is available. If it is, submit each item immediately using: `customer_email` of the primary contact, `company_domain`, `source_url` (the Gong URL or session link), and relevant `tags`. Do not hold for confirmation unless the note content is ambiguous or the source URL is missing. Report what was submitted inline.
+
+   After submission, query the Tasks DB to check whether an open Notion Task already tracks this feedback for the customer. If not, offer to create one (do not auto-create — just offer).
+
+   Do **not** write feedback content to Notion as a Notion page — only Productboard `feedback_create_notes` and optionally a Notion Task tracking the submission.
 
 ### 4.3 Follow-Up Drafting
 

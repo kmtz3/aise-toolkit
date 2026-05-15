@@ -46,7 +46,7 @@ The Customer Tracker is a **shared workspace** with other PB AISEs. Two compleme
 
 Agents and skills that need `<user-uuid>` at runtime must use the Notion lookup sequence:
 
-1. **Call `notion-get-users`** and match against the user's email (available in system context) to retrieve the Notion user ID.
+1. **Call `notion-get-users`** with the email address from the system context (`<user>` → `email`) as the `query` parameter. Do **not** use the display name — email matching is deterministic; display name matching is locale- and formatting-dependent and can return empty. This returns the Notion user ID.
 2. **Confirm via `AISE Identity` page:** `notion-search("AISE Identity — {display_name}")` + `notion-fetch` → full profile (name, timezone, UUID).
 
 Step 1 alone is sufficient for filtering queries. Step 2 is only needed when the full profile (timezone, display name, etc.) is required.

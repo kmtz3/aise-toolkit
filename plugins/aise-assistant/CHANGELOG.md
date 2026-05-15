@@ -5,6 +5,18 @@ Format: `## [version] — YYYY-MM-DD` followed by bullet points grouped by type.
 
 ---
 
+## [2.17.1] — 2026-05-15
+
+### Fixed
+- `context/project-instructions.md`: Gong transcript URL found in Notion session body is now extracted as a call ID and passed to `Glean:read_document` — URL no longer treated as a terminal result; cleanup step writes URL back to `Gong call` property when blank
+- `context/project-instructions.md`: added no-redundant-search rule — if a page ID was already retrieved via `notion-search` in the session, go directly to `notion-fetch(page_id)` rather than re-issuing the query
+- `context/project-instructions.md`: added oversized-Glean-result rule — when a search result file exceeds 25,000 tokens, skip `Read` with smaller limits and go directly to bash grep/python3 extraction
+- `context/project-instructions.md`: transcript lookup now scopes `app:gong` search more tightly (customer + date) and adds participant-email retry when account-name search returns irrelevant results; broad unscoped Glean search demoted to last resort
+- `context/project-instructions.md`: product feedback workflow now defaults to submitting via `feedback_create_notes` immediately after presenting the block, with a post-submission offer to create a tracking Notion Task
+- `context/notion-schema.md`: identity resolution step 1 now explicitly uses the email from system context as the `notion-get-users` query — not the display name — to avoid locale/formatting mismatches that return empty
+
+---
+
 ## [2.17.0] — 2026-05-15
 
 ### Added

@@ -1,5 +1,12 @@
 # Changelog — aise-leadership
 
+## [1.9.2] — 2026-05-15
+
+### Fixed
+- `context/` synced from aise-assistant v2.17.1: Gong transcript lookup improvements, no-redundant-search rule, oversized-result bash fallback, product feedback auto-submit, and identity resolution email-first fix
+
+---
+
 ## [1.9.1] — 2026-05-14
 
 ### Fixed
