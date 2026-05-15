@@ -1,5 +1,12 @@
 # Changelog — aise-leadership
 
+## [1.9.3] — 2026-05-15
+
+### Changed
+- `context/` synced from aise-assistant v2.18.0: added `session-naming-convention.md`; updated `notion-schema.md` Sessions Name field to reference the new convention
+
+---
+
 ## [1.9.2] — 2026-05-15
 
 ### Fixed

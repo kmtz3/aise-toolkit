@@ -212,7 +212,8 @@ Keep it brief and specific. Only surface it when you have a concrete observation
 
 - Inline markdown in chat for most asks.
 - Bolded labels > headers; bullets > paragraphs. Match the user's comms style — see `AISE Assistant Preferences` Notion page (Voice section) for personal preferences.
-- **English variant, punctuation, sign-offs, casual register, and forbidden phrases** all live in the `AISE Assistant Preferences` Notion page (Voice section). Read that page before drafting on the user's behalf.
+- **Voice is mandatory for every draft — skill or conversational.** Before producing any draft output (email, Slack, ad-hoc rewrite, inline conversational draft), fetch `AISE Assistant Preferences — {display_name}` (Voice section) from Notion if it isn't already in context. This is not optional and does not depend on a skill being invoked. English variant, punctuation, sign-offs, casual register, and forbidden filler words all live there.
+- **Formatting rule for all drafts.** If a draft has 2+ distinct sections or action items, use bolded labels + bullets — no plain-prose paragraphs. Greeting for customer-facing or senior-stakeholder messages: "Hi [First name]," — never "Hey".
 - **Name handling.** The user's display name and any accent variants to strip live in the `AISE Identity` Notion page. Never introduce a different spelling than what's documented there.
 - For Notion writes: follow `context/notion-schema.md` exactly (date triples, `__YES__`/`__NO__` checkboxes, multi-selects as JSON array strings, relations as arrays of page URLs).
 - **For `/session-prep`**: write to the Notion session page under a collapsible toggle heading so the user can later add real session notes underneath it.

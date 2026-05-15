@@ -351,7 +351,7 @@ Fetch the page immediately before writing — `update_content` is whitespace-exa
 
 | Field | Type | Valid values / notes |
 |---|---|---|
-| `Name` | title | Session name (typically `<Customer> — <Session ID> <Topic>` or close) |
+| `Name` | title | Session name — follow `context/session-naming-convention.md`. Format: `[<TYPE><N>] <Topic>` (e.g. `[A7] Roadmaps System Design`, `[E1] Prioritization for PMs`, `[S3] Program sync`). Do not include the customer name. Types without a code (Kick off, Discovery, Other, Internal): name descriptively. |
 | `Customers` | relation (limit 1) | → Customers DB |
 | `Consumed Package` | relation | → Active Packages DB. Drives credit burn. **Date-matching rule:** only assign an Active Package whose `Start Date` ≤ session's `Call Date` ≤ `End Date`. If the current `Active? = YES` package does not cover the session date, look for an older inactive package for the same customer whose date range does. If no package's date range covers the session date, leave this field empty. Never assign by recency alone. |
 | `Type` | select | `🏗️ Architecting`, `🗣️ Sync`, `🎓 Training`, `👟 Kick off`, `🔎 Discovery`, `📦 Other`, `🫥 Internal` |

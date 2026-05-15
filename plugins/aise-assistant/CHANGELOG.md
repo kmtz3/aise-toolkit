@@ -5,6 +5,19 @@ Format: `## [version] — YYYY-MM-DD` followed by bullet points grouped by type.
 
 ---
 
+## [2.18.0] — 2026-05-15
+
+### Added
+- `context/session-naming-convention.md` — full spec for session naming: `[TYPE][N] Topic` format, type codes (E/A/S), sequential numbering per Active Package + type, and name-resilient duplicate detection rules
+
+### Changed
+- `session-prepper` step 5: session lookup now uses triple-key match (customer + date + type) instead of customer + date only; names new sessions per convention (queries Active Package for next sequential number); surfaces rename offer when existing page has non-conforming name; fallback search drops title-prefix (unreliable pre-convention)
+- `post-session-debrief` step 1b: duplicate detection upgraded to triple-key match (customer + date + type); surfaces rename offer in final report when kept session has non-conforming name
+- `notion-schema.md` Sessions `Name` field: updated to reference naming convention with examples
+- `CLAUDE.md` output defaults: voice mandate made explicit (mandatory before any draft, not just skill-invoked); formatting rule for multi-section drafts added
+
+---
+
 ## [2.17.1] — 2026-05-15
 
 ### Fixed

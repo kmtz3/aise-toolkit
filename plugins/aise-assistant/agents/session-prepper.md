@@ -76,15 +76,21 @@ Structure (markdown, bold labels, bullets):
 
 ### 5. Land the prep brief in Notion
 
-- Find the Session page (query Sessions DB by customer relation + date).
-  - **Querying by Customers relation:** the `Customers` relation column stores full page URLs, **not** raw UUIDs. Use exact equality on the URL form, not a `LIKE` pattern on a UUID fragment:
+- Find the Session page using the **triple-key match** (customer + date + type) — this is name-resilient since existing pages may predate the naming convention:
+  - **Querying by Customers relation:** the `Customers` relation column stores full page URLs, **not** raw UUIDs. Use exact equality on the URL form:
     ```sql
     WHERE "Customers" = 'https://www.notion.so/<customer-page-id-no-dashes>'
-      AND "Call Date" = '<YYYY-MM-DD>'
+      AND "date:Call Date:start" = '<YYYY-MM-DD>'
+      AND "Type" = '<Notion type value>'
     ```
     A `WHERE Customers LIKE '%<uuid-fragment>%'` query will return empty even when matching sessions exist.
-  - **If the relation query returns empty,** also try `notion-search` by page title prefix (e.g. `"IBO — A7"`, `"<Customer> — <Session ID>"`) as a fallback before concluding no page exists.
-- **If no session page exists** — create one (`Call Status = Planned`) with the `Customers` relation set to the customer page URL, then immediately apply the matching Notion template: call `notion-update-page` with `command: apply_template` and the template ID for the session's `Type` (see `context/notion-schema.md` § Session Templates). The template places the `📋 Prep — [date]` toggle and the standard section structure on the empty page.
+  - **If the relation query returns empty,** also try `notion-search` scoped to the customer shorthand + date as a fallback before concluding no page exists — do **not** search by title prefix alone since existing pages may not follow the naming convention.
+  - **If a match is found with a non-conforming name** (i.e. doesn't match `[TYPE][N] Topic` per `context/session-naming-convention.md`), surface the rename in chat: `"Found [old name] — rename to [new name]?"`. Apply on confirmation. Never silently rename.
+- **Derive the session name** before creating (or to propose a rename): follow `context/session-naming-convention.md`.
+  1. Query the Active Package's sessions filtered by this type (exclude `Do not count = __YES__` and `Call Status = Canceled`) to find the next sequential number (count + 1).
+  2. Derive the topic from the calendar event title or session context — 2–5 words, title case.
+  3. Assemble: `[<TYPE><N>] <Topic>` (e.g. `[A3] Stakeholder Alignment`, `[E1] Prioritization for PMs`).
+- **If no session page exists** — create one (`Call Status = Planned`, `Name` set per the naming convention above) with the `Customers` relation set to the customer page URL, then immediately apply the matching Notion template: call `notion-update-page` with `command: apply_template` and the template ID for the session's `Type` (see `context/notion-schema.md` § Session Templates). The template places the `📋 Prep — [date]` toggle and the standard section structure on the empty page.
 - **5a. Customers-relation verification gate (mandatory after creating a new Session page).** Immediately re-fetch the new Session page and confirm the `Customers` relation is populated with the customer page. If it's empty, call `update_properties` again with **only** the `Customers` field set to the customer page URL array. Do NOT proceed to writing content until the relation is confirmed populated.
   > **Why this matters:** the `Customers` relation on a Session page is the single most important property — without it the session is orphaned and invisible in the customer's timeline. Never skip or defer this check.
 - **Write prep content into the `📋 Prep — [date]` toggle** using `update_content`:

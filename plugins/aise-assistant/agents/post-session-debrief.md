@@ -39,7 +39,7 @@ Always pull fresh — do not rely on memorized rules or `context/communication-s
 
 Pass the Voice section verbatim into the inline executions of `session-summarizer`, `email-drafter`, and `kdd-builder` so they apply the same rules without re-fetching.
 
-**Duplicate detection.** After locating the target Session page, run a SQL filter on the Sessions DB for the same `Customers` relation + same `date:Call Date:start` (date portion only). If more than one record is returned, surface all matches in chat with status + URL, pick the most-complete one as the target (prefer `Delivered` → `In progress` → `Planned`), and update the others with `Call Status = Canceled` + `Do not count = __YES__` + `Next Steps = "Duplicate of <kept-session-url>"`.
+**Duplicate detection.** After locating the target Session page, run a SQL filter on the Sessions DB for the same `Customers` relation + `date:Call Date:start` (date portion only) + `Type`. The triple-key match (customer + date + type) is the canonical dedup key — do **not** rely on `Name` alone, since pages created before the naming convention may use different title formats. If more than one record is returned, surface all matches in chat with status + URL, pick the most-complete one as the target (prefer `Delivered` → `In progress` → `Planned`), and update the others with `Call Status = Canceled` + `Do not count = __YES__` + `Next Steps = "Duplicate of <kept-session-url>"`. If the kept session has a non-conforming name (doesn't follow `[TYPE][N] Topic` per `context/session-naming-convention.md`), surface the rename in the final report — `"Rename [old name] → [new name]?"` — and apply on confirmation.
 
 ### 2. Read `agents/session-summarizer.md` and execute its procedure inline with these inputs:
 
