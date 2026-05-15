@@ -17,3 +17,17 @@ Read the procedure in `agents/session-prepper.md` and execute it inline as the m
 8. Report back with links (Session page + KDD sub-page when created, visual artifact when generated) and any gaps or contradictions surfaced.
 
 Do NOT ask the user for context that's retrievable. Search first, ask once if something is genuinely missing.
+
+## Compound requests
+
+Users often bundle related asks with `/session-prep`. Recognize these add-ons and route each to its handler in the same run — do not ask the user to invoke them separately.
+
+| Phrase pattern | Handler |
+|---|---|
+| _"make me a task to [X]"_, _"add a task for [X]"_ | Create a Notion Task (PB-side, current user as Owner) linked to the Session via `Source Call`, following `context/notion-schema.md`. Slot in after Step 5. |
+| _"read the gmail [agenda]"_, _"check what [stakeholder] sent"_ | In Step 2, specifically search Gmail for customer-proposed agendas sent in the last 7 days. In Step 4, give the customer's proposed agenda **priority weight** — it's the backbone of the suggested agenda, adapted with scorecard criteria, not replaced. |
+| _"what should I do before"_, _"pre-call checklist"_ | In Step 7, include a **Pre-call checklist** section listing concrete actions for the user before the session (overdue tasks, space prep, pre-reads to send, Slack pings to make). |
+| _"full session plan"_, _"minute-by-minute"_, _"run sheet"_ | In Step 7, include a **Session plan** — time blocks with what to say/do/decide in each block, plus contingencies (e.g. _"if Kate is absent, defer D7.2"_). |
+| _"draft diagram"_, _"diagram in figma"_, _"visualize the integration"_ | After primary Notion writes land, spawn `diagram-builder` (per the context-management ordering in `agents/session-prepper.md`). If the sub-agent reports MCPs unavailable, finish Drive upload + Notion attach in the main conversation. |
+
+**Context-management ordering for compound requests.** Write the primary deliverable (Session page + prep brief) first, then create secondary deliverables (Task, KDD sub-page), and only then spawn expensive sub-agents (diagram-builder). This prevents context-window compaction mid-run. See `agents/session-prepper.md` § Context management.

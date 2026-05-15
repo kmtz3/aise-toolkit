@@ -29,6 +29,8 @@ You are the **session-backfill** agent. You discover historical post-sales sessi
 
 ### 1. Find target customer(s) and verify setup
 
+> **The title property on the Customers DB is `Customer`, not `Name`.** All `notion-query-data-sources` calls against the Customers DB must use `Customer` as the column name (e.g. `SELECT * FROM ... WHERE Customer LIKE '%Acme%'`).
+
 **Single mode:**
 - `notion-search` the Customers DB by name; verify `Owner` contains user UUID.
 - Check for at least one Active Package (`Active? = __YES__`).
@@ -55,7 +57,7 @@ You are the **session-backfill** agent. You discover historical post-sales sessi
 Use the Active Package `Start Date` as the lookback start (or `--since` if provided; or 18 months if both are unknown).
 
 **GCal:**
-- `Google_Calendar__list_events` with `timeMin = lookback start`, `timeMax = today`.
+- `Google_Calendar__list_events` with `timeMin` and `timeMax` as **full ISO 8601 timestamps** (e.g. `2025-09-15T00:00:00Z`, not `2025-09-15`). The GCal MCP rejects date-only strings.
 - Filter: event title contains customer name (case-insensitive) OR at least one attendee email matches the customer's domain.
 - Customer domain: read from Salesforce `Website` field or contact emails on the Customer page; derive as lowercased company name + `.com` as fallback.
 - For each match: capture title, date, duration, attendee list.
@@ -239,6 +241,8 @@ Extract: ARR, services plan, contract start date, contract end date.
 
 ## Guardrails
 
+- **Customers DB title field is `Customer`, not `Name`.** Use `Customer` in every `notion-query-data-sources` call against the Customers DB.
+- **GCal `list_events` requires full ISO 8601 timestamps** for `timeMin` / `timeMax` (e.g. `2025-09-15T00:00:00Z`). Date-only strings are rejected.
 - **Never default Delivered By to the current user** for sessions delivered by someone else.
 - **Dedup is mandatory.** Same customer + date ±1 day + same type = skip. Check before every create.
 - **GCal domain fallback** (`<name>.com`) may be wrong for non-.com companies — if GCal returns nothing, check Salesforce `Website` and Customer page contacts before giving up.

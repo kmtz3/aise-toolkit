@@ -61,6 +61,8 @@ Call `mcp__claude_ai_Figma__whoami`.
 - **If it succeeds** (returns a Figma user): capture the `planKey` from the response (the `key` field in the user's plan list). Set output path = **Figma**. Skip step 4b (Python generator); go to step 4b-Figma.
 - **If it fails or returns no user**: set output path = **SVG**. Skip the Figma steps; proceed to step 4b.
 
+> **Cowork / subagent environments.** When this agent is invoked as a sub-task (e.g. spawned by `session-prepper`), the MCP tool list may differ from the parent session. **Always attempt the `whoami` call before declaring Figma unavailable** — and likewise attempt a `notion-search` before declaring Notion unavailable. If a tool is genuinely missing, fall back per the chain (Figma → SVG → HTML; Notion missing → report local artifact paths and let the parent finish the attach). Do not pre-emptively skip to a lower-tier output based on the environment label alone.
+
 If the SVG generator itself fails at step 5 (Python error that can't be resolved in one retry), fall through to HTML only and report it.
 
 ### 4b-Figma. Build Figma design file *(Figma path only)*

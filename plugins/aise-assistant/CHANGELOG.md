@@ -5,6 +5,31 @@ Format: `## [version] — YYYY-MM-DD` followed by bullet points grouped by type.
 
 ---
 
+## [2.17.0] — 2026-05-15
+
+### Added
+- `session-prepper` top-of-file **Context management** section — write-first ordering for compound requests (essential context → primary write → enrich → secondary deliverables → expensive sub-agents) to prevent context-window compaction before any writes land.
+- `session-prepper` Step 7 — expanded chat report with **Pre-call checklist** (overdue tasks, space prep, stakeholder pings, materials to have open) and **Session plan** (minute-by-minute flow with contingencies) sections.
+- `session-prepper` Step 7 — **Diagram follow-up** block: when a spawned `diagram-builder` sub-agent reports MCP tools unavailable but the parent has them, the parent finishes the Drive upload + Notion attach and verifies the customer-specific output path.
+- `session-prep` skill **Compound requests** section — phrase-to-handler map for in-line task creation, Gmail-agenda priority, pre-call checklist, full session plan, and diagram add-ons; codifies context-management ordering for bundled asks.
+- `post-session-debrief` Step 2a — large-transcript handling: delegate any transcript >50K chars (or `read_document` "saved to file" responses) to a `general-purpose` sub-agent with a structured extraction template; never `Read` directly in the parent.
+- `post-session-debrief` Step 2b — placeholder-debrief branch: when no transcript exists (Zoom + un-indexed Gong), write placeholder notes flagged ⚠️, create a "re-debrief" Task due session-date + 5 business days, skip the email + scorecard, and surface as `⚠️ Partial — transcript pending`.
+- `bulk-debrief` — mid-run queue expansion (one round): user can reply "yes and also add X" after the initial queue, and the agent re-runs discovery, merges/dedups, then asks for final confirmation.
+- `bulk-debrief` — sub-agent execution mode for queues of 4+ sessions (each session runs in an isolated `general-purpose` child returning a structured summary); inline mode retained for 1–3.
+
+### Changed
+- `session-prepper` Step 2 Glean bullet — explicit scoping guidance: date filters and narrow terms by default, prefer `chat` for synthesis over `search`, retry narrower on oversized-output errors instead of saving partial results to temp files. Gmail bullet now specifically searches for customer-proposed agendas from the last 7 days.
+- `session-prepper` Step 4 — when Gmail surfaces a customer-proposed agenda, use it as the **primary structure** for the suggested agenda (adapt with scorecard criteria, credit the source); do not rebuild from scratch.
+- `session-prepper` Step 5 — query the Sessions DB by full `Customers` relation URL (`= 'https://www.notion.so/<id>'`), never by `LIKE` on a UUID fragment; fall back to `notion-search` by title prefix if the relation query returns empty.
+- `diagram-builder` Step 4a — Cowork/subagent note: always attempt the `whoami` / Notion search calls before declaring tools unavailable; tool prefixes can differ from the parent session.
+- `bulk-debrief` — accepts a positional natural-language date-range argument (`yesterday`, `today`, `this past week`, `last N days`, `May 11-14`, `2026-05-11..2026-05-14`); legacy `--date` still supported.
+- `bulk-debrief` — discovery defaults to `notion-search` (semantic, fuzzy matching) for Customers + Sessions; `notion-query-data-sources` SQL is reserved as a fallback for ambiguous results (it 429s on multi-customer queue discovery).
+- `bulk` skill — documents the date-range arg, the search-first discovery model, the inline/sub-agent mode threshold, and ⚠️ Partial flag for transcript-pending sessions in the master summary.
+- `session-debrief` skill — Step 1 wired up to the new transcript branches (sub-agent for large transcripts, placeholder branch when transcript is unavailable).
+
+### Fixed
+- `session-backfill` — Customers DB title column is `Customer` (not `Name`); enforce in every `notion-query-data-sources` call. GCal `list_events` requires full ISO 8601 timestamps (`2025-09-15T00:00:00Z`), not date-only strings.
+
 ## [2.16.0] — 2026-05-14
 
 ### Changed
