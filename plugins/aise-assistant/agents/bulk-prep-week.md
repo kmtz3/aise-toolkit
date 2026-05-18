@@ -56,7 +56,7 @@ For each remaining matched customer + event date:
 Follow the full procedure in [`agents/session-prepper.md`](session-prepper.md) for each session, treating the calendar event as the session identifier. Key overrides:
 - **Ownership check:** if the matched Notion Customer record's `Owner` does not include the current user, log as **⚠️ Ownership mismatch** and skip — do not continue or reassign.
 - **Case B (existing page, no prep):** write the `📋 Prep — YYYY-MM-DD` toggle into the existing page body rather than creating a new page.
-- **Case C:** create the Session page (`Call Status = Planned`) then append the prep toggle.
+- **Case C:** create the Session page (`Call Status = Planned`) then append the prep toggle. **Also set `Current Account Owner`** to the Customer page's `Owner` UUID confirmed during the Step 2 ownership check — pass it as a Person field array `["<bare-uuid>"]` in the `notion-create-pages` call. The Notion automation that propagates this field does not fire reliably on SA-created pages, so it must be set explicitly on create.
 - **Run sessions sequentially**, not in parallel — each context pull is heavy and parallel execution causes Notion write conflicts.
 
 ### 6. Report

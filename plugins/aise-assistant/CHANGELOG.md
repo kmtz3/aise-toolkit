@@ -5,6 +5,14 @@ Format: `## [version] — YYYY-MM-DD` followed by bullet points grouped by type.
 
 ---
 
+## [2.18.1] — 2026-05-18
+
+### Fixed
+- `session-prepper` step 5 (Case C): `Current Account Owner` is now explicitly set on new Session page creation using the Customer.Owner UUID resolved in Step 2 — the Notion propagation automation does not fire reliably on SA-created pages
+- `bulk-prep-week` step 5 (Case C override): added matching note that `Current Account Owner` must be passed in the `notion-create-pages` call, using the Customer.Owner UUID confirmed during the ownership check
+
+---
+
 ## [2.18.0] — 2026-05-15
 
 ### Added
