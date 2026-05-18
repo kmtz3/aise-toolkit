@@ -5,6 +5,16 @@ Format: `## [version] — YYYY-MM-DD` followed by bullet points grouped by type.
 
 ---
 
+## [2.18.3] — 2026-05-18
+
+### Fixed
+- `agents/daily-brief.md`: parse `Working hours` end time from Identity page; use it as the prep-block cutoff instead of hardcoded 18:00; skip block creation (with chat note) when already past working hours
+- `agents/daily-brief.md`: add `focusTime` eventType and colorId 7 to focus-block classification; add Calendly external-session pattern
+- `agents/daily-brief.md`: fix task tiering to use end-of-week (not 7-day window); remove Priority as a tier-promotion criterion
+- `agents/daily-brief.md`: change HTML output theme from light to dark (`#0f172a` / `#1e293b`)
+
+---
+
 ## [2.18.2] — 2026-05-18
 
 ### Fixed

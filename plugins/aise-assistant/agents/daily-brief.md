@@ -33,6 +33,7 @@ Parse from the identity page:
 - First name (for the greeting header).
 - Time zone (IANA, for correct midnight-to-midnight windows).
 - Notion user UUID (for Tasks query).
+- Working hours end time (e.g. `17:00` or `18:00`) — used as the cutoff for prep block placement. If the field is absent or unparseable, default to `18:00`.
 
 If the identity page contains `<TBD` values, note it in the output and prompt the user to run `/assistant-setup`.
 
@@ -52,9 +53,9 @@ For each event collect: title, start/end datetime, attendee list (name + email d
 - All-day events (OOO markers, date blockers).
 
 **Classify each remaining event:**
-- **External customer session** — ≥1 non-`productboard.com` attendee, confirmed, user accepted. Extract customer name from domain or event title.
+- **External customer session** — ≥1 non-`productboard.com` attendee, confirmed, user accepted. Extract customer name from domain or event title. Note: a Calendly-booked event whose description contains patterns like "📐 Architecting Session", "Training", or similar AISE session keywords is always external even if the domain check is inconclusive.
 - **Internal meeting** — all attendees `@productboard.com`.
-- **Focus block / prep block** — title contains "prep", "focus", "block", "no meetings", or similar patterns; treat as already-blocked time.
+- **Focus block / prep block** — `eventType = focusTime`, OR `colorId = 7` (Google Calendar "Blueberry"), OR title contains "prep", "focus", "block", "no meetings", or similar patterns; treat as already-blocked time.
 - **Solo / no attendees** — only the user on the invite.
 
 ### 3. Check prep status — today's external sessions
@@ -100,7 +101,9 @@ Read `context/project-instructions.md` for the prep time benchmark by session ty
 - Unknown type → 45 min
 
 **B. Find the best available slot today.**
-Scan today's calendar events to find a free window of at least the required duration before end-of-working-day (default 18:00 local). Prefer the afternoon. Avoid placing the block back-to-back against an existing meeting (leave ≥10 min gap). If no suitable slot exists today, place the block tomorrow morning at least 90 minutes before the session start time.
+Use the `Working hours` end time resolved from the Identity page in Step 1 (default `18:00` if absent) as the hard cutoff. If the current local time is already at or past that cutoff, skip block creation for this session and note "⏰ Past working hours — no prep block created" in both the chat summary and the HTML tomorrow section; do not create the event.
+
+Otherwise, scan today's calendar events to find a free window of at least the required duration before the working-hours cutoff. Prefer the afternoon. Avoid placing the block back-to-back against an existing meeting (leave ≥10 min gap). If no suitable slot exists today, place the block tomorrow morning at least 90 minutes before the session start time.
 
 **C. Check for duplicate.**
 Before creating, scan the existing event list for any event title containing `[Prep]` and the customer name. If one already exists, skip creation for this customer and note it.
@@ -123,9 +126,11 @@ Query the Tasks DB (ID from `context/notion-schema.md`) filtered by:
 For each task collect: title, Customer relation (display name), Due date, Priority (if the field exists), Status, Notion page URL.
 
 **Tier each task:**
-- **Today** — Due date = target date, OR Status = `In Progress`, OR Priority = `High` / `Urgent`.
-- **This week** — Due date within the next 7 days (excluding Today tier).
-- **Later** — Due date beyond 7 days or no due date.
+- **Today** — Due date ≤ target date (includes overdue), OR no due date with Status = `In Progress`.
+- **This Week** — Due date is tomorrow through end of the current calendar week (Sunday, or whichever day the user's locale treats as the last working day — use Friday if uncertain).
+- **Later** — Due date beyond end-of-week, OR no due date (unless already captured in Today/This Week above).
+
+Do **not** use Priority to assign tiers — Priority is display-only context within a tier, not a promotion criterion.
 
 **Within each tier, sort:** overdue first (due < today, promoted from any tier), then by due date ascending, then alphabetically.
 
@@ -171,7 +176,7 @@ Build a self-contained HTML file (inline CSS, no external dependencies, no CDN l
 ```
 
 **Design spec:**
-- Light theme, system font (`-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif`).
+- Dark theme (`background: #0f172a`, card sections `background: #1e293b`), system font (`-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif`). Text: `#e2e8f0` primary, `#94a3b8` muted.
 - Max width 760px, centered, white card sections with `box-shadow: 0 1px 3px rgba(0,0,0,.12)`, `border-radius: 8px`, comfortable padding.
 - Color-coded badges: green `#22c55e` = prep done, amber `#f59e0b` = no prep / warning, red `#ef4444` = overdue / prep needed, blue `#3b82f6` = today task, purple `#8b5cf6` = in-progress, grey `#94a3b8` = later / internal.
 - Tomorrow section has a soft yellow-tinted background (`#fffbeb`) to visually separate it from today.
