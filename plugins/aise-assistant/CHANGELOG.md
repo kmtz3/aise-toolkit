@@ -5,6 +5,17 @@ Format: `## [version] — YYYY-MM-DD` followed by bullet points grouped by type.
 
 ---
 
+## [2.18.2] — 2026-05-18
+
+### Fixed
+- `bulk-prep-week` Step 4: dedup query now uses `LIKE 'YYYY-MM-DD%'` for Call Date comparisons — datetime-format fields store ISO timestamps and silently return empty results against date-only range operators
+- `bulk-prep-week` Step 4: added duplicate-detection — more than one Planned session page for the same customer + date is flagged as ⚠️ Duplicate pages in the report (both URLs surfaced) rather than silently skipped
+- `bulk-prep-week` Step 5: added Active Packages SQL callout requiring triple-syntax for date fields (`"date:Start Date:start"`, `"date:End Date:start"`) — bare column names cause `no such column` errors
+- `bulk-prep-week` Step 3: added Glean search scoping rules (date filter required, no broad queries, prefer `chat` for synthesis, skip Glean for already-prepped Case A sessions) to prevent oversized output and context window pressure during bulk runs
+- `bulk-prep-week` report table: added ⚠️ Duplicate pages example row; anonymized all example customer names
+
+---
+
 ## [2.18.1] — 2026-05-18
 
 ### Fixed

@@ -39,6 +39,8 @@ For each external event:
 - **No match found** → log as **⚠️ Unmatched** (include event title + attendee domains) and continue to the next event. Do not create a Customer record.
 - **Multiple matches** → log as **⚠️ Ambiguous** (list candidates) and continue. Don't guess.
 
+> **Glean search scoping rules (apply in this step and in Step 5):** All Glean `search` calls must include a date filter (e.g. `updated:past_week` or `after:<last-session-date>`) and a specific search term. Do **not** issue broad queries like `'<Customer> Productboard'` — they return 100k+ characters and will truncate. Prefer `chat` for synthesis questions (bounded output); use `search` only for specific known documents. If `search` returns an oversized-output error, retry with a narrower query. In a bulk run, **skip Glean `search` entirely for sessions that are already confirmed Case A** (prep toggle exists) — context gathering is only needed for sessions that will receive a new write.
+
 ### 4. Dedup against existing Notion Session pages
 
 Before evaluating each matched customer + event, apply flags:
@@ -46,12 +48,22 @@ Before evaluating each matched customer + event, apply flags:
 - **`--force` list:** if the customer name matches a `--force` value, treat the session as Case B regardless of whether a prep toggle exists — always rerun prep and overwrite.
 
 For each remaining matched customer + event date:
-- Query Sessions DB: Customer relation = matched customer page + session date within ±1 day.
+- Query Sessions DB: Customer relation = matched customer page + session date within ±1 day. Use `LIKE 'YYYY-MM-DD%'` for all Call Date comparisons — fields with `date:Call Date:is_datetime = 1` store ISO timestamps (`2026-05-18T13:30:00.000Z`) and will not match range operators against date-only strings. Use date-only range operators (`>=`/`<=`) only when you have confirmed `is_datetime = 0` for the specific record.
+
+  Example SQL pattern:
+  ```sql
+  WHERE "text:Customer:title" = 'Acme Corp'
+    AND "date:Call Date:start" LIKE '2026-05-18%'
+  ```
+
+- **Duplicate detection:** if the query returns **more than one** session page for the same customer + date combination (same `Type`, both `Call Status = Planned`), log as **⚠️ Duplicate pages — review required** in the run report and surface both page URLs. Do NOT silently skip — flag for manual review. Recommend the user cancel one page (`Call Status = Canceled`, `Do not count = __YES__`) before the session date. Do not proceed to Step 5 for duplicated sessions.
 - **Case A — Session page exists AND body contains a `📋 Prep` toggle:** log as **⏭️ Already prepped** and skip entirely. (Override with `--force` to rerun.)
 - **Case B — Session page exists but NO `📋 Prep` toggle in body:** proceed to step 5, targeting this existing page.
 - **Case C — No session page exists:** proceed to step 5; session-prepper will create the page.
 
 ### 5. Run session-prepper for each session that needs prep
+
+> **Active Packages SQL — date field triple syntax required:** Any SQL query against the Active Packages data source must use triple-syntax for date fields: `"date:Start Date:start"` and `"date:End Date:start"`. Bare column names (`Start Date`, `End Date`) will fail with `no such column`. This matches the pattern documented in `context/notion-schema.md`.
 
 Follow the full procedure in [`agents/session-prepper.md`](session-prepper.md) for each session, treating the calendar event as the session identifier. Key overrides:
 - **Ownership check:** if the matched Notion Customer record's `Owner` does not include the current user, log as **⚠️ Ownership mismatch** and skip — do not continue or reassign.
@@ -70,8 +82,9 @@ After all sessions are processed, post a summary table:
 | TechFirm — Architecting | TechFirm | Wed May 14 | ✅ Prepped + KDD sub-page |
 | "Q2 Review call" | — | Thu May 15 | ⚠️ Unmatched — no Customer record found |
 | StartupCo — Check-in | StartupCo | Fri May 16 | ⏭️ Skipped (--skip flag) |
+| ClientCo — Weekly Sync | ClientCo | Wed May 21 | ⚠️ Duplicate pages — review required (page 1, page 2) |
 
-Include: total events scanned, external sessions found, prepped, skipped, flagged. Link each prepped Notion Session page directly.
+Include: total events scanned, external sessions found, prepped, skipped, flagged. Link each prepped Notion Session page directly. Duplicate-page entries must list both page URLs.
 
 ## Guardrails
 
