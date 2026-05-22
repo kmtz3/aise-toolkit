@@ -8,7 +8,7 @@ Prep the user for the customer session identified in the user's message (custome
 Read the procedure in `agents/session-prepper.md` and execute it inline as the main assistant — do not try to spawn `session-prepper` as a subagent (custom agents in this plugin are procedure documents, not registered subagent types). The steps:
 
 1. Confirm date, attendees, and session type (Calendar + Notion lookup if needed).
-2. Pull context from Glean, Gmail, Notion, Calendar, and past chats — in parallel.
+2. Pull context from Glean (including Slack channel search), Gmail, Salesforce (fallback for missing snapshot fields), Notion, Calendar, and past chats — in parallel.
 3. Consult `context/pb-aise-reference-guide.md` (what-good-looks-like) and `context/score-cards.md` for the session type.
 4. Draft a prep brief: customer context, goals, KDDs to drive, open items, risks, suggested agenda, questions to ask.
 5. Find the Notion Session page (create one if missing) and append the brief inside a collapsible toggle heading `📋 Prep — YYYY-MM-DD` so real session notes can go underneath.

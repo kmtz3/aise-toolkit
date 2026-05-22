@@ -5,6 +5,18 @@ Format: `## [version] — YYYY-MM-DD` followed by bullet points grouped by type.
 
 ---
 
+## [2.20.0] — 2026-05-22
+
+### Changed
+- `session-prep` / `bulk --prep`: prep brief rewritten to short, skimmable format — one-line customer snapshot, program phase, goals, "since last session", risks (🔴/🟡), timed agenda, questions
+- `session-prepper` / `bulk-prep-week`: customer snapshot now has Notion → Salesforce → Glean fallback chain; missing ARR/tier/AP dates trigger a Salesforce SOQL query before falling back to Glean (tagged `⚠️ [Glean — verify]`)
+- `session-prepper` / `bulk-prep-week`: program phase now has Notion AP → Glean fallback if Working Notes are empty or stale
+- `session-prepper` / `bulk-prep-week`: Step 2 now explicitly searches the customer's Slack channel via Glean (`source:slack`) for open asks, escalations, and commitments; also searches for open support tickets via Gmail/Glean
+- `session-prepper`: AP staleness check added — if Working Notes haven't been updated since the last session, surfaces a prompt in Step 7 offering to update; never updates silently
+- `session-prepper` / `bulk-prep-week`: Salesforce tools (`run_soql_query`, `get_username`) added to tools frontmatter
+
+---
+
 ## [2.19.0] — 2026-05-22
 
 ### Added
