@@ -82,11 +82,12 @@ Apply [`context/communication-style-guide.md`](../../context/communication-style
   ```
 - **Pattern for ongoing architecting/working cadence:** reference *what we agreed last* + *what we'll cover next* + the ask. Never frame as first-touch.
 
-Default structure (adjust to purpose):
+Default structure for post-session follow-up (adjust to purpose):
 - Greeting (`Hi <first name>,`)
-- One-line context — *why I'm writing right now*, tied to the last session / thread
-- The substance — what we covered, what I need, what's changing
-- Next step / ask — with owners and timing if applicable
+- One-line context — single sentence: *why I'm writing*, tied to the last session or thread
+- **What we covered** — 2–3 tight bullets (decisions + key points; not a meeting recap)
+- **Next steps** — bullets: `[Owner] — [what] by [date or week]` for each open commitment
+- Close or ask (one line)
 - Sign-off
 
 ### 4.5 Draft dedup check

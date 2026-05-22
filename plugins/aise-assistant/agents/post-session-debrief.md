@@ -155,20 +155,18 @@ Using the extracted output from step 2, call `notion-writer` to write the follow
 ```
 ## 📝 Session Notes — YYYY-MM-DD
 
-**Decisions made**
-- [KDD bullets]
+**What landed**
+- ✅ [decision / outcome]
 
-**Open items / assumptions to validate**
-- [bullets with owners]
+**Action items**
+- 🔵 **PB — [owner]:** [what] by [timing]
+- 🔵 **Customer — [owner]:** [what] by [timing]
 
-**Action items — PB side**
-- [bullets: owner + timing]
+**Open items**
+- 🟡 [item + owner]
 
-**Action items — Customer side**
-- [bullets: owner + timing]
-
-**Risks surfaced**
-- [bullets]
+**Risks**
+- 🔴 [risk + impact] (or "None.")
 
 **Source:** [Gong URL or Notion meeting notes URL or Gmail thread]
 ```
@@ -233,17 +231,15 @@ Write this directly. The internal debrief is short: it is for the user's own AE/
 
 Format:
 ```
-**[Customer] — [Session Name] debrief ([date])**
+**[Customer] — [Session Name] ([date])**
 
-**What happened:** [2-3 sentences: what was covered, tone/energy, decisions reached]
+✅ [decision / outcome]
+✅ [decision / outcome]
 
-**Key decisions:** [2-3 bullets]
+**Risks:** 🔴 [critical item] / 🟡 [watch item] (or "None.")
 
-**Risks / flags:** [bullets — be direct. If nothing, write "None surfaced."]
-
-**Next steps (PB side):** [bullets with owners and timing]
-
-**Next steps (Customer side):** [bullets]
+**Next — PB:** [owner] — [what] by [timing]
+**Next — Customer:** [owner] — [what] by [timing]
 ```
 
 Apply `context/communication-style-guide.md`. No em-dashes. Return inline in chat. Then create a Notion Task in the Tasks DB:

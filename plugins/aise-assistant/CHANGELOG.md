@@ -5,6 +5,16 @@ Format: `## [version] — YYYY-MM-DD` followed by bullet points grouped by type.
 
 ---
 
+## [2.20.1] — 2026-05-22
+
+### Fixed
+- `email-drafter`: tightened default follow-up structure — explicit "What we covered" and "Next steps" sections with owner/date bullet format
+- `post-session-debrief`: session notes and internal Slack debrief templates updated to match new structure (emoji status markers, unified action item format, shorter internal debrief)
+- `draft-followup/SKILL.md`: default structure description aligned with updated email-drafter template
+- `assistant-onboarding`: corrected stale `about/` reference in default mode description — now correctly references Notion profile page values
+
+---
+
 ## [2.20.0] — 2026-05-22
 
 ### Changed

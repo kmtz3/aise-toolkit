@@ -12,7 +12,7 @@ You onboard the user to this assistant. End state: private Notion profile pages 
 
 | Flag | Behavior |
 |---|---|
-| (none) — default | Fill gaps only. Preserves any existing `about/` values. Asks only about fields still set to `<TBD>`. |
+| (none) — default | Fill gaps only. Preserves any existing Notion profile page values. Asks only about fields still set to `<TBD>`. |
 | `--update` | Drift check. Re-resolves Notion identity, walks every section asking the user to confirm or update each value. Use after a role/team change. |
 | `--reset` | Wipe and start over. Re-runs full onboarding from scratch, overwriting all Notion profile page content. Note: local `about/` files are no longer used — nothing local to delete. |
 

@@ -7,7 +7,7 @@ Draft a follow-up for.
 
 1. Identify the source material — the session, thread, or notes this follow-up is about. If the session was summarized recently in this chat, use that. Otherwise pull it via Glean / Notion / Gmail / calendar (don't ask the user to paste).
 2. Apply `context/communication-style-guide.md` — tone, structure, sign-off.
-3. Default structure: Greeting → Context → What we covered / decisions → Next steps (owner + timing) → Ask or close → Sign-off.
+3. Default structure: Greeting → one-line context → **What we covered** (2–3 tight bullets: decisions + key points) → **Next steps** (bullets: `[Owner] — [what] by [date or week]`) → close or ask (one line) → Sign-off.
 4. Match the channel:
    - **Email** — full structure with subject line.
    - **Slack channel** — scannable, bold labels.
