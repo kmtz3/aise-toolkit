@@ -118,6 +118,7 @@ If the **Transcript lookup order** is exhausted (all six sources, including a si
    - `Consumed Package` → apply date-matching rule per step 3.
    - `Gong call` → leave empty.
    - `Spark conversation` → leave unset (cannot evaluate without transcript). Note this gap in the final report.
+   - `Debriefed` → **do NOT set.** Leave `__NO__`. The session must remain discoverable for re-debrief once the transcript is available.
 
 4. **Create a PB-side Task** in the Tasks DB:
    - Title: `Re-debrief [Customer] [Session ID/Name] — Gong transcript`
@@ -179,6 +180,7 @@ Then update the Session record properties:
 - `Consumed Package` → apply the date-matching rule: assign the Active Package whose `Start Date`–`End Date` covers this session's `Call Date`. If the current `Active? = YES` package does not cover the date, query the customer's packages for an older one that does. If none cover the date, leave the field empty. Never assign by recency alone.
 - `Gong call` → if a Gong URL was identified during transcript lookup (step 2), set it now: `"Gong call": "<url>"`. Do **not** use the `userDefined:` prefix here — that prefix is reserved for properties literally named `URL` or `id`.
 - `Spark conversation` → scan the transcript/notes for evidence that Productboard Spark AI was discussed (positioning, use cases, demos, customer questions about Spark). Set `__YES__` if confirmed; `__NO__` otherwise. This is a KPI field — always evaluate it, never leave it blank.
+- `Debriefed` → set `__YES__` once the session notes are confirmed written and all properties above are applied. This is the primary signal read by `bulk-debrief` to avoid duplicate runs. **Only set this when working from real source material (transcript or live notes) — do NOT set it on placeholder debriefs (see Step 2b).**
 - Do **not** write to `Current Account Owner` — it's auto-maintained from `Customers.Owner` by the Sessions automation + Customer Resync button. Treat as derived.
 
 Follow `context/notion-schema.md` for all field formats. Write directly — no approval step.

@@ -365,6 +365,8 @@ Fetch the page immediately before writing — `update_content` is whitespace-exa
 | `Gong call` | url | Gong recording URL for this session. Write as `"Gong call": "<url>"` (no `userDefined:` prefix — that's reserved for properties literally named `URL` or `id`). Set whenever a Gong transcript is found — during debrief, summarizer, or backfill. |
 | `Spark conversation` | checkbox | `__YES__` if the session included Productboard Spark AI positioning or use-case discussion. Tracked for KPI reporting. Set during debrief / summarizer from transcript evidence; `__NO__` by default on backfill unless the transcript confirms Spark was discussed. |
 | `Related Tasks` | relation | → Tasks DB. Direct relation to tasks generated from this session. Also auto-populated when a Task's `Source Call` is set to this session (Notion bidirectional sync), but agents should set it explicitly when creating tasks from the session to ensure the link is immediate. |
+| `Prepped` | checkbox | `__YES__` once a prep brief has been written to this Session page. Set by `session-prepper` at the end of Step 5. **Agent-use only — do not set manually.** Read by `daily-brief` as the prep-status signal (replaces page-body toggle scan). |
+| `Debriefed` | checkbox | `__YES__` once the full post-session debrief has completed with real source material (transcript or notes). Set by `post-session-debrief` at the end of Step 3. **Not set on placeholder debriefs** (transcript unavailable) — remains `__NO__` so the session stays discoverable for re-debrief. Read by `bulk-debrief` as the primary dedup signal. Can be reset to `__NO__` in Notion to force a re-debrief. |
 
 ### Read-only
 

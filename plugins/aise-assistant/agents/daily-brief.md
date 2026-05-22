@@ -60,26 +60,27 @@ For each event collect: title, start/end datetime, attendee list (name + email d
 
 ### 3. Check prep status — today's external sessions
 
-For each of today's external customer sessions, query the Sessions DB using the expanded date column name:
+For each of today's external customer sessions, query the Sessions DB using the expanded date column name and include the `Prepped` property:
 
 ```sql
-SELECT * FROM "collection://29397e9c-7d4f-8052-886b-000b9e3479d7"
+SELECT Name, "Call Status", Type, "Prepped"
+FROM "collection://29397e9c-7d4f-8052-886b-000b9e3479d7"
 WHERE "date:Call Date:start" = 'YYYY-MM-DD'
 ```
 
-Use `"date:Call Date:start"` — never the bare column name `"Call Date"` (it does not exist in Notion SQL). Fetch the matching session page body. Check whether a `📋 Prep —` toggle heading exists.
+Use `"date:Call Date:start"` — never the bare column name `"Call Date"` (it does not exist in Notion SQL). Use the `Prepped` checkbox from the query result directly — **do not fetch the session page body** to scan for a toggle heading.
 
 Badge each session:
-- Notion session found + prep toggle exists → `✅ Prep done`
-- Notion session found + no prep toggle → `⚠️ No prep`
+- Notion session found + `Prepped = __YES__` → `✅ Prep done`
+- Notion session found + `Prepped = __NO__` (or unset) → `⚠️ No prep`
 - No Notion session found → `— Not in Notion`
 
 ### 4. Check prep status — tomorrow's external sessions
 
-Same logic as step 3, but filter for `"date:Call Date:start" = 'tomorrow date'`. For each of tomorrow's external customer sessions:
+Same logic as step 3, but filter for `"date:Call Date:start" = 'tomorrow date'`. Include `Prepped` in the SELECT. For each of tomorrow's external customer sessions:
 
-- Found + prep exists → `✅ Prep done` — no action needed.
-- Found + no prep → `🚨 Prep needed` — queue for blocker creation (step 5).
+- Found + `Prepped = __YES__` → `✅ Prep done` — no action needed.
+- Found + `Prepped = __NO__` (or unset) → `🚨 Prep needed` — queue for blocker creation (step 5).
 - Not found in Notion → `— Not in Notion` — still queue for blocker creation; flag the Notion gap separately.
 
 Collect the **prep-needed queue**: sessions that need prep and don't already have it.

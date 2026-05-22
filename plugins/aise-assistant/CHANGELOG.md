@@ -5,6 +5,17 @@ Format: `## [version] — YYYY-MM-DD` followed by bullet points grouped by type.
 
 ---
 
+## [2.19.0] — 2026-05-22
+
+### Added
+- Sessions DB: two new checkbox properties — `Prepped` and `Debriefed` — documented in `context/notion-schema.md`
+- `session-prepper`: sets `Prepped = __YES__` after the prep brief is confirmed written (Step 5); signal read by `daily-brief` and `bulk --prep`
+- `post-session-debrief`: sets `Debriefed = __YES__` at end of Step 3 when working from real source material; explicitly withheld on placeholder debriefs (transcript unavailable) so sessions stay discoverable for re-debrief
+- `bulk-debrief`: `Debriefed = __YES__` is now the primary dedup signal in Step 4C; existing Notes/Draft/Task heuristics demoted to secondary fallback for legacy sessions
+- `daily-brief`: Steps 3 & 4 now read `Prepped` directly from SQL instead of fetching page bodies to scan for toggle headings — faster and no per-session page fetches
+
+---
+
 ## [2.18.3] — 2026-05-18
 
 ### Fixed

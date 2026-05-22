@@ -86,16 +86,21 @@ For each external-confirmed event:
 
 **C. Pre-flight debrief state check (dedup):**
 
-Run these three checks and record the results for each matched session:
+**Primary signal — fetch from the Session page properties (SQL or notion-fetch):**
 
-1. **Notes signal:** Fetch the Session page body. Does a `## 📝 Session Notes —` heading already exist?
-2. **Draft signal:** Call `list_drafts`. Does a draft exist with this customer's name and the target date (or session ID) in the subject?
-3. **Task signal:** Query Tasks DB for any Task with `Source Call = this session's page URL` + `Owner = <user-uuid>` + `Status != Done/Cancelled`. At least one found?
+1. **Debriefed checkbox:** Does the Session record have `Debriefed = __YES__`? This is set by `post-session-debrief` only when a full debrief ran against real source material. If `--rerun <customer>` was NOT passed and `Debriefed = __YES__` → mark as "confirmed debriefed" and skip immediately. No further checks needed.
+
+If `Debriefed = __NO__` (or unset — legacy sessions predate the property), fall through to the secondary heuristic checks:
+
+2. **Notes signal:** Fetch the Session page body. Does a `## 📝 Session Notes —` heading already exist?
+3. **Draft signal:** Call `list_drafts`. Does a draft exist with this customer's name and the target date (or session ID) in the subject?
+4. **Task signal:** Query Tasks DB for any Task with `Source Call = this session's page URL` + `Owner = <user-uuid>` + `Status != Done/Cancelled`. At least one found?
 
 **Interpret signals:**
-- **Notes ✓ AND Draft ✓** → "likely already debriefed." Skip by default unless `--rerun <customer>` was passed.
-- **Only one signal positive** → "partial debrief." Queue normally; `post-session-debrief` will fill gaps only (notes write skipped if notes exist, draft skipped if draft exists, task creates skipped by `notion-writer` dedup if tasks exist).
-- **No signals** → queue for full debrief.
+- **`Debriefed = __YES__`** → "confirmed debriefed." Skip unless `--rerun <customer>`.
+- **`Debriefed = __NO__` + Notes ✓ AND Draft ✓** → "likely already debriefed (legacy / placeholder)." Skip by default unless `--rerun <customer>` was passed.
+- **`Debriefed = __NO__` + only one signal positive** → "partial debrief." Queue normally; `post-session-debrief` will fill gaps only (notes write skipped if notes exist, draft skipped if draft exists, task creates skipped by `notion-writer` dedup if tasks exist).
+- **`Debriefed = __NO__` + no signals** → queue for full debrief.
 
 ### 5. Present the opening run plan — wait for one confirmation (queue may expand)
 
@@ -114,6 +119,7 @@ Before executing any debriefs, surface (group queue rows by date when the range 
 (Add --rerun <customer> in your reply to force-include)
 | Date | Customer | Session | Signals detected |
 |---|---|---|---|
+| YYYY-MM-DD | [name] | [ID] | Debriefed ✓ |
 | YYYY-MM-DD | [name] | [ID] | Notes ✓  Draft ✓ |
 
 **Ambiguous (need your input before queuing):**

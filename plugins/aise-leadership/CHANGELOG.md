@@ -1,5 +1,12 @@
 # Changelog — aise-leadership
 
+## [1.9.4] — 2026-05-22
+
+### Changed
+- `context/` synced from aise-assistant v2.19.0: `notion-schema.md` Sessions field reference updated with `Prepped` and `Debriefed` checkbox properties
+
+---
+
 ## [1.9.3] — 2026-05-15
 
 ### Changed

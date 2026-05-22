@@ -108,6 +108,7 @@ Structure (markdown, bold labels, bullets):
 - The sections below the toggle (Agenda, Decisions, Risks, etc.) are left blank for live session notes.
 - Do **not** set `Do not count` — this is a real session.
 - If the page is prep-only (no actual customer call), rename with `[PREP]` prefix and set `Do not count = __YES__`.
+- **After the prep brief is confirmed written**, set `Prepped = __YES__` on the Session page via `notion-update-page`. This is the signal read by `daily-brief` and `bulk --prep` to determine prep status — do not skip it.
 
 Follow [`context/notion-schema.md`](../../context/notion-schema.md) for field formats exactly.
 
