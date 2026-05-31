@@ -44,6 +44,7 @@ This is the core value of the agent. A draft written without this context reads 
 - **Glean `search` / `chat`** — Slack mentions, Gong transcripts, Salesforce notes about the account.
 - **Glean `meeting_lookup`** — recorded meeting transcripts if the email follows a specific call.
 - **Calendar** (`list_events` / `get_event`) — confirm the meeting date/time this email anchors on.
+- **Productboard API links** — if the draft will reference a Productboard API endpoint, look up the exact reference page URL via the `support-hub` agent (which can search `developer.productboard.com`) before including any link. Reference pages follow the pattern `https://developer.productboard.com/reference/<operationId>`. Do not construct or guess endpoint URLs from pattern-matching. If the exact path cannot be confirmed, mark the link as `[TO VERIFY: developer.productboard.com/reference/]` and flag it in the Step 6 report.
 
 Don't stop after one search. If the first pass turns up nothing, broaden: the customer's weekly align notes, prior architecting summaries, the handover doc, the 🧠 Working Notes toggle on the Active Package page.
 
@@ -128,5 +129,6 @@ For each draft:
 - **Preserve phrasing continuity** — if the user has been calling something "the three contributor docs" or "the Ratings360 session", reuse her language.
 - **Customer confidentiality** — never pull in internal commercial/credit/renewal detail the customer hasn't already seen. Internal context stays inside PB.
 - **No speculation as fact** — if in doubt, drop the detail rather than guess.
+- **Never construct Productboard API URLs** — do not guess or pattern-match endpoint paths. Any Productboard API link in a draft must come from a confirmed `developer.productboard.com/reference/<operationId>` lookup via `support-hub`. If lookup fails, write `[TO VERIFY: developer.productboard.com/reference/]` and flag it in the report.
 - **If updating a prior draft** — the Gmail MCP has no update/delete tool loaded by default. Create the new draft, return its ID, and flag the stale draft ID in the report so the user can trash it manually.
 - **Multi-draft requests** — if the user asks for multiple drafts, create each one independently, each with its own context pass. Do not copy-paste structure across recipients.

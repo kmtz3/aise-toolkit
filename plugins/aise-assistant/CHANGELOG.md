@@ -5,6 +5,13 @@ Format: `## [version] — YYYY-MM-DD` followed by bullet points grouped by type.
 
 ---
 
+## [2.20.2] — 2026-05-29
+
+### Fixed
+- `email-drafter`: agent no longer fabricates Productboard API endpoint URLs — added mandatory lookup via `support-hub` against `developer.productboard.com/reference/` before including any API link; unknown paths marked `[TO VERIFY]` and flagged in the draft report
+
+---
+
 ## [2.20.1] — 2026-05-22
 
 ### Fixed
