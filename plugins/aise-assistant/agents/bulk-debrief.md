@@ -54,6 +54,7 @@ Filter OUT immediately:
 - Events where the user's response status is `declined`.
 - All-day events (OOO markers / blockers).
 - Events matching any `--skip <customer>` argument (customer name appears in the title or attendee domain).
+- **Future events:** Events whose `end.dateTime` is still in the future at the moment the run executes. Get the current wall-clock time with `bash date -u +%Y-%m-%dT%H:%M:%SZ` and compare against each event's end time. An event that has not yet ended cannot have been delivered — skip it regardless of the date argument passed. Log these in the step 5 queue output under "Skipping — not yet delivered: `[title]` ends at `[end_time]`".
 
 ### 3. Classify each remaining event
 

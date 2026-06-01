@@ -5,7 +5,7 @@ description: Pull today's meetings + open Tasks, flag tomorrow's sessions needin
 
 Generate a daily briefing page for **$ARGUMENTS** (defaults to today).
 
-Read the procedure in `agents/daily-brief.md` and execute it inline as the main assistant — do not try to spawn `daily-brief` as a subagent (custom agents in this plugin are procedure documents, not registered subagent types). The steps:
+Read the procedure in the plugin's `agents/daily-brief.md` and execute it inline as the main assistant — do not try to spawn `daily-brief` as a subagent (custom agents in this plugin are procedure documents, not registered subagent types). **Path note:** `agents/daily-brief.md` lives at the plugin root (e.g. `plugins/aise-assistant/agents/daily-brief.md`), not inside the skill subdirectory — use an absolute path or resolve from the plugin root, not relative to `skills/daily-brief/`. The steps:
 
 1. Resolve user identity — follow the Notion resolver in Step 1 of `agents/daily-brief.md` exactly (`notion-get-users` + `notion-search("AISE Identity — {display_name}")` + `notion-fetch`). Parse name, timezone, and Notion UUID. Compute today and tomorrow's date windows.
 2. Pull both days' calendar events; classify each (external customer session, internal, focus block).

@@ -5,6 +5,20 @@ Format: `## [version] — YYYY-MM-DD` followed by bullet points grouped by type.
 
 ---
 
+## [2.21.0] — 2026-06-01
+
+### Added
+- `daily-brief`: each external customer session card (today + tomorrow) now shows a 2-sentence agreed-topic description — sourced from the Notion session page (`🎯 Session Goals` / `Primary Focus`), Glean (Gong / Slack / Gmail) fallback, then calendar event description; omitted entirely if no signal found
+- `daily-brief`: added Glean tools (`mcp__claude_ai_Glean__search`, `meeting_lookup`, `gmail_search`) to the agent tool list for session topic resolution
+
+### Fixed
+- `daily-brief`: added 429/SQL failure fallback for Steps 3 and 4 (`notion-search` + `notion-fetch` path) — previously only documented in Step 3, now explicit in Step 4 too
+- `daily-brief`: Step 6 now uses the Tasks view URL (pre-filtered, avoids SQL parsing issues) as the preferred query path with SQL as fallback; field name mapping documented (`Task`, `date:Due Date:start`, etc.)
+- `daily-brief`: SKILL.md path note — `agents/daily-brief.md` now resolved from plugin root, not skill subdirectory
+- `bulk-debrief`: future events filter — events whose `end.dateTime` is still in the future are skipped with a logged reason
+
+---
+
 ## [2.20.2] — 2026-05-29
 
 ### Fixed
