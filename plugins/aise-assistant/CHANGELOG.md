@@ -5,6 +5,13 @@ Format: `## [version] — YYYY-MM-DD` followed by bullet points grouped by type.
 
 ---
 
+## [2.22.0] — 2026-06-05
+
+### Added
+- `temp-api-migration-usage-report`: new temporary skill that generates a customer-facing PDF report from a Looker CSV export of API v1 usage, ahead of the API v1 sunset on 2026-07-08. Grouped resource table, callout blocks, "Where to focus" narrative with CRM/hierarchy/feedback integration-type classification, environment-aware output (Cowork vs. CLI), and bulk mode (one PDF per CSV, skips bad files, prints a per-file summary table). Implemented as a self-contained Python script (`scripts/generate_report.py`) rendered to PDF via WeasyPrint.
+
+---
+
 ## [2.21.1] — 2026-06-05
 
 ### Fixed
