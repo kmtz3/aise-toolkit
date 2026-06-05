@@ -29,7 +29,9 @@ Generate an API v1 usage report PDF from a Looker CSV export.
 3. **Run the report generator** via Bash:
    ```bash
    export PATH="$HOME/.local/bin:$PATH"
-   python3 "$(dirname <SKILL_FILE>)/scripts/generate_report.py" \
+   SCRIPT=$(find /sessions -path "*/temp-api-migration-usage-report/scripts/generate_report.py" 2>/dev/null | head -1)
+   if [ -z "$SCRIPT" ]; then echo "ERROR: generate_report.py not found"; exit 1; fi
+   python3 "$SCRIPT" \
      --csv "<csv_path>" \
      --customer "<customer>" \
      [--period "<period>"] \
@@ -37,6 +39,8 @@ Generate an API v1 usage report PDF from a Looker CSV export.
      --out-dir "<resolved_output_dir>"
    ```
    The script prints the output PDF path (or a JSON summary table in bulk mode) to stdout.
+
+   _Note: In the Cowork bash sandbox, the skill script lives under `.remote-plugins/<plugin_id>/skills/…`, not under `.claude/skills/`. Always discover it via `find` rather than deriving the path from the base directory shown in the skill header._
 
 4. **Present the result** — for single-file output, confirm the PDF path. For bulk mode, print the per-file summary table returned by the script (customer, total v1 requests, # active endpoints, top endpoint + %, inferred integration type, output path or "skipped — reason").
 

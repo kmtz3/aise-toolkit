@@ -5,6 +5,13 @@ Format: `## [version] — YYYY-MM-DD` followed by bullet points grouped by type.
 
 ---
 
+## [2.22.1] — 2026-06-05
+
+### Fixed
+- `temp-api-migration-usage-report`: replaced hardcoded `$(dirname <SKILL_FILE>)` script path with a portable `find /sessions` discovery snippet — fixes `No such file or directory` failures in the Cowork bash sandbox where plugin files mount under `.remote-plugins/<plugin_id>/skills/` rather than `.claude/skills/`. Added explicit error guard if the script is not found.
+
+---
+
 ## [2.22.0] — 2026-06-05
 
 ### Added
