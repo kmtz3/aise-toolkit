@@ -53,14 +53,16 @@ For each event collect: title, start/end datetime, attendee list (name + email d
 - All-day events (OOO markers, date blockers).
 
 **Classify each remaining event:**
-- **External customer session** — ≥1 non-`productboard.com` attendee, confirmed, user accepted. Extract customer name from domain or event title. Note: a Calendly-booked event whose description contains patterns like "📐 Architecting Session", "Training", or similar AISE session keywords is always external even if the domain check is inconclusive.
+- **External customer session** — ≥1 non-`productboard.com` attendee, confirmed, user accepted. Before assigning this classification, check whether the external domain maps to a known customer in the Customer Tracker (`notion-search` the domain or org name). If no matching customer is found **and** context suggests PB is the buyer/evaluator (e.g. a sibling internal "Trial" / "Eval" / "Pilot" event on the same day, or the external org is a known vendor/tool), classify as **Vendor / tool eval — not a customer session**, badge `⚠️ Not in Notion (vendor/tool eval)`, and do **not** queue it for prep-block creation or Sessions-DB lookup. Otherwise proceed with the customer-session path. Note: a Calendly-booked event whose description contains patterns like "📐 Architecting Session", "Training", or similar AISE session keywords is always external even if the domain check is inconclusive.
 - **Internal meeting** — all attendees `@productboard.com`.
 - **Focus block / prep block** — `eventType = focusTime`, OR `colorId = 7` (Google Calendar "Blueberry"), OR title contains "prep", "focus", "block", "no meetings", or similar patterns; treat as already-blocked time.
 - **Solo / no attendees** — only the user on the invite.
 
 ### 3. Check prep status — today's external sessions
 
-For each of today's external customer sessions, query the Sessions DB using the expanded date column name and include the `Prepped` property:
+**Before attempting SQL:** If a `notion-query-data-sources` SQL call already returned a 429 earlier in this run, skip the SQL attempt entirely and go straight to the search+fetch fallback below for all sessions in this step.
+
+Otherwise, query the Sessions DB using the expanded date column name and include the `Prepped` property:
 
 ```sql
 SELECT Name, "Call Status", Type, "Prepped"
@@ -74,6 +76,8 @@ Use `"date:Call Date:start"` — never the bare column name `"Call Date"` (it do
 1. `notion-search("[customer name] [YYYY-MM-DD]")` to locate the session page.
 2. `notion-fetch(page_id)` to read the page properties directly.
 3. Use the `Prepped` checkbox property value from the fetched page — `__YES__` or `__NO__`.
+
+Record whether a 429 was encountered during this step — Step 4 will use this signal.
 
 Badge each session:
 - Notion session found + `Prepped = __YES__` → `✅ Prep done`
@@ -92,7 +96,9 @@ Store the resolved topic string per session for use in Step 7.
 
 ### 4. Check prep status — tomorrow's external sessions
 
-Same logic as step 3, but filter for `"date:Call Date:start" = 'tomorrow date'`. Include `Prepped` in the SELECT. Apply the same 429 fallback (search + fetch) after one SQL failure. For each of tomorrow's external customer sessions:
+**429 carry-over:** If Step 3 encountered a 429 (SQL returned 429 or failed), skip the SQL query here and go straight to the search+fetch fallback for all sessions in this step.
+
+Otherwise, same SQL logic as step 3 but filter for `"date:Call Date:start" = 'tomorrow date'`. Include `Prepped` in the SELECT. Apply the same 429 fallback (search + fetch) after one SQL failure. For each of tomorrow's external customer sessions:
 
 - Found + `Prepped = __YES__` → `✅ Prep done` — no action needed.
 - Found + `Prepped = __NO__` (or unset) → `🚨 Prep needed` — queue for blocker creation (step 5).
@@ -150,6 +156,11 @@ Record: customer name, created slot (start–end), event ID.
 Call `notion-query-data-sources` with:
 - `mode: "view"`
 - `view_url: "https://www.notion.so/29397e9c7d4f8060a928d1bb4255c58f?v=29a97e9c7d4f8069ac23000cc52edd9b"` (the "To Do" view — pre-filtered to Owner = me, Status ≠ Complete)
+- `page_size: 30` — **always pass this**; the unbounded result will exceed the output cap for portfolios with many open tasks.
+
+**Always paginate this call.** After each response, if `has_more` is `true`, call again with the same parameters plus `start_cursor: <next_cursor>`. Accumulate all rows before proceeding. Never call the view without `page_size`.
+
+In Cowork mode, do not attempt to recover an over-cap result from the saved temp-file path (it is on the host filesystem and unreadable from the sandbox; single-line JSON also can't be line-paginated). Instead, re-issue the query with a smaller `page_size` (e.g. `15`).
 
 This view filter already scopes to the current user's open tasks — no SQL needed. Fall back to SQL only if the view URL returns an error.
 

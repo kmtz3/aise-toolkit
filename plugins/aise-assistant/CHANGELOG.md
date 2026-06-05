@@ -5,6 +5,15 @@ Format: `## [version] — YYYY-MM-DD` followed by bullet points grouped by type.
 
 ---
 
+## [2.21.1] — 2026-06-05
+
+### Fixed
+- `daily-brief`: Tasks view query (Step 6) now always passes `page_size: 30` and paginates via `next_cursor` — prevents output-cap overflow for portfolios with many open tasks (~113 rows was the observed trigger); Cowork temp-file recovery path documented as unavailable, re-query is the correct recovery
+- `daily-brief`: Sessions-DB SQL 429 carry-over — if Step 3 SQL returns a 429, Step 4 skips SQL and goes straight to search+fetch fallback, avoiding wasted retry attempts
+- `daily-brief`: External-session classifier now checks the Customer Tracker before badging a non-productboard.com attendee as a customer session; events where PB is the buyer/evaluator (sibling "Trial"/"Eval" internal block, or known vendor domain) are classified as "Vendor / tool eval" and excluded from prep-block creation and Sessions-DB lookup
+
+---
+
 ## [2.21.0] — 2026-06-01
 
 ### Added
