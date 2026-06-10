@@ -143,6 +143,7 @@ Grouped by family. Type `/<family>-` in autocomplete to see siblings.
 |---|---|
 | `/support-hub <query>` | Search support.productboard.com for official answers to customer questions — returns sourced doc excerpts + links. |
 | `/daily-brief [--date YYYY-MM-DD] [--open] [--no-blocks]` | Pull today's meetings + open Tasks, flag tomorrow's sessions needing prep, auto-create calendar focus blocks for missing prep, and render a styled HTML briefing page to `~/Desktop/`. |
+| `/spark-demo-prep <customer> [--scheme orange\|teal\|purple] [--domain <domain>]` | Generate a customized Spark demo playbook for a customer — researches via Glean/Gong/Gmail/Slack, auto-detects brand color scheme, produces a polished HTML playbook. |
 
 Full spec per skill in [`skills/`](skills/).
 

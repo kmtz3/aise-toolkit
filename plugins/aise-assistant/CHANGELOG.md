@@ -5,6 +5,13 @@ Format: `## [version] — YYYY-MM-DD` followed by bullet points grouped by type.
 
 ---
 
+## [2.23.0] — 2026-06-10
+
+### Added
+- `spark-demo-prep`: new skill that generates a fully customized Spark demo playbook for a named customer. Runs parallel research (Slack #releases feature inventory, Glean/Gong/Gmail account context, Google Calendar session metadata), auto-detects brand color scheme via logo extraction (Clearbit → Google favicon → favicon.ico fallback), synthesizes research into demo angles, and produces a polished self-contained HTML playbook saved to `~/Projects/pb-tools/spark-{slug}-demo-playbook.html`. Supports `--scheme orange|teal|purple` override and `--domain` flag. Includes `scripts/extract_logo_color.py` for dominant-hue detection with Pillow.
+
+---
+
 ## [2.22.1] — 2026-06-05
 
 ### Fixed
