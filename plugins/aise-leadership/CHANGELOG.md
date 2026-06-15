@@ -1,5 +1,12 @@
 # Changelog — aise-leadership
 
+## [1.9.6] — 2026-06-15
+
+### Fixed
+- `context/` synced from aise-assistant v2.23.2: Gong search strategy in transcript lookup order — `after:` date filter + people-keywords; two-attempt rule before placeholder branch
+
+---
+
 ## [1.9.5] — 2026-06-15
 
 ### Changed

@@ -5,6 +5,14 @@ Format: `## [version] — YYYY-MM-DD` followed by bullet points grouped by type.
 
 ---
 
+## [2.23.2] — 2026-06-15
+
+### Fixed
+- Gong search in transcript lookup order (step 2) now uses `after:` date filter + people-and-account keywords instead of embedding the session date as query text, which Gong treated as a content keyword causing ranking failures
+- Added two-attempt rule: agent must retry with a participant email anchor before concluding the transcript is unavailable and triggering the expensive placeholder-debrief branch
+
+---
+
 ## [2.23.1] — 2026-06-15
 
 ### Changed
