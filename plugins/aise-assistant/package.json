@@ -1,6 +1,6 @@
 {
   "name": "aise-assistant",
-  "version": "2.22.1",
+  "version": "2.23.1",
   "private": true,
   "scripts": {
     "pack": "bash scripts/package.sh",

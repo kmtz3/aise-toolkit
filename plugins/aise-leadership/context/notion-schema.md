@@ -268,6 +268,9 @@ Fetch the page immediately before writing — `update_content` is whitespace-exa
 | `Priority` | select | `P0`, `P1`, `P2`, `P3`, `P4`, `Insufficient Data` |
 | `Preferred Conferencing` | select | `Zoom`, `MS Teams`, `Google Meet` |
 | `AI Ready` | select | `Sparked`, `Preparing`, `Ignitable`, `Not ready` |
+| `Spark Customer Journey` | select | `Not Active`, `AI Terms Review`, `Active for Admins (Production)`, `Active for All (Production)`, `Active (Staging only)`, `Icebox` |
+| `Ignite Journey Last Edited` | date | Date triples format. Auto-updated by Notion automation whenever `Spark Customer Journey` changes — do not set manually except when correcting drift. |
+| `Igniting?` | checkbox | `__YES__` once the Ignite motion has actively started for this account (outreach sent, in conversation, or further). `__NO__` only for accounts not yet reached out to re: Spark. |
 | `Industry` | multi-select | `Digital Consumer Intelligence`, `Social Media Management`, `Fintech`, `eCommerce`, `Digital Commerce Technology`, `B2B`, `Automotive`, `Healthcare`, `Insurance`, `eSports` |
 | `Renewal Forecast` | select | `Likely to Renew`, `Risk to Renewal`, `Churning – No save`, `Churning – Ignitable` |
 | `Owner` | person (multi) | The PB owner(s) of this account. **Authoritative ownership signal — source of truth.** Editing this field triggers the Resync button workflow that propagates to `Current Account Owner` on linked Active Packages, Sessions, Tasks. Multi-allowed for handoff windows. |
@@ -284,6 +287,16 @@ Fetch the page immediately before writing — `update_content` is whitespace-exa
 | `All Packages` | relation | → Active Packages DB (back-relation — auto-updated when Active Package.Customer is set; the full history of all APs ever linked to this account) |
 | `Figma File` | relation | → Figma Files DB (`29497e9c-7d4f-80ab-b37f-000bbe6452ba`) |
 | `Files & media` | file | Attachments |
+
+**Spark Customer Journey — stage definitions:**
+- `Not Active` — Spark is not activated and AI terms are not in active review
+- `AI Terms Review` — customer is actively working on getting AI approval from security/legal and other stakeholders
+- `Active for Admins (Production)` — Spark is active in production for admins only
+- `Active for All (Production)` — Spark is active in production for all users (final stage)
+- `Active (Staging only)` — Spark is active only in a staging workspace due to specific blockers
+- `Icebox` — customer has directly stated disinterest or has a hard blocker for Spark enablement
+
+`Ignite Journey Last Edited` is auto-updated by a Notion automation whenever `Spark Customer Journey` changes. `Days in Current Ignite Phase` (formula) = today − `Ignite Journey Last Edited`. Never write these manually except to correct automation drift.
 
 **Account Status — definitions:**
 - `Not started` — assigned, not yet started
@@ -305,7 +318,7 @@ Fetch the page immediately before writing — `update_content` is whitespace-exa
 
 ### Read-only (rollups / formulas — never write these)
 
-`ARR`, `Days Left`, `Days Till Renewal`, `Next Call`, `Next Steps`, `Delivered`, `Package Status`, `P-Score`, `Package Tier`, `Start Date (Current Pkg)`, `End Date (Current Pkg)`, `∑ Architecting`, `∑ Credit`, `∑ Time`, `∑ Training`, `Master Package` (rollup from Active Packages.Master Package), `Current package` (formula — the AP with `Active? = YES`; first found if multiple active)
+`ARR`, `Days Left`, `Days Till Renewal`, `Next Call`, `Next Steps`, `Delivered`, `Package Status`, `P-Score`, `Package Tier`, `Start Date (Current Pkg)`, `End Date (Current Pkg)`, `∑ Architecting`, `∑ Credit`, `∑ Time`, `∑ Training`, `Master Package` (rollup from Active Packages.Master Package), `Current package` (formula — the AP with `Active? = YES`; first found if multiple active), `Days in Current Ignite Phase` (formula — today minus `Ignite Journey Last Edited`; auto-calculated), `Ignite Responsibility` (formula — auto-assigns responsibility tier: AE for expansion/presales, RM for accounts within 90 days of renewal, FDEs for P3/P4, AISEs for P0/P1/P2 BoB not in active renewal)
 
 ---
 

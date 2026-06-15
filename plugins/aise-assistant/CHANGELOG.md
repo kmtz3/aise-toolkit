@@ -5,6 +5,13 @@ Format: `## [version] — YYYY-MM-DD` followed by bullet points grouped by type.
 
 ---
 
+## [2.23.1] — 2026-06-15
+
+### Changed
+- `context/notion-schema.md` — added Ignite/Spark fields to Customers DB: `Spark Customer Journey` (select with 6 stages), `Ignite Journey Last Edited` (date, auto-updated), `Igniting?` (checkbox); stage definitions block with behavioral notes; `Days in Current Ignite Phase` and `Ignite Responsibility` added to read-only formulas list
+
+---
+
 ## [2.23.0] — 2026-06-10
 
 ### Added

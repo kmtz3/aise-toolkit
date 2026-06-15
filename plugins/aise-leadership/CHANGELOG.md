@@ -1,5 +1,12 @@
 # Changelog — aise-leadership
 
+## [1.9.5] — 2026-06-15
+
+### Changed
+- `context/` synced from aise-assistant v2.23.1: `notion-schema.md` Customers DB updated with `Spark Customer Journey`, `Ignite Journey Last Edited`, `Igniting?` fields and read-only Ignite formulas
+
+---
+
 ## [1.9.4] — 2026-05-22
 
 ### Changed
