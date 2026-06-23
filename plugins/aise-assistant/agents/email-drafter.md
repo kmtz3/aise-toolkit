@@ -83,11 +83,18 @@ Apply [`context/communication-style-guide.md`](../../context/communication-style
   ```
 - **Pattern for ongoing architecting/working cadence:** reference *what we agreed last* + *what we'll cover next* + the ask. Never frame as first-touch.
 
+**Gmail formatting rules (mandatory — applies to every draft saved via `create_draft`):**
+- **No markdown tables.** Never use pipe/column syntax (`| Owner | Action | Timing |`). Gmail does not render markdown — tables arrive as garbled plain text.
+- **No markdown bold.** Never use `**text**`. Use plain text; apply bold via HTML (`<strong>`) in the `htmlBody` field only.
+- **Next steps as a flat bulleted list.** One item per line, inline format: `[Owner] — [Action] (timing)`. Example:
+  - `[PB side] — Confirm integration scoping with engineering (this week)`
+  - `[Customer side] — Reauthorize the integration in PB after account change`
+
 Default structure for post-session follow-up (adjust to purpose):
 - Greeting (`Hi <first name>,`)
 - One-line context — single sentence: *why I'm writing*, tied to the last session or thread
 - **What we covered** — 2–3 tight bullets (decisions + key points; not a meeting recap)
-- **Next steps** — bullets: `[Owner] — [what] by [date or week]` for each open commitment
+- **Next steps** — flat bulleted list: `[Owner] — [what] (timing)` for each open commitment — no table
 - Close or ask (one line)
 - Sign-off
 

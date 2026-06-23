@@ -5,6 +5,14 @@ Format: `## [version] — YYYY-MM-DD` followed by bullet points grouped by type.
 
 ---
 
+## [2.23.3] — 2026-06-24
+
+### Fixed
+- `email-drafter`: Gmail drafts now use Gmail-safe formatting — no markdown tables, no markdown bold in body text; next steps formatted as flat bulleted list (`[Owner] — [Action] (timing)`) instead of pipe tables
+- `context/communication-style-guide.md`: added "Gmail copy-paste safety" rules under Email Guidelines covering no-table, no-markdown-bold, and flat-list next steps requirements
+
+---
+
 ## [2.23.2] — 2026-06-15
 
 ### Fixed

@@ -1,5 +1,12 @@
 # Changelog — aise-leadership
 
+## [1.9.7] — 2026-06-24
+
+### Fixed
+- `context/` synced from aise-assistant v2.23.3: Gmail copy-paste safety rules added to `communication-style-guide.md` — no markdown tables, no markdown bold in draft body, next steps as flat bulleted list
+
+---
+
 ## [1.9.6] — 2026-06-15
 
 ### Fixed

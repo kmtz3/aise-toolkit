@@ -81,6 +81,14 @@ When there are follow-ups or decisions:
 6. **Questions / Call for input** – invite clarifications or choices if needed, but stay focused.
 7. **Sign-off**
 
+**Gmail copy-paste safety (applies to any draft saved to Gmail Drafts)**
+
+Gmail does not render markdown. Every draft saved via the Gmail API or copy-pasted into Gmail compose must be safe to read as plain text:
+
+- **No markdown tables** — never use pipe syntax (`| Owner | Action | Timing |`). Tables arrive as garbled characters in Gmail.
+- **No markdown bold** — never use `**text**`. Use plain text in the `body` field; bold may appear only via `<strong>` tags in the `htmlBody` field.
+- **Next steps as a flat bulleted list** — one item per line, inline owner + action + timing: `[Owner] — [Action] (timing)`. Never a table.
+
 **Level of detail**
 
 - Default to **high signal, medium detail** – enough that a busy PM or stakeholder can understand quickly, without over-explaining basics they already know.
