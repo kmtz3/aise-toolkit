@@ -60,18 +60,15 @@ For each task found, pull supporting context in parallel:
 
 Compose the feedback note using this EXACT HTML template. All section labels use `<b>` tags. Do NOT use markdown in the content body. Blank sections get a literal dash (`-`).
 
-**Title (`title` tool field):** `Feedback form (GTM): [concise problem statement — max 10 words]`
-This is the short summary displayed in PB feedback lists and search results.
+**Title (`title` tool field):** `[concise problem statement — max 10 words, no "Feedback form (GTM):" prefix]`
+This is the short summary displayed in PB feedback lists and search results. Do NOT prepend any prefix — just the problem statement.
 
 **Content (`content` tool field — full HTML body):**
-The `<b>Note title</b>` line is a human-readable repeat of the title inside the body for in-note readability — it is NOT a separate tool parameter. All other labelled sections below are also body-only; there are no PB structured fields for importance, tags, ARR, or renewal date beyond what's in the HTML.
+Do NOT repeat the title as a `<b>Note title</b>` section — it is already in the `title` field. Start directly with `<b>Importance</b>`.
 
-Each section must use `<b>Label</b><br>` so the label and its content appear on separate lines, followed by `<br><br>` before the next section. This gives clean paragraph breaks in PB's note renderer.
+Each section uses `<b>Label</b><br>` so the label and its content appear on separate lines, followed by `<br><br>` before the next section. All URL fields (Salesforce, Gong) must be wrapped in `<a href="...">` tags so they are clickable.
 
 ```
-<b>Note title</b><br>
-[Short descriptive title — same concept as the title above, without the "Feedback form (GTM):" prefix]
-<br><br>
 <b>Importance</b><br>
 [critical / important — critical if blocking adoption or at renewal risk, else important. NOTE: this is informational text in the body only; there is no dedicated importance field in the PB feedback tool.]
 <br><br>
@@ -100,13 +97,15 @@ automated solution" rather than naming a specific tool.]
 [ARR value from Notion/Salesforce, or -]
 <br><br>
 <b>Salesforce Opp or Account URL</b><br>
-[URL from Notion Active Package, or -]
+[<a href="[URL]">[URL]</a> — or -]
 <br><br>
 <b>Gong snippet link</b><br>
-[Direct Gong call URL (https://us-71146.app.gong.io/call?id=...) if available, or -]
+[<a href="[URL]">[URL]</a> — or -]
 <br><br>
 <b>Upcoming renewal date</b><br>
 [Date from Notion Active Package, or -]
+<br><br>
+<small><i>Submitted via the aise-assistant plugin. For questions or feedback on this note, contact <a href="mailto:klara.martinez@productboard.com">Klara Martinez</a>.</i></small>
 ```
 
 **Pain point quality bar** — the section should:

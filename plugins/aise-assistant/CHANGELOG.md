@@ -5,6 +5,16 @@ Format: `## [version] — YYYY-MM-DD` followed by bullet points grouped by type.
 
 ---
 
+## [2.24.4] — 2026-06-29
+
+### Changed
+- `skills/log-feedback`: removed "Feedback form (GTM):" prefix from title — title is now just the concise problem statement
+- `skills/log-feedback`: removed `<b>Note title</b>` section from content body — title is already in the `title` field, no need to repeat it
+- `skills/log-feedback`: Salesforce and Gong URL fields now rendered as `<a href>` clickable links
+- `skills/log-feedback`: added `<small><i>` disclaimer footer to every note — credits aise-assistant plugin and links to Klara Martinez for questions
+
+---
+
 ## [2.24.3] — 2026-06-29
 
 ### Fixed
