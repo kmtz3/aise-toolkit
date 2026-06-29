@@ -55,16 +55,19 @@ For each task found, pull supporting context in parallel:
 
 Compose the feedback note using this EXACT HTML template. All section labels use `<b>` tags. Do NOT use markdown in the content body. Blank sections get a literal dash (`-`).
 
-**Title:** `Feedback form (GTM): [concise problem statement — max 10 words]`
+**Title (`title` tool field):** `Feedback form (GTM): [concise problem statement — max 10 words]`
+This is the short summary displayed in PB feedback lists and search results.
 
-**Content:**
+**Content (`content` tool field — full HTML body):**
+The `<b>Note title</b>` line is a human-readable repeat of the title inside the body for in-note readability — it is NOT a separate tool parameter. All other labelled sections below are also body-only; there are no PB structured fields for importance, tags, ARR, or renewal date beyond what's in the HTML.
+
 ```
 <b>Note title</b>
-[Short descriptive title matching the title above, without the "Feedback form (GTM):" prefix]
+[Short descriptive title — same concept as the title above, without the "Feedback form (GTM):" prefix]
 <b>Importance</b>
-[critical / important — critical if blocking adoption or at renewal risk, else important]
+[critical / important — critical if blocking adoption or at renewal risk, else important. NOTE: this is informational text in the body only; there is no dedicated importance field in the PB feedback tool.]
 <b>Select Tags</b>
-[relevant tags, e.g. API, data model, initiatives, workflow — or -]
+[relevant tags as a comma-separated list in the body, e.g. API, data model, workflow — or -. The tool's separate `tags` parameter takes these as a string array.]
 <b>Account Type</b>
 [Customer / Prospect / -]
 <b>Pain point</b>
@@ -139,12 +142,12 @@ If Gong context is thin, flag it in the HITL preview as **⚠️ Limited session
 ## Step 7: Submit confirmed items
 
 For confirmed items, call `mcp__claude_ai_Productboard__feedback_create_feedback` with:
-- `title`: the full `"Feedback form (GTM): ..."` title
-- `content`: the HTML-formatted body (all `<b>` labels, `-` for empty sections)
+- `title`: the full `"Feedback form (GTM): ..."` string — displayed in PB feedback lists
+- `content`: the complete HTML body (all `<b>` section labels, `-` for empty sections)
 - `customerEmail`: the customer contact's email address — **never Klara's own email (klara.martinez@productboard.com)**
-- `companyDomain`: the customer's company domain (extract from email or Notion) — **never productboard.com or any internal domain**
-- `sourceUrl`: the Gong call URL if available
-- `tags`: any relevant tags identified
+- `companyDomain`: the customer's company domain extracted from email or Notion (e.g. `lumapps.com`) — **never `productboard.com` or any internal domain**
+- `sourceUrl`: the Gong call URL if available; if no Gong link, use the Notion meeting transcript URL as the fallback source
+- `tags`: a **JSON string array** of tag values extracted from the Select Tags section (e.g. `["API", "portal", "automation"]`) — not a comma-separated string
 
 ---
 

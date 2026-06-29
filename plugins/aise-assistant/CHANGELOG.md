@@ -5,6 +5,13 @@ Format: `## [version] — YYYY-MM-DD` followed by bullet points grouped by type.
 
 ---
 
+## [2.24.1] — 2026-06-29
+
+### Fixed
+- `skills/log-feedback`: corrected tool field mapping for `feedback_create_feedback` — clarified that `<b>Note title</b>` is body-only (not a separate param), `importance` has no dedicated PB field (body text only), `tags` must be a JSON string array not a comma-separated string, and `sourceUrl` accepts Notion transcript URL as fallback when no Gong link is available
+
+---
+
 ## [2.24.0] — 2026-06-29
 
 ### Added
