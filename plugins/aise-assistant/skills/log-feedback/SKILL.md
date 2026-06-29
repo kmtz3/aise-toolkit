@@ -105,7 +105,7 @@ automated solution" rather than naming a specific tool.]
 <b>Upcoming renewal date</b><br>
 [Date from Notion Active Package, or -]
 <br><br>
-<small><i>Submitted via the aise-assistant plugin. For questions or feedback on this note, contact <a href="mailto:klara.martinez@productboard.com">Klara Martinez</a>.</i></small>
+<small><i>Submitted via the aise-assistant plugin. Questions about this tool? Contact <a href="mailto:klara.martinez@productboard.com">Klara Martinez</a>.</i></small>
 ```
 
 **Pain point quality bar** — the section should:

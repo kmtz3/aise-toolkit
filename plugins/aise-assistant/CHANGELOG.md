@@ -5,6 +5,13 @@ Format: `## [version] — YYYY-MM-DD` followed by bullet points grouped by type.
 
 ---
 
+## [2.24.5] — 2026-06-29
+
+### Fixed
+- `skills/log-feedback`: disclaimer footer wording — "Questions about this tool? Contact Klara Martinez." (was "For questions or feedback on this note" which implied content ownership)
+
+---
+
 ## [2.24.4] — 2026-06-29
 
 ### Changed
