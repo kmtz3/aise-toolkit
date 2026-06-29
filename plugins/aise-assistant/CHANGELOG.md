@@ -5,6 +5,19 @@ Format: `## [version] — YYYY-MM-DD` followed by bullet points grouped by type.
 
 ---
 
+## [2.24.6] — 2026-06-29
+
+### Fixed
+- `skills/log-feedback`: Step 8 closeout — explicitly documents two-step pattern only (`update_properties` Status=Done, then `insert_content` append URL to body); adds explicit prohibition on writing a `Notes` property (doesn't exist in Tasks DB)
+- `skills/log-feedback`: Step 7 — removes stale "Feedback form (GTM):" prefix reference from `title` field instruction
+- `skills/log-feedback`: Workaround section — must include any workaround Klara already suggested; frame as "X was suggested but [limitation]"
+
+### Added
+- `skills/log-feedback`: Step 4b — pre-draft platform capability check; search `#releases` for Spark or PB MCP feature availability before drafting; encodes known facts (Spark event triggers not available, Spark cannot auth to external systems, PB MCP server scope as of Jun 4 2026)
+- `skills/log-feedback`: Drafting rules — use customer's stated language (not PB-internal terminology); Spark external auth limitation framing (periodic manual distillation, not live sync); PB MCP gap workarounds must list both direct API v2 and custom MCP server on top of API v2
+
+---
+
 ## [2.24.5] — 2026-06-29
 
 ### Fixed

@@ -56,6 +56,27 @@ For each task found, pull supporting context in parallel:
 
 ---
 
+## Step 4b: Pre-draft platform capability check
+
+Before drafting any feedback note, check whether the topic touches **Spark features** or **PB platform capabilities** (MCP, API, integrations). If it does, verify current feature availability in `#releases` before drafting — do not assume a capability is missing without checking.
+
+**When to run this check:**
+- Note involves Spark AI features (scheduled tasks, event-based triggers, external integrations, knowledge sources, authentication)
+- Note involves PB platform capabilities (MCP server scope, API v2, feedback/insight management, entity creation)
+
+**How to check:**
+Search `#releases` using `mcp__claude_ai_Slack__slack_search_public_and_private` with the relevant feature keyword. Read any recent announcements before forming the draft framing.
+
+**Known facts (do not re-verify these):**
+- Spark scheduled tasks: available
+- Spark event-based triggers: NOT yet available
+- Spark external system auth (SharePoint, OneDrive, etc.): NOT possible without a customer-managed API token — live sync workarounds are not viable
+- PB MCP server (shipped Jun 4 2026): supports search/fetch specs, edit docs, post/read comments, update entity status. Does NOT support entity creation, custom driver field writes, feedback/insight management, or hierarchy management.
+
+**Framing rule:** All notes touching Spark or PB platform capabilities must frame the gap as **current state → gap → desired state** — never "the feature doesn't exist" without verification, and never assume unavailability without checking `#releases`.
+
+---
+
 ## Step 5: Draft the feedback note
 
 Compose the feedback note using this EXACT HTML template. All section labels use `<b>` tags. Do NOT use markdown in the content body. Blank sections get a literal dash (`-`).
@@ -88,7 +109,7 @@ AI-generated meeting summaries. If uncertain, describe generically: "previously 
 automated solution" rather than naming a specific tool.]
 <br><br>
 <b>Workaround</b><br>
-[What they're doing today to compensate, or - if none]
+[What they're doing today to compensate, including any workaround Klara already suggested to the customer. Check the task notes and Gong transcript for suggestions Klara made. If a suggestion was made but has limitations, frame as: "X was suggested but [limitation]." Or - if none.]
 <br><br>
 <b>Desired Outcome</b><br>
 [Concrete outcome in customer terms — what good looks like when this is solved]
@@ -118,6 +139,17 @@ automated solution" rather than naming a specific tool.]
 
 Good example:
 > "Formula fields only support math operators, no if/else or dropdown references. Blocks the automated priority scoring Eric requested. S&P GR has calculated P0–P5 priority fields based on dropdowns. The current formulas in PB are limited to CIS, Drivers, Numbers, and mathematical operators. Surfaced in A-4 (Apr 24, 2026) — Eric Parikh (Solutions Engineer) flagged this as a critical blocker for their scoring automation initiative."
+
+**Drafting rules:**
+
+**F4 — Use the customer's stated language.** The note title and pain point must reflect the customer's own framing from the task notes and verbatim quotes. If the customer said "feedback," draft around "feedback" — not internal PB terminology like "insights" or "notes." Do not reframe the problem through a PB product lens.
+
+**P2 — Spark external auth limitation.** When the gap involves Spark accessing external document systems (SharePoint, OneDrive, Google Drive, etc.), do NOT suggest live sync as a workaround — Spark cannot authenticate to external systems without a customer-managed API token, making live sync non-viable. The correct workaround framing is: "Customer would need to periodically distill content from [source] into Spark agent knowledge docs manually."
+
+**P3 — PB MCP gap workarounds.** When the gap involves capabilities the PB MCP server does not support (entity creation, feedback/insight management, custom driver field writes, hierarchy management), the Workaround section must include both options:
+1. Direct PB API v2 calls (customer manages auth + plumbing, no Spark integration)
+2. Custom MCP server built on top of PB API v2 (customer manages auth + plumbing, no Spark integration)
+Both options require the customer to own authentication and tooling — note this explicitly.
 
 ---
 
@@ -162,7 +194,7 @@ If Gong context is thin, flag it in the HITL preview as **⚠️ Limited session
 ## Step 7: Submit confirmed items
 
 For confirmed items, call `mcp__claude_ai_Productboard__feedback_create_feedback` with:
-- `title`: the full `"Feedback form (GTM): ..."` string — displayed in PB feedback lists
+- `title`: the problem statement only — no prefix (matches the title drafted in Step 5)
 - `content`: the complete HTML body (all `<b>` section labels, `-` for empty sections)
 - `customerEmail`: the customer contact's email address — **never Klara's own email (klara.martinez@productboard.com)**
 - `companyDomain`: the customer's company domain extracted from email or Notion (e.g. `lumapps.com`) — **never `productboard.com` or any internal domain**
@@ -173,19 +205,23 @@ For confirmed items, call `mcp__claude_ai_Productboard__feedback_create_feedback
 
 ## Step 8: Mark Notion task complete
 
-After successful submission:
+After successful submission, execute exactly these two calls — no others:
 
-1. Capture the PB feedback note URL or ID returned by `feedback_create_feedback` (check the response for a `url`, `id`, or `links` field).
-2. Call `mcp__claude_ai_Notion__notion-update-page` with `command: "update_properties"` to set `Status` to `Done` on the task page.
-3. Call `mcp__claude_ai_Notion__notion-update-page` with `command: "insert_content"` and `position: {"type": "end"}` to append a confirmation block to the task body:
+**Step 8a — Mark Done:**
+Call `mcp__claude_ai_Notion__notion-update-page` with `command: "update_properties"` to set `Status` to `Done` on the task page.
+
+The Tasks DB has **only one writable property for this purpose: `Status`**. There is NO `Notes` property, NO `URL` property, and NO other field to write the PB note URL into. Do not attempt to set any property other than `Status` — it will fail.
+
+**Step 8b — Append confirmation to body:**
+Call `mcp__claude_ai_Notion__notion-update-page` with `command: "insert_content"` and `position: {"type": "end"}` to append this block to the task page body:
 
 ```
 ---
 ✅ Logged to PB — [YYYY-MM-DD]
-[PB feedback note URL or ID if returned, else "Note submitted — no URL returned by API"]
+[PB feedback note URL if returned, else "Note submitted — no URL returned by API"]
 ```
 
-If the PB MCP does not return a URL or ID, still mark the task Done and append the confirmation line without a link.
+If the PB MCP does not return a URL or ID, still complete both steps — mark Done and append the confirmation line without a link.
 
 ---
 
@@ -209,6 +245,7 @@ After processing all items (or after "stop"), show a summary:
 - `mcp__claude_ai_Glean__read_document`
 - `mcp__claude_ai_Glean__search` (email lookup via Gmail/Gong fallback)
 - `mcp__claude_ai_Productboard__feedback_create_feedback`
+- `mcp__claude_ai_Slack__slack_search_public_and_private` (pre-draft #releases check)
 - `Read` (for context files and PLUGIN_DATA_DIR pointer)
 
 ---
@@ -222,3 +259,4 @@ After processing all items (or after "stop"), show a summary:
 5. **`companyDomain` must be the customer's company domain** — never `productboard.com` or any internal domain.
 6. **Every section gets a value or a literal dash (`-`)** — never leave a section blank or omit it.
 7. **Owner-filter every Notion query** — always scope to the current user's records.
+8. **The Tasks DB has NO `Notes` property** — the only Notion property to write during closeout is `Status`. The PB note URL goes in the page body via `insert_content`, never in a property field.
