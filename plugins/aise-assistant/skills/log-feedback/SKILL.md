@@ -48,6 +48,11 @@ For each task found, pull supporting context in parallel:
    - Workaround description
    - Desired outcome language
 4. Check the customer's Active Package in Notion for ARR, upcoming renewal date, and Salesforce Opp URL.
+5. Find the primary contact's email address using this lookup chain — stop at the first hit:
+   a. **Notion Contacts DB** — query `collection://29497e9c-7d4f-80be-b224-000bbec4980b` filtered by the linked Customer page URL; look for an Email property.
+   b. **Glean Gmail search** — `mcp__claude_ai_Glean__search` with `query: "[contact name] [company]"` and `app: gmailnative`. Scan the results for the contact's email address in thread senders, recipients, or signatures.
+   c. **Glean Gong search** — `mcp__claude_ai_Glean__search` with `query: "[contact name] [company]"` and `app: gong`. Scan for email in participant metadata.
+   d. If all three fail, mark the email as **⚠️ MISSING** and surface it as a required gap in the HITL step — do not guess or fabricate an email address.
 
 ---
 
@@ -64,26 +69,36 @@ The `<b>Note title</b>` line is a human-readable repeat of the title inside the 
 ```
 <b>Note title</b>
 [Short descriptive title — same concept as the title above, without the "Feedback form (GTM):" prefix]
+<br><br>
 <b>Importance</b>
 [critical / important — critical if blocking adoption or at renewal risk, else important. NOTE: this is informational text in the body only; there is no dedicated importance field in the PB feedback tool.]
+<br><br>
 <b>Select Tags</b>
 [relevant tags as a comma-separated list in the body, e.g. API, data model, workflow — or -. The tool's separate `tags` parameter takes these as a string array.]
+<br><br>
 <b>Account Type</b>
 [Customer / Prospect / -]
+<br><br>
 <b>Pain point</b>
 [Rich narrative: what the problem is, customer business context, session reference with date
 (e.g. "A-22, May 7 2026"), direct customer quote if available (format: "quote text" —
 First Last, Role), what this blocks them from doing, how widespread/priority the issue is]
+<br><br>
 <b>Workaround</b>
 [What they're doing today to compensate, or - if none]
+<br><br>
 <b>Desired Outcome</b>
 [Concrete outcome in customer terms — what good looks like when this is solved]
+<br><br>
 <b>ARR Impact</b>
 [ARR value from Notion/Salesforce, or -]
+<br><br>
 <b>Salesforce Opp or Account URL</b>
 [URL from Notion Active Package, or -]
+<br><br>
 <b>Gong snippet link</b>
 [Direct Gong call URL (https://us-71146.app.gong.io/call?id=...) if available, or -]
+<br><br>
 <b>Upcoming renewal date</b>
 [Date from Notion Active Package, or -]
 ```
@@ -153,7 +168,19 @@ For confirmed items, call `mcp__claude_ai_Productboard__feedback_create_feedback
 
 ## Step 8: Mark Notion task complete
 
-After successful submission, update the Notion task status to Done/complete using `mcp__claude_ai_Notion__notion-update-page` and add a note with the date and "Logged to PB" confirmation.
+After successful submission:
+
+1. Capture the PB feedback note URL or ID returned by `feedback_create_feedback` (check the response for a `url`, `id`, or `links` field).
+2. Call `mcp__claude_ai_Notion__notion-update-page` with `command: "update_properties"` to set `Status` to `Done` on the task page.
+3. Call `mcp__claude_ai_Notion__notion-update-page` with `command: "insert_content"` and `position: {"type": "end"}` to append a confirmation block to the task body:
+
+```
+---
+✅ Logged to PB — [YYYY-MM-DD]
+[PB feedback note URL or ID if returned, else "Note submitted — no URL returned by API"]
+```
+
+If the PB MCP does not return a URL or ID, still mark the task Done and append the confirmation line without a link.
 
 ---
 
@@ -175,7 +202,7 @@ After processing all items (or after "stop"), show a summary:
 - `mcp__claude_ai_Notion__notion-get-users`
 - `mcp__claude_ai_Glean__meeting_lookup`
 - `mcp__claude_ai_Glean__read_document`
-- `mcp__claude_ai_Glean__search`
+- `mcp__claude_ai_Glean__search` (email lookup via Gmail/Gong fallback)
 - `mcp__claude_ai_Productboard__feedback_create_feedback`
 - `Read` (for context files and PLUGIN_DATA_DIR pointer)
 

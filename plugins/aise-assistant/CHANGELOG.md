@@ -5,6 +5,15 @@ Format: `## [version] — YYYY-MM-DD` followed by bullet points grouped by type.
 
 ---
 
+## [2.24.2] — 2026-06-29
+
+### Fixed
+- `skills/log-feedback`: added `<br><br>` between all HTML sections in content template so notes render with paragraph breaks instead of as a single blob
+- `skills/log-feedback`: Step 4 now includes a 3-step email lookup chain (Notion Contacts → Glean Gmail → Glean Gong) before surfacing ⚠️ MISSING in HITL
+- `skills/log-feedback`: Step 8 now captures the returned PB feedback URL/ID and appends it alongside the "Logged to PB" confirmation into the Notion task body, then marks Status = Done
+
+---
+
 ## [2.24.1] — 2026-06-29
 
 ### Fixed
