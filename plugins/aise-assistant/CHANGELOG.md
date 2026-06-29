@@ -5,6 +5,13 @@ Format: `## [version] — YYYY-MM-DD` followed by bullet points grouped by type.
 
 ---
 
+## [2.24.0] — 2026-06-29
+
+### Added
+- `skills/log-feedback`: new `/log-feedback` skill — discovers outstanding Notion feedback tasks, drafts structured Productboard GTM feedback notes (HTML template with all required fields), and submits via PB MCP with explicit HITL confirmation before every submission; never uses Klara's own email as customerEmail; flags missing contact info and thin Gong context as gaps in the review step
+
+---
+
 ## [2.23.3] — 2026-06-24
 
 ### Fixed
