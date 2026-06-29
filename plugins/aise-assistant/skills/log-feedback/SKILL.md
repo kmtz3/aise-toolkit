@@ -66,40 +66,46 @@ This is the short summary displayed in PB feedback lists and search results.
 **Content (`content` tool field — full HTML body):**
 The `<b>Note title</b>` line is a human-readable repeat of the title inside the body for in-note readability — it is NOT a separate tool parameter. All other labelled sections below are also body-only; there are no PB structured fields for importance, tags, ARR, or renewal date beyond what's in the HTML.
 
+Each section must use `<b>Label</b><br>` so the label and its content appear on separate lines, followed by `<br><br>` before the next section. This gives clean paragraph breaks in PB's note renderer.
+
 ```
-<b>Note title</b>
+<b>Note title</b><br>
 [Short descriptive title — same concept as the title above, without the "Feedback form (GTM):" prefix]
 <br><br>
-<b>Importance</b>
+<b>Importance</b><br>
 [critical / important — critical if blocking adoption or at renewal risk, else important. NOTE: this is informational text in the body only; there is no dedicated importance field in the PB feedback tool.]
 <br><br>
-<b>Select Tags</b>
+<b>Select Tags</b><br>
 [relevant tags as a comma-separated list in the body, e.g. API, data model, workflow — or -. The tool's separate `tags` parameter takes these as a string array.]
 <br><br>
-<b>Account Type</b>
+<b>Account Type</b><br>
 [Customer / Prospect / -]
 <br><br>
-<b>Pain point</b>
+<b>Pain point</b><br>
 [Rich narrative: what the problem is, customer business context, session reference with date
 (e.g. "A-22, May 7 2026"), direct customer quote if available (format: "quote text" —
-First Last, Role), what this blocks them from doing, how widespread/priority the issue is]
+First Last, Role), what this blocks them from doing, how widespread/priority the issue is.
+IMPORTANT: only include specific details (tool names, system names, prior solutions) if they
+appear in verbatim customer quotes or explicit customer statements — not inferred from
+AI-generated meeting summaries. If uncertain, describe generically: "previously had a fully
+automated solution" rather than naming a specific tool.]
 <br><br>
-<b>Workaround</b>
+<b>Workaround</b><br>
 [What they're doing today to compensate, or - if none]
 <br><br>
-<b>Desired Outcome</b>
+<b>Desired Outcome</b><br>
 [Concrete outcome in customer terms — what good looks like when this is solved]
 <br><br>
-<b>ARR Impact</b>
+<b>ARR Impact</b><br>
 [ARR value from Notion/Salesforce, or -]
 <br><br>
-<b>Salesforce Opp or Account URL</b>
+<b>Salesforce Opp or Account URL</b><br>
 [URL from Notion Active Package, or -]
 <br><br>
-<b>Gong snippet link</b>
+<b>Gong snippet link</b><br>
 [Direct Gong call URL (https://us-71146.app.gong.io/call?id=...) if available, or -]
 <br><br>
-<b>Upcoming renewal date</b>
+<b>Upcoming renewal date</b><br>
 [Date from Notion Active Package, or -]
 ```
 

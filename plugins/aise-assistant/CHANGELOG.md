@@ -5,6 +5,14 @@ Format: `## [version] — YYYY-MM-DD` followed by bullet points grouped by type.
 
 ---
 
+## [2.24.3] — 2026-06-29
+
+### Fixed
+- `skills/log-feedback`: added `<br>` after each `<b>Label</b>` tag so label and content render on separate lines (not as a run-on); `<br><br>` between sections remains for paragraph spacing
+- `skills/log-feedback`: Pain point guidance now warns against including tool names or system names inferred from AI-generated meeting summaries — use generic language ("previously had a fully automated solution") unless the detail appears in a verbatim customer quote
+
+---
+
 ## [2.24.2] — 2026-06-29
 
 ### Fixed
