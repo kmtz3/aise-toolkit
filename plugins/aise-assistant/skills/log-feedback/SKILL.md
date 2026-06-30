@@ -48,6 +48,16 @@ For each task found, pull supporting context in parallel:
    - Workaround description
    - Desired outcome language
 4. Check the customer's Active Package in Notion for ARR, upcoming renewal date, and Salesforce Opp URL.
+
+**Before drafting, confirm you have retrieved all of the following (or explicitly marked each `-`):**
+- [ ] ARR — from Active Package `ARR` property in Notion
+- [ ] Contract end date (renewal) — from Active Package `End Date` property
+- [ ] Salesforce Account URL — from Customer page `SFDC` property
+- [ ] Gong call URL — from Session page `Gong call` property (use as `sourceUrl` AND in Gong section)
+- [ ] Contact email — via the 4-step lookup chain below
+
+Do not begin drafting until all five are resolved (or explicitly marked `-`).
+
 5. Find the primary contact's email address using this lookup chain — stop at the first hit:
    a. **Notion Contacts DB** — query `collection://29497e9c-7d4f-80be-b224-000bbec4980b` filtered by the linked Customer page URL; look for an Email property.
    b. **Glean Gmail search** — `mcp__claude_ai_Glean__search` with `query: "[contact name] [company]"` and `app: gmailnative`. Scan the results for the contact's email address in thread senders, recipients, or signatures.
@@ -60,9 +70,11 @@ For each task found, pull supporting context in parallel:
 
 Before drafting any feedback note, check whether the topic touches **Spark features** or **PB platform capabilities** (MCP, API, integrations). If it does, verify current feature availability in `#releases` before drafting — do not assume a capability is missing without checking.
 
-**When to run this check:**
+**When to run this check — MANDATORY and blocking:**
 - Note involves Spark AI features (scheduled tasks, event-based triggers, external integrations, knowledge sources, authentication)
 - Note involves PB platform capabilities (MCP server scope, API v2, feedback/insight management, entity creation)
+
+For any task whose title or content references Spark, MCP, or API capabilities: **STOP before drafting.** Run the `#releases` check first. If the capability is confirmed already available, mark the Notion task Done with a note "Resolved — now available via [feature]" and skip to the next item. Do not draft a feedback note for a gap that no longer exists.
 
 **How to check:**
 Search `#releases` using `mcp__claude_ai_Slack__slack_search_public_and_private` with the relevant feature keyword. Read any recent announcements before forming the draft framing.
@@ -78,6 +90,8 @@ Search `#releases` using `mcp__claude_ai_Slack__slack_search_public_and_private`
 ---
 
 ## Step 5: Draft the feedback note
+
+> ⚠️ **STRICT FORMAT REQUIREMENT:** The `content` field MUST use the exact HTML template below — no substitutions. Do not use `<p>`, `<strong>`, markdown, or any other structure. Every section must appear in order, blank sections get a literal dash (`-`), and the Klara Martinez `<small>` disclaimer must be the final line. Failure to follow this template exactly is a submission error.
 
 Compose the feedback note using this EXACT HTML template. All section labels use `<b>` tags. Do NOT use markdown in the content body. Blank sections get a literal dash (`-`).
 
@@ -144,6 +158,8 @@ Good example:
 
 **F4 — Use the customer's stated language.** The note title and pain point must reflect the customer's own framing from the task notes and verbatim quotes. If the customer said "feedback," draft around "feedback" — not internal PB terminology like "insights" or "notes." Do not reframe the problem through a PB product lens.
 
+**F5 — Never reference AI-linking or Linked by AI.** Do not mention "AI-linking", "Linked by AI", or the passive batch-mode AI link suggestion background feature in any feedback note — this feature is not recommended for use by product. If a note touches note-to-feature linking via Spark or AI, frame the request in terms of the active, in-session user experience only (e.g. "Spark surfaces evidence but doesn't persist it as Insights"). Exception: if the customer's own verbatim quote uses this terminology, you may include the quote but must not editorially add or expand on the term.
+
 **P2 — Spark external auth limitation.** When the gap involves Spark accessing external document systems (SharePoint, OneDrive, Google Drive, etc.), do NOT suggest live sync as a workaround — Spark cannot authenticate to external systems without a customer-managed API token, making live sync non-viable. The correct workaround framing is: "Customer would need to periodically distill content from [source] into Spark agent knowledge docs manually."
 
 **P3 — PB MCP gap workarounds.** When the gap involves capabilities the PB MCP server does not support (entity creation, feedback/insight management, custom driver field writes, hierarchy management), the Workaround section must include both options:
@@ -155,39 +171,38 @@ Both options require the customer to own authentication and tooling — note thi
 
 ## Step 6: HITL confirmation — one item at a time
 
-Present each drafted feedback note to Klara for review before submitting anything. Format the confirmation as:
+**Email gate:** If `customerEmail` is still unresolved after all four lookup steps, do NOT proceed to HITL — surface a blocker:
+
+> ⚠️ Contact email not found. Please provide the email address for [Name] at [Company] before I can submit this note.
+
+Wait for Klara to supply it before continuing.
+
+Present each drafted feedback note to Klara for review before submitting anything. Render the content preview in chat with these headers:
 
 ```
----
 📋 FEEDBACK NOTE READY FOR REVIEW
 Source task: [Notion task title]
+Title: [proposed title]
+Customer: [Company name] — [contact name] ([contact email])
+Importance: [critical/important]
 
-**Title:** [proposed title]
-**Customer:** [Company name] — [contact name] ([contact email])
-**Importance:** [critical/important]
-
-**Content preview:**
+Content preview:
 [full content rendered]
-
-**Verify before submitting:**
-- [ ] Customer company mapping correct?
-- [ ] Contact email is the right person at this company?
-- [ ] Pain point has enough context / accurate?
-- [ ] Workaround and Desired Outcome captured correctly?
-
-Type:
-  submit — submit as-is
-  edit [section] [new text] — update a specific section
-  skip — skip this item
-  stop — stop processing remaining items
----
 ```
 
-Wait for explicit **"submit"** before calling `feedback_create_feedback`. If the user types `edit`, apply the edit and re-show the updated preview for re-confirmation before submitting.
+If Gong context is thin, flag it above the AskUserQuestion call as: **⚠️ Limited session context — pain point may need enrichment.**
 
-If no contact email can be found with confidence, surface it as a gap in the HITL preview and ask Klara to provide it before allowing submission. Do not guess.
+After rendering the preview, call the `AskUserQuestion` tool with:
 
-If Gong context is thin, flag it in the HITL preview as **⚠️ Limited session context — pain point may need enrichment** so Klara can decide whether to edit first.
+- **Question 1** (header: "Submit?", single-select): "Ready to submit this note to Productboard?"
+  - Options: "Submit as-is" | "Edit first" | "Skip this item" | "Stop processing"
+
+- **Question 2** (header: "Verify", multi-select): "Confirm the following before submitting:"
+  - Options: "Customer company mapping is correct" | "Contact email is the right person" | "Pain point has enough context" | "Workaround and Desired Outcome are accurate"
+
+Wait for the AskUserQuestion response before calling `feedback_create_feedback`. Only proceed with submission if all four Verify checkboxes are selected AND the user chose "Submit as-is".
+
+If the user selects "Edit first", ask which section to edit and apply the change, then re-show the preview and re-trigger AskUserQuestion.
 
 ---
 
@@ -213,15 +228,16 @@ Call `mcp__claude_ai_Notion__notion-update-page` with `command: "update_properti
 The Tasks DB has **only one writable property for this purpose: `Status`**. There is NO `Notes` property, NO `URL` property, and NO other field to write the PB note URL into. Do not attempt to set any property other than `Status` — it will fail.
 
 **Step 8b — Append confirmation to body:**
-Call `mcp__claude_ai_Notion__notion-update-page` with `command: "insert_content"` and `position: {"type": "end"}` to append this block to the task page body:
+Call `mcp__claude_ai_Notion__notion-update-page` with `command: "insert_content"` and `position: {"type": "end"}` to append this block to the task page body.
 
+**The appended text must be exactly this (no variation):**
 ```
 ---
-✅ Logged to PB — [YYYY-MM-DD]
-[PB feedback note URL if returned, else "Note submitted — no URL returned by API"]
+✅ Logged to PB — 2026-06-30
+https://pb.productboard.com/all-notes/notes/XXXXXXXX
 ```
 
-If the PB MCP does not return a URL or ID, still complete both steps — mark Done and append the confirmation line without a link.
+Do not use "PB note:", omit the `---` separator, or skip the date. Replace the date with the actual submission date (YYYY-MM-DD) and the URL with the actual PB note URL. If the PB MCP does not return a URL or ID, still complete both steps — mark Done and append the confirmation block with "Note submitted — no URL returned by API" in place of the URL.
 
 ---
 
@@ -247,6 +263,7 @@ After processing all items (or after "stop"), show a summary:
 - `mcp__claude_ai_Productboard__feedback_create_feedback`
 - `mcp__claude_ai_Slack__slack_search_public_and_private` (pre-draft #releases check)
 - `Read` (for context files and PLUGIN_DATA_DIR pointer)
+- `AskUserQuestion` (HITL confirmation widget in Step 6)
 
 ---
 

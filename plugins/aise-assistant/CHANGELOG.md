@@ -5,6 +5,16 @@ Format: `## [version] — YYYY-MM-DD` followed by bullet points grouped by type.
 
 ---
 
+## [2.25.0] — 2026-06-30
+
+### Added
+- `skills/log-feedback`: Step 5 — strict format pre-flight warning; `AskUserQuestion` widget replaces in-text HITL checklist in Step 6; drafting rule F5 prohibiting "AI-linking" / "Linked by AI" references
+- `skills/log-feedback`: Step 4 — explicit data-gathering checklist (ARR, renewal, Salesforce URL, Gong URL, contact email) required before drafting
+- `skills/log-feedback`: Step 4b — platform capability check is now mandatory and blocking for Spark/MCP/API items; confirmed-available gaps skip to next item
+- `skills/log-feedback`: Step 6 — email gate blocks HITL if `customerEmail` is unresolved; AskUserQuestion single-select (Submit/Edit/Skip/Stop) + multi-select verification checkboxes replace text-based flow
+- `skills/log-feedback`: Step 8b — literal format example for Notion task closeout body; prohibits "PB note:" prefix and missing `---` separator or date
+- `CLAUDE.md`: `/create-deck` command added to standalone commands table
+
 ## [2.24.6] — 2026-06-29
 
 ### Fixed
