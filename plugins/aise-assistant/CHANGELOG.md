@@ -5,6 +5,15 @@ Format: `## [version] — YYYY-MM-DD` followed by bullet points grouped by type.
 
 ---
 
+## [2.26.0] — 2026-06-30
+
+### Added
+- New `/create-deck` skill — generates a customer-facing HTML presentation deck for any meeting type (kickoff, QBR, strategy, product demo, onboarding, check-in). Pulls context from Notion, Glean, and Gmail; plans slide structure by meeting type; produces a self-contained `.html` file at `~/Desktop/aise-assistant/decks/`.
+- `skills/create-deck/SKILL.md` — 4-phase workflow: context pull, slide planning, HTML generation, save and confirm.
+- `skills/create-deck/deck-template.html` — complete Productboard-branded deck engine: 960×540 canvas, 7 layout classes (`layout-title`, `layout-agenda`, `layout-divider`, `layout-cards`, `layout-split`, `layout-kpi`, `layout-next-steps`), callout component, dot-nav with tooltips, keyboard and swipe navigation, auto-scale to any screen.
+
+---
+
 ## [2.25.0] — 2026-06-30
 
 ### Added

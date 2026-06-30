@@ -1,0 +1,876 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>[Customer] · [Meeting Type]</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <style>
+    /* ============================================================
+       CSS VARIABLES — Productboard brand palette
+    ============================================================ */
+    :root {
+      --navy:       #000C2C;
+      --gray-bg:    #F2F3F5;
+      --blue:       #1877F2;
+      --yellow:     #F5C200;
+      --red:        #E53E3E;
+      --teal:       #18E2CC;
+      --purple:     #9C45F1;
+      --text-dark:  #0A0E1A;
+      --text-muted: #5A6478;
+      --border:     #E5E7EB;
+    }
+
+    /* ============================================================
+       RESET + BODY
+    ============================================================ */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: #111827;
+      font-family: 'Inter', system-ui, -apple-system, sans-serif;
+      width: 100vw;
+      height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+      user-select: none;
+    }
+
+    /* padding-bottom reserves space so controls don't overlap the deck */
+    #viewport {
+      width: 100vw;
+      height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding-bottom: 52px;
+    }
+
+    /* ============================================================
+       DECK CANVAS
+       Fixed 960×540. JS sets transform: scale(…) on resize.
+    ============================================================ */
+    #deck {
+      width: 960px;
+      height: 540px;
+      position: relative;
+      transform-origin: center center;
+      flex-shrink: 0;
+    }
+
+    /* ============================================================
+       SLIDE SYSTEM
+       Opacity-only transition (no translateY).
+    ============================================================ */
+    .slide {
+      position: absolute;
+      inset: 0;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity .28s ease;
+      overflow: hidden;
+    }
+    .slide.active {
+      opacity: 1;
+      pointer-events: all;
+    }
+
+    .bg-dark  { background: var(--navy); }
+    .bg-light { background: var(--gray-bg); }
+
+    /* ============================================================
+       LOGO — Hardcoded PB diamond SVG. Never modify, remove, or
+       substitute this block when generating a deck.
+    ============================================================ */
+    .logo {
+      position: absolute;
+      top: 20px;
+      left: 32px;
+      width: 38px;
+      height: 38px;
+    }
+
+    /* ============================================================
+       FOOTER
+    ============================================================ */
+    .footer {
+      position: absolute;
+      bottom: 14px;
+      left: 48px;
+      right: 48px;
+      font-size: 9.5px;
+      letter-spacing: .02em;
+    }
+    .bg-light .footer { color: #9AA3B5; }
+    .bg-dark  .footer { color: #5A6478; }
+
+    /* ============================================================
+       BADGE / PILL — used on title slide and inline chips
+    ============================================================ */
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      height: 28px;
+      padding: 0 14px;
+      border-radius: 4px;
+      font-size: 10.5px;
+      font-weight: 700;
+      letter-spacing: .09em;
+      text-transform: uppercase;
+      color: #fff;
+    }
+    .badge-blue   { background: var(--blue); }
+    .badge-red    { background: var(--red); }
+    .badge-purple { background: var(--purple); }
+
+    /* ============================================================
+       CARD — shared component.
+       card-bar is a 5px horizontal strip at the TOP (not a left bar).
+       border-radius: 3px. Fixed height: 202px.
+    ============================================================ */
+    .cards {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 10px;
+      padding: 0 48px;
+    }
+    .cards.two-col { grid-template-columns: repeat(2, 1fr); }
+    .card {
+      background: #fff;
+      border-radius: 3px;
+      overflow: hidden;
+      height: 202px;
+      display: flex;
+      flex-direction: column;
+    }
+    .card-bar { height: 5px; flex-shrink: 0; }
+    .card-inner { padding: 10px 14px; flex: 1; overflow: hidden; }
+    .card-title {
+      font-size: 12.5px;
+      font-weight: 700;
+      color: var(--navy);
+      margin-bottom: 8px;
+      line-height: 1.3;
+    }
+    .card-list {
+      font-size: 11px;
+      color: var(--text-muted);
+      line-height: 1.65;
+      list-style: none;
+    }
+    .card-list li { padding-left: 11px; position: relative; }
+    .card-list li::before { content: '•'; position: absolute; left: 0; color: #C7CCD6; }
+
+    /* ============================================================
+       CALLOUT — dark action bar, snaps to bottom of card area.
+       Usage: <div class="callout"><span class="callout-label"
+              style="color: var(--blue)">LABEL</span><span
+              class="callout-text">…</span></div>
+    ============================================================ */
+    .callout {
+      margin: 8px 48px 0;
+      background: var(--navy);
+      border-radius: 6px;
+      padding: 10px 18px;
+      display: flex;
+      align-items: baseline;
+      gap: 10px;
+    }
+    .callout-label {
+      font-size: 9.5px;
+      font-weight: 700;
+      letter-spacing: .1em;
+      text-transform: uppercase;
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+    .callout-text { font-size: 12px; color: #C7CCD6; line-height: 1.4; }
+    /* dark-inner variant for callouts inside already-dark slides */
+    .callout.dark-inner { background: #0A1A3C; }
+
+    /* ============================================================
+       LAYOUT: layout-title
+       Left-aligned body. Light background. Badge → large title →
+       subtitle → blue accent line → date → name.
+    ============================================================ */
+    .layout-title .title-body {
+      position: absolute;
+      left: 48px;
+      top: 80px;
+      right: 400px;
+    }
+    .layout-title .title-badge  { margin-bottom: 18px; }
+    .layout-title .title-main {
+      font-size: 62px;
+      font-weight: 900;
+      color: var(--navy);
+      line-height: 1.05;
+      margin: 0 0 10px;
+      letter-spacing: -.02em;
+    }
+    .layout-title .title-sub   { font-size: 16px; color: var(--text-muted); margin-bottom: 28px; }
+    .layout-title .title-line  { width: 56px; height: 4px; background: var(--blue); margin-bottom: 18px; }
+    .layout-title .title-date  { font-size: 17px; font-weight: 700; color: var(--navy); margin-bottom: 4px; }
+    .layout-title .title-name  { font-size: 13px; color: var(--text-muted); white-space: nowrap; }
+
+    /* ============================================================
+       LAYOUT: layout-agenda
+       Centered heading + 3-col cards + callout. Light background.
+    ============================================================ */
+    .layout-agenda .agenda-head  { text-align: center; padding-top: 44px; }
+    .layout-agenda .agenda-title { font-size: 40px; font-weight: 800; color: var(--navy); }
+    .layout-agenda .agenda-sub   { font-size: 13px; color: var(--text-muted); margin-top: 4px; }
+    .layout-agenda .agenda-hr    { height: 2px; background: var(--navy); margin: 12px 48px 8px; }
+
+    /* ============================================================
+       LAYOUT: layout-divider
+       Left blue bar + left-anchored body + ghost number far right.
+       Dark background.
+    ============================================================ */
+    .layout-divider .div-bar {
+      position: absolute;
+      left: 0; top: 0; bottom: 0;
+      width: 7px;
+      background: var(--blue);
+    }
+    .layout-divider .div-body {
+      position: absolute;
+      left: 68px; right: 200px; top: 0; bottom: 0;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+    }
+    .layout-divider .div-topic {
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: .12em;
+      text-transform: uppercase;
+      color: var(--yellow);
+      margin-bottom: 12px;
+    }
+    .layout-divider .div-title {
+      font-size: 48px;
+      font-weight: 900;
+      color: #fff;
+      line-height: 1.05;
+      margin-bottom: 20px;
+    }
+    .layout-divider .div-sep {
+      width: 56px;
+      height: 4px;
+      background: var(--yellow);
+      margin-bottom: 14px;
+    }
+    .layout-divider .div-desc {
+      font-size: 14px;
+      color: #C7CCD6;
+      line-height: 1.5;
+      max-width: 520px;
+    }
+    /* Ghost section number — far right, extremely faint */
+    .layout-divider .div-num {
+      position: absolute;
+      right: 24px;
+      top: 50%;
+      transform: translateY(-50%);
+      font-size: 196px;
+      font-weight: 900;
+      color: #15294C;
+      line-height: 1;
+      letter-spacing: -.02em;
+      pointer-events: none;
+    }
+
+    /* ============================================================
+       LAYOUT: layout-cards
+       Centered title + full-width HR + 3-col cards + callout.
+       Light background.
+    ============================================================ */
+    .layout-cards .cnt-title {
+      text-align: center;
+      font-size: 26px;
+      font-weight: 800;
+      color: var(--navy);
+      padding-top: 36px;
+    }
+    .layout-cards .cnt-hr {
+      height: 2px;
+      background: var(--navy);
+      margin: 10px 48px 6px;
+    }
+
+    /* ============================================================
+       LAYOUT: layout-split
+       Two-column: left bullets, right questions. Light background.
+    ============================================================ */
+    .layout-split {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      grid-template-rows: auto auto 1fr;
+      column-gap: 40px;
+      padding: 52px 64px 48px;
+    }
+    .layout-split .slide-eyebrow {
+      grid-column: 1 / -1;
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: .12em;
+      text-transform: uppercase;
+      color: var(--text-muted);
+      margin-bottom: 4px;
+    }
+    .layout-split .slide-heading {
+      grid-column: 1 / -1;
+      font-size: 22px;
+      font-weight: 800;
+      color: var(--navy);
+      margin-bottom: 24px;
+      letter-spacing: -.01em;
+    }
+    .split-left, .split-right { display: flex; flex-direction: column; gap: 10px; }
+    .split-col-label {
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+      color: var(--text-muted);
+      margin-bottom: 6px;
+    }
+    .split-list { list-style: none; display: flex; flex-direction: column; gap: 9px; }
+    .split-list li {
+      font-size: 13px;
+      color: #374151;
+      line-height: 1.5;
+      padding-left: 11px;
+      position: relative;
+    }
+    .split-list li::before { content: '•'; position: absolute; left: 0; color: #C7CCD6; }
+    .question-box {
+      background: #fff;
+      border-radius: 6px;
+      border-left: 3px solid var(--blue);
+      padding: 10px 14px;
+      font-size: 13px;
+      color: var(--text-dark);
+      line-height: 1.5;
+    }
+
+    /* ============================================================
+       LAYOUT: layout-kpi
+       Dark background. Eyebrow + title + color accent line + stats
+       grid + callout. Use only when real numbers are available.
+    ============================================================ */
+    .layout-kpi .kpi-body { padding: 32px 48px 0; }
+    .layout-kpi .kpi-eyebrow {
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: .12em;
+      text-transform: uppercase;
+      color: var(--text-muted);
+      margin-bottom: 6px;
+    }
+    .layout-kpi .kpi-title {
+      font-size: 44px;
+      font-weight: 900;
+      color: #fff;
+      line-height: 1.05;
+      margin-bottom: 8px;
+    }
+    .layout-kpi .kpi-line {
+      width: 56px;
+      height: 4px;
+      margin-bottom: 20px;
+    }
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 8px;
+      margin-bottom: 12px;
+    }
+    .stat { background: #0A1A3C; border-radius: 4px; padding: 14px 16px; }
+    .stat-n { font-size: 36px; font-weight: 900; line-height: 1; margin-bottom: 6px; }
+    .stat-l1 { font-size: 11px; font-weight: 700; color: #fff; }
+    .stat-l2 { font-size: 10px; color: #9AA3B5; margin-top: 1px; }
+
+    /* ============================================================
+       LAYOUT: layout-next-steps
+       Left blue bar + body + 2-col grid of items. Dark background.
+    ============================================================ */
+    .layout-next-steps .ns-bar {
+      position: absolute;
+      left: 0; top: 0; bottom: 0;
+      width: 7px;
+      background: var(--blue);
+    }
+    .layout-next-steps .ns-body {
+      position: absolute;
+      left: 68px; right: 48px; top: 0; bottom: 0;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+    }
+    .layout-next-steps .ns-eyebrow {
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: .12em;
+      text-transform: uppercase;
+      color: var(--blue);
+      margin-bottom: 10px;
+    }
+    .layout-next-steps .ns-title {
+      font-size: 44px;
+      font-weight: 900;
+      color: #fff;
+      line-height: 1.05;
+      margin-bottom: 16px;
+    }
+    .layout-next-steps .ns-sep {
+      width: 56px;
+      height: 4px;
+      background: var(--blue);
+      margin-bottom: 18px;
+    }
+    .layout-next-steps .ns-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 2px 48px;
+    }
+    .ns-item { padding: 8px 0; border-bottom: 1px solid #15294C; }
+    .ns-item-title { font-size: 12.5px; font-weight: 700; color: #fff; margin-bottom: 2px; }
+    .ns-item-sub   { font-size: 11px; color: #9AA3B5; }
+
+    /* ============================================================
+       NAVIGATION CONTROLS
+    ============================================================ */
+    #controls {
+      position: fixed;
+      bottom: 14px;
+      left: 50%;
+      transform: translateX(-50%);
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      background: rgba(0,0,0,.65);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      padding: 9px 22px;
+      border-radius: 28px;
+      z-index: 999;
+      user-select: none;
+    }
+    #controls button {
+      background: none;
+      border: none;
+      color: #fff;
+      font-size: 22px;
+      cursor: pointer;
+      padding: 4px 10px;
+      border-radius: 6px;
+      transition: background .15s;
+      line-height: 1;
+    }
+    #controls button:hover     { background: rgba(255,255,255,.15); }
+    #controls button:disabled  { opacity: .3; cursor: default; }
+    #counter {
+      color: #fff;
+      font-size: 13px;
+      font-family: 'Inter', sans-serif;
+      min-width: 46px;
+      text-align: center;
+    }
+    #dots { display: flex; gap: 7px; align-items: center; }
+    .dot {
+      position: relative;
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: rgba(255,255,255,.28);
+      border: none;
+      cursor: pointer;
+      padding: 0;
+      transition: background .2s;
+    }
+    .dot.active { background: #fff; }
+    .dot::after {
+      content: attr(data-label);
+      position: absolute;
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(0,0,0,.88);
+      color: #fff;
+      font-size: 10px;
+      font-weight: 600;
+      white-space: nowrap;
+      padding: 4px 9px;
+      border-radius: 4px;
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity .15s;
+      letter-spacing: .01em;
+    }
+    .dot:hover::after { opacity: 1; }
+  </style>
+</head>
+<body>
+<div id="viewport"><div id="deck">
+
+  <!-- ================================================================
+       SLIDE 1 — LAYOUT: layout-title
+       Left-aligned. Light background. Always first.
+       badge → title-main → title-sub → title-line → title-date → title-name
+  ================================================================ -->
+  <!-- LAYOUT: layout-title -->
+  <div class="slide bg-light layout-title active" data-label="Title">
+    <svg class="logo" viewBox="0 0 28 28" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M18.6666 4.66666L28 14L18.6666 23.3334L9.33325 14L18.6666 4.66666Z" fill="#0071E1"/>
+      <path d="M18.6667 4.66666L9.33335 14L0 4.66666H18.6667Z" fill="#FFC600"/>
+      <path d="M9.33335 14L18.6667 23.3333H0L9.33335 14Z" fill="#F84136"/>
+    </svg>
+    <div class="title-body">
+      <div class="title-badge">
+        <span class="badge badge-blue">[PLACEHOLDER: Meeting type badge — e.g. "Kickoff Session"]</span>
+      </div>
+      <div class="title-main">[PLACEHOLDER: Customer Name]</div>
+      <div class="title-sub">[PLACEHOLDER: Subtitle — e.g. "Strategic partnership review · Prague"]</div>
+      <div class="title-line"></div>
+      <div class="title-date">[PLACEHOLDER: Date — e.g. "June 30, 2025"]</div>
+      <div class="title-name">[PLACEHOLDER: Your Name, Title · Productboard]</div>
+    </div>
+    <div class="footer">© [PLACEHOLDER: Year] Productboard, Inc. proprietary &amp; confidential</div>
+  </div>
+
+  <!-- ================================================================
+       SLIDE 2 — LAYOUT: layout-agenda
+       Centered heading + 3 cards + callout. Light background. Always second.
+       Cards cover the agenda topics; callout names the session goal.
+  ================================================================ -->
+  <!-- LAYOUT: layout-agenda -->
+  <div class="slide bg-light layout-agenda" data-label="Agenda">
+    <svg class="logo" viewBox="0 0 28 28" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M18.6666 4.66666L28 14L18.6666 23.3334L9.33325 14L18.6666 4.66666Z" fill="#0071E1"/>
+      <path d="M18.6667 4.66666L9.33335 14L0 4.66666H18.6667Z" fill="#FFC600"/>
+      <path d="M9.33335 14L18.6667 23.3333H0L9.33335 14Z" fill="#F84136"/>
+    </svg>
+    <div class="agenda-head">
+      <div class="agenda-title">Today's Agenda</div>
+      <div class="agenda-sub">[PLACEHOLDER: N topics · context — e.g. "3 topics · Strategy, Platform &amp; Next Steps"]</div>
+    </div>
+    <div class="agenda-hr"></div>
+    <div class="cards">
+      <div class="card">
+        <div class="card-bar" style="background: var(--blue)"></div>
+        <div class="card-inner">
+          <div class="card-title">[PLACEHOLDER: Topic 1 name]</div>
+          <ul class="card-list">
+            <li>[PLACEHOLDER: Sub-point]</li>
+            <li>[PLACEHOLDER: Sub-point]</li>
+            <li>[PLACEHOLDER: Sub-point]</li>
+          </ul>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-bar" style="background: var(--yellow)"></div>
+        <div class="card-inner">
+          <div class="card-title">[PLACEHOLDER: Topic 2 name]</div>
+          <ul class="card-list">
+            <li>[PLACEHOLDER: Sub-point]</li>
+            <li>[PLACEHOLDER: Sub-point]</li>
+            <li>[PLACEHOLDER: Sub-point]</li>
+          </ul>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-bar" style="background: var(--red)"></div>
+        <div class="card-inner">
+          <div class="card-title">[PLACEHOLDER: Topic 3 name]</div>
+          <ul class="card-list">
+            <li>[PLACEHOLDER: Sub-point]</li>
+            <li>[PLACEHOLDER: Sub-point]</li>
+            <li>[PLACEHOLDER: Sub-point]</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+    <div class="callout">
+      <span class="callout-label" style="color: var(--yellow)">[PLACEHOLDER: TODAY'S GOAL]</span>
+      <span class="callout-text">[PLACEHOLDER: One sentence — what we want to leave with today]</span>
+    </div>
+    <div class="footer">© [PLACEHOLDER: Year] Productboard, Inc. proprietary &amp; confidential</div>
+  </div>
+
+  <!-- ================================================================
+       SLIDE 3 — LAYOUT: layout-divider
+       Left blue bar + body + ghost section number right. Dark background.
+       Use between topic groups. div-topic in yellow small-caps; div-title
+       large; div-sep yellow accent; div-num faint giant right-side number.
+  ================================================================ -->
+  <!-- LAYOUT: layout-divider -->
+  <div class="slide bg-dark layout-divider" data-label="Section 01">
+    <svg class="logo" viewBox="0 0 28 28" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M18.6666 4.66666L28 14L18.6666 23.3334L9.33325 14L18.6666 4.66666Z" fill="#0071E1"/>
+      <path d="M18.6667 4.66666L9.33335 14L0 4.66666H18.6667Z" fill="#FFC600"/>
+      <path d="M9.33335 14L18.6667 23.3333H0L9.33335 14Z" fill="#F84136"/>
+    </svg>
+    <div class="div-bar"></div>
+    <div class="div-body">
+      <div class="div-topic">Topic 01</div>
+      <div class="div-title">[PLACEHOLDER: Section Title]</div>
+      <div class="div-sep"></div>
+      <div class="div-desc">[PLACEHOLDER: One-line description — e.g. "Direction setting and adoption visibility"]</div>
+    </div>
+    <div class="div-num">01</div>
+    <div class="footer">© [PLACEHOLDER: Year] Productboard, Inc. proprietary &amp; confidential</div>
+  </div>
+
+  <!-- ================================================================
+       SLIDE 4 — LAYOUT: layout-cards
+       Centered title + full-width HR + 3 cards + callout. Light background.
+       cnt-title and cnt-hr always present. Callout names the one decision.
+  ================================================================ -->
+  <!-- LAYOUT: layout-cards -->
+  <div class="slide bg-light layout-cards" data-label="[PLACEHOLDER: Slide Title]">
+    <svg class="logo" viewBox="0 0 28 28" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M18.6666 4.66666L28 14L18.6666 23.3334L9.33325 14L18.6666 4.66666Z" fill="#0071E1"/>
+      <path d="M18.6667 4.66666L9.33335 14L0 4.66666H18.6667Z" fill="#FFC600"/>
+      <path d="M9.33335 14L18.6667 23.3333H0L9.33335 14Z" fill="#F84136"/>
+    </svg>
+    <div class="cnt-title">[PLACEHOLDER: Slide Title]</div>
+    <div class="cnt-hr"></div>
+    <div class="cards">
+      <div class="card">
+        <div class="card-bar" style="background: var(--blue)"></div>
+        <div class="card-inner">
+          <div class="card-title">[PLACEHOLDER: Card 1 title — name the thing]</div>
+          <ul class="card-list">
+            <li>[PLACEHOLDER: Bullet — 1 sentence max]</li>
+            <li>[PLACEHOLDER: Bullet — 1 sentence max]</li>
+            <li>[PLACEHOLDER: Bullet — 1 sentence max]</li>
+            <li>[PLACEHOLDER: Bullet — 1 sentence max]</li>
+          </ul>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-bar" style="background: var(--yellow)"></div>
+        <div class="card-inner">
+          <div class="card-title">[PLACEHOLDER: Card 2 title]</div>
+          <ul class="card-list">
+            <li>[PLACEHOLDER: Bullet]</li>
+            <li>[PLACEHOLDER: Bullet]</li>
+            <li>[PLACEHOLDER: Bullet]</li>
+            <li>[PLACEHOLDER: Bullet]</li>
+          </ul>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-bar" style="background: var(--teal)"></div>
+        <div class="card-inner">
+          <div class="card-title">[PLACEHOLDER: Card 3 title — or remove for 2-card layout]</div>
+          <ul class="card-list">
+            <li>[PLACEHOLDER: Bullet]</li>
+            <li>[PLACEHOLDER: Bullet]</li>
+            <li>[PLACEHOLDER: Bullet]</li>
+            <li>[PLACEHOLDER: Bullet]</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+    <div class="callout">
+      <span class="callout-label" style="color: var(--blue)">[PLACEHOLDER: DECIDE TODAY / CONFIRM / etc.]</span>
+      <span class="callout-text">[PLACEHOLDER: The one thing to nail down in this section]</span>
+    </div>
+    <div class="footer">© [PLACEHOLDER: Year] Productboard, Inc. proprietary &amp; confidential</div>
+  </div>
+
+  <!-- ================================================================
+       SLIDE 5 — LAYOUT: layout-split
+       Two columns: left bullets, right discovery questions. Light background.
+       Use for context-setting, gap review, or open discussion slides.
+  ================================================================ -->
+  <!-- LAYOUT: layout-split -->
+  <div class="slide bg-light layout-split" data-label="[PLACEHOLDER: Slide Title]">
+    <svg class="logo" viewBox="0 0 28 28" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M18.6666 4.66666L28 14L18.6666 23.3334L9.33325 14L18.6666 4.66666Z" fill="#0071E1"/>
+      <path d="M18.6667 4.66666L9.33335 14L0 4.66666H18.6667Z" fill="#FFC600"/>
+      <path d="M9.33335 14L18.6667 23.3333H0L9.33335 14Z" fill="#F84136"/>
+    </svg>
+    <div class="slide-eyebrow">[PLACEHOLDER: EYEBROW — e.g. "OPEN ITEMS · AS OF JUNE 2025"]</div>
+    <div class="slide-heading">[PLACEHOLDER: Slide heading]</div>
+    <div class="split-left">
+      <div class="split-col-label">Context</div>
+      <ul class="split-list">
+        <li>[PLACEHOLDER: What you know about their situation]</li>
+        <li>[PLACEHOLDER: What they've committed to or asked for]</li>
+        <li>[PLACEHOLDER: A constraint or dependency to surface]</li>
+        <li>[PLACEHOLDER: Any hot context or flag]</li>
+      </ul>
+    </div>
+    <div class="split-right">
+      <div class="split-col-label">Questions for today</div>
+      <div class="question-box">[PLACEHOLDER: Discovery question 1 — end with "?"]</div>
+      <div class="question-box">[PLACEHOLDER: Discovery question 2 — end with "?"]</div>
+      <div class="question-box">[PLACEHOLDER: Discovery question 3 — end with "?"]</div>
+    </div>
+    <div class="footer">© [PLACEHOLDER: Year] Productboard, Inc. proprietary &amp; confidential</div>
+  </div>
+
+  <!-- ================================================================
+       SLIDE 6 — LAYOUT: layout-kpi
+       Dark background. Eyebrow + title + accent line + 4-col stats +
+       callout. Use ONLY when real metric data is available.
+       Substitute with a second layout-cards slide if no hard numbers.
+  ================================================================ -->
+  <!-- LAYOUT: layout-kpi -->
+  <div class="slide bg-dark layout-kpi" data-label="[PLACEHOLDER: Snapshot title]">
+    <svg class="logo" viewBox="0 0 28 28" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M18.6666 4.66666L28 14L18.6666 23.3334L9.33325 14L18.6666 4.66666Z" fill="#0071E1"/>
+      <path d="M18.6667 4.66666L9.33335 14L0 4.66666H18.6667Z" fill="#FFC600"/>
+      <path d="M9.33335 14L18.6667 23.3333H0L9.33335 14Z" fill="#F84136"/>
+    </svg>
+    <div class="kpi-body">
+      <div style="display:flex;justify-content:flex-end;margin-bottom:4px">
+        <!-- Optional urgency badge — remove if not applicable -->
+        <span class="badge badge-red">[PLACEHOLDER: URGENT label — or remove]</span>
+      </div>
+      <div class="kpi-title">[PLACEHOLDER: KPI slide title — e.g. "Program Snapshot"]</div>
+      <div class="kpi-line" style="background: var(--blue)"></div>
+      <div class="kpi-eyebrow">[PLACEHOLDER: Eyebrow — e.g. "Q3 2025 · as of June 30"]</div>
+      <div class="stats">
+        <div class="stat">
+          <div class="stat-n" style="color: var(--blue)">[PLACEHOLDER: N]</div>
+          <div class="stat-l1">[PLACEHOLDER: Metric label]</div>
+          <div class="stat-l2">[PLACEHOLDER: Context line]</div>
+        </div>
+        <div class="stat">
+          <div class="stat-n" style="color: var(--yellow)">[PLACEHOLDER: N]</div>
+          <div class="stat-l1">[PLACEHOLDER: Metric label]</div>
+          <div class="stat-l2">[PLACEHOLDER: Context line]</div>
+        </div>
+        <div class="stat">
+          <div class="stat-n" style="color: #C7CCD6">[PLACEHOLDER: N]</div>
+          <div class="stat-l1">[PLACEHOLDER: Metric label]</div>
+          <div class="stat-l2">[PLACEHOLDER: Context line]</div>
+        </div>
+        <div class="stat">
+          <div class="stat-n" style="color: var(--red)">[PLACEHOLDER: N]</div>
+          <div class="stat-l1">[PLACEHOLDER: Metric label]</div>
+          <div class="stat-l2">[PLACEHOLDER: Context line]</div>
+        </div>
+      </div>
+      <div class="callout dark-inner" style="margin:0">
+        <span class="callout-label" style="color: var(--red)">[PLACEHOLDER: URGENCY LABEL or KEY POINT]</span>
+        <span class="callout-text">[PLACEHOLDER: What needs to happen and who owns it]</span>
+      </div>
+    </div>
+    <div class="footer">© [PLACEHOLDER: Year] Productboard, Inc. proprietary &amp; confidential</div>
+  </div>
+
+  <!-- ================================================================
+       SLIDE 7 — LAYOUT: layout-next-steps
+       Left blue bar + body + 2-col grid. Dark background. Always last.
+       ns-grid holds 4 items (2×2). Each ns-item: bold title + muted sub.
+       Prefix item title with "01  ", "02  " etc. for scannability.
+  ================================================================ -->
+  <!-- LAYOUT: layout-next-steps -->
+  <div class="slide bg-dark layout-next-steps" data-label="Next Steps">
+    <svg class="logo" viewBox="0 0 28 28" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M18.6666 4.66666L28 14L18.6666 23.3334L9.33325 14L18.6666 4.66666Z" fill="#0071E1"/>
+      <path d="M18.6667 4.66666L9.33335 14L0 4.66666H18.6667Z" fill="#FFC600"/>
+      <path d="M9.33335 14L18.6667 23.3333H0L9.33335 14Z" fill="#F84136"/>
+    </svg>
+    <div class="ns-bar"></div>
+    <div class="ns-body">
+      <div class="ns-eyebrow">Before We Leave</div>
+      <div class="ns-title">Next Steps &amp; Agreements</div>
+      <div class="ns-sep"></div>
+      <div class="ns-grid">
+        <div class="ns-item">
+          <div class="ns-item-title">01&nbsp;&nbsp;[PLACEHOLDER: Action item 1]</div>
+          <div class="ns-item-sub">[PLACEHOLDER: Owner · timing]</div>
+        </div>
+        <div class="ns-item">
+          <div class="ns-item-title">03&nbsp;&nbsp;[PLACEHOLDER: Action item 3]</div>
+          <div class="ns-item-sub">[PLACEHOLDER: Owner · timing]</div>
+        </div>
+        <div class="ns-item">
+          <div class="ns-item-title">02&nbsp;&nbsp;[PLACEHOLDER: Action item 2]</div>
+          <div class="ns-item-sub">[PLACEHOLDER: Owner · timing]</div>
+        </div>
+        <div class="ns-item">
+          <div class="ns-item-title">04&nbsp;&nbsp;[PLACEHOLDER: Action item 4]</div>
+          <div class="ns-item-sub">[PLACEHOLDER: Owner · timing]</div>
+        </div>
+      </div>
+    </div>
+    <div class="footer">© [PLACEHOLDER: Year] Productboard, Inc. proprietary &amp; confidential</div>
+  </div>
+
+</div></div><!-- /deck /viewport -->
+
+<div id="controls">
+  <button id="prev" disabled>&#8592;</button>
+  <span id="counter">1 / 7</span>
+  <div id="dots"></div>
+  <button id="next">&#8594;</button>
+</div>
+
+<script>
+  var slides = document.querySelectorAll('.slide');
+  var cur = 0;
+
+  function goto(n) {
+    slides[cur].classList.remove('active');
+    cur = Math.max(0, Math.min(n, slides.length - 1));
+    slides[cur].classList.add('active');
+    document.getElementById('counter').textContent = (cur + 1) + ' / ' + slides.length;
+    document.querySelectorAll('.dot').forEach(function(d, i) { d.classList.toggle('active', i === cur); });
+    document.getElementById('prev').disabled = cur === 0;
+    document.getElementById('next').disabled = cur === slides.length - 1;
+  }
+
+  /* Build dots from slide data-label attributes */
+  var dotsEl = document.getElementById('dots');
+  slides.forEach(function(slide, i) {
+    var d = document.createElement('div');
+    d.className = 'dot' + (i === 0 ? ' active' : '');
+    d.dataset.label = slide.dataset.label || ('Slide ' + (i + 1));
+    d.addEventListener('click', function() { goto(i); });
+    dotsEl.appendChild(d);
+  });
+
+  document.getElementById('prev').addEventListener('click', function() { goto(cur - 1); });
+  document.getElementById('next').addEventListener('click', function() { goto(cur + 1); });
+
+  document.addEventListener('keydown', function(e) {
+    if (e.key === 'ArrowRight' || e.key === 'ArrowDown') goto(cur + 1);
+    else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') goto(cur - 1);
+  });
+
+  var tx = 0;
+  document.getElementById('deck').addEventListener('touchstart', function(e) { tx = e.touches[0].clientX; }, { passive: true });
+  document.getElementById('deck').addEventListener('touchend', function(e) {
+    var dx = e.changedTouches[0].clientX - tx;
+    if (Math.abs(dx) > 40) { if (dx < 0) goto(cur + 1); else goto(cur - 1); }
+  }, { passive: true });
+
+  /* Scale deck to fit viewport */
+  function rescale() {
+    var deck = document.getElementById('deck');
+    var vw = window.innerWidth;
+    var vh = window.innerHeight - 56;
+    var s = Math.min(vw / 960, vh / 540) * 0.97;
+    deck.style.transform = 'scale(' + s + ')';
+  }
+  rescale();
+  window.addEventListener('resize', rescale);
+
+  /* Initialize counter */
+  document.getElementById('counter').textContent = '1 / ' + slides.length;
+</script>
+
+</body>
+</html>
