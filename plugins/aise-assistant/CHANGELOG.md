@@ -5,6 +5,16 @@ Format: `## [version] — YYYY-MM-DD` followed by bullet points grouped by type.
 
 ---
 
+## [2.26.1] — 2026-06-30
+
+### Fixed
+- `skills/log-feedback`: Footer contact link now points to Klara's Slack DM instead of email address
+- `skills/log-feedback`: Simplified Step 6 HITL from two AskUserQuestion calls (Submit + 4-checkbox Verify) to a single "I confirm and submit" / "Edit first" / "Skip this item" / "Stop processing" question — removes friction and the checkbox-skip failure mode
+- `skills/log-feedback`: Added drafting rule F6 — never reference "AISE", "Solutions Architect", or individual names in Pain point or Workaround sections; use generic equivalents ("Productboard support team", "PB support")
+- `skills/log-feedback`: Step 8a now explicitly states `notion-update-page` requires `page_id` (snake_case), not `pageId` — fixes "Invalid input: expected string, received undefined" error on Notion task closeout
+
+---
+
 ## [2.26.0] — 2026-06-30
 
 ### Added

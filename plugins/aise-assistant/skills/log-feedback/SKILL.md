@@ -140,7 +140,7 @@ automated solution" rather than naming a specific tool.]
 <b>Upcoming renewal date</b><br>
 [Date from Notion Active Package, or -]
 <br><br>
-<small><i>Submitted via the aise-assistant plugin. Questions about this tool? Contact <a href="mailto:klara.martinez@productboard.com">Klara Martinez</a>.</i></small>
+<small><i>Submitted via the aise-assistant plugin. Questions about this tool? Contact <a href="https://productboard.slack.com/archives/D07818Y71HA">Klara Martinez</a>.</i></small>
 ```
 
 **Pain point quality bar** — the section should:
@@ -161,6 +161,8 @@ Good example:
 **F5 — Never reference AI-linking or Linked by AI.** Do not mention "AI-linking", "Linked by AI", or the passive batch-mode AI link suggestion background feature in any feedback note — this feature is not recommended for use by product. If a note touches note-to-feature linking via Spark or AI, frame the request in terms of the active, in-session user experience only (e.g. "Spark surfaces evidence but doesn't persist it as Insights"). Exception: if the customer's own verbatim quote uses this terminology, you may include the quote but must not editorially add or expand on the term.
 
 **P2 — Spark external auth limitation.** When the gap involves Spark accessing external document systems (SharePoint, OneDrive, Google Drive, etc.), do NOT suggest live sync as a workaround — Spark cannot authenticate to external systems without a customer-managed API token, making live sync non-viable. The correct workaround framing is: "Customer would need to periodically distill content from [source] into Spark agent knowledge docs manually."
+
+**F6 — Never use internal team names in note content.** Do not reference "AISE", "Solutions Architect", or individual names (e.g. "Klara") in the Pain point or Workaround sections. Use generic equivalents: "Productboard support team", "a Productboard team member", or "PB support". Exception: if the customer's own verbatim quote names a specific person or team, include the quote but do not editorially expand on it.
 
 **P3 — PB MCP gap workarounds.** When the gap involves capabilities the PB MCP server does not support (entity creation, feedback/insight management, custom driver field writes, hierarchy management), the Workaround section must include both options:
 1. Direct PB API v2 calls (customer manages auth + plumbing, no Spark integration)
@@ -195,18 +197,17 @@ If Gong context is thin, flag it above the AskUserQuestion call as: **⚠️ Lim
 After rendering the preview, call the `AskUserQuestion` tool with:
 
 - **Question 1** (header: "Submit?", single-select): "Ready to submit this note to Productboard?"
-  - Options: "Submit as-is" | "Edit first" | "Skip this item" | "Stop processing"
+  - Options: "I confirm and submit" | "Edit first" | "Skip this item" | "Stop processing"
 
-- **Question 2** (header: "Verify", multi-select): "Confirm the following before submitting:"
-  - Options: "Customer company mapping is correct" | "Contact email is the right person" | "Pain point has enough context" | "Workaround and Desired Outcome are accurate"
-
-Wait for the AskUserQuestion response before calling `feedback_create_feedback`. Only proceed with submission if all four Verify checkboxes are selected AND the user chose "Submit as-is".
+Wait for the AskUserQuestion response before calling `feedback_create_feedback`.
 
 If the user selects "Edit first", ask which section to edit and apply the change, then re-show the preview and re-trigger AskUserQuestion.
 
 ---
 
 ## Step 7: Submit confirmed items
+
+Proceed with submission only when the user chose "I confirm and submit". Block on "Edit first", "Skip this item", or "Stop processing" — do not submit.
 
 For confirmed items, call `mcp__claude_ai_Productboard__feedback_create_feedback` with:
 - `title`: the problem statement only — no prefix (matches the title drafted in Step 5)
@@ -223,7 +224,7 @@ For confirmed items, call `mcp__claude_ai_Productboard__feedback_create_feedback
 After successful submission, execute exactly these two calls — no others:
 
 **Step 8a — Mark Done:**
-Call `mcp__claude_ai_Notion__notion-update-page` with `command: "update_properties"` to set `Status` to `Done` on the task page.
+Call `mcp__claude_ai_Notion__notion-update-page` with `command: "update_properties"` to set `Status` to `Done` on the task page. **The parameter name is `page_id` (snake_case), not `pageId` — always use `page_id`.**
 
 The Tasks DB has **only one writable property for this purpose: `Status`**. There is NO `Notes` property, NO `URL` property, and NO other field to write the PB note URL into. Do not attempt to set any property other than `Status` — it will fail.
 
