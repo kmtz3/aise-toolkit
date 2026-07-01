@@ -436,7 +436,10 @@ def generate_report(csv_path: str, customer: str, period: str, subdomain: str, o
 def resolve_csv_paths(csv_arg: str) -> list:
     p = Path(csv_arg)
     if p.is_dir():
-        return sorted(str(f) for f in p.glob("*.csv"))
+        all_csvs = sorted(str(f) for f in p.glob("*.csv"))
+        without = [f for f in all_csvs if "without" in Path(f).name.lower()]
+        with_partners = [f for f in all_csvs if "ranked" in Path(f).name.lower() and "without" not in Path(f).name.lower()]
+        return [f for f in all_csvs if f not in with_partners] if without else all_csvs
     expanded = glob.glob(csv_arg)
     if expanded:
         return sorted(expanded)

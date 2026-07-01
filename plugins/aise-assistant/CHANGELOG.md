@@ -5,6 +5,13 @@ Format: `## [version] — YYYY-MM-DD` followed by bullet points grouped by type.
 
 ---
 
+## [2.27.3] — 2026-07-01
+
+### Fixed
+- `temp-api-migration-usage-report`: in directory mode, the plain ranked CSV is now skipped when a `*without_partner*` ranked CSV is present — previously both were processed and the last write won, producing a report based on whichever file sorted last alphabetically
+
+---
+
 ## [2.27.2] — 2026-07-01
 
 ### Fixed
