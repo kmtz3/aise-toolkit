@@ -5,6 +5,13 @@ Format: `## [version] — YYYY-MM-DD` followed by bullet points grouped by type.
 
 ---
 
+## [2.27.0] — 2026-07-01
+
+### Added
+- `skills/spark-onepager`: New skill that generates a customer-facing Spark AI Adoption Program one-pager as a print-ready HTML file. Collects customer name and Calendly booking link, substitutes them into a fixed 1280×720 16:9 slide template (5-session journey, stats, CTA block), saves the file to the Cowork outputs folder, and presents it. Prints cleanly in Chrome via `zoom: 0.78` in the `@media print` block.
+
+---
+
 ## [2.26.1] — 2026-06-30
 
 ### Fixed
