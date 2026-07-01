@@ -5,6 +5,13 @@ Format: `## [version] — YYYY-MM-DD` followed by bullet points grouped by type.
 
 ---
 
+## [2.27.1] — 2026-07-01
+
+### Fixed
+- `temp-api-migration-usage-report`: fixed incorrect pluralization in endpoint descriptions — "List companies" no longer rendered as "List companys"; list descriptions now use the original path segment directly instead of re-pluralizing the singularized form
+
+---
+
 ## [2.27.0] — 2026-07-01
 
 ### Added

@@ -98,7 +98,8 @@ def describe(ep: str, method: str) -> str:
     ):
         return "Link " + " / ".join(p for p in parts if p not in ("{uuid}",))
     if method == "GET":
-        return ("Get a single %s" % base) if has_id else ("List %ss" % base)
+        plural = parts[0] if parts else "items"
+        return ("Get a single %s" % base) if has_id else ("List %s" % plural)
     if method == "POST":
         return "Create a %s" % base
     if method in ("PATCH", "PUT"):
