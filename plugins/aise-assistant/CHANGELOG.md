@@ -5,6 +5,14 @@ Format: `## [version] — YYYY-MM-DD` followed by bullet points grouped by type.
 
 ---
 
+## [2.27.2] — 2026-07-01
+
+### Fixed
+- `temp-api-migration-usage-report`: DELETE/GET/PATCH on link sub-resources now produce correct descriptions (e.g. "Delete a note link") instead of the generic "Link notes / links" catch-all
+- `temp-api-migration-usage-report`: endpoints bucketed into the "Other" resource group are now excluded from the PDF table entirely, removing noise rows for unmapped paths like `/features-objectives` and `/features.json`
+
+---
+
 ## [2.27.1] — 2026-07-01
 
 ### Fixed

@@ -91,11 +91,17 @@ def describe(ep: str, method: str) -> str:
     parts = [p for p in ep.strip("/").split("/") if p]
     base = _singular(parts[0]) if parts else "item"
     has_id = ep.rstrip("/").endswith("{uuid}")
-    if (
-        "links" in parts
-        or "feature-links" in ep
-        or (len(parts) > 1 and parts[-1] in ("features", "notes") and method == "POST")
-    ):
+    if "links" in parts or "feature-links" in ep:
+        parent = _singular(parts[0]) if parts else "item"
+        if method == "POST":
+            return "Link " + " / ".join(p for p in parts if p not in ("{uuid}",))
+        elif method == "DELETE":
+            return "Delete a %s link" % parent
+        elif method == "GET":
+            return ("Get a %s link" % parent) if has_id else ("List %s links" % parent)
+        elif method in ("PATCH", "PUT"):
+            return "Update a %s link" % parent
+    if len(parts) > 1 and parts[-1] in ("features", "notes") and method == "POST":
         return "Link " + " / ".join(p for p in parts if p not in ("{uuid}",))
     if method == "GET":
         plural = parts[0] if parts else "items"
@@ -243,6 +249,8 @@ def build_table_rows(kept: dict) -> tuple:
     by_group = defaultdict(dict)
     for (ep, method), (count, ts) in kept.items():
         group = resource_group(ep)
+        if group == "Other":
+            continue
         by_group[group][(ep, method)] = [count, ts]
 
     group_totals = {g: sum(v[0] for v in items.values()) for g, items in by_group.items()}
