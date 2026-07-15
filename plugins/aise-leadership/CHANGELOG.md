@@ -1,5 +1,12 @@
 # Changelog — aise-leadership
 
+## [1.9.8] — 2026-07-15
+
+### Changed
+- `context/` synced from aise-assistant v2.28.0: `notion-schema.md` updated with Planhat cross-reference; `planhat-schema.md` and `notion-planhat-field-mapping.md` added; `project-instructions.md` updated with Planhat connector entry
+
+---
+
 ## [1.9.7] — 2026-06-24
 
 ### Fixed

@@ -42,6 +42,7 @@ I have connectors for many of the systems where customer context lives. Claude s
 | **Google Calendar** | Upcoming sessions, attendee lists, recurring cadences | `Google Calendar` connector |
 | **Glean** | Cross-system search — indexes Slack, Salesforce, Gong transcripts, Google Drive, Confluence, etc. **This is the primary entry point for "find me everything we know about customer X."** | `Glean:search`, `Glean:chat`, `Glean:meeting_lookup` (for Gong-style meeting transcripts), `Glean:gmail_search` |
 | **Notion** | My customer tracker — the source of truth for program status, decisions, stakeholders, session plans | `Notion` connector |
+| **Planhat** | Primary CS platform of record (migration in progress from Notion). Session conversations and tasks must be written here after every debrief — see §4.6. Also: account health, ARR, renewal dates, Spark/AI readiness tracking. **Transition in progress** — Notion Customer Tracker will eventually be deprecated; Planhat becomes the sole system of record. | `Planhat` MCP (`7441c372-4b65-4805-95b0-baf2a081ceb3`): `search_records` (company lookup), `get_model_record`, `update_model_record`, `create_model_record`. See `context/planhat-schema.md` for field mapping. |
 | **Atlassian (Jira/Confluence)** | Sometimes customer has artefacts here; sometimes our internal docs | `Atlassian` connector |
 | **Figma** | Occasional — internal design artefacts, not usually customer-facing | `Figma` connector |
 
@@ -186,6 +187,34 @@ When creating or updating customer records in Notion:
 - **Link to source material** (Gong call, email thread, Slack message) when possible.
 - **Always surface the Notion page URL** in the chat confirmation after any create or update — direct link, no exceptions. This applies to direct writes and any sub-agent write (notion-writer, session-prepper, post-session-debrief, etc.).
 - **Task priority, due date, and body content** — when not explicitly stated, apply the auto-priority and auto-due-date logic in `context/notion-writer-playbook.md` Operation 2. Always disclose the inferred value and one-line reason in the draft so the user can override. Every PB-side task page body must also include the "best shot" scaffold per Operation 2.
+
+### 4.6 Planhat Dual-Write (Migration Mode)
+
+**Active until further notice.** Migrating from Notion Customer Tracker to Planhat as the primary CS platform of record. During the transition, every session debrief must write to both Notion and Planhat.
+
+After every `/session-debrief`, run these Planhat steps in order:
+
+1. **Find the company** — `search_records(QUERY: "{customer name}")` → capture `companyId`.
+2. **Mark the Calendly event done** — if a Planhat Task exists with `action` matching the session title (Calendly-synced event), call `update_model_record(status: "done", dateDone: "<ISO datetime>")`.
+3. **Log a Conversation** — `create_model_record(MODEL: "Conversation")` with:
+   - `type`: `"meeting"` — **do NOT use `"call"` (it is a reserved type and will error)**
+   - `companyId`, `subject` (session title), `date` (session start as ISO datetime)
+   - `description`: session notes — decisions, actions, risks, next steps
+   - `custom.Gong URL`: Gong recording URL
+   - `custom.Call Duration`: duration in minutes (number)
+   - `sentiment`: `"positive"` / `"neutral"` / `"negative"`
+   - `users`: `[{"id": "6a44ef76c9aade50502936d5"}]` (Klara)
+4. **Create Tasks** — one `create_model_record(MODEL: "Task")` per PB-side action item:
+   - `mainType`: `"task"`, `companyId`, `action` (title), `description`
+   - `ownerId`: `6a44ef76c9aade50502936d5` (Klara)
+   - `endTime`: due date as ISO datetime, `status`: `"to-do"`
+   - `custom.Priority`: `"P1"` / `"P2"` / `"P3"` (match Notion priority)
+   - `custom.Spark Conversation`: `true` if session included Spark discussion
+
+**Klara's Planhat user ID:** `6a44ef76c9aade50502936d5`
+**Planhat MCP prefix:** `mcp__7441c372-4b65-4805-95b0-baf2a081ceb3__`
+
+When the migration is complete and Notion Customer Tracker is deprecated, this section will be updated and Planhat becomes the sole system of record for all debrief writes (remove Notion steps at that point).
 
 ---
 

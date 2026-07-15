@@ -189,6 +189,73 @@ Each `<li>`: `.step-content` containing `.step-action` + `.step-meta` with
 Structure: `.slide-eyebrow` → `.slide-heading` → `<div class="kpi-grid">` with 2–4 `.kpi-card`
 elements, each with `.kpi-value` (big number) + `.kpi-label` + `.kpi-sub` (context line).
 
+### Print-to-PDF CSS (mandatory)
+
+At the end of every deck's `<style>` block, always append the following print CSS verbatim.
+Never omit it — decks are shared as PDFs and must print correctly.
+
+```css
+/* ── Print / PDF ─────────────────────────────────────────────── */
+@media print {
+  @page { size: 960px 540px; margin: 0; }
+
+  *, *::before, *::after {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  html, body {
+    width: 960px !important;
+    height: auto !important;
+    background: white !important;
+    overflow: visible !important;
+    display: block !important;
+  }
+
+  #viewport {
+    display: block !important;
+    width: 960px !important;
+    height: auto !important;
+    padding: 0 !important;
+  }
+
+  #deck {
+    width: 960px !important;
+    height: auto !important;
+    transform: none !important;
+    position: relative !important;
+  }
+
+  #controls { display: none !important; }
+
+  .slide {
+    position: relative !important;
+    opacity: 1 !important;
+    width: 960px !important;
+    height: 540px !important;
+    page-break-after: always;
+    break-after: page;
+    overflow: hidden !important;
+  }
+
+  /* Preserve each layout's own display type — do NOT set display: block globally
+     or it will collapse grid-based layouts (e.g. layout-split) */
+  .slide.layout-split    { display: grid  !important; }
+  .slide.layout-cards,
+  .slide.layout-title,
+  .slide.layout-agenda,
+  .slide.layout-divider,
+  .slide.layout-next-steps { display: block !important; }
+
+  .slide:last-child {
+    page-break-after: avoid;
+    break-after: avoid;
+  }
+}
+```
+
+**Support Hub link:** always use `https://support.productboard.com/hc/en-us` (not the bare domain) in resource and contact slides.
+
 ---
 
 ## Phase 4 — Save and Confirm

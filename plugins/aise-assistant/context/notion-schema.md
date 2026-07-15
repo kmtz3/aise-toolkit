@@ -258,27 +258,29 @@ Fetch the page immediately before writing — `update_content` is whitespace-exa
 
 ## Customers — Field Reference
 
+> **Planhat cross-reference:** The Customers DB has direct equivalents in Planhat's Company model. See `context/planhat-schema.md` for the full field mapping, value mapping, name resolution table, and agent traversal patterns. Key Spark fields (`Spark Customer Journey`, `AI Ready`, `Igniting?`) are actively synced Notion → Planhat. Notion is the source of truth; Planhat is the CS platform record. For health, ARR, and renewal data, Planhat is the source of truth and those fields are not in Notion.
+
 ### Writable fields
 
-| Field | Type | Valid values / notes |
-|---|---|---|
-| `Customer` | title | Account name |
-| `Account Status` | status | **To-do:** `Not started`, `Presales` · **In progress:** `Active (no Services)`, `Active (Services)` · **Complete:** `Contracted to Scale`, `Churned` |
-| `Health (Manual)` | select | `Figuring it out`, `Healthy`, `Concerning`, `Churning` |
-| `Priority` | select | `P0`, `P1`, `P2`, `P3`, `P4`, `Insufficient Data` |
-| `Preferred Conferencing` | select | `Zoom`, `MS Teams`, `Google Meet` |
-| `AI Ready` | select | `Sparked`, `Preparing`, `Ignitable`, `Not ready` |
-| `Spark Customer Journey` | select | `Not Active`, `AI Terms Review`, `Active for Admins (Production)`, `Active for All (Production)`, `Active (Staging only)`, `Icebox` |
-| `Ignite Journey Last Edited` | date | Date triples format. Auto-updated by Notion automation whenever `Spark Customer Journey` changes — do not set manually except when correcting drift. |
-| `Igniting?` | checkbox | `__YES__` once the Ignite motion has actively started for this account (outreach sent, in conversation, or further). `__NO__` only for accounts not yet reached out to re: Spark. |
-| `Industry` | multi-select | `Digital Consumer Intelligence`, `Social Media Management`, `Fintech`, `eCommerce`, `Digital Commerce Technology`, `B2B`, `Automotive`, `Healthcare`, `Insurance`, `eSports` |
-| `Renewal Forecast` | select | `Likely to Renew`, `Risk to Renewal`, `Churning – No save`, `Churning – Ignitable` |
-| `Owner` | person (multi) | The PB owner(s) of this account. **Authoritative ownership signal — source of truth.** Editing this field triggers the Resync button workflow that propagates to `Current Account Owner` on linked Active Packages, Sessions, Tasks. Multi-allowed for handoff windows. |
-| `Account Executive` | person (multi) | The AE assigned to this account. |
-| `Renewal Manager` | person (multi) | The renewal manager for this account. |
-| `SFDC` | url | Salesforce account URL |
-| `Slack Channel` | url | Customer Slack channel URL |
-| `Domain` | url | Customer domain |
+| Field | Type | Valid values / notes | Planhat equivalent |
+|---|---|---|---|
+| `Customer` | title | Account name | `name` (may differ — see name mapping table in `planhat-schema.md`) |
+| `Account Status` | status | **To-do:** `Not started`, `Presales` · **In progress:** `Active (no Services)`, `Active (Services)` · **Complete:** `Contracted to Scale`, `Churned` | `status` / `phase` (no 1:1 mapping) |
+| `Health (Manual)` | select | `Figuring it out`, `Healthy`, `Concerning`, `Churning` | `csmScore` (1–5) |
+| `Priority` | select | `P0`, `P1`, `P2`, `P3`, `P4`, `Insufficient Data` | _(Notion only)_ |
+| `Preferred Conferencing` | select | `Zoom`, `MS Teams`, `Google Meet` | _(Notion only)_ |
+| `AI Ready` | select | `Sparked`, `Preparing`, `Ignitable`, `Not ready` | `custom.AI Ready` — values differ: `Not ready` → `Not Ready` |
+| `Spark Customer Journey` | select | `Not Active`, `AI Terms Review`, `Active for Admins (Production)`, `Active for All (Production)`, `Active (Staging only)`, `Icebox` | `custom.Spark Stage` — values differ: see `planhat-schema.md` mapping table |
+| `Ignite Journey Last Edited` | date | Date triples format. Auto-updated by Notion automation whenever `Spark Customer Journey` changes — do not set manually except when correcting drift. | _(Notion only)_ |
+| `Igniting?` | checkbox | `__YES__` once the Ignite motion has actively started for this account (outreach sent, in conversation, or further). `__NO__` only for accounts not yet reached out to re: Spark. | `custom.Igniting?` (boolean: `true`/`false`) |
+| `Industry` | multi-select | `Digital Consumer Intelligence`, `Social Media Management`, `Fintech`, `eCommerce`, `Digital Commerce Technology`, `B2B`, `Automotive`, `Healthcare`, `Insurance`, `eSports` | _(Notion only)_ |
+| `Renewal Forecast` | select | `Likely to Renew`, `Risk to Renewal`, `Churning – No save`, `Churning – Ignitable` | _(Notion only — use `renewalDate`/`renewalArr` in Planhat for renewal context)_ |
+| `Owner` | person (multi) | The PB owner(s) of this account. **Authoritative ownership signal — source of truth.** Editing this field triggers the Resync button workflow that propagates to `Current Account Owner` on linked Active Packages, Sessions, Tasks. Multi-allowed for handoff windows. | `owner` (objectId → User) — **Do not overwrite Planhat `owner` from AISE logic; managed by RevOps/CS leadership.** |
+| `Account Executive` | person (multi) | The AE assigned to this account. | `custom.Account Executive` (string) |
+| `Renewal Manager` | person (multi) | The renewal manager for this account. | `custom.Renewals Manager` (string) |
+| `SFDC` | url | Salesforce account URL — **also used as the cross-system lookup key**: extract the Account ID from the URL path and match against Planhat `sourceId` | `sourceId` (18-char SF Account ID — extract from this URL) |
+| `Slack Channel` | url | Customer Slack channel URL | _(Planhat only)_ |
+| `Domain` | url | Customer domain | `domains[0]` |
 | `Parent Company` | text | Parent company name for child accounts that share a contract (e.g. "SAP SE" for SAP-family accounts). Populate during account setup / research when the customer is part of a corporate group where multiple entities share one Active Package. |
 | `Main Contact` | relation (limit 1) | → Contacts DB |
 | `Contacts` | relation | → Contacts DB |

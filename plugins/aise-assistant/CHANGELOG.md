@@ -5,6 +5,16 @@ Format: `## [version] — YYYY-MM-DD` followed by bullet points grouped by type.
 
 ---
 
+## [2.28.0] — 2026-07-15
+
+### Added
+- `create-deck`: mandatory print-to-PDF CSS block appended to every deck's `<style>` tag — preserves dark backgrounds, renders one slide per page, fixes layout-split grid collapse on print
+- `create-deck`: Support Hub link rule — always use `https://support.productboard.com/hc/en-us` (not bare domain)
+- `context/planhat-schema.md`: Planhat data model, field mapping, value mapping, name resolution table, and agent traversal patterns
+- `context/notion-planhat-field-mapping.md`: Notion ↔ Planhat field mapping reference for dual-write workflows
+
+---
+
 ## [2.27.3] — 2026-07-01
 
 ### Fixed
