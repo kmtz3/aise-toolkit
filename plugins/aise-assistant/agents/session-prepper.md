@@ -100,6 +100,22 @@ Keep the brief short and skimmable — bold labels, tight bullets, no prose para
 - **Risks**: draw from the AP Working Notes, Glean signals above, and the common-risks table in `context/pb-aise-reference-guide.md`. Only include risks with real evidence — don't manufacture generic bullets.
 - **Agenda + questions**: synthesize from all context gathered. If a customer-proposed agenda was found in Gmail or Slack, use it as the **primary structure** — adapt by adding scorecard-required elements, not by replacing it. Credit the source inline (e.g. _"Adapted from [name]'s May 13 email"_).
 
+### 4b. PM survey / usage data (Strategic Planning and Roadmaps sessions)
+
+For sessions of type **Roadmaps** (`04-roadmaps.md` template) or **Strategic Planning**, run an additional targeted search after the main context pull:
+
+- **Gmail search:** `[customer] PM survey productboard` and `[customer] usage report` — last 14 days.
+- **Glean search:** `[customer] productboard survey results` scoped `after:<last-session-date>`.
+- **Glean Slack:** `source:slack "[customer-channel]" survey` or `usage` — last 14 days.
+
+If found, extract these signals and include them as a **📊 Survey / usage signals** callout in the prep brief under "Since last session":
+- Primary use cases (what PMs actually do in PB day-to-day)
+- Biggest time sinks / pain points
+- AI / Spark demand signals
+- Adoption rates for key features (boards, objectives, ADO/Jira sync, etc.)
+
+These signals directly inform D1–D5 facilitation (what the team actually needs vs what was planned) and must be surfaced as info boxes in the facilitation HTML decision panels via Step 6.5.
+
 ### 5. Land the prep brief in Notion
 
 - Find the Session page using the **triple-key match** (customer + date + type) — this is name-resilient since existing pages may predate the naming convention:
@@ -121,7 +137,8 @@ Keep the brief short and skimmable — bold labels, tight bullets, no prose para
   > **Why this matters:** the `Customers` relation on a Session page is the single most important property — without it the session is orphaned and invisible in the customer's timeline. Never skip or defer this check.
 - **Write prep content into the `📋 Prep — [date]` toggle** using `update_content`:
   - **New page (template just applied):** the toggle already exists as a placeholder — replace its empty interior with the actual prep brief.
-  - **Existing page with toggle present:** write inside the existing toggle.
+  - **Existing page with `Prepped = YES` and a `📋 Prep` toggle already present (enrichment mode):** do **not** create a new toggle or overwrite the existing one. Instead, insert a clearly labelled enrichment block at the top of the toggle's content using `update_content` with an `old_str` anchor. Label it `🔔 **New since prior prep (YYYY-MM-DD)**` (use today's date). Surface new intelligence (emails, Slack signals, survey data, governance doc links) below that label. The original prep content remains intact underneath. Report in Step 7 as "Updated existing prep with new intelligence (enrichment mode)." To override and create a fresh toggle, the user must pass `--force-new-toggle`.
+  - **Existing page with toggle present (not yet prepped):** write inside the existing toggle.
   - **Existing page with no toggle (legacy page without template):** create the toggle by prepending at the top of the body:
     ```
     ## 📋 Prep — YYYY-MM-DD {toggle="true"}

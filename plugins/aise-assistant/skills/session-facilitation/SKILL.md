@@ -64,6 +64,16 @@ Pull all context needed before generating HTML. Run in parallel where possible.
 - Prep brief if available.
 - Fallback: standard agenda for the session type from `context/pb-aise-reference-guide.md`.
 
+**h) Pre-read documents** — check for any documents the user or customer has shared that should be
+referenced live during the session:
+- User-uploaded files in the current conversation (governance docs, agenda proposals, survey results, org charts).
+- Links inside the `📋 Prep` toggle on the Session page (look for "📎" markers or explicit pre-read callouts).
+- Gmail/Drive search for customer-sent attachments in the 7 days before the session.
+
+For each pre-read document found: read its contents, extract key principles/rules/agenda items,
+and plan a dedicated **reference panel** in the HTML (sidebar link, not in main agenda sequence).
+See Panel structure → Pre-read reference panels below.
+
 ---
 
 ## Step 2 — Generate the HTML file
@@ -194,6 +204,22 @@ Always second-to-last (before Watch-fors and Action Items in the sidebar — tho
 2. **Parking lot card** — pre-populated from session template's parking lot items + textarea for new items.
 3. **Next session card** — two inputs: Date + Focus confirmed? (select Yes/Adjusted/TBD).
 
+#### Pre-read reference panels (sidebar link — one per pre-read document)
+
+Generated only when Step 1h found one or more pre-read documents. Each panel is a sidebar link (not in the numbered agenda sequence) and follows this structure:
+
+1. **Source info box** (teal) — doc title, author, link, and a note: "Review and react live during [relevant D# panel]."
+2. **Skimmable summary table** — columns: `#` / `Principle or rule` / `One-line summary`. Max 10 rows. Pull the key rules/items from the document, distil each to a single clear sentence.
+3. **Open questions card** (amber accent) — 3–7 questions surfaced by reading the doc that need to be resolved live. Format: `<div class="watchfor-item"><span class="watchfor-icon">❓</span><span>...</span></div>`.
+4. **Live capture card** (teal accent) — capture table with rows for the governance/agenda decisions that need to come out of the session. Use `<select>` for bounded choices (e.g. "Adopted as-is / With amendments / Not yet"), `<input type="text">` for open fields (e.g. named owner, open amendments). Include a notes textarea.
+
+**Sidebar link icon:** `📋`
+**Sidebar link label:** short doc name (e.g. "Governance Principles", "Customer Agenda")
+**Panel header:** doc title + author attribution
+**Panel subtitle:** "Pre-read — quick reference for [session / D# context]"
+
+This is the confirmed good format from the IBO A12 run — do not deviate.
+
 #### Watch-fors panel (sidebar link — not in main sequence)
 
 Accessible anytime from sidebar. Contains:
@@ -283,28 +309,38 @@ function addRow() {
 
 ## Step 3 — Save the file
 
-```bash
-mkdir -p ~/Desktop/aise-assistant/facilitation/
-```
+**Context detection (mandatory — do this before writing):**
 
-Write the file to: `~/Desktop/aise-assistant/facilitation/{filename}`.
+- **Cowork context** (detected by: `$CLAUDE_PLUGIN_DATA` is set and `$CLAUDE_PLUGIN_DATA/about/identity.md` exists):
+  - Use the `Write` tool to write the file to the Cowork outputs folder. Do **not** use Bash for file creation — `~` in the Linux sandbox resolves to the VM home, not the Mac home.
+  - After writing, call `mcp__cowork__present_files` to surface the file to the user.
+  - The Desktop path is inaccessible from the Cowork sandbox. Do not attempt `mkdir ~/Desktop/...`.
 
-Use the `Write` tool (absolute path: expand `~` to the actual home directory) or Bash.
+- **CLI (Claude Code) context** (all other cases):
+  ```bash
+  mkdir -p ~/Desktop/aise-assistant/facilitation/
+  ```
+  Write the file to: `~/Desktop/aise-assistant/facilitation/{filename}`.
+  Use the `Write` tool with the absolute path (expand `~` to the actual home directory) or Bash.
 
 ---
 
 ## Step 4 — Add reference to Notion Session page
 
+**This step is mandatory — do not skip even if the Notion session page ID was not pre-resolved.**
+
 After the file is saved, add a single paragraph block to the Notion Session page body
 (outside the `📋 Prep` toggle — append below all existing content):
 
-```
-💻 **Facilitation guide:** `~/Desktop/aise-assistant/facilitation/{filename}` — open in browser before the call.
-```
+- **CLI context:** `💻 **Facilitation guide:** \`~/Desktop/aise-assistant/facilitation/{filename}\` — open in browser before the call.`
+- **Cowork context:** `💻 **Facilitation guide generated** — open \`{filename}\` from the Cowork outputs folder before the call.`
 
-Use `notion-update-page` with `command: append_content`. Do not modify the `📋 Prep` toggle or KDD sub-page.
+Use `notion-update-page` with `command: append_content`.  Do not modify the `📋 Prep` toggle or KDD sub-page.
 
-If the Notion session page ID is not already in context, look it up from the Sessions DB (customer + date + type).
+If the Notion session page ID is not already in context, look it up from the Sessions DB (customer + date + type) before attempting the write.
+
+If the Notion write fails, surface the failure explicitly in the Step 5 report — do not silently skip.
+The file is still usable, but the failure must be visible.
 
 ---
 
@@ -312,13 +348,13 @@ If the Notion session page ID is not already in context, look it up from the Ses
 
 ```
 ✅ Facilitation guide saved:
-   ~/Desktop/aise-assistant/facilitation/{filename}
+   {filename}
    {N} panels · {session-type} · {customer}
    Open in any browser. Timer in header — click to start/pause.
 ```
 
 If Notion write succeeded: add `   📌 File path added to Notion session page.`
-If Notion write failed: note it inline — the file is still usable without the Notion reference.
+If Notion write failed: add `   ⚠️ Notion callout write failed — add manually to the session page.`
 
 ---
 

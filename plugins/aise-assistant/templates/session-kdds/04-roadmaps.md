@@ -33,6 +33,7 @@ By the close, the customer has decided:
 - Current roadmap artefacts (often in Miro, slides, spreadsheets)
 - Release/timeframe discipline status (are dates/releases populated?)
 - Named roadmap owner(s)
+- PM survey or usage data (if available) — primary use cases, biggest time sinks, AI interest signals. Search Gmail and Glean for `[customer] PM survey productboard` in the 14 days before the session. Surface findings as info boxes in D1–D5 decision panels in the facilitation guide.
 
 ---
 

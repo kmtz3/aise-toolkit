@@ -5,6 +5,19 @@ Format: `## [version] — YYYY-MM-DD` followed by bullet points grouped by type.
 
 ---
 
+## [2.29.1] — 2026-07-29
+
+### Fixed
+- `skills/session-facilitation`: Step 3 now detects Cowork vs CLI context before saving — Cowork uses `Write` tool + `present_files` (Desktop path is inaccessible from Linux sandbox); CLI uses Bash `mkdir` + Write to `~/Desktop/aise-assistant/facilitation/` as before.
+- `skills/session-facilitation`: Step 4 (Notion callout) is now mandatory and non-skippable; explicit failure surface in Step 5 report if Notion write fails.
+- `agents/session-prepper`: Step 5 enrichment mode — when `Prepped = YES` and a `📋 Prep` toggle already exists, inserts a `🔔 New since prior prep (date)` block inside the existing toggle instead of creating a duplicate. Override with `--force-new-toggle`.
+
+### Changed
+- `skills/session-facilitation`: Step 1 adds sub-step (h) — checks for user-uploaded pre-read documents (governance docs, agendas, survey results) and plans a dedicated sidebar reference panel per document found.
+- `skills/session-facilitation`: Panel structure adds **Pre-read reference panels** spec — skimmable summary table + amber open-questions card + teal capture card. This is the confirmed good format from IBO A12.
+- `agents/session-prepper`: New Step 4b — for Roadmaps and Strategic Planning sessions, explicitly searches Gmail and Glean for PM surveys and usage data; surfaces findings as `📊 Survey / usage signals` callout in the prep brief and passes them as info boxes to the facilitation HTML.
+- `templates/session-kdds/04-roadmaps.md`: Added PM survey / usage data to Pre-read inputs section.
+
 ## [2.29.0] — 2026-07-29
 
 ### Added
