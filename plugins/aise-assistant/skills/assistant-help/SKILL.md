@@ -43,6 +43,7 @@ Commands are grouped by family. Type `/<family>` (or `/<family>-`) in autocomple
 |---|---|
 | **Get up to speed on a customer** before a meeting | `/customer-whats-new <customer>` |
 | **Prepare for a customer session** | `/session-prep <customer> [session-type]` |
+| **Generate a facilitation guide only** | `/session-facilitation <customer> [session-id]` — interactive HTML with timer, decision panels, open items, action capture |
 | **Run a full post-session debrief in one shot** | `/session-debrief <customer> [session-id]` |
 | **Just summarize a delivered call** | `/session-summary [customer or session]` |
 | **Draft a follow-up email** | `/draft-email <who/what>` (saves to Gmail Drafts, never sends) |
@@ -61,7 +62,7 @@ Commands are grouped by family. Type `/<family>` (or `/<family>-`) in autocomple
 ## Suggested order around a customer session
 
 1. **Day before:** `/customer-whats-new <customer>` — surface what's changed since the last touch.
-2. **Day before / morning of:** `/session-prep <customer>` — pulls context, drafts brief, lands in Notion under a `📋 Prep` toggle. For architecting sessions, also creates a customer-facing KDD sub-page.
+2. **Day before / morning of:** `/session-prep <customer>` — pulls context, drafts brief, lands in Notion under a `📋 Prep` toggle. For A/Discovery/Kickoff sessions, also creates a KDD sub-page + interactive facilitation HTML guide saved to `~/Desktop/aise-assistant/facilitation/`.
 3. **Same day after the call:** `/session-debrief <customer>` — runs summary + Notion updates + Tasks + Gmail follow-up draft + Slack debrief draft + scorecard eval, all in one go.
 4. **Optional:** `/session-score <session-type>` if you want a focused scorecard review.
 
@@ -69,7 +70,7 @@ Commands are grouped by family. Type `/<family>` (or `/<family>-`) in autocomple
 
 - **`customer-*`** — account lifecycle (`-setup [--research|--refresh]`, `-whats-new`)
 - **`customer-plan`** — program planning (`--next` for 2–4 sessions, `--full` for a complete program)
-- **`session-*`** — per-session workflows (`-prep`, `-kdds`, `-summary`, `-score`, `-debrief`)
+- **`session-*`** — per-session workflows (`-prep`, `-kdds`, `-facilitation`, `-summary`, `-score`, `-debrief`)
 - **`bulk`** — run a session workflow across multiple meetings at once (`--debrief`, `--prep`)
 - **`bulk-account-setup`** — admin/reorg task: set up all accounts owned by a user
 - **`draft-*`** — message / artifact drafts (`-email`, `-followup`, `-diagram`)

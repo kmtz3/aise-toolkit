@@ -1,5 +1,12 @@
 # Changelog — aise-leadership
 
+## [1.9.9] — 2026-07-15
+
+### Fixed
+- `context/notion-schema.md`: synced from aise-assistant v2.28.1 — Sessions create rule updated: `Current Account Owner` must be set explicitly on create; removed "leave blank" instruction
+
+---
+
 ## [1.9.8] — 2026-07-15
 
 ### Changed

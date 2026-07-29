@@ -1,6 +1,6 @@
 ---
 name: session-prep
-description: Prep for a customer session — pulls context, drafts a brief, posts to Notion under a toggle
+description: Prep for a customer session — pulls context, drafts a brief, posts to Notion under a toggle, and generates an interactive HTML facilitation guide (auto for A/Discovery/Kickoff sessions)
 ---
 
 Prep the user for the customer session identified in the user's message (customer name, session type, and/or date).
@@ -13,8 +13,8 @@ Read the procedure in `agents/session-prepper.md` and execute it inline as the m
 4. Draft a prep brief: customer context, goals, KDDs to drive, open items, risks, suggested agenda, questions to ask.
 5. Find the Notion Session page (create one if missing) and append the brief inside a collapsible toggle heading `📋 Prep — YYYY-MM-DD` so real session notes can go underneath.
 6. **If the session is `🏗️ Architecting`**, also build the customer-facing KDD doc (title, agenda, outcome, action items, per-KDD starter examples + blank decision tables) per `templates/session-kdds/00-index.md`, and create it as a **sub-page of the Session page** titled `KDDs — [Session ID] [Name]`. Ready to copy-paste into the customer's space.
-7. **(Optional) For Discovery and Kick-off sessions** — when requested by the user or proactively offered for these large-format sessions, generate an HTML visual session flow artifact via `show_widget`. Structure: numbered phases (Intro → Upfront Contract with 5 elements → Agenda Topics → Closing), each with time allocation, color-coded cards, and key pointers. This is a visual run sheet, not a replacement for the Notion prep.
-8. Report back with links (Session page + KDD sub-page when created, visual artifact when generated) and any gaps or contradictions surfaced.
+7. **Generate facilitation HTML guide** — execute `skills/session-facilitation/SKILL.md` inline after the KDD sub-page (when applicable) is written. Auto-generates for `🏗️ Architecting`, `🔎 Discovery`, and `👟 Kick off` sessions. Offers (does not auto-run) for Sync and Training. Saves to `~/Desktop/aise-assistant/facilitation/` and adds file path to Notion session page.
+8. Report back with links (Session page + KDD sub-page when created, facilitation guide file path when generated) and any gaps or contradictions surfaced.
 
 Do NOT ask the user for context that's retrievable. Search first, ask once if something is genuinely missing.
 
@@ -29,5 +29,6 @@ Users often bundle related asks with `/session-prep`. Recognize these add-ons an
 | _"what should I do before"_, _"pre-call checklist"_ | In Step 7, include a **Pre-call checklist** section listing concrete actions for the user before the session (overdue tasks, space prep, pre-reads to send, Slack pings to make). |
 | _"full session plan"_, _"minute-by-minute"_, _"run sheet"_ | In Step 7, include a **Session plan** — time blocks with what to say/do/decide in each block, plus contingencies (e.g. _"if Kate is absent, defer D7.2"_). |
 | _"draft diagram"_, _"diagram in figma"_, _"visualize the integration"_ | After primary Notion writes land, spawn `diagram-builder` (per the context-management ordering in `agents/session-prepper.md`). If the sub-agent reports MCPs unavailable, finish Drive upload + Notion attach in the main conversation. |
+| _"facilitation guide"_, _"facilitation html"_, _"run sheet"_, _"no facilitation guide"_ / _"skip the facilitation"_ | The facilitation HTML is auto-generated for A/Discovery/Kickoff sessions — explicit mention overrides the default. "no facilitation guide" or "skip the facilitation" suppresses it. Explicit request forces it even for Sync/Training sessions. |
 
 **Context-management ordering for compound requests.** Write the primary deliverable (Session page + prep brief) first, then create secondary deliverables (Task, KDD sub-page), and only then spawn expensive sub-agents (diagram-builder). This prevents context-window compaction mid-run. See `agents/session-prepper.md` § Context management.

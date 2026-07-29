@@ -115,7 +115,7 @@ Filter queries with `<field> LIKE '%<bare-uuid>%'` so they match the stored form
 - Parent: `data_source_id: 29397e9c-7d4f-8052-886b-000b9e3479d7`
 - Required: `Name`, `Call Status`, `Type`, `date:Call Date:start`, `date:Call Date:is_datetime`
 - Set `Customers` and `Consumed Package` relations on create (works in one call)
-- **`Current Account Owner`** — leave blank on create. The Sessions-side automation fills it from `Customers.Owner` automatically.
+- **`Current Account Owner`** — **must be set explicitly on create** to the current user's UUID: `"Current Account Owner": "[\"<user-uuid>\"]"`. Do **not** rely on the Sessions-side automation — it does not fire reliably on create, and missing this field causes sessions to be invisible in tracker views and reports. Always set it.
 - **`Delivered By`** — set to the actual presenter(s). For the user's own sessions: `["<user-uuid>"]`. For backfilled historical sessions: the predecessor AISE's user ID if resolvable, otherwise leave blank and flag.
 - Types: `🏗️ Architecting`, `🗣️ Sync`, `🎓 Training`, `👟 Kick off`, `🔎 Discovery`, `📦 Other`
 - Statuses: `Not started`, `Planned`, `Postponed`, `In progress`, `Post-session debrief`, `Delivered`, `Canceled`

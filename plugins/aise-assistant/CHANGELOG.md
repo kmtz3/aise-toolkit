@@ -5,6 +5,25 @@ Format: `## [version] — YYYY-MM-DD` followed by bullet points grouped by type.
 
 ---
 
+## [2.29.0] — 2026-07-29
+
+### Added
+- `skills/session-facilitation`: new skill — generates a self-contained interactive HTML facilitation guide for any customer session. Features: sticky header with live timer (click to start/pause, amber warning near end), sidebar navigation between agenda panels, decision capture panels (one per KDD for A-sessions, with options table + live capture table + notes textarea), open items check-in, attendee presence tracking, watch-fors, synthesis/decisions register, and action items capture with add-row. Saves to `~/Desktop/aise-assistant/facilitation/` and adds a file-path callout to the Notion Session page.
+
+### Changed
+- `agents/session-prepper`: added step 6.5 — auto-generates facilitation HTML for `🏗️ Architecting`, `🔎 Discovery`, and `👟 Kick off` sessions after KDD sub-page write; offers (does not auto-run) for Sync and Training. Carries context from prior steps — does not re-fetch. Facilitation guide file path included in step 7 report.
+- `skills/session-prep`: updated description and step 7 to reflect facilitation HTML generation. Added "facilitation guide" / "skip facilitation" to compound request table.
+- `skills/assistant-help`: added `/session-facilitation` to common workflows table and updated suggested session order to mention facilitation guide. Added `-facilitation` to `session-*` family description.
+
+---
+
+## [2.28.1] — 2026-07-15
+
+### Fixed
+- `context/notion-schema.md`: Sessions create rule updated — `Current Account Owner` must now be set **explicitly** on create (`["<user-uuid>"]`); removed "leave blank" instruction. The Sessions-side automation does not fire reliably; missing this field causes sessions to be invisible in tracker views and reports.
+
+---
+
 ## [2.28.0] — 2026-07-15
 
 ### Added

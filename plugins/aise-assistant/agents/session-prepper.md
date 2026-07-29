@@ -150,11 +150,31 @@ If (and only if) `Type = 🏗️ Architecting`, also produce the customer-facing
 
 If anything about steps 1–5 is ambiguous for an A-session (template mismatch, missing D-register, conflicting discovery sources), flag it and skip sub-page creation — don't ship a half-seeded doc. the user can run `/session-kdds` standalone once resolved.
 
+### 6.5 Generate the facilitation HTML guide
+
+For **all session types**, generate a self-contained interactive HTML facilitation guide by executing the procedure in `skills/session-facilitation/SKILL.md` inline (do not spawn as a subagent).
+
+The facilitation guide must be generated **after** the KDD sub-page write (step 6) lands, so that:
+- Decisions are numbered correctly (continuing the D-register).
+- KDD question text and option tables are available to seed the HTML's decision panels.
+
+**For `🏗️ Architecting` sessions:** generate automatically — do not ask the user.
+**For `🔎 Discovery` and `👟 Kick off` sessions:** generate automatically — these large-format sessions benefit most from a visual run sheet.
+**For `🗣️ Sync` and `🎓 Training` sessions:** offer in the Step 7 report rather than auto-generating. Phrase as: "Want a facilitation guide for the session? I can generate one with a live timer and capture panels."
+
+Context carried forward from steps 1–6 (do not re-fetch):
+- Session ID, Name, Date, Duration from step 1.
+- KDD decisions list from step 6 (A-sessions).
+- Attendees from step 2 (Calendar).
+- Open items from prior session (step 2 Notion context).
+- Watch-fors and scorecard from step 3.
+- Notion Session page ID from step 5.
+
 ### 7. Report in chat
 
 Post a summary with these sections:
 
-**a) Links** — Notion pages created/updated (Session page, KDD sub-page when applicable, Tasks, diagram).
+**a) Links** — Notion pages created/updated (Session page, KDD sub-page when applicable, Tasks, diagram) + facilitation guide file path when generated.
 
 **b) Pre-call checklist** — concrete actions the user should take before the call. Include any of these that apply:
 - Overdue tasks from prior sessions that affect this one
