@@ -89,6 +89,13 @@ Gmail does not render markdown. Every draft saved via the Gmail API or copy-past
 - **No markdown bold** — never use `**text**`. Use plain text in the `body` field; bold may appear only via `<strong>` tags in the `htmlBody` field.
 - **Next steps as a flat bulleted list** — one item per line, inline owner + action + timing: `[Owner] — [Action] (timing)`. Never a table.
 
+**Subject line format**
+
+- Use `Productboard + [Customer] – [Topic]` for account-related emails (e.g. `Productboard + Cofense – Session follow-up`)
+- Always "Productboard + [Customer]", never "x" — "x" implies a match or competition; "+" signals partnership
+- Productboard first: customers see the sender context on a skim; customer name second confirms it's relevant to them
+- For follow-ups with no account framing needed: `Follow-up: [Topic] – next steps`
+
 **Level of detail**
 
 - Default to **high signal, medium detail** – enough that a busy PM or stakeholder can understand quickly, without over-explaining basics they already know.

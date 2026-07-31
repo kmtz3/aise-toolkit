@@ -5,6 +5,13 @@ Format: `## [version] — YYYY-MM-DD` followed by bullet points grouped by type.
 
 ---
 
+## [2.29.2] — 2026-07-31
+
+### Changed
+- `context/communication-style-guide.md`: added subject line format convention — use `Productboard + [Customer] – [Topic]` (never "x"); Productboard first for sender context on skim
+
+---
+
 ## [2.29.1] — 2026-07-29
 
 ### Fixed

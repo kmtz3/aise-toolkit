@@ -1,5 +1,12 @@
 # Changelog — aise-leadership
 
+## [1.9.10] — 2026-07-31
+
+### Changed
+- `context/communication-style-guide.md`: added subject line format convention — use `Productboard + [Customer] – [Topic]` (never "x"); synced from aise-assistant v2.29.2
+
+---
+
 ## [1.9.9] — 2026-07-15
 
 ### Fixed
