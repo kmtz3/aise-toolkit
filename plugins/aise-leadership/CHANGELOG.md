@@ -1,5 +1,12 @@
 # Changelog — aise-leadership
 
+## [1.9.11] — 2026-07-31
+
+### Changed
+- `context/communication-style-guide.md`: added explicit em dash ban section – synced from aise-assistant v2.29.3
+
+---
+
 ## [1.9.10] — 2026-07-31
 
 ### Changed

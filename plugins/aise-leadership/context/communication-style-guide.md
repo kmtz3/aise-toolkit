@@ -81,6 +81,10 @@ When there are follow-ups or decisions:
 6. **Questions / Call for input** – invite clarifications or choices if needed, but stay focused.
 7. **Sign-off**
 
+**Em dash ban (applies to ALL output without exception)**
+
+Never use em dashes (—). Use en dashes (–) everywhere a dash is needed — in emails, Slack messages, subject lines, Notion pages, bullets, and inline chat responses. This is an absolute rule: check every dash character before producing any draft.
+
 **Gmail copy-paste safety (applies to any draft saved to Gmail Drafts)**
 
 Gmail does not render markdown. Every draft saved via the Gmail API or copy-pasted into Gmail compose must be safe to read as plain text:

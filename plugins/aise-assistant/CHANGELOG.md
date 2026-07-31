@@ -5,6 +5,13 @@ Format: `## [version] — YYYY-MM-DD` followed by bullet points grouped by type.
 
 ---
 
+## [2.29.3] — 2026-07-31
+
+### Changed
+- `context/communication-style-guide.md`: added explicit em dash ban section – never use em dashes (—), always en dashes (–), applies to all output without exception
+
+---
+
 ## [2.29.2] — 2026-07-31
 
 ### Changed
