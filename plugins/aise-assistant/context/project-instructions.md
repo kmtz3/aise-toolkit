@@ -202,6 +202,8 @@ After every `/session-debrief`, run these Planhat steps in order:
    
    Find the ID via `search_records(QUERY: "{session title}", MODEL: "Task")` filtering for `mainType=event`. Do NOT create a new Conversation record — the Conversation record already exists (same ID as the Task); just update it.
 
+   Also update the `transcript` field on the Conversation record with the full call transcript retrieved from Gong (via `Glean:read_document`). Format as HTML paragraphs: `<p><strong>Speaker Name:</strong> text</p>` per turn. Replace `` control characters (Gong paragraph separators within a turn) with a space. Map Gong author fields to real names: `klara.martinez@productboard.com` → Klara Martinez; unknown hash IDs → cross-reference with calendar attendees; empty author → remaining attendee. Write transcript to Conversation only (not Task).
+
    **HTML formatting is required** — plain markdown is not rendered in Planhat. Use `<h3>`, `<ul>/<li>`, `<strong>`, `<p>`, `<a href>`. This rule applies to ALL Planhat description fields (event task descriptions and Task descriptions in step 4). Never use markdown syntax (`**`, `##`, `-`) in any Planhat field. Example HTML structure:
    ```html
    <h3>Session Notes — YYYY-MM-DD</h3>

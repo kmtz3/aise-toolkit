@@ -5,6 +5,13 @@ Format: `## [version] — YYYY-MM-DD` followed by bullet points grouped by type.
 
 ---
 
+## [2.29.5] — 2026-07-31
+
+### Fixed
+- Planhat dual-write: also write Gong transcript to `transcript` field on Conversation record (HTML `<p><strong>Speaker:</strong> text</p>` format per turn; map Gong author hashes to real names via calendar attendees).
+
+---
+
 ## [2.29.4] — 2026-07-31
 
 ### Fixed

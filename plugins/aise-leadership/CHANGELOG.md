@@ -1,5 +1,12 @@
 # Changelog — aise-leadership
 
+## [1.9.13] — 2026-07-31
+
+### Changed
+- `context/project-instructions.md`: Planhat transcript field rule — write Gong transcript to Conversation.transcript after every debrief — synced from aise-assistant v2.29.5
+
+---
+
 ## [1.9.12] — 2026-07-31
 
 ### Changed
