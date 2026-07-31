@@ -1,5 +1,12 @@
 # Changelog — aise-leadership
 
+## [1.9.12] — 2026-07-31
+
+### Changed
+- `context/project-instructions.md`: Planhat dual-write fix — update both Task and Conversation models with same ID; HTML-only formatting rule for descriptions — synced from aise-assistant v2.29.4
+
+---
+
 ## [1.9.11] — 2026-07-31
 
 ### Changed

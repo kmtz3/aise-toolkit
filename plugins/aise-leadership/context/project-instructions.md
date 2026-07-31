@@ -196,14 +196,30 @@ After every `/session-debrief`, run these Planhat steps in order:
 
 1. **Find the company** — `search_records(QUERY: "{customer name}")` → capture `companyId`.
 2. **Mark the Calendly event done** — if a Planhat Task exists with `action` matching the session title (Calendly-synced event), call `update_model_record(status: "done", dateDone: "<ISO datetime>")`.
-3. **Log a Conversation** — `create_model_record(MODEL: "Conversation")` with:
-   - `type`: `"meeting"` — **do NOT use `"call"` (it is a reserved type and will error)**
-   - `companyId`, `subject` (session title), `date` (session start as ISO datetime)
-   - `description`: session notes — decisions, actions, risks, next steps
-   - `custom.Gong URL`: Gong recording URL
-   - `custom.Call Duration`: duration in minutes (number)
-   - `sentiment`: `"positive"` / `"neutral"` / `"negative"`
-   - `users`: `[{"id": "6a44ef76c9aade50502936d5"}]` (Klara)
+3. **Log session notes on the calendar event — both models.** Planhat stores each Calendly-synced calendar event under the **same ID** in two models simultaneously: `Task` (mainType=event) and `Conversation`. Both have a separate `description` field. You must update both:
+   - `update_model_record(MODEL: "Task", OBJECT_ID: "{id}", PARAMETERS: {description: "..."})`
+   - `update_model_record(MODEL: "Conversation", OBJECT_ID: "{id}", PARAMETERS: {description: "..."})`
+   
+   Find the ID via `search_records(QUERY: "{session title}", MODEL: "Task")` filtering for `mainType=event`. Do NOT create a new Conversation record — the Conversation record already exists (same ID as the Task); just update it.
+
+   **HTML formatting is required** — plain markdown is not rendered in Planhat. Use `<h3>`, `<ul>/<li>`, `<strong>`, `<p>`, `<a href>`. This rule applies to ALL Planhat description fields (event task descriptions and Task descriptions in step 4). Never use markdown syntax (`**`, `##`, `-`) in any Planhat field. Example HTML structure:
+   ```html
+   <h3>Session Notes — YYYY-MM-DD</h3>
+   <h3>What landed</h3>
+   <ul>
+     <li><strong>Decision:</strong> [outcome]</li>
+   </ul>
+   <h3>Action items</h3>
+   <ul>
+     <li><strong>PB — Klara:</strong> [what] by [date]</li>
+     <li><strong>Customer — [name]:</strong> [what] by [date]</li>
+   </ul>
+   <h3>Open items</h3>
+   <ul><li>[item + owner]</li></ul>
+   <h3>Source</h3>
+   <p><a href="[GONG_URL]">Gong recording</a></p>
+   ```
+
 4. **Create Tasks** — one `create_model_record(MODEL: "Task")` per PB-side action item:
    - `mainType`: `"task"`, `companyId`, `action` (title), `description`
    - `ownerId`: `6a44ef76c9aade50502936d5` (Klara)

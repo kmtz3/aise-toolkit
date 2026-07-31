@@ -5,6 +5,14 @@ Format: `## [version] — YYYY-MM-DD` followed by bullet points grouped by type.
 
 ---
 
+## [2.29.4] — 2026-07-31
+
+### Fixed
+- Planhat dual-write: Calendly-synced events exist as the same ID in both `Task` and `Conversation` models — session notes must be written to `description` on both records (not just Task). Do not create a new Conversation record.
+- Planhat formatting: all `description` fields must use HTML (`<h3>`, `<ul>/<li>`, `<strong>`, `<p>`, `<a href>`). Plain markdown is not rendered.
+
+---
+
 ## [2.29.3] — 2026-07-31
 
 ### Changed
