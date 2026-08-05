@@ -155,15 +155,17 @@ LIMIT 500
 
 1. **Extract Notion page ID** — the 32-char hex from the session page URL. This becomes `externalId`.
 
-2. **GCal EndUser backfill — resolve attendees for this session:**
-   - Call `list_events` for the session's `Call Date` (retrieve all events on that day) and match the calendar event by title similarity (session name ≈ event title) or by customer name in the attendee list.
-   - Extract customer-side attendee emails (exclude `@productboard.com` addresses and any Productboard-internal domains).
+2. **Gong + GCal EndUser backfill — resolve attendees for this session:**
+   - **Try Gong first:** Call `mcp__Gong__ask_account(crmAccount: "<customer>")` and look for a Gong call matching this session's date and title. Extract the actual call participants (Gong shows who joined, not just who was invited). If Gong returns a match, use Gong's participant list as the authoritative source and skip GCal lookup.
+   - **GCal fallback (only if Gong has no record):** Call `list_events` for the session's `Call Date` and match the calendar event by title similarity (session name ≈ event title) or by customer name in the attendee list. Extract `accepted` RSVPs only.
+   - Extract customer-side attendee emails from whichever source was used (exclude `@productboard.com` addresses and any Productboard-internal domains).
    - For each customer email, search for a matching Planhat EndUser:
      ```
      search_records(QUERY: "<email>")
      ```
      Filter to `model: "EndUser"` with `companyId = <planhat-company-id>`. Capture `_id` for each match.
    - Collect resolved EndUser `_id` values into an `endUsers` array for the payload. If no attendees resolve, omit `endUsers`.
+   - **Note any Gong participants with no matching Planhat EndUser** in the migration output — do not create EndUser records as a side effect.
 
 3. **Dedup check:**
    ```
