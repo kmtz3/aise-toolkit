@@ -4,28 +4,37 @@
 >
 > **Last updated:** 2026-07-13 (architecture updated: sessions → Conversation, tasks → Task)
 >
-> **Architecture:**
-> - Notion **Sessions** (delivered calls) → Planhat **Conversation** (`create_model_record MODEL: "Conversation"`). Dedup key: `externalId` = Notion session page ID.
-> - Notion **Tasks** (action items) → Planhat **Task** (`mainType: "task"`). Dedup key: `sourceId` = Notion task page ID.
-> - GCal-synced meetings already exist in Planhat as `mainType: "event"` — do not duplicate as Conversations.
+> **Migration architecture:**
+>
+> | Notion | Planhat | Dedup key |
+> |---|---|---|
+> | Sessions (`Call Status = Delivered`) | **Conversation** (typed by session type) | `externalId` = Notion Session page ID |
+> | Tasks (all statuses) | **Task** (`mainType: "task"`) | `sourceId` = Notion Task page ID |
+> | Tasks (`Status = Done`) | **Task** → Planhat auto-creates linked **Conversation** | Post-write: check `noteId` → update Conversation `type` to `"Task"` if not already set |
+> | Contacts | **EndUser** | `email` or `externalId` |
+> | Customers | **Company** | SF-synced — AISE writes Spark/phase/Journey Status only |
+> | Active Packages / Master Packages | **Deal** / **Product** | SF SSOT — **never write from Notion** |
+>
+> GCal-synced meetings already exist in Planhat as `mainType: "event"` — do not duplicate as Conversations.
 
 ---
 
 ## Session Type Mapping: Notion → Planhat Conversation `type`
 
-These are the exact Planhat conversation type values (as configured in the workspace).
+> ⚠️ **Emojis are part of the exact configured option strings.** Use the Planhat column values verbatim — passing text without the emoji will save but won't match configured filters.
 
-| Notion `Type` | Planhat `type` | Notes |
+| Notion `Type` | Planhat `type` (exact string) | Notes |
 |---|---|---|
-| `🏗️ Architecting` | `Architecting` | |
-| `🗣️ Sync` | `Sync` | |
-| `🎓 Training` | `Enablement` | Planhat uses "Enablement" not "Training" |
-| `👟 Kick off` | `Kick off` | |
-| `🔎 Discovery` | `Discovery` | |
-| `📦 Other` | `Audit / Setup Review` | Catch-all for ad hoc, QBR, setup calls |
-| `🫥 Internal` | `Internal Alignment` | Sync to Planhat under the Internal section |
+| `🏗️ Architecting` | `🏗️ Architecting` | Emoji matches |
+| `🗣️ Sync` | `🔁 Sync` | **Different emoji** (🗣️ → 🔁) |
+| `🎓 Training` | `🎓 Enablement` | **Different label** — Planhat uses "Enablement" |
+| `👟 Kick off` | `👟 Kick off` | Emoji matches |
+| `🔎 Discovery` | `🔎 Discovery` | Emoji matches |
+| `📦 Other` | `🏁 Audit / Setup Review` | **Different emoji + label** |
+| `🫥 Internal` | `Internal Alignment` | No emoji in Planhat |
+| _(Done Notion Task — auto-created Conversation)_ | `Task` | No emoji. Planhat auto-creates this Conversation when Task `status` is set to `"done"`. Update via `noteId` post-write if type is not already `"Task"`. Canceled (`"ignored"`) tasks do **not** generate a Conversation. |
 
-> **Planhat types with no Notion equivalent:** `Webinar`, `Demo` — used for non-AISE sessions logged directly in Planhat.
+> **Planhat types with no Notion equivalent:** `📺 Webinar`, `🎙️ Demo`, `👾 Gong Call` — logged directly in Planhat, not from Notion.
 
 > **Note on calendar events:** GCal-synced meetings already exist in Planhat as `mainType: "event"`. AISE writes Conversations only — no overlap.
 
@@ -46,15 +55,17 @@ Conversations have no `status` field — `Call Status` determines whether to syn
 
 ### Notion Task Status → Planhat Task `status`
 
-Planhat Task `status` values (workspace-configured): `done` · `in progress` · `blocked` · `ignored`
+All Notion Tasks write to the **Planhat Task model**. For done/canceled tasks, Planhat auto-creates a linked Conversation on save — follow the post-write step to ensure the type is correct.
 
-| Notion `Status` | Planhat `status` | Action |
+| Notion `Status` | Planhat `status` | Post-write action |
 |---|---|---|
-| `Not started` | `in progress` | Sync |
-| `In progress` | `in progress` | Sync |
-| `Done` | `done` | Sync |
-| `Canceled` | `ignored` | Update only (skip on initial backfill) |
-| _(no Notion equivalent)_ | `blocked` | Set manually in Planhat only |
+| `Not started` | `"To Do"` | None |
+| `In progress` | `"in-progress"` | None. Hyphenated lowercase — NOT `"In-Progress"` |
+| `Done` | `"done"` | Read `noteId` from Task response → check linked Conversation's `type` → update to `"Task"` if not already |
+| `Canceled` | `"ignored"` | None — Planhat does **not** auto-create a Conversation for `"ignored"` tasks |
+| _(Planhat only)_ | `"blocked"` | Set manually in Planhat — no Notion equivalent |
+
+> **Why the post-write step:** When a Task is marked done/ignored, Planhat auto-creates a linked Conversation and sets `noteId` on the Task pointing to that Conversation's `_id`. The auto-created Conversation's `type` may not default to `"Task"`. Check and update it — skip the update if `type` is already `"Task"` (idempotent).
 
 ---
 
@@ -69,17 +80,19 @@ Planhat Task `status` values (workspace-configured): `done` · `in progress` · 
 | `date:Call Date:start` | `startDate` | date | Call start date. |
 | `Customers` (relation) | `companyId` | objectId | Resolve via company name or SF `sourceId`. See `planhat-schema.md`. **Required.** |
 | `Delivered By` (person, all values) | `users` | array | `[{"id": "<planhat-user-id>"}]`. Resolve from User ID table in `planhat-schema.md`. |
-| `Next Steps` / session body | `description` | string | Summary/notes. Truncate to ~2000 chars. Append `\n\nGong: <url>` if `Gong call` is set. |
+| `Next Steps` / session body | `description` | string | Summary/notes. Truncate to ~2000 chars. Do **not** append Gong URL here — use `custom.Gong URL` instead. |
+| `Gong call` (url) | `custom.Gong URL` | string | Gong call link. **Write to `custom.Gong URL`, not appended to `description`.** |
+| `Session Length (h)` | `custom.Call Duration` | number | Multiply by 60 → minutes. |
 | `Spark Conversation` | `activityTags` | array | `__YES__` → include `"Spark"` in `activityTags`. |
 | _(constant)_ | `source` | string | Always `"AISE"`. Distinguishes from Zendesk/GCal entries. |
 
-**Fields skipped:** `Session Length (h)`, `Consumed Package`, `Do not count`, `Prepped`, `Debriefed`
+**Fields skipped:** `Consumed Package`, `Do not count`, `Prepped`, `Debriefed`
 
 > **Note:** `Call Status` drives whether to sync at all (see status mapping above), but is not written to Planhat.
 
 ---
 
-## Tasks → Planhat Task: Field Mapping
+## Tasks → Planhat Task: Field Mapping (all statuses)
 
 | Notion field | Planhat field | Type | Notes |
 |---|---|---|---|
@@ -91,7 +104,7 @@ Planhat Task `status` values (workspace-configured): `done` · `in progress` · 
 | `Customers` (relation) | `companyId` | objectId | Resolve same as sessions. Skip if Customers = Productboard internal record (`29997e9c7d4f80e6a011f053bdec1ab5`). |
 | `Owner` (person) | `ownerId` | objectId | Single owner. Resolve Notion user UUID → Planhat User `_id` via User ID table. |
 | `Priority` | `custom.Priority` | string | `"1"` → `"P1"` · `"2"` → `"P2"` · `"3"` → `"P3"` · null → omit. Valid options: `P0`–`P4` (P0 and P4 not sourced from Notion tasks). |
-| `Status` | `status` | string | See status mapping above. |
+| `Status` | `status` | string | `Not started` → `"To Do"` · `In progress` → `"in-progress"` (hyphenated, lowercase). Done/Canceled tasks do NOT reach this model — they go to Conversation. |
 
 **Fields skipped:** `Source Call`, `Time (h)`, `Do not count`, `Consumed Package`
 
@@ -120,9 +133,27 @@ Planhat Task `status` values (workspace-configured): `done` · `in progress` · 
 |---|---|---|---|
 | `Health (Manual)` | `csmScore` | Write | `Healthy` → `4` · `Figuring it out` → `3` · `Concerning` → `2` · `Churning` → `1` · null → omit |
 
+### `phase` vs `custom.AISE Journey Status` — which field to use
+
+These two fields serve different purposes and have different scope:
+
+| | `phase` | `custom.AISE Journey Status` |
+|---|---|---|
+| **Scope** | All Planhat companies | AISE-managed accounts only (30k+ ARR) |
+| **What it tracks** | Universal services lifecycle stage (big buckets: Preparation → Activation → Adoption → Renewal → Churned) | AISE program-specific status (Presales / Active no Services / Active with Services / Contracted to Scale / Churned) |
+| **Used by AISE accounts?** | ✅ Yes | ✅ Yes |
+| **Used by AIPA accounts?** | ✅ Yes | ❌ No — leave blank for AIPA accounts (under 30k ARR) |
+| **Segmentation rule** | — | AISE = 30k+ ARR · AIPA = under 30k ARR |
+
+> `phase` is the shared signal across the full book of business. `custom.AISE Journey Status` is an AISE-team overlay that adds program-level nuance — AIPA uses `phase` to track where customers are in their services journey, but their accounts don't carry an AISE Journey Status.
+
+---
+
 ### Journey Status — write from Notion ✓ field confirmed
 
 Maps from Notion `Account Status`. Field ID: **`custom.AISE Journey Status`** (not `custom.Journey Status`).
+
+> **AISE accounts only.** Do not write this field for AIPA-managed accounts (under 30k ARR).
 
 > ⚠️ **`Not started` is not a valid option in Planhat.** If Notion `Account Status` = `Not started`, omit the field (do not write).
 
@@ -137,19 +168,22 @@ Maps from Notion `Account Status`. Field ID: **`custom.AISE Journey Status`** (n
 
 ### Services Phase → `phase` (default Planhat field)
 
-`custom.Services Phase` has been deleted. Use the standard Planhat **`phase`** field instead. Maps from the customer's current **Active Package `Status`** (the package where `Active? = YES`). Free-text — write the value as-is.
+`custom.Services Phase` has been deleted. Use the standard Planhat **`phase`** field instead. Maps from the customer's current **Active Package `Status`** (the package where `Active? = YES`).
 
-| Notion `Active Package.Status` | Planhat `phase` | Action |
+**`phase` is NOT free-text.** Planhat has configured options: `0. Preparation` · `1. Activation` · `2. Adoption` · `3. Renewal` · `4. Churned`. Always write one of these exact values.
+
+| Notion `Active Package.Status` | Planhat `phase` | Notes |
 |---|---|---|
-| `Not started` | `Not started` | Write |
-| `Preparing` | `Preparing` | Write |
-| `Activating` | `Activating` | Write |
-| `Adopting` | `Adopting` | Write |
-| `Renewal` | `Renewal` | Write |
-| `Package Expired` | `Package Expired` | Write |
-| `Service Quota Used` | `Service Quota Used` | Write |
+| `Not started` | `0. Preparation` | Package exists but not yet kicked off |
+| `Preparing` | `0. Preparation` | |
+| `Activating` | `1. Activation` | |
+| `Adopting` | `2. Adoption` | |
+| `Service Quota Used` | `2. Adoption` | Services credit exhausted but contract still active |
+| `Renewal` | `3. Renewal` | |
+| `Package Expired` | `0. Preparation` | Contract lapsed — set to Preparation as a flag for manual review in Planhat |
+| No active package (`Active? = YES` not found) | `0. Preparation` | Same as above — needs manual review |
 
-> If a customer has no active package (`Active? = YES`), leave `phase` blank.
+> **`4. Churned`** is set manually in Planhat when a customer fully churns. It is not derived from Active Package status — it aligns with `custom.AISE Journey Status = Churned`.
 
 ### Spark fields — actively synced (Notion → Planhat)
 
@@ -158,6 +192,18 @@ Maps from Notion `Account Status`. Field ID: **`custom.AISE Journey Status`** (n
 | `Spark Customer Journey` | `custom.Spark Stage` | `Not Active` → `Not Active` · `AI Terms Review` → `AI Terms Review` · `Active for Admins (Production)` → `Active for Admins` · `Active for All (Production)` → `Active for All` · `Active (Staging only)` → `Active on Staging` · `Icebox` → `Icebox` |
 | `AI Ready` | `custom.AI Ready` | `Sparked` → `Sparked` · `Preparing` → `Preparing` · `Ignitable` → `Ignitable` · `Not ready` → `Not Ready` _(capital R in Planhat)_ |
 | `Igniting?` | `custom.Igniting?` | `__YES__` → `true` · `__NO__` → `false` |
+
+### Active Packages ↔ Planhat Deal
+
+Planhat `Deal` records are the functional equivalent of Notion `Active Packages`. Each Deal represents a contract/package with associated `LineItem` records (credit types, session quotas, etc.).
+
+> **⛔ Never write Deal or LineItem records from Notion to Planhat.** Deals are owned by the Salesforce → Planhat sync (RevOps-managed). Salesforce is the SSOT for all contract and revenue data. Creating or updating Deals via MCP would conflict with the next SF sync.
+
+**What this means in practice:**
+- Do not map Active Package fields (Name, Start Date, End Date, Credits, Sessions) to Planhat Deals.
+- Do not create Deal records as part of session debrief or backfill workflows.
+- The Active Package `Status` field _does_ influence Planhat via the `phase` field on Company — but that is the only write path (Company.`phase`, not Deal).
+- To read contract/revenue data for an account, use `list_model_records(MODEL: "Deal", FILTER: {"companyId[equal to]": "<id>"})` — this surfaces what SF has synced.
 
 ### SF-synced fields (read-only — **never write**)
 
@@ -253,14 +299,18 @@ All fields verified against live Planhat API schema (`get_model_action_parameter
 
 **Company fields:**
 - `custom.AISE Journey Status` — string, options: `Presales` · `Active (no Services)` · `Active (Services)` · `Contracted to Scale` · `Churned` (**`Not started` is not a valid option — omit when Notion = `Not started`**). Note: field ID is `custom.AISE Journey Status`, not `custom.Journey Status`.
-- `phase` — standard Planhat field (free-text). Replaces deleted `custom.Services Phase`. Values: `Not started` · `Preparing` · `Activating` · `Adopting` · `Renewal` · `Package Expired` · `Service Quota Used`
+- `phase` — standard Planhat field. Replaces deleted `custom.Services Phase`. **Configured options (not free-text):** `0. Preparation` · `1. Activation` · `2. Adoption` · `3. Renewal` · `4. Churned`. Derived from Active Package `Status` — see mapping table above. `4. Churned` is set manually, not via Active Package sync.
 - `custom.Spark Stage` — options: `Not Active` · `AI Terms Review` · `Active for Admins` · `Active for All` · `Icebox` · `Active on Staging`
 - `custom.AI Ready` — options: `Ignitable` · `Sparked` · `Preparing` · `Not Ready`
 - `custom.Igniting?` — boolean
 
-**Task fields:**
+**Task fields (all statuses — all Notion Tasks write to Planhat Task model):**
 - `custom.Priority` — options: `P0` · `P1` · `P2` · `P3` · `P4`
 - `custom.Spark Conversation` — boolean
-- `status` — workspace-configured string (not enumerated in API): `done` · `in progress` · `blocked` · `ignored`
+- `status` — workspace-configured: `"To Do"` · `"in-progress"` · `"blocked"` · `"ignored"` (**Note:** hyphenated `in-progress`, capital `To Do` — previously documented as `In-Progress` which is wrong)
 - `users` — readonly (cannot write); use `ownerId` instead
 - `noSpecificTime` — boolean ✓
+
+**Conversation custom fields (confirmed):**
+- `custom.Gong URL` — string. Use this for Gong links — do NOT append to `description`.
+- `custom.Call Duration` — number (minutes). Derive from Notion `Session Length (h)` × 60.
