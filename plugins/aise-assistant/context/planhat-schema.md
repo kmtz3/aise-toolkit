@@ -514,7 +514,7 @@ list_model_records(
 | `Priority` | `type` | string | Write | `"1"` → `"P1"`, `"2"` → `"P2"`, `"3"` → `"P3"`. Stored in the free-text `type` field. |
 | `Do not count` | _(skip)_ | — | — | Notion billing flag. Not relevant to Planhat. |
 | `Consumed Package` | _(skip)_ | — | — | No Planhat equivalent. |
-| `Source Call` | `description` (appended) | string | Write | Append `"Source session: <session name>"` if present. |
+| `Source Call` | _(skip)_ | — | — | No native foreign key in Planhat linking a Task back to its source Conversation. Skip — the relationship lives in Notion. |
 | _(constant)_ | `mainType` | string | Write (constant) | Always `"task"`. |
 
 #### Status value mapping
