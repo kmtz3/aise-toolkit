@@ -5,6 +5,20 @@ Format: `## [version] — YYYY-MM-DD` followed by bullet points grouped by type.
 
 ---
 
+## [2.30.0] — 2026-08-05
+
+### Added
+- `ph-migrate-notion-data` agent + skill (`/ph-migrate-notion-data`) — Notion → Planhat migration, previously undocumented in `CLAUDE.md`/`README.md` despite existing on disk since v2.29.0-era. Added to the agent table, command roster, and README counts.
+- `README.md` / `CLAUDE.md`: documented `/session-facilitation` and `/spark-onepager` as standalone commands (existed on disk, undocumented); documented `/notion-fix` and `/notion-ask` in the README family breakdown; documented `/assistant-improvement`.
+
+### Removed
+- `skills/temp-api-migration-usage-report` — temporary skill for the API v1 usage report, past its self-declared sunset (API v1 sunset was 2026-07-08; skill said to delete after that date).
+
+### Fixed
+- `README.md`: slash-command and agent counts were stale (claimed 22 commands / 20 agents; actual 32 commands / 24 agents before this cleanup).
+
+---
+
 ## [2.29.5] — 2026-07-31
 
 ### Fixed

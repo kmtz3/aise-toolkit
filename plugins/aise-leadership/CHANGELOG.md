@@ -1,5 +1,12 @@
 # Changelog — aise-leadership
 
+## [1.10.0] — 2026-08-05
+
+### Changed
+- `context/planhat-schema.md`, `context/project-instructions.md`: caught up to aise-assistant's canonical copies — resynced via `scripts/sync-context.sh` after two prior aise-assistant context commits (`7365582`, `9b59412`) landed without a follow-up sync. Picks up: `custom.Priority` mapping fix, `activityTags` read-only caveat, task dedup pattern fix, `Session Length (h)` → `custom.Call Duration` mapping, `custom.Prep Notes` field, PH-migration-gate section, `create_model_record` `PARAMETERS`-not-`DATA` param fix, Gong-MCP-preference note, and the Fin chat escalation section (§10).
+
+---
+
 ## [1.9.13] — 2026-07-31
 
 ### Changed

@@ -4,17 +4,19 @@ A Cowork / Claude Code plugin that turns any Productboard **AI Success Engineer 
 
 ## What's in the box
 
-- **22 slash commands** grouped by family. Type `/<family>` (or `/<family>-`) in autocomplete to see siblings.
+- **32 slash commands** grouped by family. Type `/<family>` (or `/<family>-`) in autocomplete to see siblings.
   - **`customer-*`** (3) — `/customer-setup [--research|--refresh]`, `/bulk-account-setup`, `/customer-whats-new`
   - **`customer-plan`** (1, two modes) — `/customer-plan --next`, `/customer-plan --full`
-  - **`session-*`** (5) — `/session-prep`, `/session-kdds`, `/session-summary`, `/session-score`, `/session-debrief`
+  - **`session-*`** (6) — `/session-prep`, `/session-kdds`, `/session-summary`, `/session-score`, `/session-backfill [--bulk]`, `/session-debrief`
   - **`bulk`** (1, two modes) — `/bulk --debrief`, `/bulk --prep`
   - **`draft-*`** (3) — `/draft-email`, `/draft-followup`, `/draft-diagram`
-  - **`notion-*`** (2) — `/notion-write`, `/notion-check`
+  - **`notion-*`** (3) — `/notion-write`, `/notion-check`, `/notion-fix`
   - **`notion-sync`** (1, three modes) — `/notion-sync --sf`, `/notion-sync --owner`, `/notion-sync --renewals`
-  - **`assistant-*`** (4) — `/assistant-setup`, `/assistant-help`, `/assistant-remember`, `/aise-context`
-  - **Standalone** (2) — `/support-hub`, `/daily-brief`
-- **20 specialist agents** that execute each command (session prep, KDD generation, summaries, Notion writes, integrity checks, etc.).
+  - **`notion-ask`** (1) — `/notion-ask <question>`
+  - **`ph-*`** (1) — `/ph-migrate-notion-data`
+  - **`assistant-*`** (5) — `/assistant-setup`, `/assistant-help`, `/assistant-remember`, `/assistant-improvement`, `/aise-context`
+  - **Standalone** (7) — `/support-hub`, `/daily-brief`, `/spark-demo-prep`, `/log-feedback`, `/create-deck`, `/session-facilitation`, `/spark-onepager`
+- **24 specialist agents** that execute each command (session prep, KDD generation, summaries, Notion writes, integrity checks, Planhat migration, etc.).
 - **Universal context** — workflow rules, the AISE reference guide, scorecards, communication style guide, full Notion Customer Tracker schema, engagement planning framework, KDD anchor templates per A-session type.
 - **Personal layer scaffolding** — `about/` with a README and three onboarding templates (`identity`, `voice`, `workspace`) populated by `/assistant-setup` on first run.
 

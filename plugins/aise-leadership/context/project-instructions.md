@@ -65,6 +65,8 @@ Also search past conversations (`conversation_search`) — I may have worked on 
 
 When finding notes or a transcript for a specific session, try these sources in order. Never ask the user to paste what you can retrieve.
 
+**Gong MCP preference:** When Gong MCP tools (`mcp__Gong__ask_account`, `mcp__Gong__generate_brief`) are available, prefer them over Glean `meeting_lookup` or `app:gong` search for Gong call data — they return richer transcript content and actual participant lists directly from Gong's API. Use the Glean steps below as fallback only if Gong MCP returns no match.
+
 1. **Glean `meeting_lookup`** — primary; Gong recordings and transcripts surface here. For inherited accounts not yet in the user's calendar, this often returns empty — fall through to step 2 immediately rather than retrying. Use a narrow date range (±2 days around the session date).
 2. **Glean `search` with `app:gong`** + `read_document` — search Glean with `app:gong` + people-and-account keywords + `after:` date filter. From each result object, extract the `id` field and pass it to `read_document` to retrieve the full transcript. Do not pass a URL string to `read_document` — only the `id` from the search result object.
    - **Query construction rules (mandatory):**
@@ -84,6 +86,16 @@ When finding notes or a transcript for a specific session, try these sources in 
 8. If everything above fails, ask the user once: "Couldn't find notes/transcript for [session]. Drop a link or paste?"
 
 Cross-reference across sources. If Gong says X and user notes say Y, flag the conflict — don't silently pick one.
+
+### Attendee / participant lookup
+
+When resolving who actually attended a session (for Planhat `endusers`, Notion "Attended" fields, debrief audience context, etc.), always check **both Gong and Google Calendar**. Gong is the authoritative source — it shows who joined the call. GCal RSVPs are unreliable, especially for Teams-organized events where attendees respond via Teams and show as `needsAction` in GCal.
+
+**Lookup order:**
+1. **Gong MCP first** — `mcp__Gong__ask_account(crmAccount: "<customer>")` or `mcp__Gong__generate_brief`. Extract actual call participants from the Gong response. If Gong has a record of the call, this is the final word on attendance.
+2. **GCal fallback** — `list_events` for the session date + match by title/attendee. Use only if Gong has no record of the call. Extract `accepted` RSVPs only; exclude `@productboard.com` addresses.
+3. **When Gong and GCal conflict**, Gong wins.
+4. **EndUser linking constraint** — when writing to Planhat `endusers`, only link contacts who have existing EndUser records. Note any Gong participants with no matching EndUser in the output; do not create EndUser records as a side effect.
 
 ### Don't ask me for context I can retrieve
 
@@ -304,3 +316,32 @@ The `default_page_template` field in `data-source-state` shows which template (i
 - **Message compose tool** when drafting emails or Slack messages, especially when there's a real strategic choice.
 - **Structured markdown** — bolded labels, bullets, tables where they help.
 - **Match length to complexity.** Don't pad.
+
+---
+
+## 10. Planhat API — When Stuck
+
+Planhat's public API docs are thin. When a write is being silently ignored, a field format is unclear, or behavior differs from what the schema suggests, escalate to Planhat's support chat before guessing further.
+
+**How to escalate:**
+
+1. Stop what you're doing and tell the user you're stuck on a specific Planhat API question.
+2. Give the user this message to paste into **Planhat's Fin chat** (the AI support bot, accessible from the Planhat app via the help/chat icon):
+
+> *"I'm using the Planhat REST API / MCP to write to [field name] on the [Model] model. [Describe the problem — e.g. 'The field exists in the UI but writes are silently ignored' / 'What format does a rich text custom field expect?' / 'Does the API accept HTML or Tiptap JSON for rich text fields?']. Can you confirm the expected format and any known limitations?"*
+
+3. Ask the user to **copy the Fin answer back** into the chat.
+4. Continue from there using the confirmed information.
+
+**When this applies:**
+- A custom field write returns no error but the value doesn't appear (silent rejection)
+- `get_model_action_parameters` doesn't list a field the UI shows
+- Rich text / array / relation field format is unclear
+- API behavior contradicts the schema (e.g. `activityTags` rejected despite being listed)
+- A filter in `list_model_records` returns empty but records clearly exist
+
+**Known confirmed quirks** (do not re-investigate these — answers already confirmed):
+- `activityTags` — listed in schema but **not writable via MCP**. Apply manually in Planhat UI.
+- Rich text custom fields — accept **HTML** (`<p>`, `<strong>`, `<ul><li><p>`) not Tiptap JSON, not plain text.
+- `list_model_records` on Task — **36-record hard cap**; filters unreliable. Use attempt-create dedup or `search_records`.
+- `PARAMETERS` not `DATA` — the MCP requires `PARAMETERS` key; `DATA` returns "Missing required parameter".

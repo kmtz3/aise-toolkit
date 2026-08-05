@@ -127,6 +127,12 @@ Grouped by family. Type `/<family>-` in autocomplete to see siblings.
 | `/notion-sync --renewals [--mine\|--global] [--days N] [--dry-run] [--no-confirm]` | Set `Status = Renewal` on active packages ending within N days (default 90) that aren't already flagged. `--dry-run` previews without writing. |
 | `/notion-ask <question>` | Answer questions about how the 6 databases work, how they interconnect, what fields to fill, and what's auto-calculated. Optionally does a live Notion check when a specific customer is named or troubleshooting is needed. |
 
+### `ph-*` — Planhat integration
+
+| Command | Purpose |
+|---|---|
+| `/ph-migrate-notion-data [--customer <name> \| --customers <n1,n2>] [--aise <name>] [--dry-run]` | Migrate Notion Customer Tracker data into Planhat — Company field sync (phase, Journey Status, Spark, Priority), Delivered sessions as Conversations, and all Tasks as Tasks. Scoped per customer, a list, or all of an AISE's book. Uses externalId/sourceId dedup — safe to re-run. |
+
 ### `assistant-*` — meta / configure the assistant itself
 
 | Command | Purpose |
@@ -146,6 +152,8 @@ Grouped by family. Type `/<family>-` in autocomplete to see siblings.
 | `/spark-demo-prep <customer> [--scheme orange\|teal\|purple] [--domain <domain>]` | Generate a customized Spark demo playbook for a customer — researches via Glean/Gong/Gmail/Slack, auto-detects brand color scheme, produces a polished HTML playbook. |
 | `/log-feedback [customer or topic]` | Discover outstanding Notion tasks representing product feedback, draft structured Productboard GTM feedback notes, and submit with HITL confirmation on customer mapping and content before each submission. |
 | `/create-deck <customer> [meeting type]` | Generate a customer-facing HTML presentation deck for any meeting type. Pulls context from Notion, Glean, and Gmail, plans slide structure, and produces a styled single-file deck using the Productboard brand template. |
+| `/session-facilitation <customer> [session-id]` | Generate a self-contained interactive HTML facilitation guide for a session — live timer, sidebar nav, decision capture panels (one per KDD for A-sessions), open items check-in, attendee presence, watch-fors, action items. Saves to `~/Desktop/aise-assistant/facilitation/` and links from the Notion Session page. Runs automatically for A-sessions after KDD sub-page creation in `/session-prep`; also standalone. |
+| `/spark-onepager` | Generate a customer-facing Spark AI Adoption Program one-pager as a styled, print-ready HTML file, with a Calendly booking link. |
 
 Full spec per skill in [`skills/`](skills/).
 
@@ -182,6 +190,7 @@ Full spec per skill in [`skills/`](skills/).
 | `bulk-account-setup` | Executes `/bulk-account-setup`. Admin/reorg task: queries all customers owned by the target user (self or a named teammate), checks setup state (no Active Package / stub / already set up), presents a queue with one confirmation gate, then runs the full `account-setup` procedure sequentially for each account that needs it. In delegated mode (targeting a teammate), writes ownership fields using the target user's UUID, not the operator's. |
 | `notion-ask` | Executes `/notion-ask`. Reads `context/notion-schema.md` as the canonical source to answer questions about DB structure, field fill requirements, auto-calculated fields, and interconnections. Does live Notion queries only when a specific customer is named or the question requires real-value verification. |
 | `daily-brief` | Pulls today's schedule and open tasks, flags tomorrow's unprepped sessions, creates calendar prep blocks, and renders a styled HTML daily briefing page saved to `~/Desktop/`. |
+| `ph-migrate-notion-data` | Executes `/ph-migrate-notion-data`. Reads `context/planhat-schema.md` as the canonical field mapping, migrates Notion Company/Session/Task records into Planhat scoped per customer, list, or AISE book, using externalId/sourceId dedup so re-runs are safe. Presents a confirmation queue before writing; `--dry-run` previews the plan only. |
 
 Full spec per agent in [`agents/`](agents/).
 
