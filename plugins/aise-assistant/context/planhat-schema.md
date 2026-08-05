@@ -194,7 +194,7 @@ Planhat only — Notion does not track these in real time.
 ### "Show me open tasks for customer X"
 
 - **Notion:** query Tasks DB with `Customers LIKE '%<customer-id>%'`
-- **Planhat:** `list_model_records(MODEL: "Task", FILTER: {"companyId[equal to]": "<planhat_company_id>"})` _(Task schema not yet fully documented)_
+- **Planhat:** `search_records(QUERY: "<customer name>")` then filter for Task records, or `list_model_records(MODEL: "Task", FILTER: {"companyId[equal to]": "<planhat_company_id>"})` _(note: `list_model_records` on Task has a hard 36-record cap — use `search_records` for customers with many tasks)_
 
 ---
 
@@ -352,6 +352,12 @@ Used when setting `ownerId`, `users`, or `followers` on Planhat records.
 | Ozzy Gundogdu | ozan.gundogdu@productboard.com | `6a44ef5d102afd78d3f233ee` |
 | Tesh Patel | tesh.patel@productboard.com | `6a44ef91c9aade0b562936eb` |
 | Molly Goulding | molly.goulding@productboard.com | `6a4cc33f2af0cb301f0bd119` |
+| Jennifer Bombera | jennifer.bombera@productboard.com | `6a6c84fcf260dae164c0d6e3` |
+| Alexander Stergiou | alexander.stergiou@productboard.com | `6a51156d327589773c8fb61d` |
+| Denae Foster | denae.foster@productboard.com | `6a6c90e1dcf4f051bd5d1159` |
+| Alex Degregori | alex.degregori@productboard.com | `6a6c90e1dcf4f00a685d1139` |
+| Michael Pang | michael.pang@productboard.com | `6a6c90e1dcf4f0408a5d1199` |
+| Raphael Dozolme | raphael.dozolme@productboard.com | `6a6c84e02c2e343c6f9a5241` |
 | Elizabeth Johnstone | elizabeth.johnstone@productboard.com | `6a4cc31c2af0cba3a10bd0fd` |
 | Carson Mak | carson.mak@productboard.com | `6a4f72300b5e9f5803437923` |
 | Darrel Wu | darrell.wu@productboard.com | `6a4f72473275894bcf89ee78` |
@@ -387,7 +393,7 @@ If a result is returned, update it rather than creating a duplicate.
 | `Name` (title) | `subject` | string | Write | Session name as-is. |
 | `Type` (select) | `type` | string | Write | See value mapping below. Custom string — Planhat accepts any value. |
 | `Call Date` | `date` | datetime | Write | ISO 8601. Use `date:Call Date:start` from Notion. |
-| `Session Length (h)` | `startDate` / `endDate` | date | Write | `startDate = Call Date`. `endDate = Call Date + Session Length (h)` as a duration offset. Both are date-only (not datetime). |
+| `Session Length (h)` | `custom.Call Duration` | number | Write | Convert hours to minutes: `Session Length (h) × 60`. |
 | `Customers` (relation) | `companyId` | string | Write | Planhat Company `_id`. Resolve via name-search or `sourceId` lookup (see Company section). |
 | `Delivered By` (person) | `users` | array | Write | Array of `{"id": "<planhat-user-id>"}`. Resolve from AISE User ID table above. |
 | `Next Steps` / session page body | `description` | string | Write | Summary/notes from the session. Truncate to ~2000 chars if long. |
@@ -395,7 +401,7 @@ If a result is returned, update it rather than creating a duplicate.
 | `Call Status` | _(not mapped)_ | — | — | Notion-only status lifecycle. Not meaningful in Planhat. |
 | `Consumed Package` | _(not mapped)_ | — | — | Notion credit-ledger concept. No Planhat equivalent. |
 | `Do not count` | _(not mapped)_ | — | — | Notion-only billing flag. |
-| `Spark conversation` | `activityTags` | array | Write | If `__YES__`, include `"Spark"` in `activityTags`. |
+| `Spark conversation` | ~~`activityTags`~~ | array | ~~Write~~ | ~~If `__YES__`, include `"Spark"` in `activityTags`.~~ **Not writable via MCP — silently rejected by the API. Apply `Spark` tag manually in the Planhat UI.** |
 | _(no equivalent)_ | `source` | string | Write (constant) | Always `"AISE"` for sessions written by this assistant. Distinguishes from Zendesk/GCal entries. |
 
 #### Type value mapping: Notion → Planhat
@@ -444,14 +450,15 @@ If a result is returned, update it rather than creating a duplicate.
 | `subject` | string | — | Session name / title. |
 | `description` | string | — | Summary, notes, Gong URL. |
 | `date` | datetime | — | When the session took place (ISO 8601). |
-| `startDate` | date | — | Call start date. |
-| `endDate` | date | — | Call end date (derived from duration). |
+| `startDate` | date | — | Call start date. Not used for session duration — use `custom.Call Duration` instead. |
+| `endDate` | date | — | Call end date. Not used for session duration — use `custom.Call Duration` instead. |
 | `companyId` | string | ✅ | Planhat Company `_id`. |
 | `users` | array | — | `[{"id": "<planhat-user-id>"}]` — team members who delivered. |
 | `endusers` | array | — | `[{"id": "<planhat-enduser-id>"}]` — customer contacts who attended. |
 | `externalId` | string | — | Notion Session page ID. **Dedup key.** |
 | `source` | string | — | Always `"AISE"`. |
-| `activityTags` | array | — | `["Spark"]` if `Spark conversation = YES`. |
+| ~~`activityTags`~~ | array | — | ~~`["Spark"]` if `Spark conversation = YES`.~~ **Not writable via MCP — silently rejected. Apply manually in Planhat UI.** |
+| `custom.Prep Notes` | string | — | Plain-text prep brief written by session-prepper before the session. Format: `GOALS: ...\nOPEN ITEMS:\n- ...\nWATCH-FORS:\n- ...`. Carry over from the linked Task when writing the Conversation post-session. |
 | `transcript` | string | — | Full transcript text if available. |
 | `taskId` | objectId | — | Links this conversation to its originating Planhat Task. Set when writing a Done Notion Task as a Conversation — look up the existing Planhat Task by `sourceId` and pass its `_id` here. Optional on backfill if the Task doesn't exist yet in Planhat. |
 | `category` | string | — | One of: `Support`, `Feedback`, `Sales`, `Expansion`, `Billing & Contracts`, `Renewals`, `Legal`, `General Enquires`, `Spam`, `Marketing`. Leave blank for AISE sessions unless relevant. |
@@ -491,15 +498,16 @@ get_model_record(MODEL: "Conversation", OBJECT_ID: "<noteId>", SELECT: ["type"])
 
 ### How to look up a Planhat Task for a given Notion task
 
-**Check before creating:** use `sourceId` as the dedup key.
+**Use the attempt-create dedup pattern** — do NOT use `list_model_records` for Task dedup. The Task model has a hard **36-record cap** on `list_model_records` results and FILTER is unreliable, so pre-flight list checks will silently miss existing records and cause duplicates.
 
 ```
-list_model_records(
-  MODEL: "Task",
-  FILTER: {"sourceId[equal to]": "<notion-task-page-id>", "mainType[equal to]": "task"},
-  SELECT: ["action", "status", "companyId", "sourceId"]
-)
+# Attempt-create pattern:
+create_model_record(MODEL: "Task", PARAMETERS: { sourceId: "<notion-task-page-id>", mainType: "task", ... })
+→ If response contains a `sourceId` collision error → Task already exists → switch to update_model_record
+→ If create succeeds → new Task written
 ```
+
+Alternatively, use `search_records(QUERY: "<task title>")` and scan results for a matching `sourceId` — this is more expensive but avoids the create-on-collision side effect.
 
 ### Field-level mapping: Notion Task → Planhat Task
 
@@ -511,7 +519,7 @@ list_model_records(
 | `Due Date` | `endTime` | datetime | Write | ISO 8601. Set time to `T00:00:00.000Z` for date-only values. |
 | `Customers` (relation) | `companyId` | string | Write | Planhat Company `_id`. Resolve via company lookup. **Skip if Customers = Productboard internal** — internal tasks don't belong in Planhat. |
 | `Owner` (person) | `ownerId` | objectId | Write | Resolve Notion user UUID → Planhat user ID using the User ID table above. |
-| `Priority` | `type` | string | Write | `"1"` → `"P1"`, `"2"` → `"P2"`, `"3"` → `"P3"`. Stored in the free-text `type` field. |
+| `Priority` | `custom.Priority` | string | Write | `"1"` → `"P1"`, `"2"` → `"P2"`, `"3"` → `"P3"`. Stored in `custom.Priority` — **not** the `type` field. |
 | `Do not count` | _(skip)_ | — | — | Notion billing flag. Not relevant to Planhat. |
 | `Consumed Package` | _(skip)_ | — | — | No Planhat equivalent. |
 | `Source Call` | _(skip)_ | — | — | No native foreign key in Planhat linking a Task back to its source Conversation. Skip — the relationship lives in Notion. |
@@ -550,13 +558,15 @@ All Notion Task statuses write to the Planhat Task model. Done/Canceled statuses
 | `action` | string | — | Task title / short description of what needs to be done. |
 | `description` | string | — | Longer details. Append source session reference if present. |
 | `status` | string | — | `"To Do"` · `"in-progress"` (hyphenated lowercase) · `"done"` · `"ignored"` · `"blocked"`. |
-| `type` | string | — | Priority label: `"P1"`, `"P2"`, `"P3"`. |
+| `type` | string | — | Session type emoji string for AISE-created prep tasks (e.g. `🏗️ Architecting`). Use `"Task"` for generic Notion action items migrated from Notion. **Not used for Priority** — Priority maps to `custom.Priority`. |
 | `endTime` | datetime | — | Due date (ISO 8601). Required for `mainType: event`; optional for tasks. |
 | `startTime` | datetime | — | Start time. Optional for tasks; required for events. |
 | `companyId` | objectId | ✅ | Planhat Company `_id`. |
 | `ownerId` | objectId | — | Planhat User `_id` of the person responsible. |
 | `sourceId` | string | — | Notion Task page ID. **Dedup key.** |
-| `activityTags` | array | — | Freeform tags for filtering. |
+| `custom.Priority` | string | — | `"P1"`, `"P2"`, `"P3"` mapped from Notion `Priority` field. |
+| `custom.Prep Notes` | string | — | Plain-text prep brief written by session-prepper. Format: `GOALS: ...\nOPEN ITEMS:\n- ...\nWATCH-FORS:\n- ...`. Read and carried to the linked Conversation during post-session debrief. |
+| ~~`activityTags`~~ | array | — | ~~Freeform tags for filtering.~~ **Not writable via MCP — silently rejected. Apply manually in Planhat UI.** |
 | `endusers` | array | — | Customer contacts involved: `[{"id": "<enduser-id>"}]`. |
 
 #### Read-only fields
@@ -614,6 +624,28 @@ list_model_records(
 
 > **Scope:** Sessions (Delivered only) and Tasks (non-canceled, non-internal) owned by the current user. Customers and Active Packages are already synced from Salesforce — do not re-create them.
 
+### Migration gate: PH migrated + PH Last Migration Date (Notion Customer page)
+
+Before migrating a customer, check the Notion Customer page for:
+- **`PH migrated`** (checkbox): `true` = already migrated — skip unless running a delta sweep.
+- **`PH Last Migration Date`** (date + time): timestamp of the last completed migration run. Used by delta-sweep logic to find Notion records created/updated **after** this date and push them to Planhat incrementally.
+
+On **successful completion** of a migration run (zero errors), write both fields back to the Notion Customer page:
+
+```
+notion-update-page(
+  page_id: "<Notion Customer page ID>",
+  properties: {
+    "PH migrated": { "checkbox": true },
+    "PH Last Migration Date": { "date": { "start": "<current UTC datetime — YYYY-MM-DDTHH:MM:SS.000Z>" } }
+  }
+)
+```
+
+Get the current UTC datetime via Bash: `date -u +"%Y-%m-%dT%H:%M:%S.000Z"`
+
+---
+
 ### Pre-flight checks
 
 1. Confirm the Planhat Company exists for each customer before writing — use the name mapping table and the SF `sourceId` lookup (see Company section).
@@ -629,11 +661,11 @@ For each Session WHERE:
 
 1. Extract Notion Session page ID from URL (32-char hex)
 2. Check for existing Planhat Conversation: FILTER externalId = <session-page-id>
-   → If found: update subject/description/activityTags if stale; skip create
+   → If found: update subject/description if stale; skip create (activityTags: not writable via MCP — apply manually in Planhat UI)
    → If not found: proceed to create
 3. Resolve Planhat companyId via name search or sourceId lookup
 4. Map fields per the Session → Conversation table above
-5. create_model_record(MODEL: "Conversation", DATA: { ... })
+5. create_model_record(MODEL: "Conversation", PARAMETERS: { ... })
 6. Log result: session name, company, Planhat Conversation _id
 ```
 
@@ -650,7 +682,7 @@ For each Task WHERE:
    → If not found: proceed to create
 3. Resolve Planhat companyId via name search or sourceId lookup
 4. Map fields per the Task → Planhat Task table above
-5. create_model_record(MODEL: "Task", DATA: { mainType: "task", ... })
+5. create_model_record(MODEL: "Task", PARAMETERS: { mainType: "task", ... })
 6. Log result: task title, company, Planhat Task _id
 ```
 

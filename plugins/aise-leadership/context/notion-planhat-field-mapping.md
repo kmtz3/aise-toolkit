@@ -2,7 +2,7 @@
 
 > **Purpose:** Compact write-ready reference for agents backfilling or syncing data from the Notion Customer Tracker into Planhat.
 >
-> **Last updated:** 2026-07-13 (architecture updated: sessions → Conversation, tasks → Task)
+> **Last updated:** 2026-08-05 (Other type mapping: → Sync default + Demo title-pattern override; activityTags not writable via MCP; custom.Prep Notes on Conversation; Task type fixed to "Task" for generic action items)
 >
 > **Migration architecture:**
 >
@@ -30,11 +30,12 @@
 | `🎓 Training` | `🎓 Enablement` | **Different label** — Planhat uses "Enablement" |
 | `👟 Kick off` | `👟 Kick off` | Emoji matches |
 | `🔎 Discovery` | `🔎 Discovery` | Emoji matches |
-| `📦 Other` | `🏁 Audit / Setup Review` | **Different emoji + label** |
+| `📦 Other` (default) | `🔁 Sync` | Default fallback for general calls (e.g. licence discussions, commercial syncs). |
+| `📦 Other` + "Demo" in title | `🎙️ Demo` | **Title-pattern override:** if session title contains "Demo" (case-insensitive), use `🎙️ Demo` instead of the default `🔁 Sync`. |
 | `🫥 Internal` | `Internal Alignment` | No emoji in Planhat |
 | _(Done Notion Task — auto-created Conversation)_ | `Task` | No emoji. Planhat auto-creates this Conversation when Task `status` is set to `"done"`. Update via `noteId` post-write if type is not already `"Task"`. Canceled (`"ignored"`) tasks do **not** generate a Conversation. |
 
-> **Planhat types with no Notion equivalent:** `📺 Webinar`, `🎙️ Demo`, `👾 Gong Call` — logged directly in Planhat, not from Notion.
+> **Planhat types with no Notion equivalent:** `📺 Webinar`, `👾 Gong Call` — logged directly in Planhat, not from Notion. `🎙️ Demo` is also available and is applied automatically to `Other` sessions with "Demo" in the title.
 
 > **Note on calendar events:** GCal-synced meetings already exist in Planhat as `mainType: "event"`. AISE writes Conversations only — no overlap.
 
@@ -80,10 +81,11 @@ All Notion Tasks write to the **Planhat Task model**. For done/canceled tasks, P
 | `date:Call Date:start` | `startDate` | date | Call start date. |
 | `Customers` (relation) | `companyId` | objectId | Resolve via company name or SF `sourceId`. See `planhat-schema.md`. **Required.** |
 | `Delivered By` (person, all values) | `users` | array | `[{"id": "<planhat-user-id>"}]`. Resolve from User ID table in `planhat-schema.md`. |
-| `Next Steps` / session body | `description` | string | Summary/notes. Truncate to ~2000 chars. Do **not** append Gong URL here — use `custom.Gong URL` instead. |
+| `Next Steps` / session body | `description` | string | Actual session notes/summary. Truncate to ~2000 chars. Do **not** use this for prep notes — see `custom.Prep Notes`. Do **not** append Gong URL here — use `custom.Gong URL` instead. |
+| _(from session prep)_ | `custom.Prep Notes` | string | Prep brief written by session-prepper. Kept separate from session content. On Task: write during prep. When Task is marked done (debrief), carry to Conversation `custom.Prep Notes`. |
 | `Gong call` (url) | `custom.Gong URL` | string | Gong call link. **Write to `custom.Gong URL`, not appended to `description`.** |
 | `Session Length (h)` | `custom.Call Duration` | number | Multiply by 60 → minutes. |
-| `Spark Conversation` | `activityTags` | array | `__YES__` → include `"Spark"` in `activityTags`. |
+| `Spark Conversation` | ~~`activityTags`~~ | — | ⚠️ **`activityTags` is not writable via the Planhat MCP API** — requests are silently rejected. Omit this field. Spark tagging must be applied manually in the Planhat UI. |
 | _(constant)_ | `source` | string | Always `"AISE"`. Distinguishes from Zendesk/GCal entries. |
 
 **Fields skipped:** `Consumed Package`, `Do not count`, `Prepped`, `Debriefed`
@@ -98,13 +100,13 @@ All Notion Tasks write to the **Planhat Task model**. For done/canceled tasks, P
 |---|---|---|---|
 | Task page URL (32-char hex ID) | `sourceId` | string | **Dedup key.** Check before every create. |
 | `Task` (title) | `action` | string | Task title as-is. |
-| _(constant)_ | `type` | string | Always `AISE Action Item`. |
+| _(constant)_ | `type` | string | Always `"Task"` for generic action items from Notion. (`"AISE Action Item"` is NOT a valid option — do not use.) Session-type Tasks created by session-prepper use the session type mapping instead (e.g. `🏗️ Architecting`, `🎓 Enablement`). |
 | _(constant)_ | `mainType` | string | Always `task`. |
 | `date:Due Date:start` | `endTime` | datetime | ISO 8601. Set `noSpecificTime: true` for date-only. |
 | `Customers` (relation) | `companyId` | objectId | Resolve same as sessions. Skip if Customers = Productboard internal record (`29997e9c7d4f80e6a011f053bdec1ab5`). |
 | `Owner` (person) | `ownerId` | objectId | Single owner. Resolve Notion user UUID → Planhat User `_id` via User ID table. |
 | `Priority` | `custom.Priority` | string | `"1"` → `"P1"` · `"2"` → `"P2"` · `"3"` → `"P3"` · null → omit. Valid options: `P0`–`P4` (P0 and P4 not sourced from Notion tasks). |
-| `Status` | `status` | string | `Not started` → `"To Do"` · `In progress` → `"in-progress"` (hyphenated, lowercase). Done/Canceled tasks do NOT reach this model — they go to Conversation. |
+| `Status` | `status` | string | See status mapping table above. |
 
 **Fields skipped:** `Source Call`, `Time (h)`, `Do not count`, `Consumed Package`
 
@@ -127,11 +129,22 @@ All Notion Tasks write to the **Planhat Task model**. For done/canceled tasks, P
 | `Renewal Manager` | `custom.Renewals Manager` | **SF-synced — do not write** | Synced from Salesforce. User relationship (objectId). |
 | _(no Notion equivalent)_ | `custom.Salesforce URL` | Read-only | SF-managed — cannot write. |
 
-### Health
+### Priority & health
 
-| Notion field | Planhat field | Write? | Value mapping |
+| Notion field | Planhat field | Write? | Notes |
 |---|---|---|---|
+| `Priority` (Customer) | `custom.Priority (temp – Notion)` | Write | AISE account priority. Temp field in Planhat pending native solution. Write as-is: `P0`–`P4`. `Insufficient Data` → omit. |
 | `Health (Manual)` | `csmScore` | Write | `Healthy` → `4` · `Figuring it out` → `3` · `Concerning` → `2` · `Churning` → `1` · null → omit |
+
+### Notion-only fields (not synced to Planhat)
+
+| Notion field | Reason not synced |
+|---|---|
+| `Industry` | No Planhat equivalent — skip |
+| `Renewal Forecast` | Will come from Salesforce — skip |
+| `Preferred Conferencing` | Operational preference — skip |
+| `Parent Company` | SF SSOT — skip |
+| `Time (h)` (Task) | No Planhat Task equivalent — skip for now |
 
 ### `phase` vs `custom.AISE Journey Status` — which field to use
 
@@ -250,7 +263,7 @@ Planhat `Deal` records are the functional equivalent of Notion `Active Packages`
 4. **Never overwrite Planhat `owner`** — managed by RevOps.
 5. **`users` on Task is read-only** — only `ownerId` can be set (single person). For sessions with multiple `Delivered By`, use the first listed value.
 6. **`noSpecificTime: true`** whenever date has no time component (most Notion session dates and task due dates).
-7. **Task `status` exact strings:** `done` · `in progress` · `blocked` · `ignored` (workspace-configured values; not enumerated in API schema — use exactly as written).
+7. **Task `status` exact strings:** `"done"` · `"in-progress"` · `"To Do"` · `"blocked"` · `"ignored"` — hyphenated lowercase for `in-progress`, capital `To Do` (workspace-configured values; not enumerated in API schema — use exactly as written).
 8. **`Account Executive` and `Renewals Manager`** are User relationship fields — write as Planhat User `_id`, not display name.
 
 ---
@@ -314,3 +327,9 @@ All fields verified against live Planhat API schema (`get_model_action_parameter
 **Conversation custom fields (confirmed):**
 - `custom.Gong URL` — string. Use this for Gong links — do NOT append to `description`.
 - `custom.Call Duration` — number (minutes). Derive from Notion `Session Length (h)` × 60.
+- `custom.Prep Notes` — string. Prep brief for this session. Written by session-prepper (via Task → Conversation carry-over on mark-done) and by post-session-debrief. **Do not populate during migration** — Notion session records do not hold prep content.
+
+**Task custom fields (confirmed):**
+- `custom.Priority` — options: `P0` · `P1` · `P2` · `P3` · `P4`
+- `custom.Spark Conversation` — boolean
+- `custom.Prep Notes` — string. ⚠️ **Must be added to the Task model in Planhat UI** (Settings → Custom fields → Task) before this field can be written. Until then, fall back to `description` for prep on Tasks. Once added, use `custom.Prep Notes` on Task for prep content and reserve `description` for actual session/task notes.
