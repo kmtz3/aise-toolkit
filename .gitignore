@@ -17,3 +17,7 @@ plugins/*/memory/
 plugins/*/dist/
 *.plugin
 *.zip
+
+# Personal working docs at repo root (prep notes, playbooks, etc.)
+/*.html
+/Planhat — Spark Adoption Program Workflow.md
