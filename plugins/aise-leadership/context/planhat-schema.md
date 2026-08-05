@@ -125,7 +125,7 @@ These three fields are actively synced Notion → Planhat by the AISE assistant.
 
 ## Customer Name Mapping: Notion → Planhat
 
-Some accounts are named differently across systems. Always check this table before concluding no Planhat record exists.
+Some accounts are named differently across systems. Always check this table before concluding no Planhat record exists. When a name doesn't match here either, check the Company's `domains` array before giving up — acquired brand names (like Entrust below) may only surface there, not in the Company name itself.
 
 | Notion name | Planhat name | Planhat `_id` | Match method |
 |---|---|---|---|
@@ -134,6 +134,7 @@ Some accounts are named differently across systems. Always check this table befo
 | Qlik (Talend) | Talend | `6a4cd728ef3ea333c991129e` | Name |
 | Verisk SBS | Verisk | `6a4cd722ef3ea3fb9a9101fc` | Name |
 | Onfido | Onfido Ltd | `6a4cd728ef3ea31463911108` | Name |
+| Entrust | Onfido Ltd | `6a4cd728ef3ea31463911108` | `domains` — Entrust is an alias for the same Planhat Company record as Onfido (both `onfido.com` and `entrust.com` appear in its `domains` array), likely reflecting an acquisition |
 | Outsystems | OutSystems | `6a4cd728ef3ea3b89e91110b` | Name |
 | SymphonyAI | Symphony AI | `6a4cd728ef3ea37f3c91135c` | Name |
 | Hilti AG | Hilti | `6a4cd722ef3ea3deb09101a6` | Name |
@@ -415,11 +416,14 @@ If a result is returned, update it rather than creating a duplicate.
 | `🎓 Training` | `🎓 Enablement` | **Different label.** Use Planhat's `🎓 Enablement` |
 | `👟 Kick off` | `👟 Kick off` | Emoji matches — use as-is |
 | `🔎 Discovery` | `🔎 Discovery` | Emoji matches — use as-is |
-| `📦 Other` | `🏁 Audit / Setup Review` | **Different emoji and label.** Use Planhat's `🏁 Audit / Setup Review` |
+| `📦 Other` (default) | `🔁 Sync` | Default fallback for general calls (e.g. licence discussions, commercial syncs). |
+| `📦 Other` + "Demo" in title | `🎙️ Demo` | **Title-pattern override:** if the session title contains "Demo" (case-insensitive), use `🎙️ Demo` instead of the default `🔁 Sync`. |
 | `🫥 Internal` | `Internal Alignment` | No emoji in Planhat |
 | _(Done Notion Task — auto-created Conversation)_ | `Task` | No emoji. Planhat auto-creates this Conversation when Task `status` is set to `"done"`. Set via `noteId` post-write. Canceled (`"ignored"`) tasks do not generate a Conversation. |
 
-> **Planhat types with no Notion equivalent:** `📺 Webinar`, `🎙️ Demo`, `👾 Gong Call` — used for non-AISE sessions logged directly in Planhat.
+> **`notion-planhat-field-mapping.md` is the authoritative source for type mappings.** If this table and that file ever disagree, that file wins.
+
+> **Planhat types with no Notion equivalent:** `📺 Webinar`, `👾 Gong Call` — logged directly in Planhat, not from Notion. `🎙️ Demo` is also available and applied automatically to `Other` sessions with "Demo" in the title.
 > **Generic Planhat types** (avoid for AISE writes): `note`, `email`, `chat`, `call`, `ticket`, `other` — these are Planhat system defaults for inbox/helpdesk syncs. AISE should only use the custom configured values above.
 
 #### Status mapping
@@ -480,14 +484,18 @@ If a result is returned, update it rather than creating a duplicate.
 
 ### Planhat Task auto-Conversation behavior
 
-When `status` is set to `"done"`:
-1. Planhat creates a linked Conversation and stores a reference in `noteId` on the Task.
-2. The auto-created Conversation's `type` may not be `"Task"` — it could default to `"note"` or another value.
-3. **Post-write step:** read `noteId` from the Task response → check the Conversation's `type` → if `type != "Task"`, call `update_model_record` on the Conversation to set `type: "Task"`.
+Auto-Conversation creation only fires on a `status` *transition* to `"done"` via `update_model_record` — **not** when a Task is created directly with `status: "done"` (confirmed by live test, 2026-08-05). Always create Done-mapped tasks as `"To Do"` first, then transition with a separate `update_model_record` call.
+
+When `status` transitions to `"done"`:
+1. Planhat creates a linked Conversation and stores a reference in `noteId` on the **update** response (not the create response — `noteId` is absent if the task was created directly as `"done"`).
+2. The auto-created Conversation's `type` defaults to `"note"`, not `"Task"` (confirmed by live test) — it needs the update in step 3 below.
+3. **Post-write step:** read `noteId` from the update response → check the Conversation's `type` → if `type != "Task"`, call `update_model_record` on the Conversation to set `type: "Task"`.
+4. **The auto-created Conversation's `_id` is the same value as the Task's `_id`** (confirmed by live test) — it is not a separately generated ID. Relevant for any cleanup or dedup logic touching Conversations.
 
 ```
-# After create/update that sets status: "done":
-task_response → noteId = "<conversation-_id>"
+# After the update_model_record call that transitions status → "done"
+# (noteId is NOT present on a create_model_record response):
+update_response → noteId = "<conversation-_id>"
 
 get_model_record(MODEL: "Conversation", OBJECT_ID: "<noteId>", SELECT: ["type"])
 → if type != "Task":
@@ -527,7 +535,7 @@ Alternatively, use `search_records(QUERY: "<task title>")` and scan results for 
 
 #### Status value mapping
 
-All Notion Task statuses write to the Planhat Task model. Done/Canceled statuses trigger Planhat's auto-Conversation creation; the Conversation type is then checked and updated if needed.
+All Notion Task statuses write to the Planhat Task model. Only a `status` *transition* to `"done"` triggers Planhat's auto-Conversation creation (never `"ignored"`, and never a direct create with `status: "done"`) — the Conversation type is then checked and updated if needed.
 
 | Notion `Status` | Planhat `status` | Post-write action |
 |---|---|---|

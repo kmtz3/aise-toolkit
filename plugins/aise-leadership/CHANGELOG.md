@@ -1,5 +1,12 @@
 # Changelog — aise-leadership
 
+## [1.10.1] — 2026-08-06
+
+### Changed
+- `context/planhat-schema.md`: resynced from aise-assistant v2.30.1 — Task auto-Conversation behavior corrected (transition-only trigger, `type` defaults to `"note"`, shared Task/Conversation `_id`), `📦 Other` Conversation type mapping fixed, Entrust → Onfido Ltd domains alias added.
+
+---
+
 ## [1.10.0] — 2026-08-05
 
 ### Changed

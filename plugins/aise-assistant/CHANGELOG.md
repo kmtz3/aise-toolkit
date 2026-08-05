@@ -5,6 +5,26 @@ Format: `## [version] — YYYY-MM-DD` followed by bullet points grouped by type.
 
 ---
 
+## [2.30.1] — 2026-08-06
+
+### Fixed
+- `ph-migrate-notion-data` agent: Done tasks created directly with `status: "done"` never triggered Planhat's auto-Conversation — replaced with a two-step create-as-"To Do"-then-transition-to-"done" pattern (confirmed by live test). `noteId` absence is now treated as a write-logic bug, not a workspace/connector limitation.
+- `ph-migrate-notion-data` agent: removed a false claim that Task deletion isn't possible via API — `delete_model_record` works for both `Task` and `Conversation` (confirmed by live test).
+- `ph-migrate-notion-data` agent: Notion finalization step now writes `"PH Migrated"` (capital M) — the lowercase `"PH migrated"` name was rejected by the Notion connector.
+- `ph-migrate-notion-data` agent: removed `"PH Last Migration Date"` from Step 0B customer-lookup SQL (not a queryable column in this workspace, caused `no such column` errors); the already-migrated skip note now fetches the date per-page via `notion-fetch` instead.
+- `ph-migrate-notion-data` agent: Conversation `list_model_records` dedup check now sets `LIMIT: 50` + `SORT: "-createdAt"` — the model's ~36-record cap could hide newly created records.
+- `context/planhat-schema.md`: `📦 Other` Conversation type mapping corrected to match the authoritative `notion-planhat-field-mapping.md` (`🔁 Sync` default, `🎙️ Demo` title-pattern override) — previously contradicted it with a stale `🏁 Audit / Setup Review` mapping.
+- `context/planhat-schema.md`: fixed a self-contradicting line claiming "Done/Canceled statuses trigger auto-Conversation creation" — only a `status` transition to `"done"` does; `"ignored"` never does (confirmed by live test).
+- `context/planhat-schema.md`: Task auto-Conversation section corrected — the auto-created Conversation's `type` defaults to `"note"` (not `"Task"`), its `_id` is the same value as the Task's `_id`, and `noteId` only appears on the transition's `update_model_record` response, never on `create_model_record`.
+
+### Added
+- `ph-migrate-notion-data` agent: customer-name lookup normalizes common notation variants (dots/hyphens/spacing) into a single `OR` query instead of retrying sequentially.
+- `ph-migrate-notion-data` agent: Company lookup now falls back to a Planhat `domains` search for acquired/merged entities when name and SF sourceId matches both fail.
+- `ph-migrate-notion-data` agent: per-customer log now includes a manual reminder that `activityTags` (Spark) must be applied in the Planhat UI.
+- `context/planhat-schema.md`: Customer Name Mapping table — added Entrust → Onfido Ltd alias (shared `domains` entry) and a note to check `domains` before concluding no match exists.
+
+---
+
 ## [2.30.0] — 2026-08-05
 
 ### Added

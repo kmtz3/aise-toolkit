@@ -41,27 +41,30 @@ You are the **ph-migrate-notion-data** agent. You sync data from the Notion Cust
 Depending on scope flag:
 
 **`--customer <name>`:**
+
+Before building the `LIKE` clause, normalize the name for common notation variants and cover them in a single `OR` query — don't retry sequentially on a miss. Build variants for dots, hyphens, and spacing: `'%<raw>%'`, `'%<no-dots-no-hyphens>%'`, `'%<spaced-out>%'`. Example: `DrMax` → `WHERE Customer LIKE '%DrMax%' OR Customer LIKE '%Dr%Max%' OR Customer LIKE '%Dr.Max%'`.
+
 ```sql
-SELECT id, Customer, Owner, "Account Status", "SFDC", "Spark Customer Journey", "AI Ready", "Igniting?", "Health (Manual)", "Priority", "PH migrated", "PH Last Migration Date"
+SELECT id, Customer, Owner, "Account Status", "SFDC", "Spark Customer Journey", "AI Ready", "Igniting?", "Health (Manual)", "Priority", "PH migrated"
 FROM "collection://29397e9c-7d4f-8067-b290-000b1c2d57e1"
-WHERE Customer LIKE '%<name>%'
+WHERE (Customer LIKE '%<name>%' OR Customer LIKE '%<variant-1>%' OR Customer LIKE '%<variant-2>%')
   AND Owner LIKE '%<user-uuid>%'
 LIMIT 5
 ```
 Confirm the match is correct before proceeding. If multiple matches, list them and ask.
 
 **`--customers <n1,n2,...>`:**
-Run a separate query per name. Build the list from confirmed matches.
+Run a separate query per name (same normalization above). Build the list from confirmed matches.
 
 **No `--customer` / `--customers` (AISE-wide):**
 ```sql
-SELECT id, Customer, Owner, "Account Status", "SFDC", "Spark Customer Journey", "AI Ready", "Igniting?", "Health (Manual)", "Priority", "PH migrated", "PH Last Migration Date"
+SELECT id, Customer, Owner, "Account Status", "SFDC", "Spark Customer Journey", "AI Ready", "Igniting?", "Health (Manual)", "Priority", "PH migrated"
 FROM "collection://29397e9c-7d4f-8067-b290-000b1c2d57e1"
 WHERE Owner LIKE '%<user-uuid>%'
 LIMIT 200
 ```
 
-**Already-migrated accounts:** If `PH migrated = __YES__` on a Customer page, skip that account unless `--force` was passed. Show skipped accounts in the queue table as `⏭️ already migrated (YYYY-MM-DD)` in the Notes column — include the `PH Last Migration Date` value if set. This prevents duplicate Conversation/Task creation on re-runs against the full AISE book.
+**Already-migrated accounts:** If `PH migrated = __YES__` on a Customer page, skip that account unless `--force` was passed. `"PH Last Migration Date"` is not exposed as a SQL-queryable column in this workspace — never include it in a SELECT clause (it causes a `no such column` error). It is only ever written, not read, at the end of a successful run (Step 4). To show the date in the skip note, fetch it per already-migrated page via `notion-fetch` (not SQL). Show skipped accounts in the queue table as `⏭️ already migrated (YYYY-MM-DD)` in the Notes column. This prevents duplicate Conversation/Task creation on re-runs against the full AISE book.
 
 **C. Resolve Planhat Company for each customer**
 
@@ -72,7 +75,12 @@ For each Notion Customer page:
    ```
    list_model_records(MODEL: "Company", FILTER: {"sourceId[equal to]": "<SF_ID>"}, SELECT: ["name", "sourceId", "_id"])
    ```
-3. **Not found:** flag and skip — do not create Company records. Note in the per-customer log.
+3. **Domains fallback (acquired/merged entities):** If neither name search nor SF sourceId match, check the Customer Name Mapping table in `planhat-schema.md` first — known aliases (e.g. Entrust → Onfido Ltd) are already documented there. If still no match, search Planhat Company records by `domains` for a domain derivable from the customer name (e.g. `entrust.com` for "Entrust"):
+   ```
+   list_model_records(MODEL: "Company", FILTER: {"domains[contains]": "<derived-domain>"}, SELECT: ["name", "domains", "_id"])
+   ```
+   If a match is found, log: "Resolved `<input name>` → `<matched company name>` via domains match (likely acquisition). Proceeding with matched company." and continue with that Company.
+4. **Not found:** flag and skip — do not create Company records. Note in the per-customer log.
 
 Capture: Notion Customer page ID (32-char hex), Planhat Company `_id`, and all Notion fields needed for subsequent steps. Do this in one Notion query per customer — avoid re-fetching.
 
@@ -169,8 +177,9 @@ LIMIT 500
 
 3. **Dedup check:**
    ```
-   list_model_records(MODEL: "Conversation", FILTER: {"externalId[equal to]": "<32-char-hex-id>"})
+   list_model_records(MODEL: "Conversation", FILTER: {"externalId[equal to]": "<32-char-hex-id>"}, LIMIT: 50, SORT: "-createdAt")
    ```
+   Always set `LIMIT: 50` (or higher) and `SORT: "-createdAt"` on Conversation `list_model_records` calls — the model has an effective ~36-record cap at default settings, and without a recency sort a newly created record can be missed even when it matches the filter.
    - Found → skip create; optionally update if `description` or `type` has drifted (log as "already exists").
    - Not found → proceed to steps 4–6.
 
@@ -269,18 +278,28 @@ LIMIT 500
 
    **Fields skipped:** `Source Call` (no native FK in Planhat), `Time (h)`, `Do not count`, `Consumed Package`
 
-4. **Create:**
+4. **Create — two-step pattern required for `Done` tasks:**
+
+   Planhat only fires auto-Conversation creation on a `status` *transition* to `"done"` — not when a record is created directly with `status: "done"` (confirmed by live test, 2026-08-05). For any task whose mapped status is `"done"`, create it as `"To Do"` first, then immediately transition it:
    ```
    create_model_record(
      MODEL: "Task",
-     PARAMETERS: { <payload above> }
+     PARAMETERS: { <payload above, but status: "To Do"> }
    )
    ```
+   ```
+   update_model_record(
+     MODEL: "Task",
+     OBJECT_ID: "<_id from create response>",
+     PARAMETERS: { "status": "done" }
+   )
+   ```
+   Capture `noteId` from the **update** response — it is never present on the create response. All other statuses (`To Do`, `in-progress`, `blocked`, `ignored`) are unaffected — create them in one call with the mapped status as before.
 
 5. **Post-write check for `status: "done"` tasks only:**
-   When a Task is created/updated with `status: "done"`, Planhat auto-creates a linked Conversation and sets `noteId` on the Task response.
-   - Capture `noteId` from the create response.
-   - If `noteId` is present:
+   The `update_model_record` call that transitions a task to `"done"` (step 4) returns `noteId` — the `_id` of an auto-created Conversation.
+   - **If `noteId` is absent from that update response,** the two-step pattern in step 4 wasn't followed for this task — this is a bug in the write logic, not a workspace/connector limitation. Fix the call rather than skipping the check.
+   - **The auto-created Conversation's `type` defaults to `"note"`, not `"Task"`** (confirmed by live test) — this check-and-update step is required, not optional:
      ```
      get_model_record(MODEL: "Conversation", OBJECT_ID: "<noteId>")
      ```
@@ -292,6 +311,7 @@ LIMIT 500
        PARAMETERS: { "type": "Task" }
      )
      ```
+   - **Note:** the auto-created Conversation's `_id` is the *same value* as the Task's `_id`, not a separately generated ID (confirmed by live test) — relevant if writing any cleanup or dedup logic against Conversations.
    - `status: "ignored"` (Canceled) tasks do NOT trigger auto-Conversation — skip this step.
 
 6. **If create failed with sourceId collision (task already exists):**
@@ -302,7 +322,7 @@ LIMIT 500
      PARAMETERS: { "status": "<mapped-status>", "endTime": "<date>", ... }
    )
    ```
-   Log as "updated (already existed)."
+   Log as "updated (already existed)." If `<mapped-status>` is `"done"`, apply the same post-write `noteId` check as step 5 — the transition still applies since this is an update, not a create.
 
 ---
 
@@ -317,6 +337,7 @@ Company:       updated (5 fields)
 Conversations: 12 created · 2 already existed · 0 errors
 Tasks:         8 created · 3 updated (existed) · 1 skipped (Do not count) · 0 errors
 Errors:        [list any, with session/task names]
+Reminder:      ⚠️ activityTags (Spark) must be applied manually in the Planhat UI — not writable via MCP.
 ```
 
 **Auto-set migration flags:** After completing all three steps for a customer with **zero errors** (no failed creates, no unresolvable companies, no skipped records other than intentional skips like `Do not count = YES`), call:
@@ -324,11 +345,12 @@ Errors:        [list any, with session/task names]
 notion-update-page(
   page_id: "<Notion Customer page ID>",
   properties: {
-    "PH migrated": { "checkbox": true },
+    "PH Migrated": { "checkbox": true },
     "PH Last Migration Date": { "date": { "start": "<current UTC datetime as ISO 8601 — YYYY-MM-DDTHH:MM:SS.000Z>" } }
   }
 )
 ```
+**Property name is `"PH Migrated"` (capital M), not `"PH migrated"`** — this Notion MCP connector does not reliably fuzzy-match property casing; the exact name returns a validation error otherwise.
 Get the current datetime via Bash: `date -u +"%Y-%m-%dT%H:%M:%S.000Z"`. Write the exact output as the `start` value — do not truncate to date-only.
 
 This gates session-prepper (step 5b) and post-session-debrief (step 14) to write to Planhat for this account going forward. If any step had errors, do NOT set either flag — surface the errors and let the user decide whether to retry or flip manually.
@@ -357,7 +379,9 @@ These are non-obvious patterns from live Planhat API experience. Apply to all wr
 
 **36-record cap on `list_model_records` for Tasks.** Filters are unreliable. Do not use it for Task dedup — use attempt-create pattern instead.
 
-**Task deletion is not permitted.** Tasks created in error cannot be deleted via API. They must be removed manually in the Planhat UI.
+**Task and Conversation deletion IS possible via `delete_model_record`** (confirmed by live test, 2026-08-05) — `MODEL: "Task"` and `MODEL: "Conversation"` are both valid. Superseded: do not assume records created in error must be cleaned up manually in the UI; delete them via the API instead.
+
+**Never include `activityTags` in any MCP write payload.** It is silently rejected by the API on both Conversation and Task — no error is returned, but the field is never written. Add a manual reminder line to each customer's log instead (see § Per-customer log): "activityTags (Spark) must be applied manually in the Planhat UI."
 
 **`noSpecificTime: true`** for all date-only values (most Notion dates).
 
