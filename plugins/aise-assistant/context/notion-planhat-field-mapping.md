@@ -104,7 +104,7 @@ All Notion Tasks write to the **Planhat Task model**. For done/canceled tasks, P
 | `Customers` (relation) | `companyId` | objectId | Resolve same as sessions. Skip if Customers = Productboard internal record (`29997e9c7d4f80e6a011f053bdec1ab5`). |
 | `Owner` (person) | `ownerId` | objectId | Single owner. Resolve Notion user UUID → Planhat User `_id` via User ID table. |
 | `Priority` | `custom.Priority` | string | `"1"` → `"P1"` · `"2"` → `"P2"` · `"3"` → `"P3"` · null → omit. Valid options: `P0`–`P4` (P0 and P4 not sourced from Notion tasks). |
-| `Status` | `status` | string | `Not started` → `"To Do"` · `In progress` → `"in-progress"` (hyphenated, lowercase). Done/Canceled tasks do NOT reach this model — they go to Conversation. |
+| `Status` | `status` | string | See status mapping table above. |
 
 **Fields skipped:** `Source Call`, `Time (h)`, `Do not count`, `Consumed Package`
 
@@ -127,11 +127,22 @@ All Notion Tasks write to the **Planhat Task model**. For done/canceled tasks, P
 | `Renewal Manager` | `custom.Renewals Manager` | **SF-synced — do not write** | Synced from Salesforce. User relationship (objectId). |
 | _(no Notion equivalent)_ | `custom.Salesforce URL` | Read-only | SF-managed — cannot write. |
 
-### Health
+### Priority & health
 
-| Notion field | Planhat field | Write? | Value mapping |
+| Notion field | Planhat field | Write? | Notes |
 |---|---|---|---|
+| `Priority` (Customer) | `custom.Priority (temp – Notion)` | Write | AISE account priority. Temp field in Planhat pending native solution. Write as-is: `P0`–`P4`. `Insufficient Data` → omit. |
 | `Health (Manual)` | `csmScore` | Write | `Healthy` → `4` · `Figuring it out` → `3` · `Concerning` → `2` · `Churning` → `1` · null → omit |
+
+### Notion-only fields (not synced to Planhat)
+
+| Notion field | Reason not synced |
+|---|---|
+| `Industry` | No Planhat equivalent — skip |
+| `Renewal Forecast` | Will come from Salesforce — skip |
+| `Preferred Conferencing` | Operational preference — skip |
+| `Parent Company` | SF SSOT — skip |
+| `Time (h)` (Task) | No Planhat Task equivalent — skip for now |
 
 ### `phase` vs `custom.AISE Journey Status` — which field to use
 
@@ -250,7 +261,7 @@ Planhat `Deal` records are the functional equivalent of Notion `Active Packages`
 4. **Never overwrite Planhat `owner`** — managed by RevOps.
 5. **`users` on Task is read-only** — only `ownerId` can be set (single person). For sessions with multiple `Delivered By`, use the first listed value.
 6. **`noSpecificTime: true`** whenever date has no time component (most Notion session dates and task due dates).
-7. **Task `status` exact strings:** `done` · `in progress` · `blocked` · `ignored` (workspace-configured values; not enumerated in API schema — use exactly as written).
+7. **Task `status` exact strings:** `"done"` · `"in-progress"` · `"To Do"` · `"blocked"` · `"ignored"` — hyphenated lowercase for `in-progress`, capital `To Do` (workspace-configured values; not enumerated in API schema — use exactly as written).
 8. **`Account Executive` and `Renewals Manager`** are User relationship fields — write as Planhat User `_id`, not display name.
 
 ---

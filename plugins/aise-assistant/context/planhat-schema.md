@@ -275,6 +275,7 @@ Planhat only — Notion does not track these in real time.
 
 | Field ID | Type | Options | Notes |
 |---|---|---|---|
+| `custom.Priority (temp – Notion)` | string | `P0`, `P1`, `P2`, `P3`, `P4` | ← Notion Customer `Priority`. Temp field pending a native Planhat solution. Omit if Notion value is `Insufficient Data`. |
 | `custom.Spark Stage` | string | `Not Active`, `AI Terms Review`, `Active for Admins`, `Active for All`, `Icebox`, `Active on Staging` | ← Notion `Spark Customer Journey` |
 | `custom.AI Ready` | string | `Ignitable`, `Sparked`, `Preparing`, `Not Ready` | ← Notion `AI Ready` |
 | `custom.Igniting?` | boolean | `true` / `false` | ← Notion `Igniting?` |
