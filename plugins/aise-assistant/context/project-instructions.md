@@ -304,3 +304,32 @@ The `default_page_template` field in `data-source-state` shows which template (i
 - **Message compose tool** when drafting emails or Slack messages, especially when there's a real strategic choice.
 - **Structured markdown** — bolded labels, bullets, tables where they help.
 - **Match length to complexity.** Don't pad.
+
+---
+
+## 10. Planhat API — When Stuck
+
+Planhat's public API docs are thin. When a write is being silently ignored, a field format is unclear, or behavior differs from what the schema suggests, escalate to Planhat's support chat before guessing further.
+
+**How to escalate:**
+
+1. Stop what you're doing and tell the user you're stuck on a specific Planhat API question.
+2. Give the user this message to paste into **Planhat's Fin chat** (the AI support bot, accessible from the Planhat app via the help/chat icon):
+
+> *"I'm using the Planhat REST API / MCP to write to [field name] on the [Model] model. [Describe the problem — e.g. 'The field exists in the UI but writes are silently ignored' / 'What format does a rich text custom field expect?' / 'Does the API accept HTML or Tiptap JSON for rich text fields?']. Can you confirm the expected format and any known limitations?"*
+
+3. Ask the user to **copy the Fin answer back** into the chat.
+4. Continue from there using the confirmed information.
+
+**When this applies:**
+- A custom field write returns no error but the value doesn't appear (silent rejection)
+- `get_model_action_parameters` doesn't list a field the UI shows
+- Rich text / array / relation field format is unclear
+- API behavior contradicts the schema (e.g. `activityTags` rejected despite being listed)
+- A filter in `list_model_records` returns empty but records clearly exist
+
+**Known confirmed quirks** (do not re-investigate these — answers already confirmed):
+- `activityTags` — listed in schema but **not writable via MCP**. Apply manually in Planhat UI.
+- Rich text custom fields — accept **HTML** (`<p>`, `<strong>`, `<ul><li><p>`) not Tiptap JSON, not plain text.
+- `list_model_records` on Task — **36-record hard cap**; filters unreliable. Use attempt-create dedup or `search_records`.
+- `PARAMETERS` not `DATA` — the MCP requires `PARAMETERS` key; `DATA` returns "Missing required parameter".

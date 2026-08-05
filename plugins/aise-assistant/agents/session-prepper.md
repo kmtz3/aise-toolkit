@@ -198,21 +198,16 @@ update_model_record(
   OBJECT_ID: "<task-_id>",
   PARAMETERS: {
     "type": "<inferred-type>",
-    "custom.Prep Notes": "<condensed prep brief — 3–5 bullets, max ~500 chars, covering session goals, open items, and key watch-fors>"
+    "custom.Prep Notes": "<prep brief in HTML format — see format spec below>"
   }
 )
 ```
 
-**`custom.Prep Notes` format** (plain text — Planhat API accepts strings; use `-` bullets, no markdown or toggles):
+**`custom.Prep Notes` format** (HTML — Planhat rich text accepts HTML; no `<h>` tags, use `<strong>` for section labels and `<ul><li><p>` for bullets):
 ```
-GOALS: <1-line session objective>
-OPEN ITEMS:
-- <open item 1>
-- <open item 2>
-WATCH-FORS:
-- <risk or context point>
+<p><strong>Goals</strong></p><p><1-line session objective></p><p><strong>Open Items</strong></p><ul><li><p><open item 1></p></li><li><p><open item 2></p></li></ul><p><strong>Watch-fors</strong></p><ul><li><p><risk or context point></p></li></ul>
 ```
-Keep to ~400–500 chars. `description` is reserved for actual session content written during or after the call.
+Keep to ~400–500 chars of visible text. `description` is reserved for actual session content written during or after the call.
 
 **If the Task already has `type` set correctly:** only update `custom.Prep Notes`; do not overwrite an intentionally set type.
 
@@ -229,7 +224,7 @@ create_model_record(
     "companyId": "<planhat-company-id>",
     "endTime": "<Call Date as ISO 8601 — YYYY-MM-DDT00:00:00.000Z>",
     "noSpecificTime": true,
-    "custom.Prep Notes": "<prep brief in plain-text format above>",
+    "custom.Prep Notes": "<prep brief in HTML format above>",
     "status": "To Do"
   }
 )

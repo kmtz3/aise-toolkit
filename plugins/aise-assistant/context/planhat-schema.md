@@ -458,7 +458,7 @@ If a result is returned, update it rather than creating a duplicate.
 | `externalId` | string | — | Notion Session page ID. **Dedup key.** |
 | `source` | string | — | Always `"AISE"`. |
 | ~~`activityTags`~~ | array | — | ~~`["Spark"]` if `Spark conversation = YES`.~~ **Not writable via MCP — silently rejected. Apply manually in Planhat UI.** |
-| `custom.Prep Notes` | string | — | Plain-text prep brief written by session-prepper before the session. Format: `GOALS: ...\nOPEN ITEMS:\n- ...\nWATCH-FORS:\n- ...`. Carry over from the linked Task when writing the Conversation post-session. |
+| `custom.Prep Notes` | string | — | Plain-text prep brief written by session-prepper before the session. Format: HTML — `<p><strong>Goals</strong></p><p>...</p><p><strong>Open Items</strong></p><ul><li><p>...</p></li></ul><p><strong>Watch-fors</strong></p><ul><li><p>...</p></li></ul>`. No `<h>` tags — use `<strong>` for section labels.. Carry over from the linked Task when writing the Conversation post-session. |
 | `transcript` | string | — | Full transcript text if available. |
 | `taskId` | objectId | — | Links this conversation to its originating Planhat Task. Set when writing a Done Notion Task as a Conversation — look up the existing Planhat Task by `sourceId` and pass its `_id` here. Optional on backfill if the Task doesn't exist yet in Planhat. |
 | `category` | string | — | One of: `Support`, `Feedback`, `Sales`, `Expansion`, `Billing & Contracts`, `Renewals`, `Legal`, `General Enquires`, `Spam`, `Marketing`. Leave blank for AISE sessions unless relevant. |
@@ -565,7 +565,7 @@ All Notion Task statuses write to the Planhat Task model. Done/Canceled statuses
 | `ownerId` | objectId | — | Planhat User `_id` of the person responsible. |
 | `sourceId` | string | — | Notion Task page ID. **Dedup key.** |
 | `custom.Priority` | string | — | `"P1"`, `"P2"`, `"P3"` mapped from Notion `Priority` field. |
-| `custom.Prep Notes` | string | — | Plain-text prep brief written by session-prepper. Format: `GOALS: ...\nOPEN ITEMS:\n- ...\nWATCH-FORS:\n- ...`. Read and carried to the linked Conversation during post-session debrief. |
+| `custom.Prep Notes` | string | — | Plain-text prep brief written by session-prepper. Format: HTML — `<p><strong>Goals</strong></p><p>...</p><p><strong>Open Items</strong></p><ul><li><p>...</p></li></ul><p><strong>Watch-fors</strong></p><ul><li><p>...</p></li></ul>`. No `<h>` tags — use `<strong>` for section labels.. Read and carried to the linked Conversation during post-session debrief. |
 | ~~`activityTags`~~ | array | — | ~~Freeform tags for filtering.~~ **Not writable via MCP — silently rejected. Apply manually in Planhat UI.** |
 | `endusers` | array | — | Customer contacts involved: `[{"id": "<enduser-id>"}]`. |
 

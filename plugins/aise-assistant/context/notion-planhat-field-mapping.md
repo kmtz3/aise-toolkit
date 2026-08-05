@@ -82,7 +82,7 @@ All Notion Tasks write to the **Planhat Task model**. For done/canceled tasks, P
 | `Customers` (relation) | `companyId` | objectId | Resolve via company name or SF `sourceId`. See `planhat-schema.md`. **Required.** |
 | `Delivered By` (person, all values) | `users` | array | `[{"id": "<planhat-user-id>"}]`. Resolve from User ID table in `planhat-schema.md`. |
 | `Next Steps` / session body | `description` | string | Actual session notes/summary. Truncate to ~2000 chars. Do **not** use this for prep notes — see `custom.Prep Notes`. Do **not** append Gong URL here — use `custom.Gong URL` instead. |
-| _(from session prep)_ | `custom.Prep Notes` | string | Prep brief written by session-prepper. Kept separate from session content. On Task: write during prep. When Task is marked done (debrief), carry to Conversation `custom.Prep Notes`. |
+| _(from session prep)_ | `custom.Prep Notes` | string (HTML) | Prep brief written by session-prepper. HTML format: `<p><strong>Goals</strong></p><p>...</p><p><strong>Open Items</strong></p><ul><li><p>...</p></li></ul><p><strong>Watch-fors</strong></p><ul><li><p>...</p></li></ul>`. No `<h>` tags. On Task: write during prep. Carry to Conversation when Task is marked done (debrief). |
 | `Gong call` (url) | `custom.Gong URL` | string | Gong call link. **Write to `custom.Gong URL`, not appended to `description`.** |
 | `Session Length (h)` | `custom.Call Duration` | number | Multiply by 60 → minutes. |
 | `Spark Conversation` | ~~`activityTags`~~ | — | ⚠️ **`activityTags` is not writable via the Planhat MCP API** — requests are silently rejected. Omit this field. Spark tagging must be applied manually in the Planhat UI. |
@@ -327,9 +327,9 @@ All fields verified against live Planhat API schema (`get_model_action_parameter
 **Conversation custom fields (confirmed):**
 - `custom.Gong URL` — string. Use this for Gong links — do NOT append to `description`.
 - `custom.Call Duration` — number (minutes). Derive from Notion `Session Length (h)` × 60.
-- `custom.Prep Notes` — string. Prep brief for this session. Written by session-prepper (via Task → Conversation carry-over on mark-done) and by post-session-debrief. **Do not populate during migration** — Notion session records do not hold prep content.
+- `custom.Prep Notes` — string (HTML rich text). Prep brief for this session. HTML format — `<p><strong>Goals</strong></p><p>...</p><p><strong>Open Items</strong></p><ul><li><p>...</p></li></ul><p><strong>Watch-fors</strong></p><ul><li><p>...</p></li></ul>`. Written by session-prepper (via Task → Conversation carry-over on mark-done). **Do not populate during migration** — Notion session records do not hold prep content.
 
 **Task custom fields (confirmed):**
 - `custom.Priority` — options: `P0` · `P1` · `P2` · `P3` · `P4`
 - `custom.Spark Conversation` — boolean
-- `custom.Prep Notes` — string. ⚠️ **Must be added to the Task model in Planhat UI** (Settings → Custom fields → Task) before this field can be written. Until then, fall back to `description` for prep on Tasks. Once added, use `custom.Prep Notes` on Task for prep content and reserve `description` for actual session/task notes.
+- `custom.Prep Notes` — string (HTML rich text). ✅ Field confirmed on Task model. Same HTML format as Conversation. Write during session prep; carry to Conversation on mark-done.
