@@ -2,7 +2,7 @@
 
 > **Purpose:** Compact write-ready reference for agents backfilling or syncing data from the Notion Customer Tracker into Planhat.
 >
-> **Last updated:** 2026-08-05 (Other type mapping: → Sync default + Demo title-pattern override; activityTags not writable via MCP; custom.Prep Notes on Conversation; Task type fixed to "Task" for generic action items)
+> **Last updated:** 2026-08-05 (Other type mapping: → Sync default + Demo title-pattern override; custom.Prep Notes on Conversation; Task type fixed to "Task" for generic action items)
 >
 > **Migration architecture:**
 >
@@ -85,7 +85,6 @@ All Notion Tasks write to the **Planhat Task model**. For done/canceled tasks, P
 | _(from session prep)_ | `custom.Prep Notes` | string (HTML) | Prep brief written by session-prepper. HTML format: `<p><strong>Goals</strong></p><p>...</p><p><strong>Open Items</strong></p><ul><li><p>...</p></li></ul><p><strong>Watch-fors</strong></p><ul><li><p>...</p></li></ul>`. No `<h>` tags. On Task: write during prep. Carry to Conversation when Task is marked done (debrief). |
 | `Gong call` (url) | `custom.Gong URL` | string | Gong call link. **Write to `custom.Gong URL`, not appended to `description`.** |
 | `Session Length (h)` | `custom.Call Duration` | number | Multiply by 60 → minutes. |
-| `Spark Conversation` | ~~`activityTags`~~ | — | ⚠️ **`activityTags` is not writable via the Planhat MCP API** — requests are silently rejected. Omit this field. Spark tagging must be applied manually in the Planhat UI. |
 | _(constant)_ | `source` | string | Always `"AISE"`. Distinguishes from Zendesk/GCal entries. |
 
 **Fields skipped:** `Consumed Package`, `Do not count`, `Prepped`, `Debriefed`
@@ -319,7 +318,6 @@ All fields verified against live Planhat API schema (`get_model_action_parameter
 
 **Task fields (all statuses — all Notion Tasks write to Planhat Task model):**
 - `custom.Priority` — options: `P0` · `P1` · `P2` · `P3` · `P4`
-- `custom.Spark Conversation` — boolean
 - `status` — workspace-configured: `"To Do"` · `"in-progress"` · `"blocked"` · `"ignored"` (**Note:** hyphenated `in-progress`, capital `To Do` — previously documented as `In-Progress` which is wrong)
 - `users` — readonly (cannot write); use `ownerId` instead
 - `noSpecificTime` — boolean ✓
@@ -331,5 +329,4 @@ All fields verified against live Planhat API schema (`get_model_action_parameter
 
 **Task custom fields (confirmed):**
 - `custom.Priority` — options: `P0` · `P1` · `P2` · `P3` · `P4`
-- `custom.Spark Conversation` — boolean
 - `custom.Prep Notes` — string (HTML rich text). ✅ Field confirmed on Task model. Same HTML format as Conversation. Write during session prep; carry to Conversation on mark-done.

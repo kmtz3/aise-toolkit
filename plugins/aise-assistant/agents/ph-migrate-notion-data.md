@@ -149,7 +149,7 @@ For each customer, query all Delivered sessions from Notion:
 
 ```sql
 SELECT id, Name, Type, "Call Status", "date:Call Date:start", "Customers", "Delivered By",
-       "Next Steps", "Gong call", "Session Length (h)", "Spark Conversation"
+       "Next Steps", "Gong call", "Session Length (h)"
 FROM "collection://29397e9c-7d4f-8052-886b-000b9e3479d7"
 WHERE Customers LIKE '%<customer-page-id-no-hyphens>%'
   AND "Call Status" = 'Delivered'
@@ -163,17 +163,18 @@ LIMIT 500
 
 1. **Extract Notion page ID** — the 32-char hex from the session page URL. This becomes `externalId`.
 
-2. **Gong + GCal EndUser backfill — resolve attendees for this session:**
-   - **Try Gong first:** Call `mcp__Gong__ask_account(crmAccount: "<customer>")` and look for a Gong call matching this session's date and title. Extract the actual call participants (Gong shows who joined, not just who was invited). If Gong returns a match, use Gong's participant list as the authoritative source and skip GCal lookup.
-   - **GCal fallback (only if Gong has no record):** Call `list_events` for the session's `Call Date` and match the calendar event by title similarity (session name ≈ event title) or by customer name in the attendee list. Extract `accepted` RSVPs only.
+2. **Gong + GCal EndUser backfill — resolve attendees for this session.** This sub-step is **mandatory and non-skippable** for every session — it is part of the payload-build loop, not a separate optional phase. Do not defer or batch-defer it to a later pass; resolve `endUsers` before calling `create_model_record` (or `update_model_record`) for this Conversation.
+   - **Gong is primary for all sessions, regardless of age.** Call `mcp__Gong__ask_account(crmAccount: "<SF Account ID>")` — **pass the Salesforce Account ID (the `sourceId` on the Planhat Company record), not the company display name.** Passing a display name returns `CRM_ENTITY_NOT_FOUND`. Retrieve the SF Account ID from the Company record resolved in Step 0.C (extracted from the Notion `SFDC` URL, or read `sourceId` off the Planhat Company). Look for a Gong call matching this session's date and title, and extract the actual call participants (Gong shows who joined, not just who was invited).
+   - **GCal fallback — only for sessions in the last ~90 days, and only if Gong has no record for that session.** GCal indexing for older events is unreliable (`list_events`/`fullText` search reliably surfaces only the last ~3–4 months) — do not rely on it for sessions further back; if Gong has no data for an older session, log `endUsers: omitted (no source data)` and continue rather than trying GCal. For in-window sessions, call `list_events` for the session's `Call Date` and match the calendar event by title similarity (session name ≈ event title) or by customer name in the attendee list. Extract `accepted` RSVPs only.
    - Extract customer-side attendee emails from whichever source was used (exclude `@productboard.com` addresses and any Productboard-internal domains).
    - For each customer email, search for a matching Planhat EndUser:
      ```
      search_records(QUERY: "<email>")
      ```
      Filter to `model: "EndUser"` with `companyId = <planhat-company-id>`. Capture `_id` for each match.
+   - **If an email returns no match, retry with common first-name nickname expansions** before giving up (e.g. `jon` → `jonathan`, `liz` → `elizabeth`, `kate` → `katherine`, `mike` → `michael`, `dave` → `david`) — attendee emails from Gong/GCal sometimes use a nickname while the Planhat EndUser record uses the full first name. Log any final non-match as `not found in Planhat` — do not block the Conversation create on it.
    - Collect resolved EndUser `_id` values into an `endUsers` array for the payload. If no attendees resolve, omit `endUsers`.
-   - **Note any Gong participants with no matching Planhat EndUser** in the migration output — do not create EndUser records as a side effect.
+   - **Note any Gong/GCal participants with no matching Planhat EndUser** in the migration output — do not create EndUser records as a side effect.
 
 3. **Dedup check:**
    ```
@@ -224,7 +225,6 @@ LIMIT 500
    - `description`: `Next Steps` or session notes (truncate to ~2000 chars) — session content only. `custom.Prep Notes` is omitted during migration (prep notes are not stored in Notion's session records).
    - `custom.Gong URL`: `Gong call` field value (if present)
    - `custom.Call Duration`: `Session Length (h)` × 60 (integer minutes)
-   - ~~`activityTags`~~: **omit** — `activityTags` is not writable via the Planhat MCP API (requests are silently rejected). Apply Spark tags manually in the Planhat UI.
    - `source`: always `"AISE"`
 
 6. **Create** (only if no matching Task was found in step 4):
@@ -337,7 +337,6 @@ Company:       updated (5 fields)
 Conversations: 12 created · 2 already existed · 0 errors
 Tasks:         8 created · 3 updated (existed) · 1 skipped (Do not count) · 0 errors
 Errors:        [list any, with session/task names]
-Reminder:      ⚠️ activityTags (Spark) must be applied manually in the Planhat UI — not writable via MCP.
 ```
 
 **Auto-set migration flags:** After completing all three steps for a customer with **zero errors** (no failed creates, no unresolvable companies, no skipped records other than intentional skips like `Do not count = YES`), call:
@@ -380,8 +379,6 @@ These are non-obvious patterns from live Planhat API experience. Apply to all wr
 **36-record cap on `list_model_records` for Tasks.** Filters are unreliable. Do not use it for Task dedup — use attempt-create pattern instead.
 
 **Task and Conversation deletion IS possible via `delete_model_record`** (confirmed by live test, 2026-08-05) — `MODEL: "Task"` and `MODEL: "Conversation"` are both valid. Superseded: do not assume records created in error must be cleaned up manually in the UI; delete them via the API instead.
-
-**Never include `activityTags` in any MCP write payload.** It is silently rejected by the API on both Conversation and Task — no error is returned, but the field is never written. Add a manual reminder line to each customer's log instead (see § Per-customer log): "activityTags (Spark) must be applied manually in the Planhat UI."
 
 **`noSpecificTime: true`** for all date-only values (most Notion dates).
 

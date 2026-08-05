@@ -1,5 +1,12 @@
 # Changelog — aise-leadership
 
+## [1.10.2] — 2026-08-06
+
+### Changed
+- `context/notion-planhat-field-mapping.md`: resynced from aise-assistant v2.30.2 — removed remaining `Spark Conversation`/`activityTags` references (field already dropped as non-writable via MCP in a prior sync).
+
+---
+
 ## [1.10.1] — 2026-08-06
 
 ### Changed

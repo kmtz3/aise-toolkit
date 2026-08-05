@@ -5,6 +5,19 @@ Format: `## [version] — YYYY-MM-DD` followed by bullet points grouped by type.
 
 ---
 
+## [2.30.2] — 2026-08-06
+
+### Fixed
+- `ph-migrate-notion-data` agent: EndUser backfill (Gong + GCal attendee resolution) is now explicit and non-skippable — it is part of the per-session payload-build loop, not a deferrable phase. A prior run completed all Conversation creates but skipped this sub-step, requiring a separate follow-up pass.
+- `ph-migrate-notion-data` agent: Gong `ask_account` now requires the Salesforce Account ID (`sourceId` on the Planhat Company) as `crmAccount` — passing the company display name returned `CRM_ENTITY_NOT_FOUND`.
+- `ph-migrate-notion-data` agent: GCal is now fallback-only for sessions within the last ~90 days; Gong is primary for all sessions. GCal indexing was found to be unreliable beyond ~3–4 months, returning zero results for older sessions.
+- `ph-migrate-notion-data` agent + `context/notion-planhat-field-mapping.md`: removed remaining `Spark Conversation`/`activityTags` references (field was already dropped as non-writable via MCP in a prior edit; these were leftover mentions).
+
+### Added
+- `ph-migrate-notion-data` agent: EndUser email matching now retries with common first-name nickname expansions (e.g. `jon` → `jonathan`, `liz` → `elizabeth`) before logging a non-match — Gong/GCal attendee emails sometimes use a nickname that doesn't match the full name on the Planhat EndUser record.
+
+---
+
 ## [2.30.1] — 2026-08-06
 
 ### Fixed
