@@ -1,5 +1,12 @@
 # Changelog — aise-leadership
 
+## [1.10.3] — 2026-08-06
+
+### Changed
+- `context/notion-planhat-field-mapping.md`: resynced from aise-assistant v2.30.3 — corrected Planhat Conversation field name from `endUsers` (camelCase) to `endusers` (all lowercase); Planhat silently drops writes to the wrong field name without an error.
+
+---
+
 ## [1.10.2] — 2026-08-06
 
 ### Changed

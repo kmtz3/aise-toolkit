@@ -481,7 +481,7 @@ If no Task was found (or `noteId` was null):
 ```
 list_model_records(MODEL: "Conversation", FILTER: {"externalId[equal to]": "<session-page-id-32-char-hex>"})
 ```
-- **Found** → update if `type`, `description`, or `endUsers` drifted. Log as "already exists — refreshed."
+- **Found** → update if `type`, `description`, or `endusers` drifted. Log as "already exists — refreshed."
 - **Not found** → create:
   ```
   create_model_record(MODEL: "Conversation", PARAMETERS: {<payload below>})
@@ -497,7 +497,7 @@ list_model_records(MODEL: "Conversation", FILTER: {"externalId[equal to]": "<ses
 | `date` + `startDate` | `Call Date` as ISO 8601 (`T00:00:00.000Z`) |
 | `companyId` | Resolved Planhat Company `_id` |
 | `users` | Resolve `Delivered By` Notion UUID → Planhat User `_id` (User ID table in `context/planhat-schema.md`). Omit if unresolvable. |
-| `endUsers` | Resolve customer-side attendees from the session's GCal event (available from step 1) → Planhat EndUser `_id` values via `search_records(QUERY: "<email>")`. Omit if none resolve. |
+| `endusers` | **All lowercase — not `endUsers`; Planhat silently drops the camelCase write (HTTP 200, no error).** Resolve customer-side attendees from the session's GCal event (available from step 1) → Planhat EndUser `_id` values via `search_records(QUERY: "<email>")`, as `[{"_id": "<EndUser _id>"}, ...]`. Omit if none resolve. |
 | `description` | Session notes summary from step 2's extracted output (truncate to ~2000 chars) — **actual session content only, not prep** |
 | `custom.Prep Notes` | Prep brief captured from the Task in step 14-2b. Omit if no prep was written or the field is empty. |
 | `custom.Gong URL` | Gong URL if found during transcript lookup |

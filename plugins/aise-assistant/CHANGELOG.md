@@ -5,6 +5,14 @@ Format: `## [version] — YYYY-MM-DD` followed by bullet points grouped by type.
 
 ---
 
+## [2.30.3] — 2026-08-06
+
+### Fixed
+- `ph-migrate-notion-data` and `post-session-debrief` agents + `context/notion-planhat-field-mapping.md`: corrected Planhat Conversation field name from `endUsers` (camelCase) to `endusers` (all lowercase). Planhat silently accepts writes to the wrong field name with an HTTP 200 response, dropping the data without error — a prior migration run showed 20 successful Conversation updates but wrote no attendees on any of them.
+- `ph-migrate-notion-data` agent: added a mandatory spot-check after the first Conversation write with resolved attendees — reads back `endusers` via `get_model_record` and aborts with a warning if it's empty, since a 200 response is not proof the field was written.
+
+---
+
 ## [2.30.2] — 2026-08-06
 
 ### Fixed
