@@ -202,9 +202,9 @@ Maps from Notion `Account Status`. Field ID: **`custom.AISE Journey Status`** (n
 
 | Notion field | Planhat field | Value mapping |
 |---|---|---|
-| `Spark Customer Journey` | `custom.Spark Stage` | `Not Active` → `Not Active` · `AI Terms Review` → `AI Terms Review` · `Active for Admins (Production)` → `Active for Admins` · `Active for All (Production)` → `Active for All` · `Active (Staging only)` → `Active on Staging` · `Icebox` → `Icebox` |
-| `AI Ready` | `custom.AI Ready` | `Sparked` → `Sparked` · `Preparing` → `Preparing` · `Ignitable` → `Ignitable` · `Not ready` → `Not Ready` _(capital R in Planhat)_ |
-| `Igniting?` | `custom.Igniting?` | `__YES__` → `true` · `__NO__` → `false` |
+| `Spark Customer Journey` | `custom.⚡️ Spark Stage` | `Not Active` → `Off` · `AI Terms Review` → `AI Terms Review` · `Active for Admins (Production)` → `Admins only` · `Active for All (Production)` → `Everyone` · `Active (Staging only)` → `Admins only` · `Icebox` → `Icebox` — **Renamed 2026-08-07:** field ID gained a `⚡️` prefix and options were relabeled (`Off`/`Admins only`/`Everyone`/`Mixed` replace the old `Not Active`/`Active for Admins`/`Active for All`/n-a). `Mixed` has no Notion-side source value — Planhat-native only. |
+| `AI Ready` | `custom.AI Ready` | `Sparked` → `Sparked` · `Preparing` → `Preparing` · `Ignitable` → `Ignitable` · `Not ready` → `Not Ready` _(capital R in Planhat)_ — unchanged by the 2026-08-07 rename. |
+| `Igniting?` | `custom.⚡️ Igniting?` | `__YES__` → `true` · `__NO__` → `false` — **Renamed 2026-08-07:** field ID gained a `⚡️` prefix. |
 
 ### Active Packages ↔ Planhat Deal
 
@@ -235,7 +235,7 @@ Planhat `Deal` records are the functional equivalent of Notion `Active Packages`
 | `custom.Slack URL` | Slack channel URL. |
 | `custom.Slack ID` | Slack channel ID. |
 | `custom.Salesforce URL` | SF account URL — Planhat read-only system field. |
-| `custom.Days in Current Ignite Stage` | Auto-computed. |
+| `custom.⚡️ Days in Current Ignite Stage` | Auto-computed. **Renamed 2026-08-07:** gained a `⚡️` prefix (was `custom.Days in Current Ignite Stage`). |
 | `custom.AI Readiness – SF` | SF-synced AI readiness. Options: `AI-Forward (Inferred/Validated)` · `AI-Interested (Inferred/Validated)` · `AI Resistant/AI-Resistant (Inferred/Validated)`. |
 | `renewalDate` / `renewalArr` | Contract dates and renewal ARR. |
 | `mrr` / `arr` | Revenue figures. Derived from active licenses synced from SF. |
@@ -308,14 +308,16 @@ Hard-won patterns from the S&P Global Ratings backfill (2026-07-10 to 2026-07-13
 
 ## Confirmed Fields ✓
 
-All fields verified against live Planhat API schema (`get_model_action_parameters`) on 2026-07-10.
+All fields verified against live Planhat API schema (`get_model_action_parameters`) on 2026-07-10. Spark field names/options re-verified 2026-08-07 — see the rename notes inline in the mapping table above.
 
 **Company fields:**
 - `custom.AISE Journey Status` — string, options: `Presales` · `Active (no Services)` · `Active (Services)` · `Contracted to Scale` · `Churned` (**`Not started` is not a valid option — omit when Notion = `Not started`**). Note: field ID is `custom.AISE Journey Status`, not `custom.Journey Status`.
 - `phase` — standard Planhat field. Replaces deleted `custom.Services Phase`. **Configured options (not free-text):** `0. Preparation` · `1. Activation` · `2. Adoption` · `3. Renewal` · `4. Churned`. Derived from Active Package `Status` — see mapping table above. `4. Churned` is set manually, not via Active Package sync.
-- `custom.Spark Stage` — options: `Not Active` · `AI Terms Review` · `Active for Admins` · `Active for All` · `Icebox` · `Active on Staging`
-- `custom.AI Ready` — options: `Ignitable` · `Sparked` · `Preparing` · `Not Ready`
-- `custom.Igniting?` — boolean
+- `custom.⚡️ Spark Stage` — options: `Off` · `AI Terms Review` · `Admins only` · `Everyone` · `Icebox` · `Mixed`. **Renamed 2026-08-07** — was `custom.Spark Stage` with options `Not Active`/`Active for Admins`/`Active for All`/`Active on Staging`.
+- `custom.AI Ready` — options: `Ignitable` · `Sparked` · `Preparing` · `Not Ready` (unchanged)
+- `custom.⚡️ Igniting?` — boolean. **Renamed 2026-08-07** — was `custom.Igniting?`.
+- `custom.⚡️ Days in Current Ignite Stage` — text, read-only. **Renamed 2026-08-07** — was `custom.Days in Current Ignite Stage`.
+- `custom.⚡️ Spark Enabled` · `custom.⚡️ Spark Enabled Date` · `custom.⚡️ Spark Active For Since` · `custom.⚡️ Spark Engaged` · `custom.⚡️ Spark Engaged Date` · `custom.⚡️ AI Consent` · `custom.Spark Stage` — **added 2026-08-07**, written by `temp-ph-ignite-conversion-data-sync` skill from weekly CSV upload. CSV is the source of truth; no Notion equivalent.
 
 **Task fields (all statuses — all Notion Tasks write to Planhat Task model):**
 - `custom.Priority` — options: `P0` · `P1` · `P2` · `P3` · `P4`

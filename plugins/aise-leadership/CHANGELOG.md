@@ -1,5 +1,12 @@
 # Changelog — aise-leadership
 
+## [1.10.4] — 2026-08-07
+
+### Changed
+- `context/notion-schema.md`, `context/notion-planhat-field-mapping.md`, `context/planhat-schema.md`, `context/planhat-user-profile.md`: resynced from aise-assistant v2.31.0.
+
+---
+
 ## [1.10.3] — 2026-08-06
 
 ### Changed

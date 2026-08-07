@@ -98,13 +98,16 @@ list_model_records(MODEL: "Company", FILTER: {"sourceId[equal to]": "<SF_ACCOUNT
 
 These three fields are actively synced Notion → Planhat by the AISE assistant.
 
+> **Renamed 2026-08-07** — all three ⚡️-prefixed fields below were renamed/relabeled in Planhat. Old field IDs (`custom.Spark Stage`, `custom.Igniting?`, `custom.Days in Current Ignite Stage`, without the emoji) and old `Spark Stage` option values (`Not Active`/`Active for Admins`/`Active for All`/`Active on Staging`) are stale — do not use them. `AI Ready` is unaffected.
+
 | Notion field | Planhat field ID | Type | Value mapping |
 |---|---|---|---|
-| `Spark Customer Journey` | `custom.Spark Stage` | string (select) | `Not Active` → `Not Active` · `AI Terms Review` → `AI Terms Review` · `Active for Admins (Production)` → `Active for Admins` · `Active for All (Production)` → `Active for All` · `Active (Staging only)` → `Active on Staging` · `Icebox` → `Icebox` |
+| `Spark Customer Journey` | `custom.⚡️ Spark Stage` | string (select) | `Not Active` → `Off` · `AI Terms Review` → `AI Terms Review` · `Active for Admins (Production)` → `Admins only` · `Active for All (Production)` → `Everyone` · `Active (Staging only)` → `Admins only` · `Icebox` → `Icebox` |
 | `AI Ready` | `custom.AI Ready` | string (select) | `Sparked` → `Sparked` · `Preparing` → `Preparing` · `Ignitable` → `Ignitable` · `Not ready` → `Not Ready` _(note capital R)_ |
-| `Igniting?` | `custom.Igniting?` | boolean | `__YES__` → `true` · `__NO__` → `false` |
-| `Days in Current Ignite Phase` (formula) | `custom.Days in Current Ignite Stage` | string (read-only) | Both are computed. Do not write either. |
+| `Igniting?` | `custom.⚡️ Igniting?` | boolean | `__YES__` → `true` · `__NO__` → `false` |
+| `Days in Current Ignite Phase` (formula) | `custom.⚡️ Days in Current Ignite Stage` | string (read-only) | Both are computed. Do not write either. |
 | `Ignite Journey Last Edited` (date) | _(no equivalent)_ | — | Notion-only automation field. |
+| _(no Notion equivalent)_ | `custom.⚡️ Spark Enabled` / `custom.⚡️ Spark Enabled Date` / `custom.⚡️ Spark Active For Since` / `custom.⚡️ Spark Engaged` / `custom.⚡️ Spark Engaged Date` / `custom.⚡️ AI Consent` / `custom.Spark Stage` | boolean / date / date / boolean / date / text / list | **Added 2026-08-07.** Written by `temp-ph-ignite-conversion-data-sync` skill from weekly CSV upload. CSV is the source of truth for these fields. |
 
 **Write direction:** Notion → Planhat. Notion is the source of truth for Spark fields during the current transition. When updating Spark status, write to Notion first (via `notion-update-page`), then sync to Planhat (via `update_model_record`).
 
@@ -171,7 +174,7 @@ Some accounts are named differently across systems. Always check this table befo
 ### "What's the Spark status for customer X?"
 
 1. Search Notion Customers DB for customer X → get `Spark Customer Journey`, `Igniting?`, `AI Ready`
-2. Optionally cross-check Planhat: `search_records(QUERY: "<customer name>")` → `get_model_record(SELECT: ["custom.Spark Stage", "custom.AI Ready", "custom.Igniting?"])`
+2. Optionally cross-check Planhat: `search_records(QUERY: "<customer name>")` → `get_model_record(SELECT: ["custom.⚡️ Spark Stage", "custom.AI Ready", "custom.⚡️ Igniting?"])`
 3. If they differ, **Notion is the source of truth** — flag the discrepancy and offer to re-sync Planhat.
 
 ### "Update Spark status for customer X"
@@ -270,16 +273,16 @@ Planhat only — Notion does not track these in real time.
 | `custom.Slack ID` | string | — | Slack channel ID |
 | `custom.Salesforce URL` | string | — | SF account URL — system read-only |
 | `custom.AI Readiness – SF` | string | `AI-Forward (Inferred/Validated)`, `AI-Interested (Inferred/Validated)`, `AI-Resistant (Inferred/Validated)` | SF-synced AI readiness |
-| `custom.Days in Current Ignite Stage` | string | — | Auto-computed. Read-only. |
+| `custom.⚡️ Days in Current Ignite Stage` | string | — | Auto-computed. Read-only. **Renamed 2026-08-07** (was `custom.Days in Current Ignite Stage`). |
 
 #### AISE-writable
 
 | Field ID | Type | Options | Notes |
 |---|---|---|---|
 | `custom.Priority (temp – Notion)` | string | `P0`, `P1`, `P2`, `P3`, `P4` | ← Notion Customer `Priority`. Temp field pending a native Planhat solution. Omit if Notion value is `Insufficient Data`. |
-| `custom.Spark Stage` | string | `Not Active`, `AI Terms Review`, `Active for Admins`, `Active for All`, `Icebox`, `Active on Staging` | ← Notion `Spark Customer Journey` |
-| `custom.AI Ready` | string | `Ignitable`, `Sparked`, `Preparing`, `Not Ready` | ← Notion `AI Ready` |
-| `custom.Igniting?` | boolean | `true` / `false` | ← Notion `Igniting?` |
+| `custom.⚡️ Spark Stage` | string | `Off`, `AI Terms Review`, `Admins only`, `Everyone`, `Icebox`, `Mixed` | ← Notion `Spark Customer Journey`. **Renamed 2026-08-07** (was `custom.Spark Stage` with options `Not Active`/`Active for Admins`/`Active for All`/`Active on Staging`) — see value mapping table above. |
+| `custom.AI Ready` | string | `Ignitable`, `Sparked`, `Preparing`, `Not Ready` | ← Notion `AI Ready` (unchanged) |
+| `custom.⚡️ Igniting?` | boolean | `true` / `false` | ← Notion `Igniting?`. **Renamed 2026-08-07** (was `custom.Igniting?`). |
 | `custom.AISE Journey Status` | string | `Presales`, `Active (no Services)`, `Active (Services)`, `Contracted to Scale`, `Churned` | ← Notion `Account Status`. **AISE-managed accounts only (30k+ ARR).** Do not write for AIPA accounts. **`Not started` is not a valid option — omit.** Note: field ID is `custom.AISE Journey Status`, not `custom.Journey Status`. |
 | `phase` | string | **Configured options (not free-text):** `0. Preparation` · `1. Activation` · `2. Adoption` · `3. Renewal` · `4. Churned` | Universal field — applies to **all** Planhat companies (AISE and AIPA). Derived from the customer's current Active Package `Status` — see full mapping table in `notion-planhat-field-mapping.md`. `4. Churned` is set manually and aligns with `custom.AISE Journey Status = Churned`. |
 | `custom.AI Readiness Score` | number | — | Set manually in Planhat if needed |
@@ -306,7 +309,7 @@ Planhat only — Notion does not track these in real time.
 
 - **Never write SF-synced fields.** See the SF-synced table above. This includes account fields (Region, Segment, ARR, Makers, Slack, Account Executive, etc.), Deal records, and Line Item records. Do not write these even if the field appears blank — the sync owns them. Exact mapping is WIP; when uncertain, treat a field as SF-synced unless it appears in the AISE-writable table.
 - **Never write read-only fields** — Planhat will error.
-- **Custom field prefix:** always use `custom.` (e.g. `"custom.Spark Stage": "Active for All"`).
+- **Custom field prefix:** always use `custom.` (e.g. `"custom.⚡️ Spark Stage": "Everyone"`). Note some field IDs include an emoji (`⚡️`) as a literal part of the ID — see the 2026-08-07 rename notes above.
 - **Boolean custom fields:** use raw `true`/`false`, not strings.
 - **Option values:** exact casing required (e.g. `"Not Ready"` not `"Not ready"`).
 - **Do not overwrite `owner`** — managed by RevOps/CS leadership.

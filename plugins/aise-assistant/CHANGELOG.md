@@ -5,6 +5,18 @@ Format: `## [version] — YYYY-MM-DD` followed by bullet points grouped by type.
 
 ---
 
+## [2.31.0] — 2026-08-07
+
+### Added
+- `temp-ph-ignite-conversion-data-sync` skill: bulk-syncs Spark rollout data (AI consent, Enabled, Activated visibility, Engaged, plus their dates) from a weekly CSV export into Planhat Company records, matched by Salesforce ID → `sourceId`. Supports `--dry-run` and `--accounts` scoping; never touches the manually-managed `custom.⚡️ Igniting?` field.
+- `context/planhat-user-profile.md`: documents the Planhat-document schema, naming (`AISE Profile — Identity/Preferences/Voice Scrape Samples — {display_name}`), and append-only versioning (no `update_document`/`delete_document` tool on this connector) used by `/assistant-setup`.
+
+### Changed
+- `CLAUDE.md`, `about/README.md`, `agents/assistant-onboarding.md`, `skills/assistant-setup/SKILL.md`, `scripts/setup-connections.sh`: personal profile storage (identity, voice, workspace preferences) moved from Notion pages to private Planhat documents, resolved via `search_documents`/`get_document` rather than `notion-search`/`notion-fetch`. Most other agents/skills in the plugin still read the legacy Notion identity pages — flagged in `CLAUDE.md` as migration-in-progress, not yet swept.
+- `context/notion-schema.md`, `context/notion-planhat-field-mapping.md`, `context/planhat-schema.md`: corrections and clarifications to keep the Notion↔Planhat field mapping accurate.
+
+---
+
 ## [2.30.3] — 2026-08-06
 
 ### Fixed

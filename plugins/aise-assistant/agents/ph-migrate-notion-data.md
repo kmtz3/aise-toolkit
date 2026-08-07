@@ -123,9 +123,9 @@ For each customer with a resolved Planhat Company, compute and write AISE-writab
 | `custom.AISE Journey Status` | Notion `Account Status` | AISE-managed accounts only (ARR 30k+). Skip for AIPA. `Not started` → omit field. See mapping table. |
 | `csmScore` | Notion `Health (Manual)` | `Healthy` → `4` · `Figuring it out` → `3` · `Concerning` → `2` · `Churning` → `1` · null → omit |
 | `custom.Priority (temp – Notion)` | Notion `Priority` | Write as-is: `P0`–`P4`. `Insufficient Data` or null → omit. |
-| `custom.Spark Stage` | Notion `Spark Customer Journey` | Value mapping: `Not Active` → `Not Active` · `AI Terms Review` → `AI Terms Review` · `Active for Admins (Production)` → `Active for Admins` · `Active for All (Production)` → `Active for All` · `Active (Staging only)` → `Active on Staging` · `Icebox` → `Icebox` |
-| `custom.AI Ready` | Notion `AI Ready` | `Sparked` → `Sparked` · `Preparing` → `Preparing` · `Ignitable` → `Ignitable` · `Not ready` → `Not Ready` (capital R) |
-| `custom.Igniting?` | Notion `Igniting?` | `__YES__` → `true` · `__NO__` → `false` · null → omit |
+| `custom.⚡️ Spark Stage` | Notion `Spark Customer Journey` | **Renamed 2026-08-07** (was `custom.Spark Stage`). Value mapping: `Not Active` → `Off` · `AI Terms Review` → `AI Terms Review` · `Active for Admins (Production)` → `Admins only` · `Active for All (Production)` → `Everyone` · `Active (Staging only)` → `Admins only` · `Icebox` → `Icebox` |
+| `custom.AI Ready` | Notion `AI Ready` | `Sparked` → `Sparked` · `Preparing` → `Preparing` · `Ignitable` → `Ignitable` · `Not ready` → `Not Ready` (capital R). Unaffected by the 2026-08-07 rename. |
+| `custom.⚡️ Igniting?` | Notion `Igniting?` | **Renamed 2026-08-07** (was `custom.Igniting?`). `__YES__` → `true` · `__NO__` → `false` · null → omit |
 
 **Write call:**
 ```
@@ -432,7 +432,7 @@ When `--dry-run` is passed, show the full plan without writing. For each custome
 
 ```
 [DRY RUN] <Customer Name>
-  Company:       would write phase=2. Adoption · csmScore=4 · Spark Stage=Active for All · AI Ready=Sparked · Igniting?=false
+  Company:       would write phase=2. Adoption · csmScore=4 · ⚡️ Spark Stage=Everyone · AI Ready=Sparked · ⚡️ Igniting?=false
   Conversations: 12 sessions eligible (Delivered, not Do-not-count)
                    2 already exist in Planhat (externalId match) → would skip
                    10 would be created
