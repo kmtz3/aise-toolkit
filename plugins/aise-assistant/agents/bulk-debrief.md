@@ -17,12 +17,13 @@ After each session completes step 6, write a checkpoint file to `/tmp/bulk-debri
 ```json
 {
   "date_range": "<start_date>..<end_date>",
+  "flags": {"skip": ["<name>", "..."], "rerun": ["<name>", "..."]},
   "sessions_completed": [{"sessionId": "...", "customer": "<name>", "outcome": "summary"}],
   "sessions_pending": ["<sessionId or event title>", "..."]
 }
 ```
 
-On start-up, check for an existing checkpoint for this date range. If found, skip any session already in `sessions_completed` (log as "resumed — already debriefed this run") and re-present the queue (step 5) with only `sessions_pending`. Delete the checkpoint file once the master summary (step 7) shows zero sessions pending.
+On start-up, check for an existing checkpoint for this date range. **Before trusting it, verify `flags.skip` and `flags.rerun` match this run's `--skip`/`--rerun` arguments exactly**, and that no mid-run queue expansion (step 5) is in play for a different set of dates. If they match, skip any session already in `sessions_completed` (log as "resumed — already debriefed this run") and re-present the queue (step 5) with only `sessions_pending`. If they don't match, discard the checkpoint and rebuild the queue from scratch. Delete the checkpoint file once the master summary (step 7) shows zero sessions pending.
 
 ---
 

@@ -15,12 +15,13 @@ After each session completes step 5, write a checkpoint file to `/tmp/bulk-prep-
 ```json
 {
   "week_start": "<YYYY-MM-DD>",
+  "flags": {"skip": ["<name>", "..."], "force": ["<name>", "..."]},
   "sessions_completed": [{"sessionPageUrl": "...", "customer": "<name>"}],
   "sessions_pending": ["<event title or customer>", "..."]
 }
 ```
 
-On start-up, check for an existing checkpoint for this week. If found, skip any session already in `sessions_completed` (log as "⏭️ resumed — already prepped this run") and continue step 5 for `sessions_pending` only. Delete the checkpoint file once the report (step 6) shows zero sessions pending.
+On start-up, check for an existing checkpoint for this week. **Before trusting it, verify `flags.skip` and `flags.force` match this run's `--skip`/`--force` arguments exactly.** If they match, skip any session already in `sessions_completed` (log as "⏭️ resumed — already prepped this run") and continue step 5 for `sessions_pending` only. If they don't match — e.g. `--force` now names a customer this checkpoint already marked complete without forcing — discard the checkpoint and re-run discovery fresh. Delete the checkpoint file once the report (step 6) shows zero sessions pending.
 
 ## Inputs
 

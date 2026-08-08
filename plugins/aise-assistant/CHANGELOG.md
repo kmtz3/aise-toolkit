@@ -5,6 +5,14 @@ Format: `## [version] — YYYY-MM-DD` followed by bullet points grouped by type.
 
 ---
 
+## [2.33.1] — 2026-08-08
+
+### Fixed
+- Checkpoint & resumability (all 6 aise-assistant agents that use it): checkpoints now record the flags/args that shaped the run (`--skip`, `--force`, `--rerun`, `--since`, `--customer`, `--past`) and must be verified against the current invocation before being trusted. Previously a stale or scope-mismatched checkpoint (different flags, different lookback window, or a `today`-relative window from a prior day) could be silently resumed against, skipping work the current run actually needed to redo.
+- Clarified the checkpoint authoring convention in `.claude/CLAUDE.md` (dev-only) — the scope-slug in a checkpoint's filename should identify the run (needed for correct resumption); the "no real customer names" rule applies to spec/example text, not runtime checkpoint data.
+
+---
+
 ## [2.33.0] — 2026-08-08
 
 ### Added

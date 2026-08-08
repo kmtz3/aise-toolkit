@@ -18,12 +18,13 @@ After each account completes step 5, write a checkpoint file to `/tmp/bulk-accou
 {
   "target_user": "<name>",
   "operator": "<name>",
+  "flags": {"skip": ["<name>", "..."], "force": ["<name>", "..."]},
   "accounts_completed": [{"customer": "<name>", "activePackageUrl": "...", "sessionsBackfilled": 0}],
   "accounts_pending": ["<name>", "..."]
 }
 ```
 
-On start-up, check for an existing checkpoint for this target user. If found, skip any account already in `accounts_completed` (log as "resumed — already set up this run") and re-present the queue (step 4) with only `accounts_pending`. Delete the checkpoint file once the master summary (step 6) shows zero accounts pending.
+On start-up, check for an existing checkpoint for this target user. **Before trusting it, verify `flags.skip` and `flags.force` match this run's `--skip`/`--force` arguments exactly.** If they match, skip any account already in `accounts_completed` (log as "resumed — already set up this run") and re-present the queue (step 4) with only `accounts_pending`. If they don't match — e.g. the user added `--force` for an account this checkpoint already skipped or completed differently — discard the checkpoint and run the full discovery-and-queue flow fresh. Delete the checkpoint file once the master summary (step 6) shows zero accounts pending.
 
 ---
 

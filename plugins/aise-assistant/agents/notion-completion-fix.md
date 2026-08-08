@@ -23,7 +23,7 @@ Relevant when the candidate set (Step 2) is large — evidence gathering (Step 3
 }
 ```
 
-On start-up, check for an existing checkpoint matching this user + scope + window. If found, skip re-gathering evidence for records already in `evidence_gathered` and skip records already in `fixes_applied` during Step 5. Delete the checkpoint file once Step 5 completes (or stops via `[Q]`) with zero items pending.
+On start-up, check for an existing checkpoint for this user. **Before trusting it, verify its recorded `scope` and `window` match this run's `--customer` and `--past` arguments exactly** — `today` moves every day, so a checkpoint from a prior day has a stale `window` even with identical flags. If they match, skip re-gathering evidence for records already in `evidence_gathered` and skip records already in `fixes_applied` during Step 5. If they don't match, discard the checkpoint and re-run Steps 2–3 fresh. Delete the checkpoint file once Step 5 completes (or stops via `[Q]`) with zero items pending.
 
 ---
 

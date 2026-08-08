@@ -1,5 +1,12 @@
 # Changelog — aise-leadership
 
+## [1.11.1] — 2026-08-08
+
+### Fixed
+- Checkpoint & resumability (`notion-integrity-check`, `notion-completion-fix`): checkpoints now record the flags/args that shaped the run (`--customer`, `--owner`, `--past`) and must be verified against the current invocation before being trusted, rather than resuming silently against a stale or scope-mismatched checkpoint.
+
+---
+
 ## [1.11.0] — 2026-08-08
 
 ### Added

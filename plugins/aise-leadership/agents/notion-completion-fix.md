@@ -24,7 +24,7 @@ Portfolio-wide runs (no `--owner` / `--customer`) can surface far more candidate
 }
 ```
 
-On start-up, check for an existing checkpoint matching this scope + window. If found, skip re-gathering evidence for records already in `evidence_gathered` and skip records already in `fixes_applied` during Step 5 — including when resuming mid-AISE in the grouped report. Delete the checkpoint file once Step 5 completes (or stops via `[Q]`) with zero items pending.
+On start-up, check for an existing checkpoint matching this scope-slug. **Before trusting it, verify its recorded `scope` and `window` match this run's `--owner`/`--customer` and `--past` arguments exactly** — `today` moves every day, so a checkpoint from a prior day has a stale `window` even with identical flags. If they match, skip re-gathering evidence for records already in `evidence_gathered` and skip records already in `fixes_applied` during Step 5 — including when resuming mid-AISE in the grouped report. If they don't match, discard the checkpoint and re-run Steps 2–3 fresh. Delete the checkpoint file once Step 5 completes (or stops via `[Q]`) with zero items pending.
 
 ---
 

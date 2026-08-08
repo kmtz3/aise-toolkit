@@ -15,12 +15,13 @@ Relevant in `--bulk mine` mode (many customers, each with its own discovery + wr
 ```json
 {
   "scope": "bulk:<user>",
+  "flags": {"since": "<YYYY-MM-DD or null>"},
   "customers_completed": [{"customer": "<name>", "sessionsCreated": 0, "apBootstrapped": false}],
   "customers_pending": ["<name>", "..."]
 }
 ```
 
-On start-up in bulk mode, check for an existing checkpoint for this user. If found, skip any customer already in `customers_completed` (log as "resumed — already backfilled this run") and re-present the queue (step 6) with only `customers_pending`. Delete the checkpoint file once the report (step 8) shows zero customers pending. Not needed in single-customer mode — one customer's discovery-and-write loop is short enough to complete in one pass.
+On start-up in bulk mode, check for an existing checkpoint for this user. **Before trusting it, verify `flags.since` matches this run's `--since` argument (including "no `--since` passed" as a value to match).** If it matches, skip any customer already in `customers_completed` (log as "resumed — already backfilled this run") and re-present the queue (step 6) with only `customers_pending`. If it doesn't match — the lookback window changed — discard the checkpoint and re-run discovery fresh. Delete the checkpoint file once the report (step 8) shows zero customers pending. Not needed in single-customer mode — one customer's discovery-and-write loop is short enough to complete in one pass.
 
 ---
 

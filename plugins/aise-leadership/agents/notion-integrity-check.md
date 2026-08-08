@@ -23,7 +23,7 @@ Relevant when `--fix` is applying corrections across many findings in one run. A
 }
 ```
 
-On start-up when `--fix` is passed, check for an existing checkpoint for this user + scope. If found, skip any record already in `fixes_applied` and resume Step 5 from `fixes_pending` only. Delete the checkpoint file once Step 5's before/after verification shows zero fixes pending. Not needed in read-only mode (no `--fix`) — a single scan-and-report pass is short enough to complete without resumption.
+On start-up when `--fix` is passed, check for an existing checkpoint for this user. **Before trusting it, verify its recorded `scope` matches this run's `--customer` argument (or lack thereof) exactly.** If it matches, skip any record already in `fixes_applied` and resume Step 5 from `fixes_pending` only. If it doesn't match — different customer scope, or Notion state has visibly changed since the checkpoint was written — discard it and re-run the full scan (Steps 2–4) fresh. Delete the checkpoint file once Step 5's before/after verification shows zero fixes pending. Not needed in read-only mode (no `--fix`) — a single scan-and-report pass is short enough to complete without resumption.
 
 ---
 
