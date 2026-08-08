@@ -2,7 +2,7 @@
 
 > **Purpose:** Compact write-ready reference for agents backfilling or syncing data from the Notion Customer Tracker into Planhat.
 >
-> **Last updated:** 2026-08-08 (ph-migrate Company sync: removed Spark/AI Ready/Igniting? — live data SSOT, not written by migration; Do not count sessions now always migrated; added 🏁 Audit / Setup Review Conversation type)
+> **Last updated:** 2026-08-08 (added Brandwatch/Cision dual-email EndUser resolution note; ph-migrate Company sync: removed Spark/AI Ready/Igniting? — live data SSOT, not written by migration; Do not count sessions now always migrated; added 🏁 Audit / Setup Review Conversation type)
 >
 > **Migration architecture:**
 >
@@ -82,7 +82,7 @@ All Notion Tasks write to the **Planhat Task model**. For done/canceled tasks, P
 | `date:Call Date:start` | `startDate` | date | Call start date. |
 | `Customers` (relation) | `companyId` | objectId | Resolve via company name or SF `sourceId`. See `planhat-schema.md`. **Required.** |
 | `Delivered By` (person, all values) | `users` | array | `[{"id": "<planhat-user-id>"}]`. Resolve from User ID table in `planhat-schema.md`. |
-| _(from Gong/GCal backfill)_ | `endusers` | array | **Field is all-lowercase — not `endUsers`.** Write format: `[{"_id": "<EndUser _id>"}, ...]`. Read-response format uses `id` instead: `[{"id": "...", "name": "..."}]`. Planhat returns HTTP 200 and silently drops the field if written as `endUsers` (camelCase) — no error surfaces. Omit if no attendees resolve. |
+| _(from Gong/GCal backfill)_ | `endusers` | array | **Field is all-lowercase — not `endUsers`.** Write format: `[{"_id": "<EndUser _id>"}, ...]`. Read-response format uses `id` instead: `[{"id": "...", "name": "..."}]`. Planhat returns HTTP 200 and silently drops the field if written as `endUsers` (camelCase) — no error surfaces. Omit if no attendees resolve. **Brandwatch / Cision dual-email:** Brandwatch contacts may have two separate Planhat EndUser records — one with `@brandwatch.com` (original) and one with `@cision.com` (post-migration). When resolving attendees for Brandwatch sessions, search by both domains if the first lookup returns no match. |
 | `Next Steps` / session body | `description` | string | Actual session notes/summary. Truncate to ~2000 chars. Do **not** use this for prep notes — see `custom.Prep Notes`. Do **not** append Gong URL here — use `custom.Gong URL` instead. |
 | _(from session prep)_ | `custom.Prep Notes` | string (HTML) | Prep brief written by session-prepper. HTML format: `<p><strong>Goals</strong></p><p>...</p><p><strong>Open Items</strong></p><ul><li><p>...</p></li></ul><p><strong>Watch-fors</strong></p><ul><li><p>...</p></li></ul>`. No `<h>` tags. On Task: write during prep. Carry to Conversation when Task is marked done (debrief). |
 | `Gong call` (url) | `custom.Gong URL` | string | Gong call link. **Write to `custom.Gong URL`, not appended to `description`.** |

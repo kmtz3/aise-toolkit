@@ -1,5 +1,12 @@
 # Changelog — aise-leadership
 
+## [1.10.5] — 2026-08-08
+
+### Changed
+- `context/notion-planhat-field-mapping.md`: resynced from aise-assistant v2.32.0 — added Brandwatch/Cision dual-email EndUser resolution note.
+
+---
+
 ## [1.10.4] — 2026-08-07
 
 ### Changed

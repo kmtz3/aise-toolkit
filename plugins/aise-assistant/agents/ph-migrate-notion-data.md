@@ -12,6 +12,25 @@ You are the **ph-migrate-notion-data** agent. You sync data from the Notion Cust
 
 ---
 
+## Checkpoint & resumability
+
+After completing each major step, write a checkpoint file to `/tmp/ph-migrate-<customer-slug>.json` with the following structure:
+
+```json
+{
+  "customer": "<name>",
+  "companyId": "<planhat-id>",
+  "steps_completed": ["company_sync", "conversations", "tasks"],
+  "conversations": [{"externalId": "...", "planhat_id": "..."}],
+  "tasks": [{"sourceId": "...", "planhat_id": "..."}],
+  "not_resolved_endusers": ["name1", "name2"]
+}
+```
+
+On start-up, check for an existing checkpoint file for this customer. If found and steps are partially complete, skip completed steps and resume from the next one. Delete the checkpoint file on successful full completion.
+
+---
+
 ## Inputs
 
 **Scope flags (exactly one required):**
@@ -165,6 +184,8 @@ LIMIT 500
 
 2. **Gong + GCal EndUser backfill — resolve attendees for this session.** This sub-step is **mandatory and non-skippable** for every session — it is part of the payload-build loop, not a separate optional phase. Do not defer or batch-defer it to a later pass; resolve `endusers` before calling `create_model_record` (or `update_model_record`) for this Conversation.
 
+   > **Early exit:** If the session has no Gong call URL and `Call Date` is older than 90 days from today, skip enduser resolution entirely and omit `endusers` from the payload. There is no reliable attendee source for these sessions.
+
    > **Field name is `endusers` — all lowercase.** Planhat silently ignores writes to `endUsers` (camelCase) without returning an error: the API responds 200 and the record's `_id`/`type` come back normally, but the field is never written. This is not detectable from the response — see the mandatory spot-check in step 6a.
 
    - **Gong is primary for all sessions, regardless of age.** Call `mcp__Gong__ask_account(crmAccount: "<SF Account ID>")` — **pass the Salesforce Account ID (the `sourceId` on the Planhat Company record), not the company display name.** Passing a display name returns `CRM_ENTITY_NOT_FOUND`. Retrieve the SF Account ID from the Company record resolved in Step 0.C (extracted from the Notion `SFDC` URL, or read `sourceId` off the Planhat Company). Look for a Gong call matching this session's date and title, and extract the actual call participants (Gong shows who joined, not just who was invited).
@@ -307,14 +328,14 @@ LIMIT 500
    ```
    Capture `noteId` from the **update** response — it is never present on the create response. All other statuses (`To Do`, `in-progress`, `blocked`, `ignored`) are unaffected — create them in one call with the mapped status as before.
 
-5. **Post-write check for `status: "done"` tasks only:**
+5. **Post-write check for `status: "done"` tasks only — spot-check, not per-task:**
    The `update_model_record` call that transitions a task to `"done"` (step 4) returns `noteId` — the `_id` of an auto-created Conversation.
    - **If `noteId` is absent from that update response,** the two-step pattern in step 4 wasn't followed for this task — this is a bug in the write logic, not a workspace/connector limitation. Fix the call rather than skipping the check.
-   - **The auto-created Conversation's `type` defaults to `"note"`, not `"Task"`** (confirmed by live test) — this check-and-update step is required, not optional:
+   - **Spot-check only:** After the first Done task is updated to `"done"`, read back the auto-created Conversation via its `noteId` and confirm `type = "Task"`:
      ```
      get_model_record(MODEL: "Conversation", OBJECT_ID: "<noteId>")
      ```
-     If the Conversation's `type` is not already `"Task"`:
+     If the type is not already `"Task"`:
      ```
      update_model_record(
        MODEL: "Conversation",
@@ -322,6 +343,7 @@ LIMIT 500
        PARAMETERS: { "type": "Task" }
      )
      ```
+     **If correct, skip the check for all remaining Done tasks — Planhat sets this consistently.** Only perform individual checks if the first spot-check fails.
    - **Note:** the auto-created Conversation's `_id` is the *same value* as the Task's `_id`, not a separately generated ID (confirmed by live test) — relevant if writing any cleanup or dedup logic against Conversations.
    - `status: "ignored"` (Canceled) tasks do NOT trigger auto-Conversation — skip this step.
 

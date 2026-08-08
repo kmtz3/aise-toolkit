@@ -5,6 +5,18 @@ Format: `## [version] — YYYY-MM-DD` followed by bullet points grouped by type.
 
 ---
 
+## [2.32.0] — 2026-08-08
+
+### Added
+- `ph-migrate-notion-data`: new **Checkpoint & resumability** section — after each major step, writes a checkpoint file to `/tmp/ph-migrate-<customer-slug>.json` tracking completed steps, migrated Conversations/Tasks, and unresolved endusers. On start-up, resumes from the last incomplete step instead of redoing finished work; checkpoint is deleted on full success.
+
+### Changed
+- `ph-migrate-notion-data`: the `noteId` check after a Done task auto-creates a Conversation is now a **spot-check** — only the first Done task in a run is verified; if it passes, remaining Done tasks skip the individual check (Planhat sets `type` consistently).
+- `ph-migrate-notion-data`: Gong + GCal EndUser backfill now **early-exits** when a session has no Gong call URL and its `Call Date` is older than 90 days — `endusers` is omitted from the payload rather than attempting an unreliable resolution.
+- `context/notion-planhat-field-mapping.md`: added a note on Brandwatch/Cision dual-email EndUser records — Brandwatch contacts may have both an `@brandwatch.com` and `@cision.com` Planhat EndUser record; search both domains on a failed lookup.
+
+---
+
 ## [2.31.1] — 2026-08-08
 
 ### Fixed
