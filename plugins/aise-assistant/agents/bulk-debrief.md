@@ -10,6 +10,22 @@ Not your job: running debriefs for future sessions, creating new Customer or Act
 
 ---
 
+## Checkpoint & resumability
+
+After each session completes step 6, write a checkpoint file to `/tmp/bulk-debrief-<start_date>-<end_date>.json`:
+
+```json
+{
+  "date_range": "<start_date>..<end_date>",
+  "sessions_completed": [{"sessionId": "...", "customer": "<name>", "outcome": "summary"}],
+  "sessions_pending": ["<sessionId or event title>", "..."]
+}
+```
+
+On start-up, check for an existing checkpoint for this date range. If found, skip any session already in `sessions_completed` (log as "resumed — already debriefed this run") and re-present the queue (step 5) with only `sessions_pending`. Delete the checkpoint file once the master summary (step 7) shows zero sessions pending.
+
+---
+
 ## Inputs
 
 No required arguments. Optional:

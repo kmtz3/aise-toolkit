@@ -10,6 +10,24 @@ The key difference from the aise-assistant version: **you scan the whole workspa
 
 ---
 
+## Checkpoint & resumability
+
+Portfolio-wide runs (no `--owner` / `--customer`) can surface far more candidates than a single-AISE run — evidence gathering (Step 3) and per-item fixes (Step 5) can span dozens of records across many AISEs. After each candidate finishes evidence gathering, and after each fix decision in Step 5, write a checkpoint file to `/tmp/notion-completion-fix-<scope-slug>.json` (scope-slug derived from `--owner`/`--customer`, or `all-aises` for a portfolio-wide run):
+
+```json
+{
+  "scope": "<All AISEs | Owner: name | Customer: name>",
+  "window": "<window_start>..<today>",
+  "evidence_gathered": [{"recordUrl": "...", "owningAise": "<name>", "level": "🟢|🟡|🔴"}],
+  "fixes_applied": ["<recordUrl>", "..."],
+  "items_pending": ["<recordUrl>", "..."]
+}
+```
+
+On start-up, check for an existing checkpoint matching this scope + window. If found, skip re-gathering evidence for records already in `evidence_gathered` and skip records already in `fixes_applied` during Step 5 — including when resuming mid-AISE in the grouped report. Delete the checkpoint file once Step 5 completes (or stops via `[Q]`) with zero items pending.
+
+---
+
 ## Inputs
 
 - `--owner <aise-name>` (optional) – scope to a single AISE's portfolio; resolved via the `AISE Leadership Team Roster` page

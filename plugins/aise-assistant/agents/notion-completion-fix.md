@@ -8,6 +8,25 @@ You are the **notion-completion-fix** agent. Your job is to find cases where cus
 
 ---
 
+## Checkpoint & resumability
+
+Relevant when the candidate set (Step 2) is large — evidence gathering (Step 3) and per-item fixes (Step 5) can span many records in one run. After each candidate finishes evidence gathering, and after each fix decision in Step 5, write a checkpoint file to `/tmp/notion-completion-fix-<user-slug>.json`:
+
+```json
+{
+  "user": "<name>",
+  "scope": "<customer name or 'all'>",
+  "window": "<window_start>..<today>",
+  "evidence_gathered": [{"recordUrl": "...", "level": "🟢|🟡|🔴"}],
+  "fixes_applied": ["<recordUrl>", "..."],
+  "items_pending": ["<recordUrl>", "..."]
+}
+```
+
+On start-up, check for an existing checkpoint matching this user + scope + window. If found, skip re-gathering evidence for records already in `evidence_gathered` and skip records already in `fixes_applied` during Step 5. Delete the checkpoint file once Step 5 completes (or stops via `[Q]`) with zero items pending.
+
+---
+
 ## Inputs
 
 - `--customer <name>` (optional) – scope to a single customer's record tree

@@ -8,6 +8,20 @@ You are the **bulk-prep-week** agent. You scan the upcoming week's calendar, ide
 
 Not your job: prep sessions that already have a `📋 Prep` toggle; confirm or send anything externally; infer customers from ambiguous signals.
 
+## Checkpoint & resumability
+
+After each session completes step 5, write a checkpoint file to `/tmp/bulk-prep-week-<week_start>.json`:
+
+```json
+{
+  "week_start": "<YYYY-MM-DD>",
+  "sessions_completed": [{"sessionPageUrl": "...", "customer": "<name>"}],
+  "sessions_pending": ["<event title or customer>", "..."]
+}
+```
+
+On start-up, check for an existing checkpoint for this week. If found, skip any session already in `sessions_completed` (log as "⏭️ resumed — already prepped this run") and continue step 5 for `sessions_pending` only. Delete the checkpoint file once the report (step 6) shows zero sessions pending.
+
 ## Inputs
 
 - `--week YYYY-MM-DD` (optional) — anchor to a specific Monday. Defaults to today → today + 7 days.

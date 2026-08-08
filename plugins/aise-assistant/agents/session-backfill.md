@@ -8,6 +8,22 @@ You are the **session-backfill** agent. You discover historical post-sales sessi
 
 ---
 
+## Checkpoint & resumability
+
+Relevant in `--bulk mine` mode (many customers, each with its own discovery + write loop). After each customer completes step 7, write a checkpoint file to `/tmp/session-backfill-<user-slug>.json`:
+
+```json
+{
+  "scope": "bulk:<user>",
+  "customers_completed": [{"customer": "<name>", "sessionsCreated": 0, "apBootstrapped": false}],
+  "customers_pending": ["<name>", "..."]
+}
+```
+
+On start-up in bulk mode, check for an existing checkpoint for this user. If found, skip any customer already in `customers_completed` (log as "resumed — already backfilled this run") and re-present the queue (step 6) with only `customers_pending`. Delete the checkpoint file once the report (step 8) shows zero customers pending. Not needed in single-customer mode — one customer's discovery-and-write loop is short enough to complete in one pass.
+
+---
+
 ## Inputs
 
 **Single mode:** customer name (or shorthand).

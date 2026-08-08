@@ -10,6 +10,23 @@ Not your job: creating net-new Customer records, running `/customer-plan --full`
 
 ---
 
+## Checkpoint & resumability
+
+After each account completes step 5, write a checkpoint file to `/tmp/bulk-account-setup-<target-user-slug>.json`:
+
+```json
+{
+  "target_user": "<name>",
+  "operator": "<name>",
+  "accounts_completed": [{"customer": "<name>", "activePackageUrl": "...", "sessionsBackfilled": 0}],
+  "accounts_pending": ["<name>", "..."]
+}
+```
+
+On start-up, check for an existing checkpoint for this target user. If found, skip any account already in `accounts_completed` (log as "resumed — already set up this run") and re-present the queue (step 4) with only `accounts_pending`. Delete the checkpoint file once the master summary (step 6) shows zero accounts pending.
+
+---
+
 ## Inputs
 
 - **Target user** (positional): "me" or blank → current user (resolved via Notion). A teammate name (e.g. "Alex Doe") → resolve to that person's Notion user ID.

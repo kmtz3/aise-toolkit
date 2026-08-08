@@ -5,6 +5,13 @@ Format: `## [version] — YYYY-MM-DD` followed by bullet points grouped by type.
 
 ---
 
+## [2.33.0] — 2026-08-08
+
+### Added
+- Generalized checkpoint & resumability (introduced for `ph-migrate-notion-data` earlier today) to every bulk/multi-record agent: `bulk-account-setup`, `bulk-debrief`, `bulk-prep-week`, `session-backfill` (`--bulk` mode), `notion-integrity-check`, `notion-completion-fix`. Each now writes a `/tmp/<agent-name>-<scope>.json` checkpoint after each completed item, resumes from the next incomplete item on a subsequent run instead of redoing finished work, and deletes the checkpoint on full completion.
+
+---
+
 ## [2.32.0] — 2026-08-08
 
 ### Added

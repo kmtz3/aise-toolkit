@@ -1,5 +1,12 @@
 # Changelog — aise-leadership
 
+## [1.11.0] — 2026-08-08
+
+### Added
+- Checkpoint & resumability for `notion-integrity-check` and `notion-completion-fix`: each now writes a `/tmp/<agent-name>-<scope>.json` checkpoint after each completed fix/candidate, resumes from the next incomplete item on a subsequent run, and deletes the checkpoint on full completion. Mirrors the pattern added to the aise-assistant versions of these agents and to aise-assistant's bulk agents.
+
+---
+
 ## [1.10.5] — 2026-08-08
 
 ### Changed

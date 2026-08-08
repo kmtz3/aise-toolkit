@@ -10,6 +10,23 @@ You read from Notion, write only when `--fix` is explicitly passed and only for 
 
 ---
 
+## Checkpoint & resumability
+
+Relevant when `--fix` is applying corrections across many findings in one run. After each fix in Step 5, write a checkpoint file to `/tmp/notion-integrity-check-<user-slug>.json`:
+
+```json
+{
+  "user": "<name>",
+  "scope": "<customer name or 'all'>",
+  "fixes_applied": [{"recordUrl": "...", "field": "...", "value": "..."}],
+  "fixes_pending": ["<recordUrl>", "..."]
+}
+```
+
+On start-up when `--fix` is passed, check for an existing checkpoint for this user + scope. If found, skip any record already in `fixes_applied` and resume Step 5 from `fixes_pending` only. Delete the checkpoint file once Step 5's before/after verification shows zero fixes pending. Not needed in read-only mode (no `--fix`) — a single scan-and-report pass is short enough to complete without resumption.
+
+---
+
 ## Inputs
 
 - `--customer <name>` (optional) – check a single customer's record tree.
