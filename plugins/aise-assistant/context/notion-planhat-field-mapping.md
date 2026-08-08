@@ -2,7 +2,7 @@
 
 > **Purpose:** Compact write-ready reference for agents backfilling or syncing data from the Notion Customer Tracker into Planhat.
 >
-> **Last updated:** 2026-08-05 (Other type mapping: → Sync default + Demo title-pattern override; custom.Prep Notes on Conversation; Task type fixed to "Task" for generic action items)
+> **Last updated:** 2026-08-08 (ph-migrate Company sync: removed Spark/AI Ready/Igniting? — live data SSOT, not written by migration; Do not count sessions now always migrated; added 🏁 Audit / Setup Review Conversation type)
 >
 > **Migration architecture:**
 >
@@ -12,7 +12,7 @@
 > | Tasks (all statuses) | **Task** (`mainType: "task"`) | `sourceId` = Notion Task page ID |
 > | Tasks (`Status = Done`) | **Task** → Planhat auto-creates linked **Conversation** | Post-write: check `noteId` → update Conversation `type` to `"Task"` if not already set |
 > | Contacts | **EndUser** | `email` or `externalId` |
-> | Customers | **Company** | SF-synced — AISE writes Spark/phase/Journey Status only |
+> | Customers | **Company** | SF-synced — AISE writes phase, Journey Status, csmScore, Priority only. **Spark/AI Ready/Igniting? are live-data SSOT — never written by ph-migrate.** |
 > | Active Packages / Master Packages | **Deal** / **Product** | SF SSOT — **never write from Notion** |
 >
 > GCal-synced meetings already exist in Planhat as `mainType: "event"` — do not duplicate as Conversations.
@@ -33,9 +33,10 @@
 | `📦 Other` (default) | `🔁 Sync` | Default fallback for general calls (e.g. licence discussions, commercial syncs). |
 | `📦 Other` + "Demo" in title | `🎙️ Demo` | **Title-pattern override:** if session title contains "Demo" (case-insensitive), use `🎙️ Demo` instead of the default `🔁 Sync`. |
 | `🫥 Internal` | `Internal Alignment` | No emoji in Planhat |
+| `Do not count` session (any type) | `🏁 Audit / Setup Review` | **Type override for Do not count sessions.** Sessions with `Do not count = YES` are always migrated (never skipped) — use `🏁 Audit / Setup Review` as the Planhat type regardless of the Notion session type. These represent real interactions that need to be on record even though they don't count against the services quota. |
 | _(Done Notion Task — auto-created Conversation)_ | `Task` | No emoji. Planhat auto-creates this Conversation when Task `status` is set to `"done"`. Update via `noteId` post-write if type is not already `"Task"`. Canceled (`"ignored"`) tasks do **not** generate a Conversation. |
 
-> **Planhat types with no Notion equivalent:** `📺 Webinar`, `👾 Gong Call` — logged directly in Planhat, not from Notion. `🎙️ Demo` is also available and is applied automatically to `Other` sessions with "Demo" in the title.
+> **Planhat types with no Notion equivalent:** `📺 Webinar`, `👾 Gong Call` — logged directly in Planhat, not from Notion. `🎙️ Demo` is also available and is applied automatically to `Other` sessions with "Demo" in the title. `🏁 Audit / Setup Review` is used for Do not count sessions.
 
 > **Note on calendar events:** GCal-synced meetings already exist in Planhat as `mainType: "event"`. AISE writes Conversations only — no overlap.
 
@@ -198,7 +199,9 @@ Maps from Notion `Account Status`. Field ID: **`custom.AISE Journey Status`** (n
 
 > **`4. Churned`** is set manually in Planhat when a customer fully churns. It is not derived from Active Package status — it aligns with `custom.AISE Journey Status = Churned`.
 
-### Spark fields — actively synced (Notion → Planhat)
+### Spark fields — live data SSOT (⛔ NOT written by ph-migrate)
+
+> **Do not write Spark/AI Ready/Igniting? during ph-migrate-notion-data.** These fields are maintained by an external live data source (weekly CSV upload via `temp-ph-ignite-conversion-data-sync`). Writing from Notion during migration would overwrite the live values. The value mapping below is retained for reference only — use it only in workflows that explicitly own Spark sync (not ph-migrate).
 
 | Notion field | Planhat field | Value mapping |
 |---|---|---|

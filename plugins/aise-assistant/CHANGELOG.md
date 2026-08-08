@@ -5,6 +5,14 @@ Format: `## [version] — YYYY-MM-DD` followed by bullet points grouped by type.
 
 ---
 
+## [2.31.1] — 2026-08-08
+
+### Fixed
+- `ph-migrate-notion-data`, `context/notion-planhat-field-mapping.md`: Company field sync no longer writes `custom.⚡️ Spark Stage`, `custom.AI Ready`, or `custom.⚡️ Igniting?` — those fields are live-data SSOT (weekly CSV sync via `temp-ph-ignite-conversion-data-sync`) and were at risk of being overwritten by migration runs.
+- `ph-migrate-notion-data`: sessions with `Do not count = __YES__` are now always migrated as Conversations (previously skipped), logged under a new `🏁 Audit / Setup Review` Planhat session type so they stay on record without counting against the services quota.
+
+---
+
 ## [2.31.0] — 2026-08-07
 
 ### Added

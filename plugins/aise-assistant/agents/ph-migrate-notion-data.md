@@ -1,6 +1,6 @@
 ---
 name: ph-migrate-notion-data
-description: Migrates Notion Customer Tracker data into Planhat for one or more customers — Company field sync (phase, Journey Status, Spark, Priority), Sessions → Conversations (Delivered only), and Tasks → Tasks (all statuses). Invoked by `/ph-migrate-notion-data`.
+description: Migrates Notion Customer Tracker data into Planhat for one or more customers — Company field sync (phase, Journey Status, Priority, csmScore), Sessions → Conversations (all Delivered sessions, including Do not count), and Tasks → Tasks (all statuses). Invoked by `/ph-migrate-notion-data`.
 tools: Read, mcp__Notion__notion-search, mcp__Notion__notion-fetch, mcp__Notion__notion-query-data-sources, mcp__Notion__notion-get-users, mcp__Planhat__create_model_record, mcp__Planhat__update_model_record, mcp__Planhat__list_model_records, mcp__Planhat__search_records, mcp__Planhat__get_model_record, mcp__Planhat__get_model_action_parameters, mcp__Google_Calendar__list_events, mcp__Google_Calendar__get_event
 ---
 
@@ -123,9 +123,9 @@ For each customer with a resolved Planhat Company, compute and write AISE-writab
 | `custom.AISE Journey Status` | Notion `Account Status` | AISE-managed accounts only (ARR 30k+). Skip for AIPA. `Not started` → omit field. See mapping table. |
 | `csmScore` | Notion `Health (Manual)` | `Healthy` → `4` · `Figuring it out` → `3` · `Concerning` → `2` · `Churning` → `1` · null → omit |
 | `custom.Priority (temp – Notion)` | Notion `Priority` | Write as-is: `P0`–`P4`. `Insufficient Data` or null → omit. |
-| `custom.⚡️ Spark Stage` | Notion `Spark Customer Journey` | **Renamed 2026-08-07** (was `custom.Spark Stage`). Value mapping: `Not Active` → `Off` · `AI Terms Review` → `AI Terms Review` · `Active for Admins (Production)` → `Admins only` · `Active for All (Production)` → `Everyone` · `Active (Staging only)` → `Admins only` · `Icebox` → `Icebox` |
-| `custom.AI Ready` | Notion `AI Ready` | `Sparked` → `Sparked` · `Preparing` → `Preparing` · `Ignitable` → `Ignitable` · `Not ready` → `Not Ready` (capital R). Unaffected by the 2026-08-07 rename. |
-| `custom.⚡️ Igniting?` | Notion `Igniting?` | **Renamed 2026-08-07** (was `custom.Igniting?`). `__YES__` → `true` · `__NO__` → `false` · null → omit |
+| ~~`custom.⚡️ Spark Stage`~~ | ~~Notion `Spark Customer Journey`~~ | **Do not write from ph-migrate.** Spark fields are updated live from external data (CSV upload via `temp-ph-ignite-conversion-data-sync`). Writing them here would overwrite the live values. |
+| ~~`custom.AI Ready`~~ | ~~Notion `AI Ready`~~ | **Do not write from ph-migrate.** Same reason as above — live data SSOT. |
+| ~~`custom.⚡️ Igniting?`~~ | ~~Notion `Igniting?`~~ | **Do not write from ph-migrate.** Same reason as above — live data SSOT. |
 
 **Write call:**
 ```
@@ -157,7 +157,7 @@ ORDER BY "date:Call Date:start" ASC
 LIMIT 500
 ```
 
-**Skip:** sessions where `Do not count` = `__YES__`. These are internal/non-billable sessions that don't belong in Planhat as Conversations.
+**Do not count sessions: always migrate.** Sessions with `Do not count` = `__YES__` are still logged in Planhat as Conversations — they represent real interactions that need to be on record even if they don't count against the services quota. Do not skip them. Log them with the same type mapping as any other session. Note `source: "AISE"` as usual.
 
 **For each session:**
 

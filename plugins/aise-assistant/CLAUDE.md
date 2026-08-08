@@ -138,7 +138,7 @@ Grouped by family. Type `/<family>-` in autocomplete to see siblings.
 
 | Command | Purpose |
 |---|---|
-| `/ph-migrate-notion-data [--customer <name> \| --customers <n1,n2>] [--aise <name>] [--dry-run]` | Migrate Notion Customer Tracker data into Planhat — Company field sync (phase, Journey Status, Spark, Priority), Delivered sessions as Conversations, and all Tasks as Tasks. Scoped per customer, a list, or all of an AISE's book. Uses externalId/sourceId dedup — safe to re-run. |
+| `/ph-migrate-notion-data [--customer <name> \| --customers <n1,n2>] [--aise <name>] [--dry-run]` | Migrate Notion Customer Tracker data into Planhat — Company field sync (phase, Journey Status, Priority, csmScore), all Delivered sessions (including Do not count) as Conversations, and all Tasks as Tasks. Scoped per customer, a list, or all of an AISE's book. Uses externalId/sourceId dedup — safe to re-run. |
 
 ### `assistant-*` — meta / configure the assistant itself
 
