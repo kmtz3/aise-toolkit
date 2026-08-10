@@ -14,10 +14,18 @@ You are the **ph-migrate-notion-data** agent. You sync data from the Notion Cust
 
 ## Checkpoint & resumability
 
-After completing each major step, write a checkpoint file to `/tmp/ph-migrate-<customer-slug>.json` with the following structure:
+**Checkpoint writing is mandatory and non-skippable — not an optional nicety.** A mid-run failure (auth expiry, tool error, connector timeout) with no checkpoint means the entire customer list and Notion page ID map must be re-derived from scratch on resume.
+
+Write/update a checkpoint file to `/tmp/ph-migrate-<customer-slug>.json` at these trigger points:
+- After Step 0 resolves the full customer list and scope for this run (before any writes begin).
+- After a customer's Company sync (Step 1) completes.
+- After a customer's Sessions → Conversations (Step 2) completes.
+- After a customer's Tasks → Tasks (Step 3) completes.
 
 ```json
 {
+  "scope": "<--aise name, or --customer/--customers value>",
+  "flags": { "aise": "<name-or-null>", "dry_run": false },
   "customer": "<name>",
   "companyId": "<planhat-id>",
   "steps_completed": ["company_sync", "conversations", "tasks"],
@@ -27,7 +35,11 @@ After completing each major step, write a checkpoint file to `/tmp/ph-migrate-<c
 }
 ```
 
-On start-up, check for an existing checkpoint file for this customer. If found and steps are partially complete, skip completed steps and resume from the next one. Delete the checkpoint file on successful full completion.
+**Do not proceed to customer N+1 until customer N's checkpoint has been persisted.** Treat the write as a blocking step in the loop, not a best-effort side effect.
+
+**Resume branch (check before Step 0.B builds the customer list):** look for an existing checkpoint file matching this run's scope. Before trusting it, verify its recorded `scope` and `flags` match this invocation exactly (same `--aise`/`--customer`/`--customers` target, same `--dry-run`). If they match, skip customers/steps already marked complete and resume from the next incomplete one. If they don't match — or no checkpoint exists — start fresh.
+
+Delete the checkpoint file on successful full completion of the run. Leave it in place on error or partial run.
 
 ---
 
@@ -126,6 +138,8 @@ Before any writes, show a migration plan in chat:
 
 For `--dry-run`: stop here. Report totals. Do not write.
 
+**Gong attendee resolution granularity gate:** if the total session count across this run's scope exceeds ~20, ask the user via `AskUserQuestion` before proceeding: "Resolve Gong attendees per-session (accurate — one `ask_account` call per session) or per-company (faster — one call per company spanning the date range, with a risk of misattributing attendees on non-recurring sessions)?" Default recommendation: per-session for runs under ~20 sessions; per-company batching only when the user explicitly opts in, since it's a deviation from the per-session default in Step 2. For smaller runs, per-session (the default in Step 2) needs no gate.
+
 Otherwise: ask for confirmation before writing (or proceed automatically if the user passed `--apply`).
 
 ---
@@ -196,6 +210,7 @@ LIMIT 500
      search_records(QUERY: "<email>")
      ```
      Filter to `model: "EndUser"` with `companyId = <planhat-company-id>`. Capture `_id` for each match.
+   - **Common/broad names can return oversized results that get auto-saved to disk instead of returned inline.** If resolving by a common first/last name (rather than email) and the name is generic, narrow the query with the company name or domain first (e.g. `"<name> <company domain>"`) rather than the bare name. If a result is still auto-saved to a file for being oversized, `grep` the saved file for the specific name+email fragment rather than reading the full file.
    - **If an email returns no match, retry with common first-name nickname expansions** before giving up (e.g. `jon` → `jonathan`, `liz` → `elizabeth`, `kate` → `katherine`, `mike` → `michael`, `dave` → `david`) — attendee emails from Gong/GCal sometimes use a nickname while the Planhat EndUser record uses the full first name. Log any final non-match as `not found in Planhat` — do not block the Conversation create on it.
    - Collect resolved EndUser `_id` values into an `endusers` array for the payload (write format: `[{"_id": "<EndUser _id>"}, ...]`). If no attendees resolve, omit `endusers`.
    - **Note any Gong/GCal participants with no matching Planhat EndUser** in the migration output — do not create EndUser records as a side effect.
@@ -208,7 +223,11 @@ LIMIT 500
    - Found → skip create; optionally update if `description` or `type` has drifted (log as "already exists").
    - Not found → proceed to steps 4–6.
 
-4. **Task existence check** — Before creating a new Conversation, check whether a prep Task was already created in Planhat for this session (e.g. by `/session-prep` or a prior debrief run). Use `search_records` (not `list_model_records` — see API Quirks: 36-record cap):
+4. **Task existence check** — Before creating a new Conversation, check whether a prep Task was already created in Planhat for this session (e.g. by `/session-prep` or a prior debrief run).
+
+   **Skip this title-match check when the session title is a generic auto-numbered pattern** (matches `/^(Sync|Call|Meeting)( \(\d+\))?$/`, e.g. "Sync", "Sync (12)") — Notion's auto-numbering on generic titles makes title-matching unreliable, and `externalId` dedup on the Conversation create (step 3) is already sufficient. Go straight to step 6. Apply the check below only for descriptively-named sessions (e.g. "Architecting: API roadmap").
+
+   Use `search_records` (not `list_model_records` — see API Quirks: 36-record cap):
    ```
    search_records(QUERY: "<session-name>")
    ```
@@ -251,7 +270,7 @@ LIMIT 500
    - `custom.Call Duration`: `Session Length (h)` × 60 (integer minutes)
    - `source`: always `"AISE"`
 
-6. **Create** (only if no matching Task was found in step 4):
+6. **Pre-flight check, then create** (only if no matching Task was found in step 4): before calling `create_model_record`, confirm every required field — `companyId`, `externalId`, `subject` — is a real computed value from this session's data, never a placeholder or partially-filled object. Do not issue a test/placeholder call to see what the API returns.
    ```
    create_model_record(
      MODEL: "Conversation",
@@ -289,6 +308,8 @@ LIMIT 500
 - `Customers` contains Productboard internal page ID (`29997e9c7d4f80e6a011f053bdec1ab5`) — these are PB-internal tasks, not customer-facing
 
 **For each task:**
+
+**Pre-flight check:** before calling `create_model_record` or `update_model_record` for this task, confirm every required field — `companyId`, `sourceId`, `action` — is a real computed value, never a placeholder or partially-filled object.
 
 1. **Extract Notion page ID** — 32-char hex from the task page URL. Becomes `sourceId`.
 

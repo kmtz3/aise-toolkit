@@ -1,5 +1,12 @@
 # Changelog — aise-leadership
 
+## [1.11.2] — 2026-08-10
+
+### Changed
+- `context/notion-planhat-field-mapping.md`: resynced from aise-assistant v2.34.0 — added bolded `companyId`-required notes atop the Sessions→Conversation and Tasks→Task field-mapping tables.
+
+---
+
 ## [1.11.1] — 2026-08-08
 
 ### Fixed

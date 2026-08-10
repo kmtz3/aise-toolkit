@@ -73,6 +73,8 @@ All Notion Tasks write to the **Planhat Task model**. For done/canceled tasks, P
 
 ## Sessions → Planhat Conversation: Field Mapping
 
+> **`companyId` is a hard requirement on every create call.** Resolve the customer's Planhat Company `_id` via `search_records` (or the checkpoint file, once per customer) once per customer, cache it, and include it on every subsequent Conversation create for that customer. Never issue a create call without it already resolved — omitting it fails with `"CompanyId is required for note"`.
+
 | Notion field | Planhat field | Type | Notes |
 |---|---|---|---|
 | Session page URL (32-char hex ID) | `externalId` | string | **Dedup key.** Check before every create: `list_model_records(MODEL: "Conversation", FILTER: {"externalId[equal to]": "<id>"})` |
@@ -96,6 +98,8 @@ All Notion Tasks write to the **Planhat Task model**. For done/canceled tasks, P
 ---
 
 ## Tasks → Planhat Task: Field Mapping (all statuses)
+
+> **`companyId` is a hard requirement on every create call.** Resolve the customer's Planhat Company `_id` via `search_records` (or the checkpoint file, once per customer) once per customer, cache it, and include it on every subsequent Task create for that customer. Never issue a create call without it already resolved — omitting it fails with `"Required Field: companyId"`.
 
 | Notion field | Planhat field | Type | Notes |
 |---|---|---|---|

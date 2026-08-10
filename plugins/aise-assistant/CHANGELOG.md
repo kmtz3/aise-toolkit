@@ -5,6 +5,20 @@ Format: `## [version] — YYYY-MM-DD` followed by bullet points grouped by type.
 
 ---
 
+## [2.34.0] — 2026-08-10
+
+### Added
+- `ph-migrate-notion-data`: `AskUserQuestion` gate before writing, asking whether to resolve Gong attendees per-session or per-company when a run's session count exceeds ~20 — surfaces the accuracy/speed tradeoff explicitly instead of silently batching at scale.
+- `ph-migrate-notion-data`: Sessions → Conversations dedup now skips the per-session existing-Task title-match check when the session title is a generic auto-numbered pattern (e.g. "Sync", "Sync (12)") — `externalId` dedup is sufficient in that case; the check still runs for descriptively-named sessions.
+
+### Fixed
+- `ph-migrate-notion-data`: checkpoint writing is now a mandatory, blocking step at each customer/step boundary (previously specced but not consistently written, requiring manual conversation-transcript reconstruction after a mid-run auth failure) — added an explicit resume branch that validates scope/flags before trusting an existing checkpoint.
+- `ph-migrate-notion-data`: added a pre-flight field check before every Task/Conversation `create_model_record` call to catch missing `companyId`/`externalId`/`sourceId` before the API round-trip.
+- `ph-migrate-notion-data`: Gong/GCal EndUser resolution now narrows `search_records` queries with company name/domain for common names, and falls back to `grep` on oversized auto-saved results instead of reading the full file.
+- `context/notion-planhat-field-mapping.md`: added a bolded `companyId`-required note atop both the Sessions→Conversation and Tasks→Task field-mapping tables — resolve and cache the Company `_id` once per customer, never omit it on a create call.
+
+---
+
 ## [2.33.1] — 2026-08-08
 
 ### Fixed
