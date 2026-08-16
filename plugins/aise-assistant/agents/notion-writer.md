@@ -15,16 +15,15 @@ The Customer Tracker is a **shared workspace** with other PB AISEs (since May 20
 **Do not Glob. Do not search plugin paths. Do not guess. Follow these steps in order.**
 
 **Resolve identity:**
-1. Call `notion-get-users` → UUID, display name.
-2. `notion-search("AISE Identity — {display_name}")` → `notion-fetch` → parse name, timezone, UUID.
-3. If the identity page is not found, output "AISE Identity page not found — run `/assistant-setup` to configure your profile." and stop.
+1. `notion-get-users` (self) → UUID, display name, email. This is all this agent needs — no Planhat lookup required, since the Notion UUID used for ownership filtering isn't part of the Planhat profile (see `context/planhat-user-profile.md`).
 
 ---
 
 ## Before every write
 
-1. Read [`context/notion-schema.md`](../../context/notion-schema.md). Treat it as the sole authoritative schema reference. Pay particular attention to the **Ownership Model** section.
-2. For updates, **fetch the target page immediately beforehand** – `update_content` `old_str` matching is whitespace-exact, and you also need the current `Owner` / `Current Account Owner` value to honor the verify-before-write contract.
+1. **Identity resolved in preamble above — use it directly.** The user's Notion UUID came from `notion-get-users` in the identity resolution step.
+2. Read [`context/notion-schema.md`](../../context/notion-schema.md). Treat it as the sole authoritative schema reference. Pay particular attention to the **Ownership Model** section.
+3. For updates, **fetch the target page immediately beforehand** – `update_content` `old_str` matching is whitespace-exact, and you also need the current `Owner` / `Current Account Owner` value to honor the verify-before-write contract.
 
 ---
 
@@ -32,7 +31,7 @@ The Customer Tracker is a **shared workspace** with other PB AISEs (since May 20
 
 > _Derived from `context/notion-schema.md` § Ownership Model — that file is the authoritative source. If anything here conflicts with the schema, trust the schema and update this section._
 
-the user's Notion user ID: `<user-uuid>` (resolved from the `AISE Identity — {display_name}` Notion page in the identity resolution preamble above). Person values are written as `'["<user-uuid>"]'` and stored as `["user://<user-uuid>"]` on read. Filter with `LIKE '%<user-uuid>%'` to match either form.
+the user's Notion user ID: `<user-uuid>` (resolved via `notion-get-users` in the identity resolution preamble above). Person values are written as `'["<user-uuid>"]'` and stored as `["user://<user-uuid>"]` on read. Filter with `LIKE '%<user-uuid>%'` to match either form.
 
 ### Per-DB on-create rules
 
@@ -94,7 +93,7 @@ Before any `update_properties` or `update_content` on an existing record:
 2. Read the relevant ownership field per DB:
    - Customer → `Owner`
    - Active Package / Session / Task → `Current Account Owner` (and `Delivered By` for Sessions, `Owner` for Tasks if the update touches those fields)
-3. **If none of the relevant ownership fields contain the user's Notion ID (from the `AISE Identity` Notion page), abort the write and surface the conflict:**
+3. **If none of the relevant ownership fields contain the user's Notion ID (resolved via `notion-get-users`), abort the write and surface the conflict:**
    > "I was about to update <page name>. Owner=<value>, Current Account Owner=<value>. the user isn't in either. This may be a teammate's record. Confirm to override or skip."
 4. Wait for explicit confirmation.
 
@@ -124,7 +123,7 @@ Before any **Task** or **Session** create, search for an existing record where t
 
 Match if **all** of:
 - `Customers` relation includes the same Customer page URL
-- `Owner` OR `Current Account Owner` contains the user's Notion ID (from the `AISE Identity` Notion page)
+- `Owner` OR `Current Account Owner` contains the user's Notion ID (resolved via `notion-get-users`)
 - `Status` is not `Done` or `Canceled` (a closed historical task isn't a live duplicate)
 - `Task` title overlaps meaningfully with the candidate – substring match on the first 6+ characters, OR explicit semantic match (e.g. "Reply to Clotilde" vs "Reply to Clotilde re. milestones")
 

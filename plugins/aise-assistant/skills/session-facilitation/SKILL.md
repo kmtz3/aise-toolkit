@@ -74,6 +74,15 @@ For each pre-read document found: read its contents, extract key principles/rule
 and plan a dedicated **reference panel** in the HTML (sidebar link, not in main agenda sequence).
 See Panel structure → Pre-read reference panels below.
 
+**i) Facilitator identity** — the facilitator name shown in the generated page's header/subtitle
+comes from the user's Planhat User record, not a guess or a generic label:
+`list_model_records(MODEL:"User", FILTER:{"email[equal to]":"<user's email from session context>"}, SELECT:["firstName","lastName","email"])`
+→ `planhat_user_id` (or the pre-resolved table in `context/planhat-schema.md` § Planhat User IDs),
+then `get_model_record(MODEL:"User", OBJECT_ID:"{planhat_user_id}", SELECT:["custom.AISE Identity"])`
+→ parse the preferred/display name (stripped of accent variants). Use that name in the header
+subtitle (see Header spec in Step 2). If the field is empty, fall back to the session-context
+user display name and note in the Step 5 report that `/assistant-setup` should be run.
+
 ---
 
 ## Step 2 — Generate the HTML file

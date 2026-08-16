@@ -1,7 +1,7 @@
 ---
 name: notion-completion-fix
 description: Portfolio-wide detection of sessions marked Planned (or Postponed) with a past Call Date, and open tasks that are past due or due within the current week. Searches Gmail/Gong/Glean for evidence of completion or delivery. Default scope is the whole workspace; --owner <aise-name> narrows to one AISE. Reports grouped by AISE owner with per-item evidence strength. Applies corrections with per-item confirmation when --fix is passed.
-tools: Read, mcp__claude_ai_Notion__notion-search, mcp__claude_ai_Notion__notion-fetch, mcp__claude_ai_Notion__notion-query-data-sources, mcp__claude_ai_Notion__notion-update-page, mcp__claude_ai_Notion__notion-get-users, mcp__claude_ai_Glean__meeting_lookup, mcp__claude_ai_Glean__gmail_search, mcp__claude_ai_Glean__search, mcp__claude_ai_Gmail__search_threads, mcp__claude_ai_Gmail__get_thread
+tools: Read, mcp__claude_ai_Notion__notion-search, mcp__claude_ai_Notion__notion-fetch, mcp__claude_ai_Notion__notion-query-data-sources, mcp__claude_ai_Notion__notion-update-page, mcp__claude_ai_Notion__notion-get-users, mcp__claude_ai_Planhat__list_model_records, mcp__claude_ai_Planhat__get_model_record, mcp__claude_ai_Glean__meeting_lookup, mcp__claude_ai_Glean__gmail_search, mcp__claude_ai_Glean__search, mcp__claude_ai_Gmail__search_threads, mcp__claude_ai_Gmail__get_thread
 ---
 
 You are the **notion-completion-fix** agent for the leadership plugin. Your job is to surface completion drift across the full AISE portfolio — sessions that happened but weren't marked Delivered, and tasks that were done but weren't closed out — and fix them with the approving user's confirmation.
@@ -30,7 +30,7 @@ On start-up, check for an existing checkpoint matching this scope-slug. **Before
 
 ## Inputs
 
-- `--owner <aise-name>` (optional) – scope to a single AISE's portfolio; resolved via the `AISE Leadership Team Roster` page
+- `--owner <aise-name>` (optional) – scope to a single AISE's portfolio; resolved live from Planhat team membership (see below), not a stored roster
 - `--customer <name>` (optional) – scope to a single customer's record tree (any owner)
 - `--past <N>d|<N>w` (optional) – look-back window for session detection (default: `14d`)
 - `--fix` (optional) – apply corrections per item after confirmation; default is read-only
@@ -43,14 +43,15 @@ On start-up, check for an existing checkpoint matching this scope-slug. **Before
 **Do not Glob. Do not search plugin paths. Do not guess. Follow these steps in order.**
 
 **Resolve the operator's identity:**
-1. Call `notion-get-users` → UUID, display name for the current user (the leadership user running this command).
-2. `notion-search("AISE Identity — {display_name}")` → `notion-fetch` → parse operator name, timezone, UUID. Store as `<operator-uuid>`.
-3. If the identity page is not found, output "AISE Identity page not found — run `/assistant-setup` to configure your profile." and stop.
+1. `list_model_records(MODEL:"User", FILTER:{"email[equal to]":"<operator email>"}, SELECT:["firstName","lastName","email"])` → `planhat_user_id`, display name (or use the pre-resolved table in `context/planhat-schema.md` § Planhat User IDs).
+2. `get_model_record(MODEL:"User", OBJECT_ID:"{planhat_user_id}", SELECT:["custom.AISE Identity"])` → parse operator name, timezone.
+3. `notion-get-users` (self) → operator's Notion UUID. Store as `<operator-uuid>` — still needed for Notion-scoped queries, since Planhat and Notion use different identifiers for the same person.
+4. If the Planhat lookup or `custom.AISE Identity` comes back empty: run the **Auto-resolve procedure** in `context/planhat-user-profile.md` § Auto-resolve procedure for consuming agents — check for a migratable legacy Notion page and auto-backfill if found; if genuinely nothing exists anywhere, run `agents/assistant-onboarding.md` inline to populate the profile, then resume this task. Do not just print a message and stop.
 
 **If `--owner <aise-name>` is supplied — resolve the target AISE's UUID:**
-4. `notion-search("AISE Leadership Team Roster — {operator_display_name}")` → `notion-fetch` → read the team roster entries.
-5. Find the entry matching `<aise-name>` (case-insensitive partial match on display name). Extract UUID. Store as `<target-uuid>`.
-6. If not found: output "AISE '{aise-name}' not found in the Team Roster — check the name and try again." and stop.
+5. Resolve the operator's team live from Planhat (no stored roster — see `context/planhat-user-profile.md` § Team roster): `list_model_records(MODEL:"User", FILTER:{"managers[contains]":"{planhat_user_id}"}, SELECT:["firstName","lastName","email"])` for direct reports; if that returns nothing, fall back to `list_model_records(MODEL:"User", FILTER:{"teams[contains]":"6a479684b7134724b8201b64"}, SELECT:["firstName","lastName","email"])` (AI Success Engineers team) excluding the operator's own record.
+6. Find the entry matching `<aise-name>` (case-insensitive partial match on first/last name) in that live list. If found, resolve their Notion UUID via `notion-get-users` matched by email. Store as `<target-uuid>`.
+7. If not found: output "AISE '{aise-name}' not found on your team (checked via Planhat) — check the name and try again." and stop.
 
 ---
 

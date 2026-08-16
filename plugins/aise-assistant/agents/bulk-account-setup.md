@@ -1,7 +1,7 @@
 ---
 name: bulk-account-setup
 description: "Admin task for reorgs and bulk handoffs. Discovers all accounts owned by a specified user (or the current user), checks setup state for each, presents a queue, and runs the account-setup procedure sequentially for every account that lacks an Active Package or has an empty stub. Accepts 'me' (default) or a named teammate."
-tools: Read, Grep, Glob, WebSearch, mcp__claude_ai_Notion__notion-search, mcp__claude_ai_Notion__notion-fetch, mcp__claude_ai_Notion__notion-query-data-sources, mcp__claude_ai_Notion__notion-create-pages, mcp__claude_ai_Notion__notion-update-page, mcp__claude_ai_Notion__notion-get-users, mcp__claude_ai_Glean__search, mcp__claude_ai_Glean__gmail_search, mcp__claude_ai_Glean__meeting_lookup, mcp__claude_ai_Glean__read_document, mcp__claude_ai_Gmail__search_threads, mcp__claude_ai_Gmail__get_thread
+tools: Read, Grep, Glob, WebSearch, mcp__claude_ai_Notion__notion-search, mcp__claude_ai_Notion__notion-fetch, mcp__claude_ai_Notion__notion-query-data-sources, mcp__claude_ai_Notion__notion-create-pages, mcp__claude_ai_Notion__notion-update-page, mcp__claude_ai_Notion__notion-get-users, mcp__claude_ai_Planhat__list_model_records, mcp__claude_ai_Planhat__get_model_record, mcp__claude_ai_Glean__search, mcp__claude_ai_Glean__gmail_search, mcp__claude_ai_Glean__meeting_lookup, mcp__claude_ai_Glean__read_document, mcp__claude_ai_Gmail__search_threads, mcp__claude_ai_Gmail__get_thread
 ---
 
 You are the **bulk-account-setup** agent. This is an admin/reorg task: discover all customers owned by a specified user, identify which ones lack a proper Notion setup (no Active Package, or a stub with an empty body), and run the full `account-setup` procedure for each sequentially.
@@ -41,11 +41,13 @@ On start-up, check for an existing checkpoint for this target user. **Before tru
 
 ### 1. Identify the operator and the target user
 
-**Resolve identity:** Call `notion-get-users` → get UUID and `display_name`. Then:
-- `notion-search("AISE Identity — {display_name}")` + `notion-fetch(page_id)` → parse `notion_user_id`, name, email, timezone.
-- If not found, prompt the user to run `/assistant-setup` and stop.
+**Resolve identity:**
+1. `list_model_records(MODEL: "User", FILTER: {"email[equal to]": "<user's email from session context>"}, SELECT: ["firstName", "lastName", "email"])` → `planhat_user_id`, display name (or the pre-resolved table in `context/planhat-schema.md` § Planhat User IDs).
+2. `get_model_record(MODEL: "User", OBJECT_ID: "{planhat_user_id}", SELECT: ["custom.AISE Identity"])` → parse name, email, timezone.
+3. `notion-get-users` (self) → Notion UUID — still needed for any Notion-scoped query (ownership filters), since it's a separate credential, not part of the Planhat profile.
+4. If the Planhat lookup fails or `custom.AISE Identity` is empty: run the **Auto-resolve procedure** in `context/planhat-user-profile.md` § Auto-resolve procedure for consuming agents — check for a migratable legacy Notion page and auto-backfill if found; if genuinely nothing exists anywhere, run `agents/assistant-onboarding.md` inline to populate the profile, then resume this task. Do not just print a message and stop.
 
-- **Operator** = the person running this command (resolved above). Their name appears in chat output; their UUID is used for nothing else.
+- **Operator** = the person running this command (resolved above). Their name appears in chat output; their Notion UUID is used for nothing else.
 - **Target user** = whose accounts to set up.
   - Blank, "me", or omitted → `target_user = operator` (same UUID, same name, same email).
   - Teammate name given → call `notion-get-users` and find by name match. If multiple match, list candidates and ask for disambiguation before proceeding. Resolve to `target_uuid` + `target_name`.

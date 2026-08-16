@@ -19,7 +19,7 @@ Read `context/aise-context.md` (or equivalent) to understand the customer portfo
 
 **Resolve PLUGIN_DATA_DIR first:** use the Read tool on `~/.claude/aise-assistant.datadir` — the file content is the absolute path. Never use the `CLAUDE_PLUGIN_DATA` env variable.
 
-Then call `notion-get-users` and `notion-search("AISE Identity — {display_name}") → notion-fetch` to get the user's Notion UUID. All Notion queries must filter by this UUID (Owner contains current user).
+Then call `notion-get-users` (self) → Notion UUID, display name, email. This is all this step needs — no Planhat lookup required, since the Notion UUID used for ownership filtering isn't part of the Planhat profile (see `context/planhat-user-profile.md`). All Notion queries must filter by this UUID (Owner contains current user).
 
 ---
 

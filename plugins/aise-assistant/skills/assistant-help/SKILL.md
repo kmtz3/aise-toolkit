@@ -166,13 +166,14 @@ Commands are grouped by family. Type `/<family>` (or `/<family>-`) in autocomple
 
 ## Personal config
 
-Your identity, voice preferences, and workspace specifics live in private Notion pages:
+Your identity, voice preferences, and workspace specifics live directly on `custom.AISE *` fields on your Planhat User record:
 
-- **`AISE Identity — {display_name}`** — name, Notion user ID, role, time zone
-- **`AISE Assistant Preferences — {display_name}`** (Voice section) — sign-offs, language quirks, casual register
-- **`AISE Assistant Preferences — {display_name}`** (Workspace section) — Slack patterns, Calendly URLs, internal coordinators
+- **`custom.AISE Identity`** — name, role, time zone, manager
+- **`custom.AISE Profile preferences`** — sign-offs, language quirks, casual register
+- **`custom.AISE Workspace`** — conferencing tool, Slack channel, manager
+- **`custom.AISE Calendly Sync` / `Architecting` / `Enablement` / `Discovery` / `Kickoff` / `Spark`** — booking links per session type
 
-To change them: run `/assistant-setup` for a guided re-onboarding, or edit the Notion pages directly.
+To change them: run `/assistant-setup` for a guided re-onboarding, or edit the fields directly in Planhat.
 
 ## Where things live
 
@@ -182,9 +183,9 @@ To change them: run `/assistant-setup` for a guided re-onboarding, or edit the N
 | **`context/notion-schema.md`** | DB schema, field formats, query patterns |
 | **`context/score-cards.md`** | Per-session scorecards (Discovery, Foundations, Insights, Prioritization, Roadmaps, Spark, Success Planning, QBR) |
 | **`context/pb-aise-reference-guide.md`** | Session methodology — "what good looks like" per session type |
-| **`context/communication-style-guide.md`** | Universal AISE comms patterns; `AISE Assistant Preferences` Notion page (Voice section) overrides |
+| **`context/communication-style-guide.md`** | Universal AISE comms patterns; `custom.AISE Profile preferences` on your Planhat User record overrides |
 | **`templates/session-kdds/`** | Customer-facing KDD anchor templates per A-session type |
-| **`<PLUGIN_DATA_DIR>/about/tracker-memory.md`** | Cross-customer observations only — per-user, written by `context-keeper` (Notion is SSOT for everything else) |
+| **`custom.AISE Tracker Memory`** (Planhat User field) | Cross-customer observations only — per-user, written by `context-keeper` (Notion is SSOT for everything else) |
 
 ## Tips
 

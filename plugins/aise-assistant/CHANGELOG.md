@@ -5,6 +5,21 @@ Format: `## [version] — YYYY-MM-DD` followed by bullet points grouped by type.
 
 ---
 
+## [2.36.0] — 2026-08-16
+
+### Changed
+- Personal profile storage (`/assistant-setup`) moved off Planhat Documents/Notion pages onto `custom.AISE *` fields directly on the user's Planhat `User` record — identity, voice preferences, workspace config, Voice Scrape Samples, Tracker Memory, and six Calendly booking links (added Discovery, Kickoff, and Spark to the three that previously existed). Writes are now in-place via `update_model_record` — no more append-only versioning.
+- Swept every downstream agent/skill that reads identity, voice, or Tracker Memory (`email-drafter`, `draft-followup`, `draft-email`, `diagram-builder`, `create-deck`, `session-facilitation`, `kdd-builder`, `session-summarizer`, `engagement-planner`, `post-session-debrief`, `bulk-debrief`, `session-prepper`, `daily-brief`, `notion-writer`, `bulk-account-setup`, `session-backfill`, `bulk-prep-week`, `notion-completion-fix`, `notion-ask`, `sf-backfill`, `notion-integrity-check`, `aise-context`, `log-feedback`) to resolve from the new Planhat fields instead of the old Notion `AISE Identity —`/`AISE Assistant Preferences —` pages.
+- `/spark-onepager` now reads the Calendly booking link from `custom.AISE Calendly Spark` automatically instead of asking every time.
+- Agents that previously hard-stopped on an empty profile (`daily-brief`, `notion-completion-fix`, `bulk-account-setup`, `bulk-prep-week`, `diagram-builder`, `aise-context`) now run an auto-resolve procedure instead: auto-migrate from a legacy Notion page if one exists, or run `/assistant-setup` inline if nothing exists anywhere, then resume the original task.
+- `context/planhat-user-profile.md` rewritten as the canonical field map, read/write procedure, migration-check procedure, and the new auto-resolve procedure for consuming agents.
+
+### Fixed
+- `session-prepper.md` and `post-session-debrief.md` had Planhat tools declared under the wrong MCP prefix (`mcp__Planhat__*` instead of `mcp__claude_ai_Planhat__*`), which would have failed to resolve at runtime.
+- Stale "personal config lives in Notion" documentation in `assistant-help` and `assistant-improvement` updated to the current `custom.AISE *` field names.
+
+---
+
 ## [2.35.0] — 2026-08-14
 
 ### Added

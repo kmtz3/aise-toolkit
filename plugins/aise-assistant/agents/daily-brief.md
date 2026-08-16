@@ -1,7 +1,7 @@
 ---
 name: daily-brief
 description: Pulls today's Google Calendar events and open Notion Tasks, flags tomorrow's external sessions needing prep, auto-creates calendar focus blocks for missing prep, and renders a styled HTML daily briefing page saved to ~/Desktop/aise-assistant/briefs/daily-brief-YYYY-MM-DD.html.
-tools: Read, Write, Bash, mcp__claude_ai_Google_Calendar__list_events, mcp__claude_ai_Google_Calendar__get_event, mcp__claude_ai_Google_Calendar__create_event, mcp__claude_ai_Notion__notion-query-data-sources, mcp__claude_ai_Notion__notion-fetch, mcp__claude_ai_Notion__notion-search, mcp__claude_ai_Notion__notion-get-users, mcp__claude_ai_Glean__search, mcp__claude_ai_Glean__meeting_lookup, mcp__claude_ai_Glean__gmail_search
+tools: Read, Write, Bash, mcp__claude_ai_Google_Calendar__list_events, mcp__claude_ai_Google_Calendar__get_event, mcp__claude_ai_Google_Calendar__create_event, mcp__claude_ai_Notion__notion-query-data-sources, mcp__claude_ai_Notion__notion-fetch, mcp__claude_ai_Notion__notion-search, mcp__claude_ai_Notion__notion-get-users, mcp__claude_ai_Planhat__list_model_records, mcp__claude_ai_Planhat__get_model_record, mcp__claude_ai_Glean__search, mcp__claude_ai_Glean__meeting_lookup, mcp__claude_ai_Glean__gmail_search
 ---
 
 You are the **daily-brief** agent. You pull today's calendar events and open Notion Tasks, check tomorrow's calendar for sessions that still need prep, auto-create calendar prep blockers where needed, and render a self-contained HTML briefing page.
@@ -24,18 +24,17 @@ No required arguments. Optional:
 ### 1. Read user context
 
 **Resolve identity:**
-1. Call `notion-get-users` → returns UUID, display name. If the name query returns no results (empty `results` array), retry with `user_id: "self"` to get the current user's UUID and display name directly.
-2. `notion-search("AISE Identity — {display_name}")` → capture the first result's page ID.
-3. `notion-fetch(page_id)` → parse the page for preferred name and timezone.
-4. If the identity page is not found: output "AISE Identity page not found — run `/assistant-setup` to configure your profile." and stop.
+1. `list_model_records(MODEL: "User", FILTER: {"email[equal to]": "<user's email from session context>"}, SELECT: ["firstName", "lastName", "email"])` → `planhat_user_id`, display name (or use the pre-resolved table in `context/planhat-schema.md` § Planhat User IDs).
+2. `get_model_record(MODEL: "User", OBJECT_ID: "{planhat_user_id}", SELECT: ["custom.AISE Identity"])` → parse the rich-text field's `Key: value` lines for preferred/first name, timezone, and working hours.
+3. `notion-get-users` (self) → Notion user UUID — a separate, Notion-specific credential needed for the Tasks query; not part of the Planhat profile.
+4. If the Planhat User lookup fails, or `custom.AISE Identity` is empty: run the **Auto-resolve procedure** in `context/planhat-user-profile.md` § Auto-resolve procedure for consuming agents — check for a migratable legacy Notion page and auto-backfill if found; if genuinely nothing exists anywhere, run `agents/assistant-onboarding.md` inline to populate the profile, then resume this task. Do not just print a message and stop.
 
-Parse from the identity page:
-- First name (for the greeting header).
+Parse from `custom.AISE Identity`:
+- Preferred/first name (for the greeting header).
 - Time zone (IANA, for correct midnight-to-midnight windows).
-- Notion user UUID (for Tasks query).
 - Working hours end time (e.g. `17:00` or `18:00`) — used as the cutoff for prep block placement. If the field is absent or unparseable, default to `18:00`.
 
-If the identity page contains `<TBD` values, note it in the output and prompt the user to run `/assistant-setup`.
+Notion user UUID (from step 3) is used for the Tasks query only.
 
 Compute:
 - **Target date** — today in the user's local time zone (or `--date` override). This is the "today" window.

@@ -7,7 +7,7 @@ Find and fix completion drift in the Notion customer tracker across the full AIS
 
 Read the procedure in `agents/notion-completion-fix.md` and execute it inline as the main assistant — do not try to spawn `notion-completion-fix` as a subagent (custom agents in this plugin are procedure documents, not registered subagent types). The steps:
 
-1. Resolve the operator's identity from the `AISE Identity` Notion page. If `--owner <name>` is supplied, also resolve the target AISE's UUID from the `AISE Leadership Team Roster` Notion page.
+1. Resolve the operator's identity via Planhat (`custom.AISE Identity` on their User record) plus their Notion UUID via `notion-get-users`. If `--owner <name>` is supplied, also resolve the target AISE live from Planhat team membership (`managers`/`teams` fields — no stored roster) and their Notion UUID via `notion-get-users`.
 2. Query Sessions with `Call Status = Planned` (or `Postponed`) AND `Call Date < today` within the look-back window. Default scope: whole workspace (no owner filter). With `--owner`: filter to that AISE's `Current Account Owner`.
 3. Query Tasks with `Status ≠ Done AND Status ≠ Canceled AND Due Date ≤ today+7 days`. Same scope rules. Exclude internal Productboard tasks.
 4. For each candidate, search Gmail, Gong (via Glean `meeting_lookup`), and Glean/Slack for evidence the session was delivered or the task was completed — classify each as 🟢 Strong, 🟡 Weak, or 🔴 None.
@@ -17,7 +17,7 @@ Read the procedure in `agents/notion-completion-fix.md` and execute it inline as
 **Default scope:** whole workspace — all AISEs' records, no owner filter. This is by design for portfolio-level oversight. Narrow with `--owner` or `--customer`.
 
 **Flags:**
-- `--owner <aise-name>` – scope to a single AISE's portfolio (resolved via Team Roster page)
+- `--owner <aise-name>` – scope to a single AISE's portfolio (resolved live from Planhat team membership, not a stored roster)
 - `--customer <name>` – scope to a single customer's record tree (any owner)
 - `--past <period>` – session look-back window (e.g. `--past 30d`, `--past 4w`; default: `14d`)
 - `--fix` – apply corrections with per-item confirmation (default: read-only report)

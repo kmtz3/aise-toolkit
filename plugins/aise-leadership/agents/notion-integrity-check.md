@@ -39,9 +39,7 @@ On start-up when `--fix` is passed, check for an existing checkpoint for this us
 **Do not Glob. Do not search plugin paths. Do not guess. Follow these steps in order.**
 
 **Resolve identity:**
-1. Call `notion-get-users` → UUID, display name.
-2. `notion-search("AISE Identity — {display_name}")` → `notion-fetch` → parse name, timezone, UUID.
-3. If the identity page is not found, output "AISE Identity page not found — run `/assistant-setup` to configure your profile." and stop.
+1. `notion-get-users` (self) → UUID, display name, email. This is all this agent needs — no Planhat lookup required, since the Notion UUID used for ownership filtering isn't part of the Planhat profile (see `context/planhat-user-profile.md`).
 
 ---
 
@@ -51,7 +49,7 @@ On start-up when `--fix` is passed, check for an existing checkpoint for this us
 
 ### Step 1 – Determine scope
 
-user Notion ID: resolved from `AISE Identity — {display_name}` in the preamble above (`<user-uuid>`).
+user Notion ID: resolved via `notion-get-users` in the preamble above (`<user-uuid>`).
 
 If `--customer` is supplied, resolve to a single Customer page URL via `notion-search`. Verify `Owner` contains the user before continuing.
 
@@ -161,12 +159,12 @@ Summary: [n] total findings. [n] auto-fixable with `--fix`.
 
 ### Step 5 – Apply fixes if --fix is passed
 
-For each 🟨 propagation drift item: write `Current Account Owner = the user's Notion ID (resolved from the `AISE Identity` Notion page)` on the affected record.
+For each 🟨 propagation drift item: write `Current Account Owner = the user's Notion ID (resolved via `notion-get-users`)` on the affected record.
 
 For each 🟦 field hygiene item:
 - Active Package name mismatch: if `Start Date`, linked Customer name, and linked Master Package name are all resolvable, auto-fix by writing the corrected `Name` in the format `{Year} – {Customer Name} | {Master Package}`. If any relation is null, surface and skip.
 - Task with null `Customers`: do NOT auto-fix. Surface for the user's decision (which customer to link).
-- Session with null `Delivered By` on an account the user owns: set to the user's Notion ID (resolved from the `AISE Identity` Notion page), but flag in the report that this is an assumption.
+- Session with null `Delivered By` on an account the user owns: set to the user's Notion ID (resolved via `notion-get-users`), but flag in the report that this is an assumption.
 - Session Planned but past-dated: do NOT auto-fix. Surface for the user's decision (mark Delivered, reschedule, or cancel).
 - Session with null `Consumed Package` (Delivered, not Do-not-count): find the AP for that customer whose `Start Date` ≤ session `Call Date` ≤ `End Date`. If exactly one match exists, auto-fix by setting `Consumed Package` to that AP. If zero or multiple matches, surface for user decision.
 - Task with null `Consumed Package` (open, not Do-not-count, not internal): apply the date-matching rule from `context/notion-schema.md` § Create a Task. (1) if task has `Source Call`, inherit that session's `Consumed Package`. (2) Otherwise find the customer's AP covering the task's `Due Date` or today. If found, auto-fix. If not, surface for user decision.

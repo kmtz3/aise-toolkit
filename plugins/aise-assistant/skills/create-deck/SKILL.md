@@ -39,9 +39,9 @@ key contacts (name + title), pain points and goals.
 
 ### 1b. Notion — customer tracker
 
-**Resolve PLUGIN_DATA_DIR first:** use the Read tool on `~/.claude/aise-assistant.datadir`
-— the file content is the absolute path. Use it to resolve `{PLUGIN_DATA_DIR}/about/identity.md`
-and get the user's Notion UUID for owner-filtered queries.
+**Resolve the user's Notion UUID first:** call `notion-get-users(user_id: "self")` — this is a
+Notion-specific credential, not part of the Planhat profile, so resolve it live rather than from
+a cached value. Use the returned UUID for owner-filtered queries.
 
 Then:
 1. `notion-search("{customer}")` → `notion-fetch` the Customer page and its linked Active Package.

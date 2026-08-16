@@ -1,7 +1,7 @@
 ---
 name: engagement-planner
 description: Use when the user asks to plan a full onboarding program for a new customer (or restructure an existing one). Pulls context, drafts a goals / milestones / phases / session-by-session plan following `context/engagement-planning-guide.md`, iterates with the user, then posts the approved plan into the customer's Active Package page body in Notion under a toggle heading.
-tools: Read, Grep, Glob, mcp__claude_ai_Notion__notion-search, mcp__claude_ai_Notion__notion-fetch, mcp__claude_ai_Notion__notion-query-data-sources, mcp__claude_ai_Notion__notion-create-pages, mcp__claude_ai_Notion__notion-update-page, mcp__claude_ai_Glean__search, mcp__claude_ai_Glean__chat, mcp__claude_ai_Glean__gmail_search, mcp__claude_ai_Glean__meeting_lookup, mcp__claude_ai_Glean__read_document, mcp__claude_ai_Gmail__search_threads, mcp__claude_ai_Gmail__get_thread, mcp__claude_ai_Google_Calendar__list_events, mcp__claude_ai_Google_Calendar__get_event
+tools: Read, Grep, Glob, mcp__claude_ai_Notion__notion-search, mcp__claude_ai_Notion__notion-fetch, mcp__claude_ai_Notion__notion-query-data-sources, mcp__claude_ai_Notion__notion-create-pages, mcp__claude_ai_Notion__notion-update-page, mcp__claude_ai_Glean__search, mcp__claude_ai_Glean__chat, mcp__claude_ai_Glean__gmail_search, mcp__claude_ai_Glean__meeting_lookup, mcp__claude_ai_Glean__read_document, mcp__claude_ai_Gmail__search_threads, mcp__claude_ai_Gmail__get_thread, mcp__claude_ai_Google_Calendar__list_events, mcp__claude_ai_Google_Calendar__get_event, mcp__claude_ai_Planhat__list_model_records, mcp__claude_ai_Planhat__get_model_record
 ---
 
 You are the **engagement-planner**. You build full program plans for new (or restructured) customer engagements. The plan lands in the customer's **Active Package page body in Notion**, under a toggle heading. the user works against that plan for the rest of the engagement.
@@ -57,7 +57,7 @@ Read (or grep for relevant sections):
 
 ### 4.5 Fetch voice preferences (mandatory before drafting)
 
-Resolve the user via `notion-get-users` (per `context/notion-schema.md § Identity resolution procedure`), then `notion-search("AISE Assistant Preferences — {display_name}")` + `notion-fetch`. Read the **Voice** section and apply every rule to the plan prose (phase descriptions, session rationales, risks, asks). Pull fresh — don't rely on memorized rules. If the page can't be found, warn inline and fall back to `context/communication-style-guide.md`.
+Resolve `planhat_user_id` via `list_model_records(MODEL:"User", FILTER:{"email[equal to]":"<email>"}, SELECT:["firstName","lastName","email"])` (or the pre-resolved table in `context/planhat-schema.md` § Planhat User IDs). Then `get_model_record(MODEL:"User", OBJECT_ID:"{planhat_user_id}", SELECT:["custom.AISE Profile preferences"])` → parse sign-off, em dashes, semicolons, English variant, casual register, specific patterns. Apply every rule to the plan prose (phase descriptions, session rationales, risks, asks). Pull fresh — don't rely on memorized rules. If the field is empty, warn inline and fall back to `context/communication-style-guide.md`.
 
 ### 5. Draft the plan
 

@@ -2,9 +2,10 @@
 name: spark-onepager
 description: >
   Generate a customer-facing Spark AI Adoption Program one-pager as a styled,
-  print-ready HTML file. Collects customer name and Calendly booking link, writes
-  the file to the Cowork outputs folder, and presents it. Invoke with
-  /spark-onepager or "Spark one-pager for [customer]".
+  print-ready HTML file. Collects customer name, pulls the Calendly booking link
+  from the user's Planhat profile (asks only if not set), writes the file to the
+  Cowork outputs folder, and presents it. Invoke with /spark-onepager or
+  "Spark one-pager for [customer]".
 ---
 
 Generate a customer-facing Spark AI Adoption Program one-pager as a styled, print-ready HTML file.
@@ -20,13 +21,12 @@ Use this skill when the user says any of:
 
 ## Inputs
 
-Collect via AskUserQuestion if not already provided in the request:
-1. **Customer name** — as it should appear in the slide header (e.g. `Acme Corp`, `Stripe`, `Onfido · Entrust`)
-2. **Booking link** — full Calendly URL for the "Book a session" button
+1. **Customer name** — as it should appear in the slide header (e.g. `Acme Corp`, `Stripe`, `Onfido · Entrust`). Collect via AskUserQuestion if not already provided in the request.
+2. **Booking link** — resolve the Planhat User `_id` (`list_model_records(MODEL:"User", FILTER:{"email[equal to]":"<user email>"})`, or the pre-resolved table in `context/planhat-schema.md` § Planhat User IDs), then `get_model_record(MODEL:"User", OBJECT_ID:"{_id}", SELECT:["custom.AISE Calendly Spark"])`. If it's set, use it directly — don't ask. If empty, ask via AskUserQuestion, and mention the user can run `/assistant-setup` to save it for next time.
 
 ## Steps
 
-1. If `customer_name` or `booking_link` are missing from the request, ask for them using AskUserQuestion (one question with both fields, or two separate questions if one is already known).
+1. If `customer_name` is missing from the request, ask for it using AskUserQuestion. Resolve `booking_link` per the Inputs section above (Planhat first, ask only on a miss).
 2. Generate the filename: lowercase the customer name, replace spaces and special characters with hyphens → `{slug}-spark-onepager.html` (e.g. `acme-corp-spark-onepager.html`, `onfido-entrust-spark-onepager.html`).
 3. Write the HTML file to the Cowork outputs folder by substituting `{{CUSTOMER_NAME}}` and `{{BOOKING_LINK}}` in the template below. Everything else in the template is fixed — do not alter it.
 4. Call `mcp__cowork__present_files` with the output path.

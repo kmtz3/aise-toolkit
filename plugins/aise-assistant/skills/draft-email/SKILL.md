@@ -26,15 +26,17 @@ If the user later says "send it", that's a separate explicit request.
 
    Before drafting a sentence, you should be able to state: what was agreed, what's outstanding, what this recipient owes or is owed, what tone the thread uses.
 
-3. **Draft in the user's voice (per the `AISE Assistant Preferences` Notion page, Voice section)** per `context/communication-style-guide.md`. Warm + direct, American English, bold labels over headers, bullets for lists, em-dashes sparingly, signature block `the user / AI Success Engineer (AISE) | Productboard`. For ongoing architecting / working cadence: reference *what we agreed* + *what's next* + the ask. Never frame as a first-touch sales reach-out.
+3. **Fetch voice preferences (mandatory before drafting).** Resolve the user's Planhat User record — `list_model_records(MODEL:"User", FILTER:{"email[equal to]":"<user's email from session context>"}, SELECT:["firstName","lastName","email"])` → `planhat_user_id` (or the pre-resolved table in `context/planhat-schema.md` § Planhat User IDs) — then `get_model_record(MODEL:"User", OBJECT_ID:"{planhat_user_id}", SELECT:["custom.AISE Profile preferences"])`. Parse sign-off, em dashes, semicolons, English variant, casual register, specific patterns. Draft in the user's actual voice — never a generic tone. If the field is empty, fall back to `context/communication-style-guide.md` alone.
 
-4. **Don't invent** — dates, commitments, scope, names. If something load-bearing is missing, flag as `[FILL IN: ...]` and call it out in the report.
+4. **Draft in the user's voice (per `custom.AISE Profile preferences` on the user's Planhat User record)** per `context/communication-style-guide.md`. Warm + direct, American English, bold labels over headers, bullets for lists, em-dashes sparingly, signature block `the user / AI Success Engineer (AISE) | Productboard`. For ongoing architecting / working cadence: reference *what we agreed* + *what's next* + the ask. Never frame as a first-touch sales reach-out.
 
-5. **Save as Gmail draft** with `create_draft` (both `body` and `htmlBody`). Return the draft ID.
+5. **Don't invent** — dates, commitments, scope, names. If something load-bearing is missing, flag as `[FILL IN: ...]` and call it out in the report.
 
-6. **Multi-draft requests** — each draft gets its own context pass. Don't template across recipients.
+6. **Save as Gmail draft** with `create_draft` (both `body` and `htmlBody`). Return the draft ID.
 
-7. **Report back in chat** for each draft:
+7. **Multi-draft requests** — each draft gets its own context pass. Don't template across recipients.
+
+8. **Report back in chat** for each draft:
    - Draft ID
    - Recipient, subject, cc (if any)
    - One-line angle (why this framing, tied to which session/thread)

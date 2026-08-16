@@ -4,15 +4,18 @@ You are helping a **Productboard AISE leadership team member** (AISE Manager, He
 
 This file is always loaded. It points at the detail — don't duplicate it here.
 
-**Personal layer.** Anything user-specific (name, Notion user ID, voice, sign-offs) is stored in private Notion pages. Run `/assistant-setup` to populate. If pages are missing or have placeholder values, prompt the user to run `/assistant-setup`.
+**Personal layer.** Anything user-specific (name, voice, sign-offs, workspace specifics) is stored directly on `custom.AISE *` fields on the user's Planhat User record. Run `/assistant-setup` to populate. If fields are missing or empty, prompt the user to run `/assistant-setup`. The Notion UUID (needed for ownership-scoped Notion queries) is a separate, Notion-specific credential — always resolve it live via `notion-get-users`, never cache it on the Planhat profile.
 
-> **Path resolver — Notion only:**
-> Call `notion-get-users` for UUID + display name; then:
-> - `notion-search("AISE Identity — {display_name}")` + `notion-fetch` → name, timezone, UUID (always)
-> - `notion-search("AISE Leadership Preferences — {display_name}")` + `notion-fetch` → voice + workspace (when needed)
-> - `notion-search("AISE Leadership Team Roster — {display_name}")` + `notion-fetch` → team roster (when scoping queries to team)
+> **Path resolver — Planhat + Notion:**
+> `list_model_records(MODEL:"User", FILTER:{"email[equal to]":"<email>"})` for `planhat_user_id` + display name (or the pre-resolved table in `context/planhat-schema.md` § Planhat User IDs); then:
+> - `get_model_record(MODEL:"User", OBJECT_ID:"{planhat_user_id}", SELECT:["custom.AISE Identity"])` → name, timezone (always)
+> - `get_model_record(MODEL:"User", OBJECT_ID:"{planhat_user_id}", SELECT:["custom.AISE Profile preferences", "custom.AISE Leadership Workspace"])` → voice + workspace (when needed)
+> - `notion-get-users` (self) → Notion UUID (always, for any owner-scoped Notion query)
+> - **Team roster:** no stored field — resolve live via `list_model_records(MODEL:"User", FILTER:{"managers[contains]":"{planhat_user_id}"})`, falling back to `{"teams[contains]":"<team id>"}`, only when a team-scoped query needs it. See `context/planhat-user-profile.md` § Team roster.
+>
+> `custom.AISE Identity` and `custom.AISE Profile preferences` are **shared with aise-assistant** — same person, one identity, one voice, regardless of which plugin reads or writes them.
 
-**Address the user by name.** Resolve the user's display name from the `AISE Identity` Notion page and use it naturally in chat output.
+**Address the user by name.** Resolve the user's display name from `custom.AISE Identity` on their Planhat User record and use it naturally in chat output.
 
 ---
 
@@ -20,14 +23,16 @@ This file is always loaded. It points at the detail — don't duplicate it here.
 
 ### Per-user (always read first when user values are needed)
 
-> **Finding user data — Notion only:** `notion-get-users` for UUID + display name; `notion-search("AISE Identity — {display_name}") → notion-fetch` for name/timezone/UUID; `notion-search("AISE Leadership Preferences — {display_name}") → notion-fetch` for voice + workspace; `notion-search("AISE Leadership Team Roster — {display_name}") → notion-fetch` for team roster.
+> **Finding user data — Planhat + Notion:** `list_model_records(MODEL:"User", FILTER:{"email[equal to]":"<email>"})` for `planhat_user_id` + display name; `get_model_record(MODEL:"User", OBJECT_ID:"{planhat_user_id}", SELECT:[...])` for whichever `custom.AISE *` fields are needed; `notion-get-users` (self) for the Notion UUID needed on any owner-scoped Notion query.
 
 | Source | When to read |
 |---|---|
-| `AISE Identity — {display_name}` (Notion page) | Name, Notion user ID, email, role, time zone. Read for any query filtered by user or output addressed to the user by name. |
-| `AISE Leadership Preferences — {display_name}` (Notion page) | Personal communication preferences: sign-offs, formatting rules, English variant (Voice section). Workspace specifics: Notion report templates DB ID + per-cadence format prefs, Gong session title keywords, Slack channels, internal coordinators (Workspace section). |
-| `AISE Leadership Team Roster — {display_name}` (Notion page) | AISE team members: name, email, Notion UUID. **Read for all team-scoped Notion queries and Gong host filtering.** Filter `Customer.Owner` by any Active UUID here; use host emails for Gong. |
-| **Tracker Memory** Notion sub-page (child of `AISE Identity — {display_name}`) | Cross-team patterns and learnings spanning multiple accounts or AISEs. Find via `notion-search("AISE Identity — {display_name}") → notion-fetch` then look for a "Tracker Memory" child page in the page's blocks. If absent, it hasn't been created yet — only create it when logging a new pattern. Written by `context-keeper`. |
+| `custom.AISE Identity` (Planhat User field, shared with aise-assistant) | Name, Planhat User ID, email, role, time zone. Read for any query filtered by user or output addressed to the user by name. |
+| `custom.AISE Profile preferences` (Planhat User field, shared with aise-assistant) | Personal communication preferences: sign-offs, formatting rules, English variant. |
+| `custom.AISE Leadership Workspace` (Planhat User field) | Notion report templates DB ID + per-cadence format prefs, Gong session title keywords, Slack channels, internal coordinators. |
+| Notion UUID (via `notion-get-users`, not stored anywhere) | Needed for every owner-scoped Notion query (`Customer.Owner`, `Current Account Owner`, etc.) — a Notion-specific credential, resolved live, never cached on the Planhat profile. |
+| Team roster (no stored field — live query) | `list_model_records(MODEL:"User", FILTER:{"managers[contains]":"{planhat_user_id}"})`, falling back to `{"teams[contains]":"<team id>"}`. **Read for all team-scoped Notion queries and Gong host filtering** — resolve each teammate's Notion UUID via `notion-get-users` matched by email once you have the Planhat list. See `context/planhat-user-profile.md` § Team roster. |
+| `custom.AISE Tracker Memory` (Planhat User field, shared with aise-assistant) | Cross-team patterns and learnings spanning multiple accounts or AISEs, one entry per pattern (Pattern / Source / Action). Append-only in practice — read current value, append, write full field back. Written by `context-keeper`. |
 
 ### Universal (apply to any user)
 
@@ -35,7 +40,7 @@ This file is always loaded. It points at the detail — don't duplicate it here.
 |---|---|
 | [context/pb-aise-reference-guide.md](context/pb-aise-reference-guide.md) | Program structure, session types, PB data model, licensing, credit model, common risks |
 | [context/notion-schema.md](context/notion-schema.md) | Customer Tracker database schema, IDs, field formats, known gotchas |
-| [context/communication-style-guide.md](context/communication-style-guide.md) | AISE-comms patterns. Personal preferences override via the `AISE Leadership Preferences` Notion page (Voice section). |
+| [context/communication-style-guide.md](context/communication-style-guide.md) | AISE-comms patterns. Personal preferences override via `custom.AISE Profile preferences` on the user's Planhat User record. |
 | [context/notion-writer-playbook.md](context/notion-writer-playbook.md) | How to write Notion page content |
 
 > **context/ is shared locally.** The `context/` directory is sourced from `plugins/aise-assistant/` in this monorepo and synced via `scripts/sync-context.sh`. Never edit files in `context/` directly — make changes in `plugins/aise-assistant/context/` and sync here.
@@ -48,7 +53,7 @@ This file is always loaded. It points at the detail — don't duplicate it here.
 - **Pull context proactively** via Notion / Glean / Gmail. Never ask for things that are retrievable.
 - **Don't invent facts.** ARR, dates, credits — if missing, flag the gap.
 - **Customer confidentiality.** Never exfil customer names / deal sizes to external artefacts without explicit authorization.
-- **Owner-filter every Notion read.** The workspace is shared. Every query that filters by user must use the correct Notion UUID resolved from the `AISE Identity` Notion page. For `/report --aise <teammate>`, use the target AISE's UUID, not the operator's.
+- **Owner-filter every Notion read.** The workspace is shared. Every query that filters by user must use the correct Notion UUID resolved live via `notion-get-users` (self). For `/report --aise <teammate>`, use the target AISE's UUID (resolved by name match, or via live Planhat team lookup — see `context/planhat-user-profile.md` § Team roster), not the operator's.
 - **This plugin is read-oriented.** `/report` produces no Notion writes. `/notion-check --fix` applies low-risk corrections only. `/notion-sync` writes require explicit `--apply`.
 
 ---
@@ -76,7 +81,7 @@ This file is always loaded. It points at the detail — don't duplicate it here.
 
 | Command | Purpose |
 |---|---|
-| `/assistant-setup` | Onboard or re-onboard (Notion identity, voice, workspace). Run on first install. |
+| `/assistant-setup` | Onboard or re-onboard (Planhat identity, voice, workspace — writes `custom.AISE *` fields on your Planhat User record). Run on first install. |
 | `/assistant-help [--whatsnew]` | Full command reference. `--whatsnew` (or "what's new?") reads the CHANGELOG and surfaces the latest version changes instead. |
 | `/assistant-remember <correction>` | Capture a correction or new rule into context files and memory. |
 | `/assistant-improvement` | After a skill run with issues, analyze what went wrong and output a copyable coding-agent prompt naming the exact plugin, files, and fixes needed. No writes — output only. |
@@ -97,7 +102,7 @@ Full spec per skill in [`skills/`](skills/).
 | `sf-backfill` | Executes `/notion-sync --sf`. Queries SF opp data, applies ARR/date updates, flags churn/skip cases in chat. |
 | `notion-writer` | Notion create/update utility — used by integrity-check `--fix` and sf-backfill `--apply`. |
 | `context-keeper` | Watches for corrections and new rules, proposes diffs, writes both context files and memory. Invoke liberally. |
-| `assistant-onboarding` | Executes `/assistant-setup`. Auto-resolves Notion identity, asks short HITL questions, writes `about/` files. |
+| `assistant-onboarding` | Executes `/assistant-setup`. Auto-resolves Planhat User identity, asks short HITL questions about voice + workspace, optionally scrapes Gmail + Slack for a voice profile, checks for and migrates any prior profile data, and writes directly to `custom.AISE *` fields on the user's Planhat User record. No team roster step — that's resolved live by consuming agents instead. |
 
 Full spec per agent in [`agents/`](agents/).
 
@@ -134,7 +139,7 @@ The `/commit` skill runs this automatically before every commit. Never edit `con
 ## Output defaults
 
 - Inline markdown in chat for most asks.
-- Bolded labels > headers; bullets > paragraphs. Personal style from `AISE Leadership Preferences — {display_name}` Notion page (Voice section).
+- Bolded labels > headers; bullets > paragraphs. Personal style from `custom.AISE Profile preferences` on the user's Planhat User record.
 - **For `/report`**: structured, leadership-readable output. Prioritize signal over detail — a manager needs to act on the information, not read a transcript.
-- **Report templates:** if the `AISE Leadership Preferences` Notion page has a `Notion templates DB ID`, query that DB at report time to discover available template pages. If the user specifies a template name, fetch that page and read its H2/H3 headings as the report structure skeleton. If no template is specified, list available options and ask, or fall back to the default template name for that cadence from the Preferences page.
+- **Report templates:** if `custom.AISE Leadership Workspace` has a `Notion templates DB ID`, query that DB at report time to discover available template pages. If the user specifies a template name, fetch that page and read its H2/H3 headings as the report structure skeleton. If no template is specified, list available options and ask, or fall back to the default template name for that cadence from the same field.
 - **For Notion writes** (integrity-check `--fix`, sf-backfill `--apply`): follow `context/notion-schema.md` exactly (date triples, `__YES__`/`__NO__` checkboxes, relations as arrays of page URLs).

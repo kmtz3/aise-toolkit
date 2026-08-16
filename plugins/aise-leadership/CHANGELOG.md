@@ -1,5 +1,17 @@
 # Changelog — aise-leadership
 
+## [1.12.0] — 2026-08-16
+
+### Changed
+- `/assistant-setup` onboarding rewritten to write directly to `custom.AISE *` fields on the user's Planhat User record instead of Notion pages — `custom.AISE Identity` and `custom.AISE Profile preferences` are shared with aise-assistant (same person, one identity, one voice); a new `custom.AISE Leadership Workspace` field holds report templates, cadence formats, Gong keywords, Slack channels, and coordinators.
+- Team roster is no longer a stored page or field — `report-builder` and `notion-completion-fix` now resolve "who's on my team" live from Planhat's native `managers`/`teams` fields, falling back to `notion-get-users` per teammate only when a Notion UUID is needed for ownership scoping.
+- `context-keeper`'s voice-preference and cross-team-pattern rows now target the shared Planhat fields (`custom.AISE Profile preferences`, `custom.AISE Tracker Memory`), matching the aise-assistant copy.
+- Simplified `notion-writer`, `sf-backfill`, `notion-ask`, `notion-integrity-check` to resolve the Notion UUID directly via `notion-get-users` — they never needed the full identity fetch, just ownership scoping.
+- Agents that previously hard-stopped on an empty profile (`notion-completion-fix`, `report-builder`) now auto-migrate from a legacy Notion page if one exists, or run `assistant-onboarding` inline if nothing exists anywhere, instead of telling the user to go run `/assistant-setup` themselves.
+- `context/planhat-user-profile.md` synced from aise-assistant with the full field map, team-roster live-query procedure, and auto-resolve procedure.
+
+---
+
 ## [1.11.2] — 2026-08-10
 
 ### Changed

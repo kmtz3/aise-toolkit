@@ -83,9 +83,7 @@ Run a live check **only when**:
 **Procedure:**
 
 1. **Resolve identity** (needed for owner-scoped queries):
-   1. Call `notion-get-users` → UUID, display name.
-   2. `notion-search("AISE Identity — {display_name}")` → `notion-fetch(page_id)` → parse `notion_user_id` from the page body.
-   3. If the identity page is not found, prompt the user to run `/assistant-setup` and stop.
+   1. `notion-get-users` (self) → Notion UUID, display name, email. This is all this step needs — no Planhat lookup required, since the Notion UUID used for ownership filtering isn't part of the Planhat profile (see `context/planhat-user-profile.md`).
 
 2. **Find the customer** if named: search Notion for the customer page, confirm the match.
 

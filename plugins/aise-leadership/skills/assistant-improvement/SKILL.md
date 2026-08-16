@@ -77,7 +77,7 @@ Match each signal to the right layer:
 - **Wrong tool strategy, wrong search, wrong output format / tool-routing or output-shape preference** → `agents/<name>.md`
 - **Wrong field, wrong DB, wrong ownership rule** → `context/notion-schema.md`
 - **Wrong assumption about the workflow or session type** → `context/project-instructions.md` or `context/pb-aise-reference-guide.md`
-- **Tone / format regression or voice preference** → `context/communication-style-guide.md` (or the user's `AISE Leadership Preferences` Notion page if it's personal voice)
+- **Tone / format regression or voice preference** → `context/communication-style-guide.md` (or `custom.AISE Profile preferences` on the user's Planhat User record if it's personal voice)
 - **Interaction-style preference (confirmation gates, default verbosity)** → typically the agent file, sometimes `CLAUDE.md` if it's cross-skill
 
 If the agent file for the failing skill doesn't exist yet (i.e. the skill has no dedicated agent and runs inline), note that.

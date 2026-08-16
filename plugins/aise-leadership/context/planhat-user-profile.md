@@ -1,58 +1,116 @@
-# Planhat User Profile Documents — Schema & Conventions
+# Planhat User Profile Fields — Schema & Conventions
 
-> **Status:** Active. This is where `/assistant-setup` stores each AISE's personal profile (identity, voice, workspace preferences). Unrelated to the Notion↔Planhat *customer data* migration in `planhat-schema.md` — there is no Notion source for these documents; Planhat is the only store.
-
----
-
-## Why Documents, and why versioned
-
-The Planhat MCP connector exposes `create_document`, `get_document`, and `search_documents` — but **no `update_document` or `delete_document` tool** (confirmed live, 2026-08-07; a Planhat-side "document update" permission grant did not add the tool — availability is fixed by the MCP server's exposed toolset, not by API scopes). Profile documents are therefore **append-only**: every `/assistant-setup` run that changes anything creates a brand-new Document; nothing is edited in place.
-
-There is also no folder/parent parameter on `create_document` (confirmed live — the `path` field on a created document comes back empty regardless). A stable name prefix (`AISE Profile — `) stands in for a folder: it groups every AISE's profile documents under one searchable prefix in lieu of real Planhat folder support via this connector.
-
-**If this changes** (an `update_document` tool appears after a future connector reconnect), simplify: read-modify-write in place instead of the versioning dance below, and backfill by keeping only the newest document per title.
+> **Status:** Active. This is where `/assistant-setup` stores each AISE's personal profile (identity, voice, workspace preferences, Calendly links). Unrelated to the Notion↔Planhat *customer data* migration in `planhat-schema.md` — there is no Notion source of truth for this profile; the Planhat `User` record is the only store.
 
 ---
 
-## Document naming
+## Where profile data lives
 
-One document per section, per user, always the same title (no version number in the title itself — recency is resolved by `createdAt`, not by name):
+Personal profile data lives directly on the Planhat **`User`** record (model `User`), as `custom.*` fields. `update_model_record` edits these fields in place; there is no versioning, no append-only history, and no need to resolve "the newest one" — the current value on the record is always the current value.
 
-| Title | Content |
-|---|---|
-| `AISE Profile — Identity — {display_name}` | Preferred name, display name, accent variants, role, team, manager, time zone, working hours, email |
-| `AISE Profile — Preferences — {display_name}` | Voice section + Workspace section (mirrors the old Notion "Assistant Preferences" page) |
-| `AISE Profile — Voice Scrape Samples — {display_name}` | Only created when Gmail/Slack scraping ran (Step 5 of onboarding) |
-
-All three: `IS_PUBLIC: false`, `OWNER: <the user's own Planhat User _id>`. Never share these across users.
+The only prior store for this data is the legacy Notion pages — see **Migrating stale data** below.
 
 ---
 
-## Read procedure (resolve the *current* profile)
+## Field map
 
-1. `search_documents(QUERY: "AISE Profile — Identity — {display_name}")`
-2. Filter results to `name` **exactly** matching the expected title (search is fuzzy full-text — don't trust ranking alone).
-3. If more than one match, take the one with the **maximum `createdAt`** — that's the current version. Older matches are stale history; ignore them, don't merge them.
-4. `get_document(DOCUMENT_ID: "<_id>", FORMAT: "text")` → parse fields from `content`.
-5. Repeat for `AISE Profile — Preferences — {display_name}`.
-6. If `search_documents` returns nothing for a title, the profile section hasn't been created yet — treat all its fields as unset (equivalent to old Notion `<TBD>`).
+All fields live on the `User` model, prefixed `AISE `. Resolve them via `get_model_action_parameters(MODEL:"User")` if this table ever looks stale.
 
-## Write procedure (create a new version)
+| Field ID | Type | Content |
+|---|---|---|
+| `custom.AISE Identity` | rich text | Preferred name, display name, accent variants, role, team, manager, time zone, working hours, email |
+| `custom.AISE Profile preferences` | rich text | Voice section — sign-off, em dashes, semicolons, English variant, casual register, specific patterns |
+| `custom.AISE Workspace` | rich text | Workspace section — conferencing tool, internal Slack channel, manager (Calendly links are NOT stored here — see below) |
+| `custom.AISE Voice Scrape Samples` | rich text | Distilled patterns from Gmail/Slack scraping (Step 5 of onboarding) — only populated when scraping ran |
+| `custom.AISE Tracker Memory` | rich text | Cross-customer patterns/learnings the `context-keeper` agent logs — one entry per pattern (Pattern / Source / Action). Append-only in practice, unlike the other fields above which are wholesale-replaced. Shared across both plugins — same person, same accumulated pattern log regardless of which plugin is logging it. |
+| `custom.AISE Leadership Workspace` | rich text | **aise-leadership only.** Notion report-templates DB ID/URL, per-cadence output format + template names, Gong session-title keywords, Slack channels (AISE/leadership/CS org), internal coordinators (manager, commercial partner, PS Ops contact). Distinct from `custom.AISE Workspace` (aise-assistant's conferencing/Slack/manager fields) because the content genuinely doesn't overlap. |
+| `custom.AISE Calendly Sync` | url | Office Hours / ad-hoc sync booking link |
+| `custom.AISE Calendly Architecting` | url | Architecting session booking link |
+| `custom.AISE Calendly Enablement` | url | Enablement / training session booking link |
+| `custom.AISE Calendly Spark` | url | Spark demo / adoption program booking link — also read by `/spark-onepager` |
+| `custom.AISE Calendly Discovery` | url | Discovery session booking link |
+| `custom.AISE Calendly Kickoff` | url | Kickoff session booking link |
 
-1. Resolve the current version first (read procedure above) — you need the existing values to merge in default (gap-fill) mode.
-2. Build the **full** content block (existing untouched fields + new/changed fields) — never write a partial diff, since there's nothing to patch against.
-3. `create_document(NAME: "<same exact title as always>", CONTENT: "<full content>", OWNER: "<planhat user id>", IS_PUBLIC: false)`.
-4. Do not attempt to remove the previous version — there is no `delete_document` tool. Mention in the completion message that old versions remain in Planhat and can be removed manually via the Planhat UI if the user wants to tidy up.
+Rich-text fields take plain-text `Key: value` / `## Section` content (same shape the old Notion pages used) — no HTML required, unlike Company/Conversation rich-text fields (see `planhat-schema.md`).
 
-## Resolving the Planhat User ID (`OWNER`)
+**Shared vs plugin-specific:** `custom.AISE Identity`, `custom.AISE Profile preferences`, `custom.AISE Voice Scrape Samples`, and `custom.AISE Tracker Memory` are shared — one person has one identity, one voice, one pattern log, regardless of which plugin is reading or writing. `custom.AISE Workspace` (aise-assistant) and `custom.AISE Leadership Workspace` (aise-leadership) are plugin-specific because their content genuinely doesn't overlap. Calendly fields are aise-assistant-only.
+
+## Team roster (aise-leadership) — live query, not a stored field
+
+There is no `custom.AISE Leadership Team Roster` field, and none is planned. Team membership is resolved live at query time instead of cached, using fields already native to the Planhat `User` model:
+
+1. Resolve the leader's `planhat_user_id` (see below).
+2. Direct reports: `list_model_records(MODEL:"User", FILTER:{"managers[contains]":"{planhat_user_id}"}, SELECT:["firstName","lastName","email"])`.
+3. If that returns nothing (the `managers` hierarchy isn't populated for this org), fall back to team membership: `list_model_records(MODEL:"User", FILTER:{"teams[contains]":"6a479684b7134724b8201b64"}, SELECT:["firstName","lastName","email"])` (team ID for "AI Success Engineers" — see `planhat-schema.md` § Planhat User IDs / team options) — excluding the leader's own record.
+4. Neither of these returns a **Notion** UUID — only Planhat identifiers. Any Notion-scoped query (filtering `Customer.Owner`, etc.) still needs a live `notion-get-users` lookup matched by email for each teammate resolved above.
+
+This trades the old HITL-curated roster (which let a leader mark someone inactive or add an exception manually) for always-current data. If that curation is ever missed, revisit — but the working assumption is that `managers`/`teams` in Planhat is kept accurate as the org's system of record, so a shadow copy shouldn't be needed.
+
+---
+
+## Read procedure
+
+```
+get_model_record(MODEL: "User", OBJECT_ID: "{planhat_user_id}",
+  SELECT: ["custom.AISE Identity", "custom.AISE Profile preferences", "custom.AISE Workspace",
+           "custom.AISE Voice Scrape Samples", "custom.AISE Calendly Sync", "custom.AISE Calendly Architecting",
+           "custom.AISE Calendly Enablement", "custom.AISE Calendly Spark", "custom.AISE Calendly Discovery",
+           "custom.AISE Calendly Kickoff"])
+```
+
+(Or `list_model_records` with the same `FILTER`/`SELECT` if you don't have `planhat_user_id` yet — see below.)
+
+Parse each rich-text field's `Key: value` lines back out. A field that's empty/absent means that section has never been set — treat it like the old `<TBD>` placeholder, but **before** asking the user, run the migration check below.
+
+## Write procedure
+
+```
+update_model_record(MODEL: "User", OBJECT_ID: "{planhat_user_id}",
+  PARAMETERS: { "custom.AISE Identity": "<full content>", "custom.AISE Calendly Kickoff": "<url>", ... })
+```
+
+Always write the **full** content for any rich-text field you're touching (existing untouched key-lines + new/changed ones) — `update_model_record` replaces the field value, it doesn't merge line-by-line. URL fields are single values, just pass the new URL directly. Only include the fields that actually changed in `PARAMETERS` — untouched fields don't need to be resent.
+
+No versioning step, no "old version stays as inert history" messaging — the record is simply updated.
+
+**Exception — `custom.AISE Tracker Memory` is append-only in practice.** Unlike the other fields (wholesale replace on each onboarding run), `context-keeper` appends one new entry per cross-customer pattern over time: read the current value, append the new entry, write the full field back. Since Planhat rich-text fields don't have a documented growth ceiling but aren't built for unbounded append either, periodically review and prune superseded/stale entries rather than letting it grow forever — `context-keeper` should flag this if the field gets unwieldy (e.g. clearly outdated entries, or the same pattern logged more than once).
+
+## Resolving the Planhat User ID
 
 `list_model_records(MODEL: "User", FILTER: {"email[equal to]": "<user's email>"}, SELECT: ["firstName", "lastName", "email"])` → capture `_id`. The current AISE team's IDs are also pre-resolved in `planhat-schema.md` § Planhat User IDs (e.g. Klara Martinez → `6a44ef76c9aade50502936d5`) — check there first to skip a lookup.
 
-## Content format
+---
 
-Plain text, same `Key: value` / `## Section` shape the old Notion pages used — `get_document(FORMAT: "text")` returns this cleanly, and it's simple to parse back out on the next read. No need for HTML/Markdown structure here (unlike Planhat rich-text `custom.*` fields on Company/Conversation, which do require HTML — see `planhat-schema.md`).
+## Migrating stale data (run once per field, only when that field is empty)
 
-Example — Identity document content:
+When a `custom.AISE *` field comes back empty on the read above, don't go straight to asking the user — check whether the value already exists on the one prior store (the legacy Notion pages), and offer it as a pre-filled default instead of asking cold.
+
+**Legacy Notion pages** (pre-Planhat era): `AISE Identity — {display_name}` / `AISE Assistant Preferences — {display_name}` (or `AISE Leadership Preferences — {display_name}` in aise-leadership) Notion pages, if they still exist. If none found, the field is genuinely unset — ask fresh.
+
+When something is found, surface it in the HITL form as a pre-filled default ("Found this in your old Notion profile page — use it? [value]") rather than writing it silently. The user confirms or overrides before it's written to the `User` record.
+
+Calendly links have no historical equivalent for Discovery/Kickoff/Spark (those are new fields) — always ask fresh for those three unless the general "any other Calendly link" free-text field from the old Workspace section happens to contain one, in which case surface it as a candidate default.
+
+---
+
+## Auto-resolve procedure for consuming agents (instead of a hard stop)
+
+The section above is `/assistant-setup`'s own migration check, run during a full onboarding session. This section is for every **other** agent that needs a `custom.AISE *` field mid-task and finds it empty. Don't just print "profile not found — run `/assistant-setup`" and stop. Do this instead, in order:
+
+1. **Try the Planhat read.** If populated, done — proceed with the task.
+2. **If empty, run the migration check for the specific field(s) this agent needs** (not the whole profile) — legacy Notion pages (`AISE Identity —`, `AISE Assistant Preferences —` / `AISE Leadership Preferences —`).
+3. **If found in step 2, auto-migrate it — no HITL gate.** This is a like-for-like backfill of data that already exists somewhere else in the user's own systems, not new data entry, so it doesn't need the confirm-every-field friction that full onboarding uses (that friction exists there because onboarding is asking the user to actively review a wide set of values in one sitting). Write it straight to the `User` record via `update_model_record`, note inline in the agent's output — e.g. "Backfilled your identity from an existing Notion page — review anytime via `/assistant-setup --update`." — then proceed with the task using the now-populated value.
+4. **If step 2 finds nothing either** (genuinely first-time user — no Planhat data, no legacy Notion page): don't hand the user a "go run this yourself" message. Read `agents/assistant-onboarding.md` and execute its full procedure inline right now, per the same "agents are procedure documents, run them inline" convention used everywhere else in this plugin, then resume the original task once onboarding completes. Onboarding's default mode only asks about fields that are actually empty, so this doesn't force a redundant re-ask of anything that already exists.
+
+**Applies to:** any agent that would otherwise hard-stop on a missing `custom.AISE Identity` (or other core field) — `daily-brief`, `notion-completion-fix`, `bulk-account-setup`, `session-backfill`, `bulk-prep-week`, `notion-ask`, `sf-backfill`, `notion-integrity-check`, `notion-writer`, `aise-context`, `log-feedback`, and the aise-leadership equivalents (`report-builder`, `notion-completion-fix`, etc.).
+
+**Agents with an existing softer fallback** (`email-drafter`, `draft-followup`, `draft-email`, and similar — which already degrade to `context/communication-style-guide.md` with an inline warning rather than stopping) should still run steps 2–3 (auto-migrate if found) before falling back, but can keep their existing graceful-degrade behavior for step 4 instead of running full onboarding — triggering a multi-question onboarding flow mid-draft is heavier than a single email needs. Full onboarding is the right response for the hard-stop tier, not for a one-off drafting task.
+
+---
+
+## Content format (rich-text fields)
+
+Example — `custom.AISE Identity`:
 ```
 Preferred name: Klara
 Display name: Klara Martinez
@@ -65,26 +123,26 @@ Email: klara.martinez@productboard.com
 Accent variants: none
 ```
 
-Example — Preferences document content:
+Example — `custom.AISE Profile preferences`:
 ```
-## Voice
 Sign-off: Best,
 Em dashes: OK
 Semicolons: Avoid
 English variant: US
 Casual register: Mild only
+```
 
-## Workspace
+Example — `custom.AISE Workspace`:
+```
 Conferencing tool: Zoom
-Calendly — ad-hoc: <url or "not set">
-Calendly — architecting: <url or "not set">
-Calendly — training: <url or "not set">
 Slack AISE channel: <value>
 Manager: <value>
 ```
 
+Calendly links are separate `url` fields, not embedded in the Workspace rich text — write each directly to its own field.
+
 ---
 
-## Known limitation — downstream readers not yet migrated
+## Migration status
 
-As of this writing, most other agents/skills in this plugin still read personal voice/identity from the Notion `AISE Identity — {display_name}` / `AISE Assistant Preferences — {display_name}` pages (see `CLAUDE.md` § Per-user context, and every agent file that says "resolve the user's Notion identity page"). `/assistant-setup` and its `assistant-onboarding` agent write to Planhat now; the read side across the rest of the plugin has not been swept yet. Until that sweep happens, personalization elsewhere in the plugin will not see values set via the Planhat-based onboarding. Treat this file (and `CLAUDE.md`'s resolver block) as the target state to migrate the rest of the plugin toward.
+As of 2026-08-16, the downstream-readers sweep is complete in both plugins — every agent/skill that needs identity, voice, workspace, or Tracker Memory reads from `custom.AISE *` Planhat fields, not the old Notion pages. The only intentional remaining references to the legacy Notion page names are: (a) the migration-check fallback logic in this file and in `assistant-onboarding.md`, and (b) the Auto-resolve procedure above. If you find a file reading personal profile data from Notion as its *primary* path (not a migration fallback), that's drift — fix it to match this file.

@@ -1,6 +1,6 @@
 ---
 name: assistant-setup
-description: Onboard a new user (or re-onboard yourself) to this assistant. Resolves Planhat User identity, asks short HITL questions about voice + workspace preferences, optionally scrapes recent Gmail and Slack to draft your voice profile, and writes private Planhat profile documents. Run on first install of the plugin or when handing the assistant off to a teammate.
+description: Onboard a new user (or re-onboard yourself) to this assistant. Resolves Planhat User identity, asks short HITL questions about voice + workspace + Calendly preferences, optionally scrapes recent Gmail and Slack to draft your voice profile, checks for and migrates any prior profile data, and writes directly to `custom.AISE *` fields on your Planhat User record. Run on first install of the plugin or when handing the assistant off to a teammate.
 ---
 
 Set up the assistant for the current user.
@@ -17,4 +17,4 @@ Read the procedure in `agents/assistant-onboarding.md` and execute it **inline a
 
 **Don't ask for retrievable values.** Planhat User ID, primary email, time zone — pull from the connected account, never ask.
 
-**Why Planhat writes are versioned, not edited in place:** see `context/planhat-user-profile.md` — the Planhat MCP connector has no `update_document`/`delete_document` tool, so every change creates a new document version rather than patching the old one.
+**Where profile data lives and how it's written:** see `context/planhat-user-profile.md` — profile values live on `custom.AISE *` fields directly on the user's Planhat User record, updated in place via `update_model_record` (no versioning). That file also covers the migration check that backfills from legacy Notion pages when a field is empty.

@@ -4,18 +4,19 @@ You are helping a **Productboard AI Success Engineer (AISE)** (post-sales) run c
 
 This file is always loaded. Keep it short — it points at the detail.
 
-**Personal layer.** Anything user-specific (name, Planhat User ID, voice, sign-offs, language preferences, workspace specifics) is stored in private Planhat documents. Read those documents before producing anything on the user's behalf. If they're missing or have placeholder values, prompt the user to run `/assistant-setup`.
+**Personal layer.** Anything user-specific (name, Planhat User ID, voice, sign-offs, language preferences, workspace specifics, Calendly links) is stored directly on `custom.AISE *` fields on the user's own Planhat User record. Read those fields before producing anything on the user's behalf. If they're missing or empty, prompt the user to run `/assistant-setup`.
 
 > **Path resolver — Planhat only:**
 > Call `list_model_records(MODEL: "User", FILTER: {"email[equal to]": "<user email>"})` for `_id` + name (or use the pre-resolved table in `context/planhat-schema.md` § Planhat User IDs); then:
-> - `search_documents(QUERY: "AISE Profile — Identity — {display_name}")` → filter to exact-title matches, take the max-`createdAt` result, `get_document(FORMAT: "text")` → name, timezone, `_id` (always)
-> - `search_documents(QUERY: "AISE Profile — Preferences — {display_name}")` → same resolution → voice + workspace (only when needed for drafting)
+> - `get_model_record(MODEL: "User", OBJECT_ID: "{_id}", SELECT: ["custom.AISE Identity"])` → name, timezone (always)
+> - `get_model_record(MODEL: "User", OBJECT_ID: "{_id}", SELECT: ["custom.AISE Profile preferences", "custom.AISE Workspace"])` → voice + workspace (only when needed for drafting)
+> - `get_model_record(MODEL: "User", OBJECT_ID: "{_id}", SELECT: ["custom.AISE Calendly Sync", "custom.AISE Calendly Architecting", "custom.AISE Calendly Enablement", "custom.AISE Calendly Spark", "custom.AISE Calendly Discovery", "custom.AISE Calendly Kickoff"])` → Calendly links (only when a booking link is needed)
 >
-> Full read/write procedure — including why profile documents are versioned by re-creation rather than edited in place (no `update_document`/`delete_document` tool on this connector) — is in `context/planhat-user-profile.md`.
+> Full field map and read/write procedure — including the migration check that backfills from legacy Notion pages when a field is empty — is in `context/planhat-user-profile.md`.
 >
 > ⚠️ **Migration in progress:** most agents/skills in this plugin still reference the old Notion `AISE Identity — {display_name}` / `AISE Assistant Preferences — {display_name}` pages inline. Those have not yet been swept to the Planhat resolver above — `/assistant-setup` and its `assistant-onboarding` agent are the only fully-migrated read/write path today. When editing any agent/skill that reads personal identity or voice, prefer the Planhat resolver above and flag the file for follow-up migration rather than writing new Notion-identity reads.
 
-**Address the user by name.** In chat output, refer to the user by the `Display name` (or informal first name) from the `AISE Profile — Identity — {display_name}` Planhat document, not as "the user" or "you" alone. Use it naturally where it lands — opening a message, calling out an action item, or surfacing a question — but don't force it. Agent spec files use generic language ("the user") so they work for any installer; the personalized address is a runtime behavior.
+**Address the user by name.** In chat output, refer to the user by the `Display name` (or informal first name) parsed from `custom.AISE Identity` on the user's Planhat User record, not as "the user" or "you" alone. Use it naturally where it lands — opening a message, calling out an action item, or surfacing a question — but don't force it. Agent spec files use generic language ("the user") so they work for any installer; the personalized address is a runtime behavior.
 
 ---
 
@@ -25,15 +26,17 @@ Read these when the task touches their subject. Don't duplicate their content he
 
 ### Per-user (always read first when user values are needed)
 
-> **Finding user data — Planhat only:** `list_model_records(MODEL: "User", FILTER: {"email[equal to]": "<email>"})` (or the pre-resolved table in `context/planhat-schema.md` § Planhat User IDs) for `_id` + display name; `search_documents(QUERY: "AISE Profile — Identity — {display_name}") → get_document` for name/timezone/`_id`; `search_documents(QUERY: "AISE Profile — Preferences — {display_name}") → get_document` for voice + workspace. Always resolve to the max-`createdAt` match — see `context/planhat-user-profile.md`.
+> **Finding user data — Planhat only:** `list_model_records(MODEL: "User", FILTER: {"email[equal to]": "<email>"})` (or the pre-resolved table in `context/planhat-schema.md` § Planhat User IDs) for `_id` + display name; `get_model_record(MODEL: "User", OBJECT_ID: "{_id}", SELECT: [...])` for whichever `custom.AISE *` fields are needed. See `context/planhat-user-profile.md` for the full field map.
 
 | Source | When to read |
 |---|---|
-| `AISE Profile — Identity — {display_name}` (Planhat document) | Name, Planhat User ID, email, role, time zone. **Read for any agent that filters records by user, writes drafts in the user's voice, or references the user by name.** |
-| `AISE Profile — Preferences — {display_name}` (Planhat document) | Personal communication preferences: sign-offs, em-dash rule, semicolons, English variant, casual register, forbidden filler words (Voice section). Workspace-specific context: conferencing tool, Calendly links, Slack channel patterns, internal coordinators (Workspace section). |
-| **Tracker Memory** Notion sub-page (child of the legacy `AISE Identity — {display_name}` Notion page) | **Cross-customer observations only** — patterns and learnings spanning ≥2 customers. Not yet migrated to Planhat. Find via `notion-search("AISE Identity — {display_name}") → notion-fetch` then look for a "Tracker Memory" child page in the page's blocks. If absent, it hasn't been created yet — only create it when logging a new pattern. Per-customer state and active-engagements list are queried live from Notion; not cached here. Written by `context-keeper`. |
+| `custom.AISE Identity` (User field) | Name, Planhat User ID, email, role, time zone. **Read for any agent that filters records by user, writes drafts in the user's voice, or references the user by name.** |
+| `custom.AISE Profile preferences` (User field) | Personal communication preferences: sign-offs, em-dash rule, semicolons, English variant, casual register, forbidden filler words. |
+| `custom.AISE Workspace` (User field) | Conferencing tool, Slack channel patterns, internal coordinators. |
+| `custom.AISE Calendly Sync` / `Architecting` / `Enablement` / `Discovery` / `Kickoff` / `Spark` (User url fields) | Booking links per session type — read whichever one the task needs. |
+| `custom.AISE Tracker Memory` (User field) | **Cross-customer observations only** — patterns and learnings spanning ≥2 customers, one entry per pattern (Pattern / Source / Action). Append-only in practice — read current value, append, write full field back. Per-customer state and active-engagements list are queried live from Notion; not cached here. Written by `context-keeper`. |
 
-> Most agents below still say "Notion `AISE Identity`/`AISE Assistant Preferences`" — that's the pre-migration state, not yet swept. Treat the Planhat sources above as canonical going forward; see the ⚠️ note under Path resolver.
+> Most agents below still say "Notion `AISE Identity`/`AISE Assistant Preferences`" — that's the pre-migration state, not yet swept. Treat the Planhat `custom.AISE *` fields above as canonical going forward; see the ⚠️ note under Path resolver.
 
 ### Universal (apply to any user)
 
@@ -42,8 +45,8 @@ Read these when the task touches their subject. Don't duplicate their content he
 | [context/project-instructions.md](context/project-instructions.md) | Overall workflow rules, search strategy, ground rules. **Default reference.** |
 | [context/pb-aise-reference-guide.md](context/pb-aise-reference-guide.md) | Program structure, session "what good looks like", PB data model, architecture, licensing, common risks |
 | [context/score-cards.md](context/score-cards.md) | Per-session scorecards — use when prepping to hit criteria or scoring a delivered session |
-| [context/communication-style-guide.md](context/communication-style-guide.md) | Universal AISE-comms patterns (structure, tone-by-context, transformation rules). Personal preferences override via the `AISE Profile — Preferences — {display_name}` Planhat document (Voice section). |
-| [context/planhat-user-profile.md](context/planhat-user-profile.md) | Personal profile document schema — naming, versioning, and the read/write procedure `/assistant-setup` uses to store Identity/Preferences/Voice-Scrape-Samples in Planhat. |
+| [context/communication-style-guide.md](context/communication-style-guide.md) | Universal AISE-comms patterns (structure, tone-by-context, transformation rules). Personal preferences override via `custom.AISE Profile preferences` on the user's Planhat User record. |
+| [context/planhat-user-profile.md](context/planhat-user-profile.md) | Personal profile field schema — the `custom.AISE *` field map and read/write procedure `/assistant-setup` uses to store Identity/Preferences/Workspace/Voice-Scrape-Samples/Calendly links directly on the user's Planhat User record. |
 | [context/notion-writer-playbook.md](context/notion-writer-playbook.md) | How to write Notion page content (structure, tone, formatting) |
 | [context/notion-schema.md](context/notion-schema.md) | Customer Tracker database schema, IDs, field formats, known gotchas |
 | [context/engagement-planning-guide.md](context/engagement-planning-guide.md) | Framework for full program plans (goals → milestones → phases → sessions). Reference for `/customer-plan --full`. |
@@ -69,13 +72,13 @@ Read these when the task touches their subject. Don't duplicate their content he
 
 ## Install / upgrade
 
-Personal data is stored in private Planhat documents — it persists across plugin installs, updates, and reinstalls and is accessible from any machine where Planhat is connected.
+Personal data is stored directly on `custom.AISE *` fields on the user's Planhat User record — it persists across plugin installs, updates, and reinstalls and is accessible from any machine where Planhat is connected.
 
-**Fresh install** (no Planhat profile documents exist): `/assistant-setup` creates them. Prompt the user to run it on first install.
+**Fresh install** (no `custom.AISE *` fields populated yet): `/assistant-setup` populates them, checking first for prior values to migrate from legacy Notion pages. Prompt the user to run it on first install.
 
 **After a marketplace update or reinstall**: profile data is in Planhat and is unaffected. No migration needed.
 
-**To fully reset**: run `/assistant-setup --reset` to write fresh profile documents from scratch. (Old documents aren't deleted — no `delete_document` tool via this connector — they just become inert history.)
+**To fully reset**: run `/assistant-setup --reset` to overwrite every `custom.AISE *` field with fresh content. Since these are User-record fields, not Documents, the reset genuinely replaces the old values.
 
 ---
 
@@ -144,7 +147,7 @@ Grouped by family. Type `/<family>-` in autocomplete to see siblings.
 
 | Command | Purpose |
 |---|---|
-| `/assistant-setup [--scrape-voice] [--reset]` | Onboard the current user (or re-onboard) to this assistant. Resolves Planhat User identity automatically, asks short HITL questions for preferences, optionally scrapes Gmail + Slack to draft a voice profile, and writes the `AISE Profile — Identity` and `AISE Profile — Preferences` Planhat documents. Run on first install or when handing off to a teammate. |
+| `/assistant-setup [--scrape-voice] [--reset]` | Onboard the current user (or re-onboard) to this assistant. Resolves Planhat User identity automatically, asks short HITL questions for preferences, optionally scrapes Gmail + Slack to draft a voice profile, and writes directly to `custom.AISE *` fields on the user's Planhat User record. Run on first install or when handing off to a teammate. |
 | `/assistant-help [--whatsnew]` | Quick reference of all available commands grouped by workflow stage, plus suggested order around a customer session and pointers to deeper docs. `--whatsnew` (or "what's new?") reads the CHANGELOG and surfaces the latest version changes instead. |
 | `/assistant-remember <correction>` | Manually invoke the context-keeper to update context files / memory. |
 | `/assistant-improvement` | After a skill run with issues, analyze what went wrong and output a single copyable coding-agent prompt naming the exact plugin, files, and fixes needed. No writes — output only. |
@@ -182,7 +185,7 @@ Full spec per skill in [`skills/`](skills/).
 | `engagement-planner` | Executes `/customer-plan --full`. Pulls customer context, builds a goals/milestones/phases/sessions plan per `engagement-planning-guide.md`, iterates with the user, then writes the approved plan to the Active Package page body via `notion-writer`. |
 | `account-setup` | Executes `/customer-setup` (all three modes). **Baseline**: creates Customer page (applies New Customer template, sections as placeholders), Active Package, session backfill (GCal + Gong). **`--research`**: baseline plus Company Research sub-procedure — discovers page sections dynamically, populates from web + Salesforce + Gong. **`--refresh`**: runs Company Research on existing page — enriches content, confirms before overwriting manually-added info. |
 | `session-backfill` | Executes `/session-backfill`. Discovers historical post-sales sessions from GCal + Gong + Notion for one or more already-configured customers. Deduplicates against existing Session records, infers type, matches Consumed Package by date. If no Active Package exists, bootstraps one from Salesforce (Glean fallback) before proceeding. Creates Session records on approval. |
-| `email-drafter` | Executes `/draft-email`. Pulls context across Glean / Notion / Gmail / Calendar to ground the draft in real session history + outstanding commitments, writes in the user's voice (per the `AISE Profile — Preferences` Planhat document, Voice section), saves to Gmail Drafts. **Never sends.** |
+| `email-drafter` | Executes `/draft-email`. Pulls context across Glean / Notion / Gmail / Calendar to ground the draft in real session history + outstanding commitments, writes in the user's voice (per `custom.AISE Profile preferences` on the user's Planhat User record), saves to Gmail Drafts. **Never sends.** |
 | `post-session-debrief` | Executes `/session-debrief`. Superagent that orchestrates the complete post-session workflow: spawns `session-summarizer`, `email-drafter`, `kdd-builder` (A-sessions only), and `notion-writer` in sequence; surfaces scorecard eval and product feedback log in chat only. |
 | `bulk-debrief` | Executes `/bulk --debrief`. Discovers all external customer meetings from the previous calendar day, checks each for prior debrief signals (notes / draft / tasks), and executes the complete `post-session-debrief` procedure for each unprocessed or partially-processed session in sequence. |
 | `notion-writer` | Executes Notion create/update operations following `notion-schema.md`. |
@@ -192,7 +195,7 @@ Full spec per skill in [`skills/`](skills/).
 | `notion-integrity-check` | Executes `/notion-check`. Walks the user's Notion records (Customers / Active Packages / Sessions / Tasks) hunting for ownership and field drift. Read-only by default; surfaces findings grouped by severity. Applies low-risk fixes only when `--fix` is passed. |
 | `notion-completion-fix` | Executes `/notion-fix`. Queries for Planned/Postponed past-date sessions and open past-due or this-week tasks, searches Gmail/Gong/Glean for evidence of delivery or completion, classifies evidence strength (🟢/🟡/🔴), and applies corrections with per-item confirmation when `--fix` is passed. Scope: current user's records only. |
 | `whats-new` | Executes `/customer-whats-new`. Pulls activity for one customer inside a defined window across Gmail / Glean (Slack, Gong, SF, Confluence, Drive) / Notion / Calendar, distills a top Signals block, returns a grouped chat brief. Read-only — no writes. |
-| `assistant-onboarding` | Executes `/assistant-setup`. Auto-resolves the user's Planhat User identity, asks short HITL questions about voice + workspace preferences, optionally scrapes recent Gmail and Slack to draft a voice profile (distinguishing internal vs client-facing tone), and writes the `AISE Profile — Identity` and `AISE Profile — Preferences` Planhat documents. Run on first install or when handing off to a teammate. |
+| `assistant-onboarding` | Executes `/assistant-setup`. Auto-resolves the user's Planhat User identity, asks short HITL questions about voice + workspace + Calendly preferences, optionally scrapes recent Gmail and Slack to draft a voice profile (distinguishing internal vs client-facing tone), checks for and migrates prior profile data, and writes directly to `custom.AISE *` fields on the user's Planhat User record. Run on first install or when handing off to a teammate. |
 | `bulk-prep-week` | Executes `/bulk --prep`. Scans Google Calendar for external customer sessions in the upcoming week, maps them to Notion Customer records, deduplicates against existing Session pages (skips already-prepped, updates page-exists-no-prep, creates otherwise), and runs the full session-prepper flow sequentially for each session that needs prep. |
 | `bulk-account-setup` | Executes `/bulk-account-setup`. Admin/reorg task: queries all customers owned by the target user (self or a named teammate), checks setup state (no Active Package / stub / already set up), presents a queue with one confirmation gate, then runs the full `account-setup` procedure sequentially for each account that needs it. In delegated mode (targeting a teammate), writes ownership fields using the target user's UUID, not the operator's. |
 | `notion-ask` | Executes `/notion-ask`. Reads `context/notion-schema.md` as the canonical source to answer questions about DB structure, field fill requirements, auto-calculated fields, and interconnections. Does live Notion queries only when a specific customer is named or the question requires real-value verification. |
@@ -230,10 +233,10 @@ Keep it brief and specific. Only surface it when you have a concrete observation
 ## Output defaults
 
 - Inline markdown in chat for most asks.
-- Bolded labels > headers; bullets > paragraphs. Match the user's comms style — see `AISE Profile — Preferences — {display_name}` Planhat document (Voice section) for personal preferences.
-- **Voice is mandatory for every draft — skill or conversational.** Before producing any draft output (email, Slack, ad-hoc rewrite, inline conversational draft), fetch `AISE Profile — Preferences — {display_name}` (Voice section) from Planhat if it isn't already in context — resolve via `search_documents` + `get_document`, see `context/planhat-user-profile.md`. This is not optional and does not depend on a skill being invoked. English variant, punctuation, sign-offs, casual register, and forbidden filler words all live there.
+- Bolded labels > headers; bullets > paragraphs. Match the user's comms style — see `custom.AISE Profile preferences` on the user's Planhat User record for personal preferences.
+- **Voice is mandatory for every draft — skill or conversational.** Before producing any draft output (email, Slack, ad-hoc rewrite, inline conversational draft), fetch `custom.AISE Profile preferences` from the user's Planhat User record if it isn't already in context — resolve via `get_model_record`, see `context/planhat-user-profile.md`. This is not optional and does not depend on a skill being invoked. English variant, punctuation, sign-offs, casual register, and forbidden filler words all live there.
 - **Formatting rule for all drafts.** If a draft has 2+ distinct sections or action items, use bolded labels + bullets — no plain-prose paragraphs. Greeting for customer-facing or senior-stakeholder messages: "Hi [First name]," — never "Hey".
-- **Name handling.** The user's display name and any accent variants to strip live in the `AISE Profile — Identity — {display_name}` Planhat document. Never introduce a different spelling than what's documented there.
+- **Name handling.** The user's display name and any accent variants to strip live in `custom.AISE Identity` on the user's Planhat User record. Never introduce a different spelling than what's documented there.
 - For Notion writes: follow `context/notion-schema.md` exactly (date triples, `__YES__`/`__NO__` checkboxes, multi-selects as JSON array strings, relations as arrays of page URLs).
 - **For `/session-prep`**: write to the Notion session page under a collapsible toggle heading so the user can later add real session notes underneath it.
 - **For architecting sessions (via `/session-prep` or `/session-kdds`)**: also create a sub-page of the Session page titled `KDDs — [Session ID] [Name]` containing the customer-facing KDD doc (title, agenda, outcome, action items, per-KDD starter examples + blank decision tables). Spec lives in `templates/session-kdds/00-index.md`. Starter examples seeded from real customer context only — never fabricated.

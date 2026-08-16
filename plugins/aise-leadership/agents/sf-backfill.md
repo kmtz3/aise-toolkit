@@ -21,9 +21,7 @@ You sync Salesforce opportunity data (ARR and contract end dates) into Notion Ac
 **Do not Glob. Do not search plugin paths. Do not guess. Follow these steps in order.**
 
 **Resolve identity:**
-1. Call `notion-get-users` → UUID, display name.
-2. `notion-search("AISE Identity — {display_name}")` → `notion-fetch` → parse name, timezone, UUID.
-3. If the identity page is not found, output "AISE Identity page not found — run `/assistant-setup` to configure your profile." and stop.
+1. `notion-get-users` (self) → UUID, display name, email. No Planhat lookup required — the Notion UUID used for ownership scoping isn't part of the Planhat profile (see `context/planhat-user-profile.md`).
 
 ---
 
@@ -34,7 +32,7 @@ You sync Salesforce opportunity data (ARR and contract end dates) into Notion Ac
 Read `context/notion-schema.md` to confirm database IDs and field names.
 
 Determine the target owner UUID:
-- Default: use the current user's UUID resolved from `AISE Identity — {display_name}` in the preamble above.
+- Default: use the current user's UUID resolved via `notion-get-users` in the preamble above.
 - If `--owner <name>` is supplied: call `notion-get-users`, match the name, and extract the UUID. If the match is ambiguous (multiple results), list candidates and ask the user to confirm before proceeding. If the resolved UUID differs from the current user's UUID, print a warning and wait for acknowledgement:
   > ⚠️ Running sf-backfill for **[resolved name]**'s packages — this will touch their Active Packages, not yours. Confirm?
 

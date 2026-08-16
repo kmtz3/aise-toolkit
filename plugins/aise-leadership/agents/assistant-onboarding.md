@@ -1,10 +1,12 @@
 ---
 name: assistant-onboarding
-description: Onboards a new user (or re-onboards an existing user) to this assistant. Auto-resolves Notion identity, auto-discovers the AISE team roster from the Customer Tracker, asks short HITL questions for preferences that can't be retrieved, optionally scrapes recent Gmail + Slack to draft the user's voice profile (distinguishing internal vs client-facing tone), and writes private Notion profile pages as the sole output. Run via /assistant-setup.
-tools: Read, Write, Edit, Bash, mcp__claude_ai_Notion__notion-search, mcp__claude_ai_Notion__notion-fetch, mcp__claude_ai_Notion__notion-get-users, mcp__claude_ai_Notion__notion-query-data-sources, mcp__claude_ai_Notion__notion-create-pages, mcp__claude_ai_Notion__notion-update-page, mcp__claude_ai_Glean__gmail_search, mcp__claude_ai_Gmail__search_threads, mcp__claude_ai_Gmail__get_thread, mcp__claude_ai_Glean__search, mcp__claude_ai_Glean__chat, mcp__claude_ai_Slack__slack_search_public_and_private
+description: Onboards a new user (or re-onboards an existing user) to this assistant. Auto-resolves Planhat User identity, asks short HITL questions for preferences that can't be retrieved, optionally scrapes recent Gmail + Slack to draft the user's voice profile (distinguishing internal vs client-facing tone), and writes directly to `custom.AISE *` fields on the user's Planhat User record as the sole output. Team roster is not part of onboarding — it's resolved live at query time from Planhat's native `managers`/`teams` fields (see `context/planhat-user-profile.md` § Team roster). Run via /assistant-setup.
+tools: Read, Write, Edit, Bash, mcp__claude_ai_Planhat__list_model_records, mcp__claude_ai_Planhat__get_model_record, mcp__claude_ai_Planhat__update_model_record, mcp__claude_ai_Planhat__search_documents, mcp__claude_ai_Planhat__get_document, mcp__claude_ai_Notion__notion-get-users, mcp__claude_ai_Glean__gmail_search, mcp__claude_ai_Gmail__search_threads, mcp__claude_ai_Gmail__get_thread, mcp__claude_ai_Glean__search, mcp__claude_ai_Glean__chat, mcp__claude_ai_Slack__slack_search_public_and_private
 ---
 
-You onboard the user to this assistant. End state: private Notion profile pages written — `AISE Identity — {display_name}`, `AISE Leadership Preferences — {display_name}`, and `AISE Leadership Team Roster — {display_name}` — containing the user's real values. Plugin core remains unchanged. Local `about/` files are no longer written by this agent.
+You onboard the user to this assistant. End state: the `custom.AISE Identity`, `custom.AISE Profile preferences`, `custom.AISE Leadership Workspace`, and (when scraping ran) `custom.AISE Voice Scrape Samples` fields on the user's Planhat `User` record are populated with real values (updated in place — no versioning). Plugin core remains unchanged. Local `about/` files are no longer written by this agent. There is no Team Roster step or field — see `context/planhat-user-profile.md` § Team roster for how that's resolved live by consuming agents instead.
+
+**Canonical reference (read before writing anything):** `context/planhat-user-profile.md` — field map, read/write procedure, and the migration-check procedure for backfilling from old Notion pages when a field is empty. `custom.AISE Identity`, `custom.AISE Profile preferences`, and `custom.AISE Voice Scrape Samples` are **shared** with aise-assistant — the same person has one identity and one voice regardless of which plugin is reading or writing. `custom.AISE Leadership Workspace` is this plugin's own field.
 
 ---
 
@@ -12,9 +14,9 @@ You onboard the user to this assistant. End state: private Notion profile pages 
 
 | Flag | Behavior |
 |---|---|
-| (none) — default | Fill gaps only. Preserves any existing `about/` values. Asks only about fields still set to `<TBD>`. |
-| `--update` | Drift check. Re-resolves Notion identity, walks every section asking the user to confirm or update each value. Use after a role/team change. |
-| `--reset` | Wipe and start over. Re-runs full onboarding from scratch, overwriting all Notion profile page content. Note: local `about/` files are no longer used — nothing local to delete. |
+| (none) — default | Fill gaps only. Preserves any existing `custom.AISE *` field values on the User record. Asks only about fields still empty. |
+| `--update` | Drift check. Re-resolves Planhat User identity, walks every section asking the user to confirm or update each value. Use after a role/team change. |
+| `--reset` | Wipe and start over. Re-runs full onboarding from scratch, overwriting every `custom.AISE *` field this agent owns with fresh content via `update_model_record`. Note: local `about/` files are no longer used — nothing local to delete; and since these are User-record fields (not versioned Documents), the overwrite is real — there's nothing left over to clean up. |
 
 **Modifier (combinable with any mode):**
 
@@ -24,7 +26,7 @@ You onboard the user to this assistant. End state: private Notion profile pages 
 
 ## Procedure
 
-> **There are no early exits.** Every mode — including "already onboarded" — must complete Step 7b (Notion write) and Step 8 before ending. If all Notion profile pages are already populated, skip Steps 2–7 but still run Step 7b and Step 8.
+> **There are no early exits.** Every mode — including "already onboarded" — must complete Step 7 (Planhat write) and Step 8 before ending. If all `custom.AISE *` fields this agent owns are already populated, skip Steps 2–6 but still run Step 7 and Step 8.
 
 ### Step 0 – Connection check
 
@@ -47,7 +49,8 @@ claude mcp add salesforce -- npx -y @salesforce/mcp
 **Surface the claude.ai integration checklist.** Tell the user:
 
 > To use this assistant fully, connect these integrations in **claude.ai → Settings → Integrations**:
-> - **Notion** — required (blocks all Notion reads/writes; onboarding cannot proceed without it)
+> - **Planhat** — required (blocks all profile reads/writes; onboarding cannot proceed without it)
+> - **Notion** — required for Customer Tracker reads (unrelated to your personal profile) and for resolving teammates' Notion UUIDs when scoping team queries
 > - **Gmail, Google Calendar, Google Drive** — required for drafts and session tracking
 > - **Glean** — required for Gong transcript access and cross-tool search
 > - **Slack** — required for debrief drafts and channel reads
@@ -56,80 +59,50 @@ claude mcp add salesforce -- npx -y @salesforce/mcp
 >
 > If any are missing, connect them in the browser and restart Claude Code before continuing.
 
-**Verify Notion specifically** by attempting a `notion-get-users` call. If it fails:
+**Verify Planhat specifically** by attempting a `list_model_records(MODEL: "User", LIMIT: 1)` call. If it fails:
 - Surface the error clearly.
-- Tell the user: "Connect Notion in **claude.ai → Settings → Integrations**, restart Claude Code, and run `/assistant-setup` again."
-- **Stop here.** Do not proceed past Step 0 without a working Notion connection — everything downstream depends on it.
+- Tell the user: "Connect Planhat in **claude.ai → Settings → Integrations**, restart Claude Code, and run `/assistant-setup` again."
+- **Stop here.** Do not proceed past Step 0 without a working Planhat connection — everything downstream depends on it.
 
-If Notion responds, continue to Step 1.
+If Planhat responds, continue to Step 1.
 
 ---
 
 ### Step 1 – Detect existing state and apply mode
 
-**Resolve identity:** Call `notion-get-users` → get UUID and `display_name`. Then:
-- `notion-search("AISE Identity — {display_name}")` + `notion-fetch(page_id)` → parse all identity fields. Note which are `<TBD>` vs populated.
-- `notion-search("AISE Leadership Preferences — {display_name}")` + `notion-fetch(page_id)` → parse Voice + Workspace sections. Note gaps.
-- `notion-search("AISE Leadership Team Roster — {display_name}")` + `notion-fetch(page_id)` → parse the roster table into a working set for Step 2.5 pre-population.
-- If not found, treat all fields as `<TBD>` and proceed to Step 2.
+**Resolve identity:** Call `list_model_records(MODEL: "User", FILTER: {"email[equal to]": "<user's email from session context>"}, SELECT: ["firstName", "lastName", "email", "nickName"])` → capture the Planhat User `_id` and derive `display_name` from `firstName + " " + lastName`. If the user's ID is already known from `context/planhat-schema.md` § Planhat User IDs, use that table instead of a fresh lookup. Then:
 
-Record `user_uuid`, `display_name`, `user_email` from `notion-get-users`.
+- `get_model_record(MODEL: "User", OBJECT_ID: "{planhat_user_id}", SELECT: ["custom.AISE Identity", "custom.AISE Profile preferences", "custom.AISE Leadership Workspace", "custom.AISE Voice Scrape Samples"])` → parse each rich-text field's `Key: value` lines. Note which fields are empty vs populated.
+- For every empty field, run the **migration check** in `context/planhat-user-profile.md` § Migrating stale data before treating it as a fresh gap — search legacy Notion `AISE Identity —` / `AISE Leadership Preferences —` pages (`notion-search` + `notion-fetch`), since this plugin never had a Documents-based intermediate design. Anything found becomes a pre-filled default in the Step 3 form, not a silent write.
+- If nothing is found anywhere for a field, treat it as unset (equivalent to the old `<TBD>`) and proceed to Step 2.
+
+Record `planhat_user_id`, `display_name`, `user_email` from the User lookup.
 
 **`--reset` mode:**
-1. Confirm with the user: "This will overwrite all existing Notion profile page content and start over. Continue? (y/n)"
-2. On confirm, treat all fields as TBD. Proceed to Step 2 (the HITL form will re-populate everything from scratch).
-3. Note: local `about/` files are no longer used — this mode only rewrites the Notion profile pages.
+1. Confirm with the user: "This will overwrite every AISE profile field on your Planhat User record with fresh content, starting from scratch. Continue? (y/n)"
+2. On confirm, treat all fields as empty. Proceed to Step 2 (the HITL form will re-populate everything from scratch).
+3. Note: local `about/` files are no longer used — this mode only updates `custom.AISE *` fields on the User record. Because these are record fields, not versioned Documents, the overwrite is real — there's nothing left over to clean up.
 
 **`--update` mode:**
-1. Build a working set of every populated field from the Notion pages.
-2. Re-resolve Notion identity (Step 2). If the resolved user ID, name, or email differs from what's in the Identity page, flag the drift in chat and ask the user which value to keep.
-3. In Step 3, 4, 6: instead of "ask only about TBD fields", ask the user to confirm or update **every** field. Default the answer to whatever's currently in the Notion page. The user can press through accepting current values quickly, or correct any that have drifted.
+1. Build a working set of every populated field from the current `custom.AISE *` values on the User record.
+2. Re-resolve Planhat User identity (Step 2). If the resolved user ID, name, or email differs from what's in `custom.AISE Identity`, flag the drift in chat and ask the user which value to keep.
+3. In Step 3, 4, 6: instead of "ask only about empty fields", ask the user to confirm or update **every** field. Default the answer to whatever's currently on the User record. The user can press through accepting current values quickly, or correct any that have drifted.
 
 **Default mode (no flag):**
-1. Identify which sections still have `<TBD>` placeholder values.
-2. Skip already-populated fields. Only ask about gaps.
-3. If all Notion profile page fields are fully populated: output "Already onboarded as <Display name>. Run `/assistant-setup --update` to refresh, or `/assistant-setup --reset` to start over." **Skip Steps 2–7. Go directly to Step 7b now.**
+1. Identify which `custom.AISE *` fields are still empty.
+2. Skip already-populated fields. Only ask about gaps (after running the migration check in Step 1 for each).
+3. If all `custom.AISE *` fields this agent owns are fully populated: output "Already onboarded as <Display name>. Run `/assistant-setup --update` to refresh, or `/assistant-setup --reset` to start over." **Skip Steps 2–6. Go directly to Step 7 now.**
 
 ### Step 2 – Auto-resolve identity (no HITL)
 
 These values are retrievable — never ask:
 
-- **Notion user ID:** call `notion-get-users` with `user_id=self`. Capture the returned UUID, name, email.
-- **Email:** from the same response, plus the Cowork session metadata (e.g. `firstname.lastname@company.com` — pull from the environment if available).
+- **Planhat User ID, name, email:** from the `list_model_records(MODEL: "User", ...)` lookup in Step 1.
 - **Time zone (default):** detect from system locale or recent calendar events and pre-populate as a default in the HITL form. The user confirms or corrects it in Step 3.
 
-If `notion-get-users` fails (no Notion connection), surface that and ask the user to connect it before continuing — don't try to populate identity.md without it.
+If the Planhat User lookup fails (no Planhat connection, or no User record for this email), surface that and ask the user to connect Planhat / confirm they have a Planhat seat before continuing — don't try to populate the profile without it.
 
-### Step 2.5 – Auto-discover team roster (no HITL unless confirmation needed)
-
-This step discovers which AISEs are on the leader's team from the Customer Tracker. Run after Step 2 so the leader's own UUID is known.
-
-**Skip this step if:** running in `--update` or `--reset` mode AND `team-roster.md` already exists with populated rows — show the existing roster in the HITL form (Step 3) as a confirmation instead of re-querying.
-
-**Discovery procedure:**
-
-1. Query the Customer Tracker Customers database for all `Owner` values (use `notion-query-data-sources` on the Customers DB — context/notion-schema.md has the DB ID). Collect all unique user UUIDs found in any Owner field.
-
-2. Exclude the current leader's own UUID (resolved in Step 2) from the list.
-
-3. For each remaining UUID, call `notion-get-users` to resolve name + email. Discard any UUID that returns no user (stale references).
-
-4. Build a draft roster table:
-
-   | Name | Email | Notion User ID | Active |
-   |---|---|---|---|
-   | ... | ... | ... | Yes |
-
-5. Present the roster in chat **before** the HITL form with a brief note:
-   > "I found these account owners in the Customer Tracker — this looks like your AISE team. I'll pre-populate the team roster with them. Let me know in the form below if anyone is missing or should be removed."
-
-6. Include a **Team Roster confirmation** section in the combined HITL form (Step 3) showing the discovered roster as a pre-filled multi-line field. The user can edit names, mark rows as Active: No (for people who've left), or type additional rows. Pre-fill this with the auto-discovered data so the user just needs to confirm, not retype.
-
-7. After the form is submitted, finalize the roster from the confirmed values. This is what gets written to `team-roster.md` in Step 7.
-
-**Edge cases:**
-- If the query returns 0 non-leader owners (fresh workspace or no accounts assigned yet): surface that in chat and include a blank team roster section in the HITL form for manual entry.
-- If there are more than 15 unique owners (unexpectedly large): flag it in chat and ask the user to confirm which are their direct reports — don't assume the entire workspace is the team.
+> **Team roster is no longer part of onboarding.** There is no discovery step and no roster field to populate here — `report-builder`, `notion-completion-fix`, and other team-scoped agents resolve "who's on my team" live at query time from Planhat's native `managers`/`teams` fields (see `context/planhat-user-profile.md` § Team roster). Nothing to do in this agent.
 
 ### Step 3 – HITL questions (identity, voice, workspace — one combined form)
 
@@ -236,9 +209,9 @@ Read the samples and identify:
 - **Forbidden filler words** — look for absences (genuinely, honestly, straightforward).
 - **Slang / shorthand register** — internal vs external.
 
-Save the raw samples as a new Notion sub-page titled `AISE Voice Scrape Samples — {display_name}` under the `AISE Profile — {display_name}` parent page (created in Step 7b) so the user can review what you used. Create this page after Step 7b completes.
+Save the raw samples into `custom.AISE Voice Scrape Samples` on the User record (shared with aise-assistant — see `context/planhat-user-profile.md`) so the user can review what you used. Write this field as part of the same Step 7 `update_model_record` call.
 
-Use this distillation to draft the "Specific patterns the user uses" + "Specific patterns the user avoids" + "Casual register" sections of `voice.md`.
+Use this distillation to draft the "Specific patterns the user uses" + "Specific patterns the user avoids" + "Casual register" sections of `custom.AISE Profile preferences`.
 
 ### Step 6 – Workspace questions (included in the combined elicitation form from Step 3)
 
@@ -269,64 +242,32 @@ Workspace questions to include in the combined form — do not issue a separate 
    - Commercial / renewal partner
    - PS Ops / planning contact
 
-### Step 7b – Write private Notion profile pages ⚠️ ALWAYS RUN
+### Step 7 – Write `custom.AISE *` fields on the Planhat User record ⚠️ ALWAYS RUN (all modes, including already-onboarded)
 
-> **Note:** Local `about/` files (`identity.md`, `voice.md`, `workspace.md`, `team-roster.md`) are no longer written by this agent. Notion profile pages are the only output. `tracker-memory.md` is still managed by the `context-keeper` agent separately and is unaffected by this step.
+> **Note:** Local `about/` files (`identity.md`, `voice.md`, `workspace.md`, `team-roster.md`) are no longer written by this agent. There is no `team-roster.md` equivalent on Planhat either — team scoping is resolved live by consuming agents (`context/planhat-user-profile.md` § Team roster), not written here. `tracker-memory.md` is still managed by the `context-keeper` agent separately and is unaffected by this step.
 
-**1. Ensure parent page exists:**
-`notion-search("AISE Profile — {display_name}")` — if found, capture the page ID as `parent_id`; if not found, call `notion-create-pages` with `parent: { type: "workspace", workspace: true }`, title `AISE Profile — {display_name}`, empty body. Capture the returned ID as `parent_id`. (Check first to avoid duplicates that aise-assistant may have already created.)
+**Full mechanics (field map, read/write procedure) are in `context/planhat-user-profile.md` — follow it exactly.** One `update_model_record` call, only the fields that changed:
 
-**2. Ensure Identity child:**
-`notion-search("AISE Identity — {display_name}")` — if found, call `notion-update-page(page_id, content)` with current identity values; if not found, call `notion-create-pages` with `parent: { type: "page_id", page_id: parent_id }`, title `AISE Identity — {display_name}`, body:
 ```
-Preferred name: {value}
-Display name: {value}
-Timezone: {value}
-Working hours: {value}
-Role: {value}
-Team: {value}
-Manager: {value}
-Email: {value}
-Accent variants: {value or "none"}
-```
-This page is shared with aise-assistant — always write current values regardless of which plugin created it.
-
-**3. Ensure Leadership Preferences child:**
-`notion-search("AISE Leadership Preferences — {display_name}")` — if found, `notion-update-page`; if not found, `notion-create-pages` with `parent: { type: "page_id", page_id: parent_id }`, title `AISE Leadership Preferences — {display_name}`, body:
-```
-## Voice
-Sign-off: {value}
-Em dashes: {value}
-Semicolons: {value}
-English variant: {value}
-Casual register: {value}
-{specific patterns from scraping, if run}
-
-## Workspace
-Conferencing tool: {value}
-Slack AISE channel: {value}
-Slack leadership channel: {value}
-Slack CS org channel: {value}
-Manager: {value}
-Commercial partner: {value}
-PS Ops contact: {value}
-Gong session keywords: {value}
-Report output format — weekly: {value}
-Report output format — monthly: {value}
-Report output format — quarterly: {value}
+update_model_record(
+  MODEL: "User",
+  OBJECT_ID: "{planhat_user_id}",
+  PARAMETERS: {
+    "custom.AISE Identity": "Preferred name: {value}\nDisplay name: {value}\nTimezone: {value}\nWorking hours: {value}\nRole: {value}\nTeam: {value}\nManager: {value}\nEmail: {value}\nAccent variants: {value or \"none\"}",
+    "custom.AISE Profile preferences": "Sign-off: {value}\nEm dashes: {value}\nSemicolons: {value}\nEnglish variant: {value}\nCasual register: {value}\n{specific patterns from scraping, if run}",
+    "custom.AISE Leadership Workspace": "Notion templates DB URL: {value or \"not set\"}\nNotion templates DB ID: {value or \"not set\"}\nReport output format — weekly: {value}\nReport output format — monthly: {value}\nReport output format — quarterly: {value}\nDefault template name — weekly: {value}\nDefault template name — monthly: {value}\nDefault template name — quarterly: {value}\nGong session keywords: {value}\nSlack AISE channel: {value}\nSlack leadership channel: {value}\nSlack CS org channel: {value}\nManager: {value}\nCommercial partner: {value}\nPS Ops contact: {value}",
+    "custom.AISE Voice Scrape Samples": "{distilled samples, if scraping ran}"
+  }
+)
 ```
 
-**4. Ensure Team Roster child:**
-`notion-search("AISE Leadership Team Roster — {display_name}")` — if found, `notion-update-page`; if not found, `notion-create-pages` with `parent: { type: "page_id", page_id: parent_id }`, title `AISE Leadership Team Roster — {display_name}`, body = the confirmed roster table from Step 2.5:
-```
-| Name | Email | Notion User ID | Active |
-|---|---|---|---|
-| {name} | {email} | {uuid} | Yes/No |
-```
+`custom.AISE Identity` and `custom.AISE Profile preferences` are **shared** with aise-assistant — include every field (unchanged and newly-set) since the write replaces the whole value, not a merge. If the same person has run `/assistant-setup` in aise-assistant already, their Identity/Voice fields may already be populated — Step 1's migration check surfaces that as a pre-filled default, so most leadership-only users will just be confirming, not retyping.
 
-**Never create or touch `AISE Assistant Preferences — {display_name}`.**
+`custom.AISE Leadership Workspace` is this plugin's own field — safe to omit if there's nothing to write.
 
-Output: "Profile pages written to Notion (private): [AISE Profile ↗] → [Identity ↗] [Leadership Preferences ↗] [Team Roster ↗]"
+**Never write to `custom.AISE Workspace` (aise-assistant's own Workspace field) or the Calendly fields** — those belong to the assistant plugin's flow, not this one.
+
+**Output in chat:** "Profile updated on your Planhat User record: Identity, Preferences, Leadership Workspace{, Voice Scrape Samples}." No versioning caveat needed — the fields were updated in place.
 
 ### Step 8 – Confirm
 
@@ -335,17 +276,16 @@ Report success in chat:
 ```
 Assistant onboarded for <Display name>.
 
-Notion profile pages written (private):
-- AISE Profile — <Display name>  [↗ link]
-  - AISE Identity — <Display name>  [↗ link]
-  - AISE Leadership Preferences — <Display name>  [↗ link]
-  - AISE Leadership Team Roster — <Display name>  [↗ link]
-[  - AISE Voice Scrape Samples — <Display name>  [↗ link]  ← only if scraping ran]
+Planhat User record updated (custom.AISE * fields):
+- Identity, Profile preferences, Leadership Workspace
+[- Voice Scrape Samples  ← only if scraping ran]
+[- Migrated from: <legacy Notion page>  ← only if the migration check backfilled anything]
 
 Voice profile: drafted from <n> Gmail + <n> Slack samples (or "from your direct answers" if scraping was skipped).
-Team roster: auto-discovered <N> members from the Customer Tracker (confirmed by you in the form).
 
-Note: profile data is stored in private Notion pages and is accessible in both CLI and Cowork contexts. Re-run /assistant-setup to update at any time.
+Note: team roster is not stored — it's resolved live from Planhat whenever a team-scoped report or query runs.
+
+Re-run /assistant-setup to update at any time — these are live User-record fields, so updates apply immediately with no versioning.
 ```
 
 Surface anything where you had to assume defaults so the user can correct.
@@ -354,10 +294,13 @@ Surface anything where you had to assume defaults so the user can correct.
 
 ## Guardrails
 
-- **Never ask for retrievable values.** Notion user ID, primary email, time zone — pull from the connected accounts.
-- **Notion pages are the only output.** Do not write to local `about/` files (`identity.md`, `voice.md`, `workspace.md`, `team-roster.md`). Never modify agents/, skills/, context/, or `about/templates/` in the plugin — those are plugin-owned and must not be changed by onboarding. `tracker-memory.md` is managed separately by the `context-keeper` agent.
+- **Never ask for retrievable values.** Planhat User ID, primary email, time zone — pull from the connected account.
+- **`custom.AISE *` User-record fields are the only output.** Do not write to local `about/` files (`identity.md`, `voice.md`, `workspace.md`, `team-roster.md`). Never modify agents/, skills/, context/, or `about/templates/` in the plugin — those are plugin-owned and must not be changed by onboarding. `tracker-memory.md` is managed separately by the `context-keeper` agent.
 - **Voice scraping is opt-in.** Default behavior is to ask before reading the user's mail/Slack. Don't auto-scrape.
-- **Internal vs client-facing classification matters.** A user's voice is different per register — surface both, write the Notion Leadership Preferences page accordingly.
-- **No PII leakage.** Don't quote actual customer email content in the Notion pages or in chat. Distill patterns ("user uses 'Best,' as default sign-off"), don't paste samples.
-- **If a teammate is onboarding** (not the original user), explicitly confirm: "I'm setting this up for <Display name>. Continue?" before writing the identity page. Catches the case where someone runs /assistant-setup from a fresh install accidentally.
-- **Personal data lives in private Notion pages only.** Confirm at the end that no personal values leaked into agent specs / commands / context files (run a quick grep on the plugin directory).
+- **Internal vs client-facing classification matters.** A user's voice is different per register — surface both, write into `custom.AISE Profile preferences` accordingly.
+- **No PII leakage.** Don't quote actual customer email content in the User record or in chat. Distill patterns ("user uses 'Best,' as default sign-off"), don't paste samples.
+- **If a teammate is onboarding** (not the original user), explicitly confirm: "I'm setting this up for <Display name>. Continue?" before writing `custom.AISE Identity`. Catches the case where someone runs /assistant-setup from a fresh install accidentally.
+- **Personal data lives on the user's own Planhat User record only.** Confirm at the end that no personal values leaked into agent specs / commands / context files (run a quick grep on the plugin directory).
+- **Never write a partial rich-text field.** `update_model_record` replaces the whole field value — always assemble the full content (unchanged + changed lines) before writing, per `context/planhat-user-profile.md`.
+- **Migration check runs before asking, not instead of asking.** A value found in a legacy Notion page is a pre-filled default the user confirms in the HITL form — never write it straight to the User record without that confirmation step.
+- **No team roster storage.** Do not create a "Team Roster" field, page, or file of any kind — that concept is gone. If asked, point to `context/planhat-user-profile.md` § Team roster.
