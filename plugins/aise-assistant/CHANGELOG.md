@@ -5,6 +5,18 @@ Format: `## [version] — YYYY-MM-DD` followed by bullet points grouped by type.
 
 ---
 
+## [2.35.0] — 2026-08-14
+
+### Added
+- `planhat-formula-builder`: new skill covering Planhat formula field syntax end to end — same-model `<<>>` vs cross-model `OPERATION(Model.field & {...})` references, a function support matrix (`FIND` accepts `sort`/`limit`; `COUNT`/`SUM`/`AVERAGE`/`MAX`/`MIN` do not), filter operators, the `through` traversal escape hatch in both its array and string forms, operator and date-function reference, five worked patterns, and a nine-step debugging checklist.
+- `planhat-formula-builder`: documents the determinism rules that make multi-record lookups safe — `"limit": 1` without `"sort"` returns an arbitrary record, and `"sort"` accepts exactly one key so there is no tiebreaker. Both matter on accounts with overlapping live terms (early renewals, mid-term expansions, multi-workspace accounts), where several child records legitimately match the same filters at once.
+- `planhat-formula-builder`: records that `IS_EMPTY(FIND(...))` cannot distinguish "no record matched the filters" from "a record matched but the target field is blank", with a `COUNT()` companion-field workaround.
+
+### Changed
+- `planhat-automations`: scope narrowed to automation steps only. Formula-field syntax moved to `planhat-formula-builder`; description updated so the two skills no longer compete on triggering, and a pointer added under the H1. The `FIND` + `through` pattern stays in place, since it drives the Association-pull-vs-formula decision documented alongside it.
+
+---
+
 ## [2.34.0] — 2026-08-10
 
 ### Added
