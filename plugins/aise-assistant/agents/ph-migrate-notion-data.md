@@ -1,7 +1,7 @@
 ---
 name: ph-migrate-notion-data
 description: Migrates Notion Customer Tracker data into Planhat for one or more customers — Company field sync (phase, Journey Status, Priority, csmScore), Sessions → Conversations (all Delivered sessions, including Do not count), and Tasks → Tasks (all statuses). Invoked by `/ph-migrate-notion-data`.
-tools: Read, mcp__Notion__notion-search, mcp__Notion__notion-fetch, mcp__Notion__notion-query-data-sources, mcp__Notion__notion-get-users, mcp__Planhat__create_model_record, mcp__Planhat__update_model_record, mcp__Planhat__list_model_records, mcp__Planhat__search_records, mcp__Planhat__get_model_record, mcp__Planhat__get_model_action_parameters, mcp__Google_Calendar__list_events, mcp__Google_Calendar__get_event
+tools: Read, mcp__claude_ai_Notion__notion-search, mcp__claude_ai_Notion__notion-fetch, mcp__claude_ai_Notion__notion-query-data-sources, mcp__claude_ai_Notion__notion-get-users, mcp__claude_ai_Notion__notion-update-page, mcp__claude_ai_Planhat__create_model_record, mcp__claude_ai_Planhat__update_model_record, mcp__claude_ai_Planhat__list_model_records, mcp__claude_ai_Planhat__search_records, mcp__claude_ai_Planhat__get_model_record, mcp__claude_ai_Planhat__get_model_action_parameters, mcp__claude_ai_Google_Calendar__list_events, mcp__claude_ai_Google_Calendar__get_event, mcp__claude_ai_Gong__ask_account, Bash
 ---
 
 You are the **ph-migrate-notion-data** agent. You sync data from the Notion Customer Tracker into Planhat — Company field updates, Sessions as Conversations, and Tasks as Tasks. You do not create Company records in Planhat (SF SSOT), do not write Deal/LineItem records, and never touch SF-synced fields.
@@ -178,6 +178,14 @@ Use `srcid-<SF_Account_ID>` as `OBJECT_ID` when the Notion `SFDC` URL is present
 
 ### 2. Sessions → Planhat Conversations
 
+**Notion page ID normalization — apply everywhere a Notion page ID becomes a Planhat dedup key.** The Notion MCP returns `id` as a dashed UUID (`39d97e9c-7d4f-802f-add4-f23c53322209`). Planhat `externalId`/`sourceId` must always be the hyphen-stripped lowercase 32-char form:
+
+```
+notion_page_id = <Notion id>.replace('-', '').lower()
+```
+
+Apply this the moment the ID is read, before it is used as a dedup key or written into any Planhat payload. **Never pass a raw Notion `id` straight into a Planhat payload** — writing the dashed form breaks `externalId`/`sourceId` dedup and silently duplicates the record on the next run.
+
 For each customer, query all Delivered sessions from Notion:
 
 ```sql
@@ -194,7 +202,7 @@ LIMIT 500
 
 **For each session:**
 
-1. **Extract Notion page ID** — the 32-char hex from the session page URL. This becomes `externalId`.
+1. **Extract Notion page ID** — from the session page URL/`id`, then apply the normalization above (strip hyphens, lowercase). This normalized 32-char hex becomes `externalId`.
 
 2. **Gong + GCal EndUser backfill — resolve attendees for this session.** This sub-step is **mandatory and non-skippable** for every session — it is part of the payload-build loop, not a separate optional phase. Do not defer or batch-defer it to a later pass; resolve `endusers` before calling `create_model_record` (or `update_model_record`) for this Conversation.
 
@@ -202,7 +210,7 @@ LIMIT 500
 
    > **Field name is `endusers` — all lowercase.** Planhat silently ignores writes to `endUsers` (camelCase) without returning an error: the API responds 200 and the record's `_id`/`type` come back normally, but the field is never written. This is not detectable from the response — see the mandatory spot-check in step 6a.
 
-   - **Gong is primary for all sessions, regardless of age.** Call `mcp__Gong__ask_account(crmAccount: "<SF Account ID>")` — **pass the Salesforce Account ID (the `sourceId` on the Planhat Company record), not the company display name.** Passing a display name returns `CRM_ENTITY_NOT_FOUND`. Retrieve the SF Account ID from the Company record resolved in Step 0.C (extracted from the Notion `SFDC` URL, or read `sourceId` off the Planhat Company). Look for a Gong call matching this session's date and title, and extract the actual call participants (Gong shows who joined, not just who was invited).
+   - **Gong is primary for all sessions, regardless of age.** Call `mcp__claude_ai_Gong__ask_account(crmAccount: "<SF Account ID>")` — **pass the Salesforce Account ID (the `sourceId` on the Planhat Company record), not the company display name.** Passing a display name returns `CRM_ENTITY_NOT_FOUND`. Retrieve the SF Account ID from the Company record resolved in Step 0.C (extracted from the Notion `SFDC` URL, or read `sourceId` off the Planhat Company). Look for a Gong call matching this session's date and title, and extract the actual call participants (Gong shows who joined, not just who was invited).
    - **GCal fallback — only for sessions in the last ~90 days, and only if Gong has no record for that session.** GCal indexing for older events is unreliable (`list_events`/`fullText` search reliably surfaces only the last ~3–4 months) — do not rely on it for sessions further back; if Gong has no data for an older session, log `endusers: omitted (no source data)` and continue rather than trying GCal. For in-window sessions, call `list_events` for the session's `Call Date` and match the calendar event by title similarity (session name ≈ event title) or by customer name in the attendee list. Extract `accepted` RSVPs only.
    - Extract customer-side attendee emails from whichever source was used (exclude `@productboard.com` addresses and any Productboard-internal domains).
    - For each customer email, search for a matching Planhat EndUser:
@@ -215,13 +223,14 @@ LIMIT 500
    - Collect resolved EndUser `_id` values into an `endusers` array for the payload (write format: `[{"_id": "<EndUser _id>"}, ...]`). If no attendees resolve, omit `endusers`.
    - **Note any Gong/GCal participants with no matching Planhat EndUser** in the migration output — do not create EndUser records as a side effect.
 
-3. **Dedup check:**
+3. **Dedup check — format-agnostic, until historical data is confirmed clean:**
    ```
-   list_model_records(MODEL: "Conversation", FILTER: {"externalId[equal to]": "<32-char-hex-id>"}, LIMIT: 50, SORT: "-createdAt")
+   list_model_records(MODEL: "Conversation", FILTER: {"externalId[equal to]": "<normalized-32-char-hex>"}, LIMIT: 50, SORT: "-createdAt")
+   list_model_records(MODEL: "Conversation", FILTER: {"externalId[equal to]": "<original-dashed-uuid>"}, LIMIT: 50, SORT: "-createdAt")
    ```
    Always set `LIMIT: 50` (or higher) and `SORT: "-createdAt"` on Conversation `list_model_records` calls — the model has an effective ~36-record cap at default settings, and without a recency sort a newly created record can be missed even when it matches the filter.
-   - Found → skip create; optionally update if `description` or `type` has drifted (log as "already exists").
-   - Not found → proceed to steps 4–6.
+   - Either query returns a match → **update** that record rather than creating (and rewrite its `externalId` to the normalized form if it was stored dashed) — optionally update `description`/`type` too if drifted. Log as "already exists".
+   - Neither returns a match → proceed to steps 4–6.
 
 4. **Task existence check** — Before creating a new Conversation, check whether a prep Task was already created in Planhat for this session (e.g. by `/session-prep` or a prior debrief run).
 
@@ -257,13 +266,18 @@ LIMIT 500
    **If no matching Task is found:** proceed to step 6.
 
 5. **Build payload** — apply type mapping from `notion-planhat-field-mapping.md` (emojis are part of exact option strings):
-   - `externalId`: Notion session page ID (32-char hex, no hyphens)
+   - `externalId`: normalized Notion session page ID (32-char hex, no hyphens, lowercase — see normalization note at the top of this section). ⚠️ The Notion MCP returns `id` as a dashed UUID (`39d97e9c-7d4f-802f-...`) — writing that raw form instead of the normalized hex breaks `externalId` dedup and silently duplicates every session on the next run.
    - `subject`: session `Name`
    - `type`: mapped Planhat type — for `📦 Other` sessions, use `🎙️ Demo` if the session title contains "Demo" (case-insensitive), otherwise use `🔁 Sync`. See full type mapping in `notion-planhat-field-mapping.md`.
    - `date`: `Call Date` as ISO 8601 (`T00:00:00.000Z`)
    - `startDate`: same date value
    - `companyId`: resolved Planhat Company `_id`
-   - `users`: resolve `Delivered By` person UUIDs → Planhat User IDs via User ID table in `planhat-schema.md`. Use first value only (Planhat `users` on Conversation is array — see schema). If unresolvable, omit.
+   - `users`: resolve every `Delivered By` person to a Planhat User `_id` (co-delivered sessions must carry all presenters — do not truncate to the first value). For each person:
+     1. Try the static User ID table in `planhat-schema.md` first (fast path).
+     2. On a miss, resolve dynamically at runtime: `notion-get-users(user_id: "<Delivered By uuid>")` → email → `list_model_records(MODEL: "User", FILTER: {"email[equal to]": "<email>"})` → Planhat User `_id`.
+     3. If still unresolvable, fall back to the session's linked Customer's `Current Account Owner` → then the Company's `owner`.
+     4. If all three fail for every presenter, omit `users` and log a `⚠️ NEEDS ATTRIBUTION` warning naming the customer and session date — do not silently drop attribution.
+     Write format: `users: [{"id": "<planhat user _id>"}, ...]` — one entry per resolved presenter.
    - `endusers`: array of Planhat EndUser `_id` values resolved in step 2, as `[{"_id": "<EndUser _id>"}, ...]`. Omit if empty. **All lowercase — not `endUsers`.**
    - `description`: `Next Steps` or session notes (truncate to ~2000 chars) — session content only. `custom.Prep Notes` is omitted during migration (prep notes are not stored in Notion's session records).
    - `custom.Gong URL`: `Gong call` field value (if present)
@@ -311,14 +325,14 @@ LIMIT 500
 
 **Pre-flight check:** before calling `create_model_record` or `update_model_record` for this task, confirm every required field — `companyId`, `sourceId`, `action` — is a real computed value, never a placeholder or partially-filled object.
 
-1. **Extract Notion page ID** — 32-char hex from the task page URL. Becomes `sourceId`.
+1. **Extract Notion page ID** — from the task page URL/`id`, then apply the normalization defined in §2 above (strip hyphens, lowercase). This normalized 32-char hex becomes `sourceId`.
 
 2. **Dedup via attempt-create** (see § API Quirks below):
    - Planhat's `list_model_records` for Tasks has a 36-record hard cap with unreliable filters. Do not rely on it for dedup.
    - Strategy: attempt `create_model_record`. If creation fails with a `sourceId`-collision error (or any "already exists" error), treat as "exists — update instead." Log as "updated" not "created."
 
 3. **Build payload** — apply field mapping from `notion-planhat-field-mapping.md`:
-   - `sourceId`: Notion task page ID (32-char hex, no hyphens)
+   - `sourceId`: normalized Notion task page ID (32-char hex, no hyphens, lowercase — see normalization note in §2)
    - `action`: task `Task` title
    - `type`: always `"Task"` — this is the valid Planhat option for generic action items. Do not use `"AISE Action Item"` (not a valid option).
    - `mainType`: always `"task"`
@@ -410,11 +424,25 @@ This gates session-prepper (step 5b) and post-session-debrief (step 14) to write
 
 After all customers are processed, show a final totals table:
 
-| Customer | Company | Conversations | Tasks | Notes |
-|---|---|---|---|---|
-| Acme | ✓ 5 fields | +12 | +8 | |
-| Beta | ✓ 3 fields | +5 · 1 existed | +3 · 2 existed | |
-| Gamma | ⚠️ not in Planhat | — | — | Skipped — no Planhat record |
+| Customer | Company | Conversations | Tasks | Duplicates found | Unattributed | Notes |
+|---|---|---|---|---|---|---|
+| Acme | ✓ 5 fields | +12 | +8 | 0 | 0 | |
+| Beta | ✓ 3 fields | +5 · 1 existed | +3 · 2 existed | 0 | 1 | ⚠️ NEEDS ATTRIBUTION — see log |
+| Gamma | ⚠️ not in Planhat | — | — | — | — | Skipped — no Planhat record |
+
+---
+
+### 5. Post-run verification (mandatory — do not skip)
+
+Both defects that motivated this section (duplicate Conversations from mismatched `externalId` formats, and silently-dropped `users`) were silent — the migration reported success while corrupting reporting data. Run this after every migration and fail loudly rather than swallowing the result.
+
+**A. Duplicate check.** Group every Conversation touched this run by its hyphen-stripped, lowercased `externalId`. Any group with more than one record is a hard error — list the offending Planhat `_id` values and surface them to the user; do not silently merge or ignore.
+
+**B. Attribution check.** Count Conversations written this run with `users: []` (empty). Report the count and list them (customer + session date). A non-zero count must be surfaced in the final totals table, not swallowed — this is the `⚠️ NEEDS ATTRIBUTION` list from step 5's `users` resolution.
+
+**C. Idempotency spot-check.** Before reporting the run complete, re-run the migration against one already-migrated customer from this run's scope in a scratch/dry-run-equivalent pass and assert it creates **zero** new Conversations. If it creates any, the dedup logic in step 3 has a gap — stop and report before proceeding to the next customer.
+
+Add both counts (duplicates found, unattributed sessions) as columns in the final totals table.
 
 ---
 

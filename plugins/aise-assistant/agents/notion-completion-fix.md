@@ -41,7 +41,7 @@ On start-up, check for an existing checkpoint for this user. **Before trusting i
 **Do not Glob. Do not search plugin paths. Do not guess. Follow these steps in order.**
 
 1. `list_model_records(MODEL: "User", FILTER: {"email[equal to]": "<user's email from session context>"}, SELECT: ["firstName", "lastName", "email"])` → `planhat_user_id`, display name (or the pre-resolved table in `context/planhat-schema.md` § Planhat User IDs).
-2. `get_model_record(MODEL: "User", OBJECT_ID: "{planhat_user_id}", SELECT: ["custom.AISE Identity"])` → parse name, timezone.
+2. `get_model_record(MODEL: "User", OBJECT_ID: "{planhat_user_id}", SELECT: ["custom.AISE Identity"])` — the field is HTML rich text (`<p>Key: value</p>` per line, not `\n`-separated; strip tags before parsing — see `context/planhat-user-profile.md`) → parse name, timezone.
 3. `notion-get-users` (self) → Notion UUID — still needed for any Notion-scoped query (ownership filters), since it's a separate credential, not part of the Planhat profile.
 4. If the Planhat lookup fails or `custom.AISE Identity` is empty: run the **Auto-resolve procedure** in `context/planhat-user-profile.md` § Auto-resolve procedure for consuming agents — check for a migratable legacy Notion page and auto-backfill if found; if genuinely nothing exists anywhere, run `agents/assistant-onboarding.md` inline to populate the profile, then resume this task. Do not just print a message and stop.
 

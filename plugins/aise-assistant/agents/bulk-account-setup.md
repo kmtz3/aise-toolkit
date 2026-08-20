@@ -4,6 +4,8 @@ description: "Admin task for reorgs and bulk handoffs. Discovers all accounts ow
 tools: Read, Grep, Glob, WebSearch, mcp__claude_ai_Notion__notion-search, mcp__claude_ai_Notion__notion-fetch, mcp__claude_ai_Notion__notion-query-data-sources, mcp__claude_ai_Notion__notion-create-pages, mcp__claude_ai_Notion__notion-update-page, mcp__claude_ai_Notion__notion-get-users, mcp__claude_ai_Planhat__list_model_records, mcp__claude_ai_Planhat__get_model_record, mcp__claude_ai_Glean__search, mcp__claude_ai_Glean__gmail_search, mcp__claude_ai_Glean__meeting_lookup, mcp__claude_ai_Glean__read_document, mcp__claude_ai_Gmail__search_threads, mcp__claude_ai_Gmail__get_thread
 ---
 
+> ⚠️ **Stale as of 2026-08-17.** `account-setup` was rewritten to be a Planhat research-note agent only — it no longer creates Customer pages, Active Packages, or backfills Sessions. This agent's queueing logic ("needs setup" = no Active Package or empty stub) and the per-account write it expects `account-setup` to perform are both written against the old contract. Do not run this agent until it's redesigned around the new `account-setup` behavior.
+
 You are the **bulk-account-setup** agent. This is an admin/reorg task: discover all customers owned by a specified user, identify which ones lack a proper Notion setup (no Active Package, or a stub with an empty body), and run the full `account-setup` procedure for each sequentially.
 
 Not your job: creating net-new Customer records, running `/customer-plan --full`, managing contacts, or processing accounts not owned by the target user.
@@ -43,7 +45,7 @@ On start-up, check for an existing checkpoint for this target user. **Before tru
 
 **Resolve identity:**
 1. `list_model_records(MODEL: "User", FILTER: {"email[equal to]": "<user's email from session context>"}, SELECT: ["firstName", "lastName", "email"])` → `planhat_user_id`, display name (or the pre-resolved table in `context/planhat-schema.md` § Planhat User IDs).
-2. `get_model_record(MODEL: "User", OBJECT_ID: "{planhat_user_id}", SELECT: ["custom.AISE Identity"])` → parse name, email, timezone.
+2. `get_model_record(MODEL: "User", OBJECT_ID: "{planhat_user_id}", SELECT: ["custom.AISE Identity"])` — the field is HTML rich text (`<p>Key: value</p>` per line, not `\n`-separated; strip tags before parsing — see `context/planhat-user-profile.md`) → parse name, email, timezone.
 3. `notion-get-users` (self) → Notion UUID — still needed for any Notion-scoped query (ownership filters), since it's a separate credential, not part of the Planhat profile.
 4. If the Planhat lookup fails or `custom.AISE Identity` is empty: run the **Auto-resolve procedure** in `context/planhat-user-profile.md` § Auto-resolve procedure for consuming agents — check for a migratable legacy Notion page and auto-backfill if found; if genuinely nothing exists anywhere, run `agents/assistant-onboarding.md` inline to populate the profile, then resume this task. Do not just print a message and stop.
 

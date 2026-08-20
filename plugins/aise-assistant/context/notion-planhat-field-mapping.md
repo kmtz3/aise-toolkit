@@ -77,13 +77,13 @@ All Notion Tasks write to the **Planhat Task model**. For done/canceled tasks, P
 
 | Notion field | Planhat field | Type | Notes |
 |---|---|---|---|
-| Session page URL (32-char hex ID) | `externalId` | string | **Dedup key.** Check before every create: `list_model_records(MODEL: "Conversation", FILTER: {"externalId[equal to]": "<id>"})` |
+| Session page URL/`id` (dashed UUID from Notion) | `externalId` | string | **Dedup key.** Normalize first: `id.replace('-', '').lower()` — the Notion MCP returns a dashed UUID, and writing that raw form instead of the normalized 32-char hex breaks dedup and silently duplicates the record. Check before every create using **both** forms until historical data is confirmed clean: `list_model_records(MODEL: "Conversation", FILTER: {"externalId[equal to]": "<normalized-hex>"})` and again with the raw dashed form. Either match → update, rewriting `externalId` to the normalized form. |
 | `Name` | `subject` | string | Session title as-is. |
 | `Type` | `type` | string | See type mapping table above. |
 | `date:Call Date:start` | `date` | datetime | ISO 8601. |
 | `date:Call Date:start` | `startDate` | date | Call start date. |
 | `Customers` (relation) | `companyId` | objectId | Resolve via company name or SF `sourceId`. See `planhat-schema.md`. **Required.** |
-| `Delivered By` (person, all values) | `users` | array | `[{"id": "<planhat-user-id>"}]`. Resolve from User ID table in `planhat-schema.md`. |
+| `Delivered By` (person, all values) | `users` | array | `[{"id": "<planhat-user-id>"}, ...]` — one entry per presenter, never truncated to the first value. Resolve each: try the static User ID table in `planhat-schema.md` first, then fall back to a live lookup (`notion-get-users` → email → `list_model_records(MODEL: "User", FILTER: {"email[equal to]": "<email>"})`) on a table miss. If still unresolvable for every presenter, fall back to the session's `Current Account Owner`, then the Company's `owner`. Only omit `users` (and log a `NEEDS ATTRIBUTION` warning) if all of the above fail. |
 | _(from Gong/GCal backfill)_ | `endusers` | array | **Field is all-lowercase — not `endUsers`.** Write format: `[{"_id": "<EndUser _id>"}, ...]`. Read-response format uses `id` instead: `[{"id": "...", "name": "..."}]`. Planhat returns HTTP 200 and silently drops the field if written as `endUsers` (camelCase) — no error surfaces. Omit if no attendees resolve. **Brandwatch / Cision dual-email:** Brandwatch contacts may have two separate Planhat EndUser records — one with `@brandwatch.com` (original) and one with `@cision.com` (post-migration). When resolving attendees for Brandwatch sessions, search by both domains if the first lookup returns no match. |
 | `Next Steps` / session body | `description` | string | Actual session notes/summary. Truncate to ~2000 chars. Do **not** use this for prep notes — see `custom.Prep Notes`. Do **not** append Gong URL here — use `custom.Gong URL` instead. |
 | _(from session prep)_ | `custom.Prep Notes` | string (HTML) | Prep brief written by session-prepper. HTML format: `<p><strong>Goals</strong></p><p>...</p><p><strong>Open Items</strong></p><ul><li><p>...</p></li></ul><p><strong>Watch-fors</strong></p><ul><li><p>...</p></li></ul>`. No `<h>` tags. On Task: write during prep. Carry to Conversation when Task is marked done (debrief). |
@@ -103,7 +103,7 @@ All Notion Tasks write to the **Planhat Task model**. For done/canceled tasks, P
 
 | Notion field | Planhat field | Type | Notes |
 |---|---|---|---|
-| Task page URL (32-char hex ID) | `sourceId` | string | **Dedup key.** Check before every create. |
+| Task page URL/`id` (dashed UUID from Notion) | `sourceId` | string | **Dedup key.** Normalize first: `id.replace('-', '').lower()` — same rule as Conversation `externalId` above. Check before every create. |
 | `Task` (title) | `action` | string | Task title as-is. |
 | _(constant)_ | `type` | string | Always `"Task"` for generic action items from Notion. (`"AISE Action Item"` is NOT a valid option — do not use.) Session-type Tasks created by session-prepper use the session type mapping instead (e.g. `🏗️ Architecting`, `🎓 Enablement`). |
 | _(constant)_ | `mainType` | string | Always `task`. |
@@ -268,7 +268,7 @@ Planhat `Deal` records are the functional equivalent of Notion `Active Packages`
 2. **Dedup before every create.** Use `sourceId` on Task (both sessions and tasks). Use `sourceId` on Company.
 3. **`custom.` prefix required** on all custom fields.
 4. **Never overwrite Planhat `owner`** — managed by RevOps.
-5. **`users` on Task is read-only** — only `ownerId` can be set (single person). For sessions with multiple `Delivered By`, use the first listed value.
+5. **`users` on Task is read-only** — only `ownerId` can be set (single person). On Conversations, `users` is writable and an array — for sessions with multiple `Delivered By`, resolve and write **all** presenters (co-delivery must not collapse to the first value). See ID resolution note below.
 6. **`noSpecificTime: true`** whenever date has no time component (most Notion session dates and task due dates).
 7. **Task `status` exact strings:** `"done"` · `"in-progress"` · `"To Do"` · `"blocked"` · `"ignored"` — hyphenated lowercase for `in-progress`, capital `To Do` (workspace-configured values; not enumerated in API schema — use exactly as written).
 8. **`Account Executive` and `Renewals Manager`** are User relationship fields — write as Planhat User `_id`, not display name.

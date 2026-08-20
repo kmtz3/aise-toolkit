@@ -1,6 +1,6 @@
 ---
 name: customer-setup
-description: Set up a newly assigned or inherited customer account. Three modes via flags — baseline (creates Customer page + Active Package + session backfill, no research), --research (baseline plus deep company research to populate Customer page sections), --refresh (deep research on existing page, enriches content without silently overwriting manually-added info).
+description: Research a newly assigned or inherited customer — company overview, products they bring to market, their use cases with Productboard, org/toolstack, stakeholders — and write the findings as a Planhat Conversation note on the Company record.
 ---
 
 Set up account for.
@@ -9,51 +9,22 @@ Read the procedure in `agents/account-setup.md` and execute it inline as the mai
 
 ## Flags
 
-Canonical syntax uses flags (`--research`, `--refresh`), but also recognize natural language variations and map to the same modes — e.g. "research Acme", "set up Acme with research", "deep research setup", "refresh the page for Acme", "update the company info for Acme" all resolve to the right mode. When the intent is ambiguous, default to baseline and offer the other modes.
+Canonical syntax uses `--force-new`, but also recognize natural language variations — e.g. "research Acme", "set up Acme", "refresh the research for Acme" all run the default (research, enrich if a note already exists); "redo the research from scratch for Acme", "start fresh" map to `--force-new`.
 
 | Flag | Natural language equivalents | What it does |
 |---|---|---|
-| *(none)* | "set up", "create", "onboard" | **Baseline** — creates/verifies Customer page (template applied), Active Package, session backfill. Sections left as placeholders. |
-| `--research` | "research", "with research", "deep research", "populate the page" | **Deep research** — everything in baseline, plus runs company research to populate all discovered Customer page sections from web, Salesforce, and Gong. |
-| `--refresh` | "refresh", "update the company page", "re-research", "update company info" | **Refresh** — assumes Customer + Active Package already exist. Runs company research against the existing page; enriches content, but confirms with the user before overwriting anything that can't be verified from an external source (may be manually added by the AISE). |
+| *(none)* | "set up", "research", "onboard" | Research the customer. If a Planhat research note already exists on the Company record, enrich it (prepend new findings, keep prior content). Otherwise create a fresh one. |
+| `--force-new` | "start fresh", "redo the research", "ignore the old note" | Skip enrichment — write a brand-new research note even if one already exists. |
 
 ## The procedure
 
-1. **Locates or creates the Customer page** in the Notion Customers DB.
-   - If found: captures the URL and fetches current content.
-   - If not found (baseline or `--research`): creates it via Notion API, applies the **New Customer template** (`29397e9c7d4f8005b04bef3858ece3e0`), then fetches the resulting page to discover section headings dynamically.
-   - If not found (`--refresh`): stops and asks the user to run baseline or `--research` first.
-
-2. **Detects customer mode** after pulling Gong and Notion history (baseline and `--research` only):
-   - **New customer** — no relevant post-sales sessions found. Creates the foundation only (Customer page + Active Package). No session backfill.
-   - **Existing customer** — post-sales sessions found. Creates the foundation AND backfills all relevant sessions as Session records. Always backfills all — no partial backfills.
-
-3. **Researches in parallel** (baseline: Salesforce + Gong for history only; `--research`/`--refresh`: full research):
-   - Web search — company overview, industry, scale, tech stack, product areas
-   - Salesforce — plan, AE, AISE, renewal manager, health, billing cycle, stated PB objectives from opp notes
-   - Gong — sales and post-sales calls for goals, product areas, org structure, toolstack signals
-   - Google Calendar — events from contract start date where customer name/domain appears in title or attendees; merged with Gong (same date ±1 day = same session, Gong preferred); GCal-only events flagged as having no transcript
-   - Gmail history — threads from previous AEs / predecessor AISEs
-   - Notion — any existing sessions, tasks, or contacts already in the tracker
-
-4. **Filters sessions** (baseline/`--research` only) — only post-sales sessions are backfilled. Excluded: sales demos, discovery calls, pricing/negotiation calls, AE-only calls, internal PB syncs. When ambiguous, flags for the user to decide.
-
-5. **Maps the Master Package** from the Salesforce `servicesplan` field to the Master Packages DB (baseline/`--research` only).
-
-6. **Populates Customer page sections** (`--research`/`--refresh` only):
-   - Sections are discovered from the live page fetch — never hardcoded.
-   - Content is mapped to sections by heading name/emoji heuristic (see `agents/account-setup.md` § Company Research sub-procedure).
-   - In `--refresh` mode: confirms with the user before overwriting any section content that can't be matched to a current external source.
-
-7. **Proposes in chat (always — never writes without confirmation):**
-   - Mode and customer type (new vs. existing)
-   - Customer page: sections to populate (research modes) or "template applied, sections left as placeholders" (baseline)
-   - Active Package record: name, Master Package, dates, ARR, Status
-   - Active Package page body: structured account history summary
-   - Session records to backfill (existing customer mode): date, inferred type, 2–3 sentence brief
-
-8. **Writes on approval** in order: Customer page → Active Package → Session records. Reports all Notion URLs and flags remaining gaps.
+1. **Resolves the Planhat Company** for the customer (name search → SF `sourceId` fallback → `domains` fallback — see `context/planhat-schema.md`). If no Company record exists yet, stops and flags it — nothing to attach research to until Salesforce sync creates one.
+2. **Checks for an existing research note** — a Planhat Conversation (`type: "note"`, subject `Account Research — <Company>`) on the Company record. If found (and `--force-new` wasn't passed), this run enriches it rather than replacing it.
+3. **Researches in parallel** — web search (company overview, industry, tech stack), Planhat Sales Handoff fields (auto-populated at deal close), Gong via Glean (goals, product areas, use cases, org structure), Gmail/Glean (stakeholders, handoff context).
+4. **Synthesizes** a write-up: company overview, products they bring to market, customer's use cases with Productboard, org/toolstack, key stakeholders, open items — citing sources, never fabricating gaps.
+5. **Proposes in chat (always — never writes without confirmation)** the full write-up, flagging any thin sections.
+6. **Writes on approval** — creates a fresh Planhat Conversation note, or prepends a dated enrichment block to the existing one.
 
 ## After setup
 
-Once the Active Package is in place, run `/customer-plan --full [customer]` to build the program plan on top of it.
+Once the research note is in place, run `/customer-plan --full [customer]` to build the program plan.

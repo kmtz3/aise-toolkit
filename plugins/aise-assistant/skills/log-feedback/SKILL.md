@@ -1,9 +1,9 @@
 ---
 name: log-feedback
-description: Discover outstanding Notion tasks representing product feedback, draft structured Productboard GTM feedback notes, and submit with HITL confirmation on customer mapping and content. Triggers: /log-feedback, 'log PB feedback', 'submit feedback to productboard', 'log outstanding customer feedback'.
+description: Discover outstanding Planhat product-feedback Tasks, draft structured Productboard GTM feedback notes, and submit with HITL confirmation on customer mapping and content. Triggers: /log-feedback, 'log PB feedback', 'submit feedback to productboard', 'log outstanding customer feedback'.
 ---
 
-Discover outstanding feedback tasks from Klara's Notion Tasks database, draft structured Productboard feedback notes in the GTM format, and submit them via the PB MCP — with explicit HITL confirmation before every submission.
+Discover outstanding `type: "Product Feedback"` Tasks in Planhat (created by `post-session-debrief` step 8), draft structured Productboard feedback notes in the GTM format, and submit them via the PB MCP — with explicit HITL confirmation before every submission.
 
 **Trigger phrases:** /log-feedback · "log PB feedback" · "submit feedback to productboard" · "any outstanding feedback to log" · "log outstanding customer feedback"
 
@@ -11,26 +11,26 @@ Discover outstanding feedback tasks from Klara's Notion Tasks database, draft st
 
 ## Step 1: Load AISE context
 
-Read `context/aise-context.md` (or equivalent) to understand the customer portfolio, Notion schema, and tool conventions. Also read `context/notion-schema.md` for the Tasks DB structure and field names.
+Read `context/project-instructions.md` to understand workflow rules, search strategy, and tool conventions. Also read `context/planhat-schema.md` for the Task/Company/EndUser field structure and field names.
 
 ---
 
 ## Step 2: Resolve user identity
 
-**Resolve PLUGIN_DATA_DIR first:** use the Read tool on `~/.claude/aise-assistant.datadir` — the file content is the absolute path. Never use the `CLAUDE_PLUGIN_DATA` env variable.
-
-Then call `notion-get-users` (self) → Notion UUID, display name, email. This is all this step needs — no Planhat lookup required, since the Notion UUID used for ownership filtering isn't part of the Planhat profile (see `context/planhat-user-profile.md`). All Notion queries must filter by this UUID (Owner contains current user).
+Resolve `planhat_user_id` via `list_model_records(MODEL:"User", FILTER:{"email[equal to]":"<email>"}, SELECT:["firstName","lastName","email"])` (or the pre-resolved table in `context/planhat-schema.md` § Planhat User IDs). All Task queries in this skill filter by `ownerId = planhat_user_id`.
 
 ---
 
 ## Step 3: Discover outstanding feedback tasks
 
-Query the Notion Tasks database using `mcp__claude_ai_Notion__notion-query-data-sources` for tasks that appear to be outstanding product feedback items. Filter by Owner = current user. Match on ANY of:
-- Title contains keywords: "feedback", "PB feedback", "log feedback", "product gap", "feature request", "workaround", "log to PB"
-- Status is open / not completed
-- Due date is past or this week
+Query Planhat for open product-feedback Tasks:
+```
+list_model_records(MODEL: "Task", FILTER: {"type[equal to]": "Product Feedback", "status[not equal to]": "done", "ownerId[equal to]": "<planhat_user_id>"}, SELECT: ["action", "description", "companyId", "companyName", "status", "createdAt"])
+```
 
-If the user invoked with a customer name or topic as an argument (e.g. `/log-feedback LumApps API linking`), scope the search to that customer/topic.
+**Note the 36-record hard cap on `list_model_records` for Task** (per `context/planhat-schema.md`). If a customer/topic scope is given and the list comes back empty or suspiciously short, fall back to `search_records(QUERY: "<customer or topic>")` filtered to `model: "Task"` and scan for `type: "Product Feedback"`.
+
+If the user invoked with a customer name or topic as an argument (e.g. `/log-feedback LumApps API linking`), scope to that customer/topic.
 
 If no matching tasks are found, say so and stop.
 
@@ -40,26 +40,26 @@ If no matching tasks are found, say so and stop.
 
 For each task found, pull supporting context in parallel:
 
-1. Read the task's Notion page body (`mcp__claude_ai_Notion__notion-fetch`) for session notes and description.
-2. Use `mcp__claude_ai_Glean__meeting_lookup` to find the relevant Gong call(s) referenced in the task or for the linked customer. Try the customer name and/or keywords from the task title.
+1. Read the task's `description` field (already returned by the list query) — this is the full PM-formatted log entry `post-session-debrief` wrote, including session date and any customer quote captured at debrief time.
+2. Use `mcp__claude_ai_Glean__meeting_lookup` to find the relevant Gong call(s) for the linked customer (`companyName`). Try the customer name and/or keywords from the task's `action`.
 3. If a Gong transcript is found, use `mcp__claude_ai_Glean__read_document` on it to extract:
    - Exact customer quotes (attributed to name + role)
    - Business context
    - Workaround description
    - Desired outcome language
-4. Check the customer's Active Package in Notion for ARR, upcoming renewal date, and Salesforce Opp URL.
+4. Pull ARR, renewal date, and Salesforce Account ID directly from the Planhat Company record: `get_model_record(MODEL: "Company", OBJECT_ID: "<companyId>", SELECT: ["arr", "renewalDate", "sourceId"])`. Reconstruct the Salesforce Account URL from `sourceId`: `https://productboard.lightning.force.com/lightning/r/Account/<sourceId>/view`.
 
 **Before drafting, confirm you have retrieved all of the following (or explicitly marked each `-`):**
-- [ ] ARR — from Active Package `ARR` property in Notion
-- [ ] Contract end date (renewal) — from Active Package `End Date` property
-- [ ] Salesforce Account URL — from Customer page `SFDC` property
-- [ ] Gong call URL — from Session page `Gong call` property (use as `sourceUrl` AND in Gong section)
-- [ ] Contact email — via the 4-step lookup chain below
+- [ ] ARR — from Planhat Company `arr`
+- [ ] Contract end date (renewal) — from Planhat Company `renewalDate`
+- [ ] Salesforce Account URL — reconstructed from Planhat Company `sourceId`
+- [ ] Gong call URL — from the task's `description` or `custom.Gong URL` on the linked Conversation (use as `sourceUrl` AND in the Gong section)
+- [ ] Contact email — via the lookup chain below
 
 Do not begin drafting until all five are resolved (or explicitly marked `-`).
 
 5. Find the primary contact's email address using this lookup chain — stop at the first hit:
-   a. **Notion Contacts DB** — query `collection://29497e9c-7d4f-80be-b224-000bbec4980b` filtered by the linked Customer page URL; look for an Email property.
+   a. **Planhat EndUser records for the company** — `list_model_records(MODEL: "EndUser", FILTER: {"companyId[equal to]": "<companyId>"}, SELECT: ["name", "email", "position", "primary"])`. Prefer the record with `primary: true`.
    b. **Glean Gmail search** — `mcp__claude_ai_Glean__search` with `query: "[contact name] [company]"` and `app: gmailnative`. Scan the results for the contact's email address in thread senders, recipients, or signatures.
    c. **Glean Gong search** — `mcp__claude_ai_Glean__search` with `query: "[contact name] [company]"` and `app: gong`. Scan for email in participant metadata.
    d. If all three fail, mark the email as **⚠️ MISSING** and surface it as a required gap in the HITL step — do not guess or fabricate an email address.
@@ -74,7 +74,7 @@ Before drafting any feedback note, check whether the topic touches **Spark featu
 - Note involves Spark AI features (scheduled tasks, event-based triggers, external integrations, knowledge sources, authentication)
 - Note involves PB platform capabilities (MCP server scope, API v2, feedback/insight management, entity creation)
 
-For any task whose title or content references Spark, MCP, or API capabilities: **STOP before drafting.** Run the `#releases` check first. If the capability is confirmed already available, mark the Notion task Done with a note "Resolved — now available via [feature]" and skip to the next item. Do not draft a feedback note for a gap that no longer exists.
+For any task whose title or content references Spark, MCP, or API capabilities: **STOP before drafting.** Run the `#releases` check first. If the capability is confirmed already available, mark the Planhat task done (append "Resolved — now available via [feature]" to `description`, per Step 8) and skip to the next item. Do not draft a feedback note for a gap that no longer exists.
 
 **How to check:**
 Search `#releases` using `mcp__claude_ai_Slack__slack_search_public_and_private` with the relevant feature keyword. Read any recent announcements before forming the draft framing.
@@ -129,7 +129,7 @@ automated solution" rather than naming a specific tool.]
 [Concrete outcome in customer terms — what good looks like when this is solved]
 <br><br>
 <b>ARR Impact</b><br>
-[ARR value from Notion/Salesforce, or -]
+[ARR value from Planhat Company `arr`, or -]
 <br><br>
 <b>Salesforce Opp or Account URL</b><br>
 [<a href="[URL]">[URL]</a> — or -]
@@ -138,7 +138,7 @@ automated solution" rather than naming a specific tool.]
 [<a href="[URL]">[URL]</a> — or -]
 <br><br>
 <b>Upcoming renewal date</b><br>
-[Date from Notion Active Package, or -]
+[Date from Planhat Company `renewalDate`, or -]
 <br><br>
 <small><i>Submitted via the aise-assistant plugin. Questions about this tool? Contact <a href="https://productboard.slack.com/archives/D07818Y71HA">Klara Martinez</a>.</i></small>
 ```
@@ -183,7 +183,7 @@ Present each drafted feedback note to Klara for review before submitting anythin
 
 ```
 📋 FEEDBACK NOTE READY FOR REVIEW
-Source task: [Notion task title]
+Source task: [Planhat task action]
 Title: [proposed title]
 Customer: [Company name] — [contact name] ([contact email])
 Importance: [critical/important]
@@ -213,32 +213,28 @@ For confirmed items, call `mcp__claude_ai_Productboard__feedback_create_feedback
 - `title`: the problem statement only — no prefix (matches the title drafted in Step 5)
 - `content`: the complete HTML body (all `<b>` section labels, `-` for empty sections)
 - `customerEmail`: the customer contact's email address — **never Klara's own email (klara.martinez@productboard.com)**
-- `companyDomain`: the customer's company domain extracted from email or Notion (e.g. `lumapps.com`) — **never `productboard.com` or any internal domain**
-- `sourceUrl`: the Gong call URL if available; if no Gong link, use the Notion meeting transcript URL as the fallback source
+- `companyDomain`: the customer's company domain extracted from the contact's email or the Planhat Company record (e.g. `lumapps.com`) — **never `productboard.com` or any internal domain**
+- `sourceUrl`: the Gong call URL if available; if no Gong link, use `-`
 - `tags`: a **JSON string array** of tag values extracted from the Select Tags section (e.g. `["API", "portal", "automation"]`) — not a comma-separated string
 
 ---
 
-## Step 8: Mark Notion task complete
+## Step 8: Mark Planhat task complete
 
 After successful submission, execute exactly these two calls — no others:
 
-**Step 8a — Mark Done:**
-Call `mcp__claude_ai_Notion__notion-update-page` with `command: "update_properties"` to set `Status` to `Done` on the task page. **The parameter name is `page_id` (snake_case), not `pageId` — always use `page_id`.**
-
-The Tasks DB has **only one writable property for this purpose: `Status`**. There is NO `Notes` property, NO `URL` property, and NO other field to write the PB note URL into. Do not attempt to set any property other than `Status` — it will fail.
-
-**Step 8b — Append confirmation to body:**
-Call `mcp__claude_ai_Notion__notion-update-page` with `command: "insert_content"` and `position: {"type": "end"}` to append this block to the task page body.
-
-**The appended text must be exactly this (no variation):**
+**Step 8a — Append confirmation to `description`:**
+Fetch the task's current `description` (already in context from Step 4), append this block (exactly — no variation):
 ```
+
 ---
 ✅ Logged to PB — 2026-06-30
 https://pb.productboard.com/all-notes/notes/XXXXXXXX
 ```
+Replace the date with the actual submission date (YYYY-MM-DD) and the URL with the actual PB note URL. If the PB MCP does not return a URL or ID, still append the block with "Note submitted — no URL returned by API" in place of the URL. Write it back: `update_model_record(MODEL: "Task", OBJECT_ID: "<task_id>", PARAMETERS: {"description": "<appended text>"})`.
 
-Do not use "PB note:", omit the `---` separator, or skip the date. Replace the date with the actual submission date (YYYY-MM-DD) and the URL with the actual PB note URL. If the PB MCP does not return a URL or ID, still complete both steps — mark Done and append the confirmation block with "Note submitted — no URL returned by API" in place of the URL.
+**Step 8b — Transition status to done:**
+`update_model_record(MODEL: "Task", OBJECT_ID: "<task_id>", PARAMETERS: {"status": "done"})`. This must be a separate `update_model_record` call, not combined with the create or with any other field — per `context/planhat-schema.md`, only a `status` *transition* via update triggers Planhat's auto-Conversation creation, and it's a reasonable side effect here: it logs the feedback submission as a company touchpoint.
 
 ---
 
@@ -253,17 +249,16 @@ After processing all items (or after "stop"), show a summary:
 
 ## Tools required
 
-- `mcp__claude_ai_Notion__notion-query-data-sources`
-- `mcp__claude_ai_Notion__notion-fetch`
-- `mcp__claude_ai_Notion__notion-search`
-- `mcp__claude_ai_Notion__notion-update-page`
-- `mcp__claude_ai_Notion__notion-get-users`
+- `mcp__claude_ai_Planhat__list_model_records`
+- `mcp__claude_ai_Planhat__get_model_record`
+- `mcp__claude_ai_Planhat__update_model_record`
+- `mcp__claude_ai_Planhat__search_records`
 - `mcp__claude_ai_Glean__meeting_lookup`
 - `mcp__claude_ai_Glean__read_document`
 - `mcp__claude_ai_Glean__search` (email lookup via Gmail/Gong fallback)
 - `mcp__claude_ai_Productboard__feedback_create_feedback`
 - `mcp__claude_ai_Slack__slack_search_public_and_private` (pre-draft #releases check)
-- `Read` (for context files and PLUGIN_DATA_DIR pointer)
+- `Read` (for context files)
 - `AskUserQuestion` (HITL confirmation widget in Step 6)
 
 ---
@@ -276,5 +271,5 @@ After processing all items (or after "stop"), show a summary:
 4. **If Gong context is thin**, flag it in the HITL preview as "⚠️ Limited session context — pain point may need enrichment."
 5. **`companyDomain` must be the customer's company domain** — never `productboard.com` or any internal domain.
 6. **Every section gets a value or a literal dash (`-`)** — never leave a section blank or omit it.
-7. **Owner-filter every Notion query** — always scope to the current user's records.
-8. **The Tasks DB has NO `Notes` property** — the only Notion property to write during closeout is `Status`. The PB note URL goes in the page body via `insert_content`, never in a property field.
+7. **Owner-filter every Task query** (`ownerId` = current user's Planhat id) — always scope to the current user's records.
+8. **`status: "done"` must be its own `update_model_record` transition** — never combine it with the `description` append in the same call, and never set it on create.

@@ -31,7 +31,9 @@ All fields live on the `User` model, prefixed `AISE `. Resolve them via `get_mod
 | `custom.AISE Calendly Discovery` | url | Discovery session booking link |
 | `custom.AISE Calendly Kickoff` | url | Kickoff session booking link |
 
-Rich-text fields take plain-text `Key: value` / `## Section` content (same shape the old Notion pages used) — no HTML required, unlike Company/Conversation rich-text fields (see `planhat-schema.md`).
+**Rich-text fields require HTML** — same as Company/Conversation rich-text fields (see `planhat-schema.md`). This corrects an earlier version of this doc that claimed plain-text `Key: value` lines were sufficient; they are not. Planhat's `rich text` fieldType renders the stored value as HTML, and a bare `\n` is silently stripped rather than preserved as a line break — writing plain text collapses every line into one run-on string on read-back (confirmed live, 2026-08-18: a write using bare newlines came back as `"Preferred name: KlaraDisplay name: Klara Martinez..."` with no separators at all).
+
+Use `<p>Key: value</p>` per line, `<p><strong>Section</strong></p>` for section headers, and `<ul><li>...</li></ul>` for bullets — the same convention documented for Conversation/Task `custom.Prep Notes` below. When parsing a field back out, strip HTML tags first, then split on `</p>` (or list items) to recover one logical line per `Key: value` pair — do not split on `\n`, since none will be present.
 
 **Shared vs plugin-specific:** `custom.AISE Identity`, `custom.AISE Profile preferences`, `custom.AISE Voice Scrape Samples`, and `custom.AISE Tracker Memory` are shared — one person has one identity, one voice, one pattern log, regardless of which plugin is reading or writing. `custom.AISE Workspace` (aise-assistant) and `custom.AISE Leadership Workspace` (aise-leadership) are plugin-specific because their content genuinely doesn't overlap. Calendly fields are aise-assistant-only.
 
@@ -60,7 +62,7 @@ get_model_record(MODEL: "User", OBJECT_ID: "{planhat_user_id}",
 
 (Or `list_model_records` with the same `FILTER`/`SELECT` if you don't have `planhat_user_id` yet — see below.)
 
-Parse each rich-text field's `Key: value` lines back out. A field that's empty/absent means that section has never been set — treat it like the old `<TBD>` placeholder, but **before** asking the user, run the migration check below.
+Parse each rich-text field's `Key: value` lines back out — strip HTML tags first (`<p>`, `<li>`, `<strong>`, etc.), then treat each `</p>` or `</li>` boundary as one logical line. A field that's empty/absent means that section has never been set — treat it like the old `<TBD>` placeholder, but **before** asking the user, run the migration check below.
 
 ## Write procedure
 
@@ -102,7 +104,7 @@ The section above is `/assistant-setup`'s own migration check, run during a full
 3. **If found in step 2, auto-migrate it — no HITL gate.** This is a like-for-like backfill of data that already exists somewhere else in the user's own systems, not new data entry, so it doesn't need the confirm-every-field friction that full onboarding uses (that friction exists there because onboarding is asking the user to actively review a wide set of values in one sitting). Write it straight to the `User` record via `update_model_record`, note inline in the agent's output — e.g. "Backfilled your identity from an existing Notion page — review anytime via `/assistant-setup --update`." — then proceed with the task using the now-populated value.
 4. **If step 2 finds nothing either** (genuinely first-time user — no Planhat data, no legacy Notion page): don't hand the user a "go run this yourself" message. Read `agents/assistant-onboarding.md` and execute its full procedure inline right now, per the same "agents are procedure documents, run them inline" convention used everywhere else in this plugin, then resume the original task once onboarding completes. Onboarding's default mode only asks about fields that are actually empty, so this doesn't force a redundant re-ask of anything that already exists.
 
-**Applies to:** any agent that would otherwise hard-stop on a missing `custom.AISE Identity` (or other core field) — `daily-brief`, `notion-completion-fix`, `bulk-account-setup`, `session-backfill`, `bulk-prep-week`, `notion-ask`, `sf-backfill`, `notion-integrity-check`, `notion-writer`, `aise-context`, `log-feedback`, and the aise-leadership equivalents (`report-builder`, `notion-completion-fix`, etc.).
+**Applies to:** any agent that would otherwise hard-stop on a missing `custom.AISE Identity` (or other core field) — `daily-brief`, `notion-completion-fix`, `bulk-account-setup`, `session-backfill`, `bulk-prep-week`, `notion-ask`, `notion-integrity-check`, `notion-writer`, `aise-context`, `log-feedback`, and the aise-leadership equivalents (`report-builder`, `notion-completion-fix`, etc.).
 
 **Agents with an existing softer fallback** (`email-drafter`, `draft-followup`, `draft-email`, and similar — which already degrade to `context/communication-style-guide.md` with an inline warning rather than stopping) should still run steps 2–3 (auto-migrate if found) before falling back, but can keep their existing graceful-degrade behavior for step 4 instead of running full onboarding — triggering a multi-question onboarding flow mid-draft is heavier than a single email needs. Full onboarding is the right response for the hard-stop tier, not for a one-off drafting task.
 
@@ -111,32 +113,18 @@ The section above is `/assistant-setup`'s own migration check, run during a full
 ## Content format (rich-text fields)
 
 Example — `custom.AISE Identity`:
-```
-Preferred name: Klara
-Display name: Klara Martinez
-Timezone: Europe/Prague
-Working hours: 09:00–18:00 CET
-Role: AI Success Engineer
-Team: AISE
-Manager: <value>
-Email: klara.martinez@productboard.com
-Accent variants: none
+```html
+<p>Preferred name: Klara</p><p>Display name: Klara Martinez</p><p>Timezone: Europe/Prague</p><p>Working hours: 09:00–18:00 CET</p><p>Role: AI Success Engineer</p><p>Team: AISE</p><p>Manager: <value></p><p>Email: klara.martinez@productboard.com</p><p>Accent variants: none</p>
 ```
 
 Example — `custom.AISE Profile preferences`:
-```
-Sign-off: Best,
-Em dashes: OK
-Semicolons: Avoid
-English variant: US
-Casual register: Mild only
+```html
+<p>Sign-off: Best,</p><p>Em dashes: OK</p><p>Semicolons: Avoid</p><p>English variant: US</p><p>Casual register: Mild only</p>
 ```
 
 Example — `custom.AISE Workspace`:
-```
-Conferencing tool: Zoom
-Slack AISE channel: <value>
-Manager: <value>
+```html
+<p>Conferencing tool: Zoom</p><p>Slack AISE channel: <value></p><p>Manager: <value></p>
 ```
 
 Calendly links are separate `url` fields, not embedded in the Workspace rich text — write each directly to its own field.

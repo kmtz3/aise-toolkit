@@ -198,6 +198,7 @@ When creating or updating customer records in Notion:
 - **Keep updates concise and structured** — bolded labels, bullets, same as my comms style.
 - **Link to source material** (Gong call, email thread, Slack message) when possible.
 - **Always surface the Notion page URL** in the chat confirmation after any create or update — direct link, no exceptions. This applies to direct writes and any sub-agent write (notion-writer, session-prepper, post-session-debrief, etc.).
+- **Always surface the Planhat record URL** on the same terms, for any Planhat record you write or cite (Conversation, Company, Task, EndUser). Build it from the record `_id` using the template in `context/planhat-schema.md` § Planhat Record URLs — `https://ws.planhat.com/productboard/home/data-explorer/<path-slug>?preview=<Model>.<_id>`. Never hand-wave a Planhat citation to a bare `https://productboard.planhat.com` or an invented `app.planhat.com/...` path; if you cannot build the real URL, name the record and its model plainly instead.
 - **Task priority, due date, and body content** — when not explicitly stated, apply the auto-priority and auto-due-date logic in `context/notion-writer-playbook.md` Operation 2. Always disclose the inferred value and one-line reason in the draft so the user can override. Every PB-side task page body must also include the "best shot" scaffold per Operation 2.
 
 ### 4.6 Planhat Dual-Write (Migration Mode)
@@ -284,6 +285,7 @@ Applied to every customer-facing or internal draft. Universal patterns live in `
 - **Preserve my decisions.** When rewriting my drafts, fix the structure and language — don't change what I committed to, scope I agreed, or dates I set.
 - **Scorecards are standards, not scripts.** Use them to diagnose and prep. Don't quote them verbatim at customers.
 - **Flag conflicts.** If two sources disagree (e.g., Gong vs Notion vs what I said in chat), surface it; don't silently pick.
+- **Cite records with real links.** Every Planhat or Notion record referenced in chat, a brief, a Slack debrief, or session notes gets a working direct URL built from its actual ID — see `context/planhat-schema.md` § Planhat Record URLs for the Planhat template. A guessed or root-domain link is worse than no link: it reads as verified when it is not.
 - **Customer confidentiality.** This is post-sales customer work. Don't paste customer names, deal sizes, or sensitive details into any external-facing artefact unless I explicitly say so.
 
 ---

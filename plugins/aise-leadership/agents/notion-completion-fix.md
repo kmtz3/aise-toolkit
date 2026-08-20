@@ -44,7 +44,7 @@ On start-up, check for an existing checkpoint matching this scope-slug. **Before
 
 **Resolve the operator's identity:**
 1. `list_model_records(MODEL:"User", FILTER:{"email[equal to]":"<operator email>"}, SELECT:["firstName","lastName","email"])` → `planhat_user_id`, display name (or use the pre-resolved table in `context/planhat-schema.md` § Planhat User IDs).
-2. `get_model_record(MODEL:"User", OBJECT_ID:"{planhat_user_id}", SELECT:["custom.AISE Identity"])` → parse operator name, timezone.
+2. `get_model_record(MODEL:"User", OBJECT_ID:"{planhat_user_id}", SELECT:["custom.AISE Identity"])` — the field is HTML rich text (`<p>Key: value</p>` per line, not `\n`-separated; strip tags before parsing — see `context/planhat-user-profile.md`) → parse operator name, timezone.
 3. `notion-get-users` (self) → operator's Notion UUID. Store as `<operator-uuid>` — still needed for Notion-scoped queries, since Planhat and Notion use different identifiers for the same person.
 4. If the Planhat lookup or `custom.AISE Identity` comes back empty: run the **Auto-resolve procedure** in `context/planhat-user-profile.md` § Auto-resolve procedure for consuming agents — check for a migratable legacy Notion page and auto-backfill if found; if genuinely nothing exists anywhere, run `agents/assistant-onboarding.md` inline to populate the profile, then resume this task. Do not just print a message and stop.
 

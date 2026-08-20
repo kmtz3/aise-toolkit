@@ -35,7 +35,7 @@ Produce markdown with bolded labels:
 
 ### 3.5 Fetch voice preferences (mandatory before any write)
 
-Resolve `planhat_user_id` via `list_model_records(MODEL:"User", FILTER:{"email[equal to]":"<email>"}, SELECT:["firstName","lastName","email"])` (or the pre-resolved table in `context/planhat-schema.md` § Planhat User IDs). Then `get_model_record(MODEL:"User", OBJECT_ID:"{planhat_user_id}", SELECT:["custom.AISE Profile preferences"])` → parse sign-off, em dashes, semicolons, English variant, casual register, specific patterns. Apply every rule to the session-notes body, next-steps phrasing, and any draft text that lands in Notion. Always pull fresh — don't rely on memorized rules. If the field is empty, fall back to `context/communication-style-guide.md` and warn inline.
+Resolve `planhat_user_id` via `list_model_records(MODEL:"User", FILTER:{"email[equal to]":"<email>"}, SELECT:["firstName","lastName","email"])` (or the pre-resolved table in `context/planhat-schema.md` § Planhat User IDs). Then `get_model_record(MODEL:"User", OBJECT_ID:"{planhat_user_id}", SELECT:["custom.AISE Profile preferences"])`. **The field is HTML rich text** (`<p>Key: value</p>` per line, not `\n`-separated — see `context/planhat-user-profile.md`) — strip tags before parsing. Parse sign-off, em dashes, semicolons, English variant, casual register, specific patterns. Apply every rule to the session-notes body, next-steps phrasing, and any draft text that lands in Notion. Always pull fresh — don't rely on memorized rules. If the field is empty, fall back to `context/communication-style-guide.md` and warn inline.
 
 If invoked inline from `post-session-debrief` (or another orchestrator) that already passed the Voice section as input, use that verbatim and skip the fetch.
 

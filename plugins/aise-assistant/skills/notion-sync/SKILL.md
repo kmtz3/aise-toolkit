@@ -1,30 +1,16 @@
 ---
 name: notion-sync
-description: Push external data into Notion Active Packages and related records. Three modes via required flag: --sf (Salesforce ARR + contract dates), --owner (propagate Customer.Owner to Sessions/Tasks/Packages), --renewals (flag packages ending soon as Status=Renewal).
+description: Push external data into Notion Active Packages and related records. Two modes via required flag: --owner (propagate Customer.Owner to Sessions/Tasks/Packages), --renewals (flag packages ending soon as Status=Renewal).
 ---
 
 Sync external data into Notion. A mode flag is required:
 
-- **`/notion-sync --sf`** — Salesforce → Active Packages (ARR + contract end dates)
 - **`/notion-sync --owner`** — Customer.Owner → Sessions, Tasks, Active Packages (drift repair)
 - **`/notion-sync --renewals`** — Flag Active Packages ending soon with Status = Renewal
 
-If no mode flag is given, list the three modes with a one-line description of each and ask which to run.
+If no mode flag is given, list the two modes with a one-line description of each and ask which to run.
 
----
-
-## `--sf` — Salesforce sync
-
-Read the procedure in `agents/sf-backfill.md` and execute it inline — do not spawn a subagent.
-
-**What it does:** For each Active Package, queries Salesforce (open renewal opps + recent closed opps) and syncs ARR (ACV) and contract end date. Classifies each account: rollover needed / ARR fill / end-date update / already in sync / skip / flag. Presents the full change list and waits for approval before writing (unless `--apply` is passed).
-
-**Flags:**
-- `--customer <name>` — run for a single customer instead of all active packages
-- `--owner <name>` — run for a specific user's packages instead of your own (always confirms before proceeding)
-- `--apply` — skip the approval gate and write immediately
-
-Do NOT ask the user for Salesforce data — query Salesforce directly via the SF MCP. Do NOT touch churned or at-risk accounts.
+> **Salesforce → Notion ARR/contract-date sync was retired.** Planhat's Company and Deal records are natively SF-synced, so agents that need ARR, tier, or contract-end data now read it live from Planhat (see `agents/session-prepper.md` § Customer snapshot fallback) instead of pushing a copy into Notion Active Packages.
 
 ---
 

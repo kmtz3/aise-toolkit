@@ -11,12 +11,12 @@ A Cowork / Claude Code plugin that turns any Productboard **AI Success Engineer 
   - **`bulk`** (1, two modes) — `/bulk --debrief`, `/bulk --prep`
   - **`draft-*`** (3) — `/draft-email`, `/draft-followup`, `/draft-diagram`
   - **`notion-*`** (3) — `/notion-write`, `/notion-check`, `/notion-fix`
-  - **`notion-sync`** (1, three modes) — `/notion-sync --sf`, `/notion-sync --owner`, `/notion-sync --renewals`
+  - **`notion-sync`** (1, two modes) — `/notion-sync --owner`, `/notion-sync --renewals`
   - **`notion-ask`** (1) — `/notion-ask <question>`
   - **`ph-*`** (1) — `/ph-migrate-notion-data`
   - **`assistant-*`** (5) — `/assistant-setup`, `/assistant-help`, `/assistant-remember`, `/assistant-improvement`, `/aise-context`
   - **Standalone** (7) — `/support-hub`, `/daily-brief`, `/spark-demo-prep`, `/log-feedback`, `/create-deck`, `/session-facilitation`, `/spark-onepager`
-- **24 specialist agents** that execute each command (session prep, KDD generation, summaries, Notion writes, integrity checks, Planhat migration, etc.).
+- **23 specialist agents** that execute each command (session prep, KDD generation, summaries, Notion writes, integrity checks, Planhat migration, etc.).
 - **Universal context** — workflow rules, the AISE reference guide, scorecards, communication style guide, full Notion Customer Tracker schema, engagement planning framework, KDD anchor templates per A-session type.
 - **Personal layer scaffolding** — `about/` with a README and three onboarding templates (`identity`, `voice`, `workspace`) populated by `/assistant-setup` on first run.
 
@@ -68,7 +68,7 @@ Re-run with `--update` to drift-check, `--reset` to start over, or `--scrape-voi
 |---|---|
 | **New customer / handoff** | `/customer-setup` → `/customer-plan --full` |
 | **Per session** | `/customer-whats-new` → `/session-prep` (or `/session-kdds` for architecting) → deliver → `/session-debrief` |
-| **Ongoing** | `/customer-plan --next`, `/session-score`, `/notion-write`, `/notion-check`, `/notion-sync --sf` |
+| **Ongoing** | `/customer-plan --next`, `/session-score`, `/notion-write`, `/notion-check`, `/notion-sync --renewals` |
 | **Anytime** | `/draft-email`, `/draft-followup`, `/draft-diagram`, `/support-hub`, `/assistant-remember`, `/assistant-automate`, `/assistant-help` |
 
 ## Connecting your tools

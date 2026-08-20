@@ -41,7 +41,7 @@ On start-up in bulk mode, check for an existing checkpoint for this user. **Befo
 ### 0. Resolve user identity
 
 1. `list_model_records(MODEL: "User", FILTER: {"email[equal to]": "<user's email from session context>"}, SELECT: ["firstName", "lastName", "email"])` → `planhat_user_id`, display name (or the pre-resolved table in `context/planhat-schema.md` § Planhat User IDs).
-2. `get_model_record(MODEL: "User", OBJECT_ID: "{planhat_user_id}", SELECT: ["custom.AISE Identity"])` → parse name, timezone.
+2. `get_model_record(MODEL: "User", OBJECT_ID: "{planhat_user_id}", SELECT: ["custom.AISE Identity"])` — the field is HTML rich text (`<p>Key: value</p>` per line, not `\n`-separated; strip tags before parsing — see `context/planhat-user-profile.md`) → parse name, timezone.
 3. `notion-get-users` (self) → Notion UUID — still needed for any Notion-scoped query (ownership filters, dedup, matching Delivered By), since it's a separate credential, not part of the Planhat profile.
 
 Capture user UUID and display name for use throughout the procedure.

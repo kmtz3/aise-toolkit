@@ -54,7 +54,6 @@ Commands are grouped by family. Type `/<family>` (or `/<family>-`) in autocomple
 | **Check Notion for data drift** | `/notion-check [--customer <name>] [--fix]` |
 | **Ask how the Tracker databases work** | `/notion-ask <question>` — what to fill, what's auto-calculated, how DBs connect |
 | **Answer a customer question with PB docs** | `/support-hub <query>` |
-| **Sync Salesforce → Active Packages** | `/notion-sync --sf [--customer <name>] [--apply]` |
 | **Repair ownership drift in Notion** | `/notion-sync --owner [--global]` |
 | **Flag renewals coming up** | `/notion-sync --renewals [--days N] [--dry-run]` |
 | **Build a customer-facing diagram** | `/draft-diagram <customer> <type> [description]` |
@@ -68,32 +67,28 @@ Commands are grouped by family. Type `/<family>` (or `/<family>-`) in autocomple
 
 ## Command families at a glance
 
-- **`customer-*`** — account lifecycle (`-setup [--research|--refresh]`, `-whats-new`)
+- **`customer-*`** — account lifecycle (`-setup [--force-new]`, `-whats-new`)
 - **`customer-plan`** — program planning (`--next` for 2–4 sessions, `--full` for a complete program)
 - **`session-*`** — per-session workflows (`-prep`, `-kdds`, `-facilitation`, `-summary`, `-score`, `-debrief`)
 - **`bulk`** — run a session workflow across multiple meetings at once (`--debrief`, `--prep`)
 - **`bulk-account-setup`** — admin/reorg task: set up all accounts owned by a user
 - **`draft-*`** — message / artifact drafts (`-email`, `-followup`, `-diagram`)
 - **`notion-*`** — direct Notion operations (`-write`, `-check`, `-ask`)
-- **`notion-sync`** — push external data into Notion (`--sf`, `--owner`, `--renewals`)
+- **`notion-sync`** — push external data into Notion (`--owner`, `--renewals`)
 - **`assistant-*`** — meta / configure the assistant (`-setup`, `-help`, `-remember`, `-automate`)
 - **Standalone** — `/support-hub`, `/daily-brief`
 
 ## Flag reference — multi-mode commands
 
-### `/notion-sync` — three modes, one command
+### `/notion-sync` — two modes, one command
 
 | Mode | What it does | Key flags |
 |---|---|---|
-| `--sf` | Sync Salesforce ARR + contract end dates into Active Packages | `--customer <name>`, `--owner <name>`, `--apply` |
 | `--owner` | Push Customer.Owner → Sessions, Tasks, Active Packages | `--mine` (default), `--global`, `--no-confirm` |
 | `--renewals` | Set Status = Renewal on packages ending soon | `--mine` (default), `--global`, `--days N` (default 90), `--dry-run`, `--no-confirm` |
 
 **Examples:**
 ```
-/notion-sync --sf                          # sync SF data for all my packages
-/notion-sync --sf --customer Acme          # one customer only
-/notion-sync --sf --apply                  # skip approval gate
 /notion-sync --owner                       # repair drift on my accounts
 /notion-sync --owner --global              # repair drift workspace-wide (asks for confirmation)
 /notion-sync --renewals                    # flag packages ending in ≤90 days

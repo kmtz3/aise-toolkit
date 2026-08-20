@@ -1,5 +1,13 @@
 # Changelog — aise-leadership
 
+## [1.12.1] — 2026-08-20
+
+### Fixed
+- `agents/assistant-onboarding.md`, `agents/context-keeper.md`, `agents/notion-completion-fix.md`, `agents/report-builder.md`: corrected the format of `custom.AISE Identity`, `custom.AISE Profile preferences`, and `custom.AISE Tracker Memory` on the Planhat User record — these are HTML rich-text fields (`<p>Key: value</p>` per line, `<ul><li>` for bullets), not `\n`-separated plain text. Planhat silently strips bare `\n` on write, so a prior plain-text write would collapse into one run-on string. All four agents now strip tags before parsing and write `<p>`/`<li>`-wrapped HTML back.
+- `agents/assistant-onboarding.md`: added a mandatory post-write verification step — immediately re-reads a just-written rich-text field to confirm the `<p>` boundaries survived, since a successful (HTTP 200) write doesn't guarantee the content landed correctly.
+
+---
+
 ## [1.12.0] — 2026-08-16
 
 ### Changed

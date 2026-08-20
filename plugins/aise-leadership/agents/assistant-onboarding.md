@@ -72,7 +72,7 @@ If Planhat responds, continue to Step 1.
 
 **Resolve identity:** Call `list_model_records(MODEL: "User", FILTER: {"email[equal to]": "<user's email from session context>"}, SELECT: ["firstName", "lastName", "email", "nickName"])` → capture the Planhat User `_id` and derive `display_name` from `firstName + " " + lastName`. If the user's ID is already known from `context/planhat-schema.md` § Planhat User IDs, use that table instead of a fresh lookup. Then:
 
-- `get_model_record(MODEL: "User", OBJECT_ID: "{planhat_user_id}", SELECT: ["custom.AISE Identity", "custom.AISE Profile preferences", "custom.AISE Leadership Workspace", "custom.AISE Voice Scrape Samples"])` → parse each rich-text field's `Key: value` lines. Note which fields are empty vs populated.
+- `get_model_record(MODEL: "User", OBJECT_ID: "{planhat_user_id}", SELECT: ["custom.AISE Identity", "custom.AISE Profile preferences", "custom.AISE Leadership Workspace", "custom.AISE Voice Scrape Samples"])`. **These are HTML rich-text fields** (`<p>Key: value</p>` per line, not `\n`-separated — see `context/planhat-user-profile.md`) — strip tags before parsing, then read each `Key: value` line. Note which fields are empty vs populated. If a field comes back as an unparseable fragment (no recognizable `Key: value` pairs) rather than genuinely empty, treat it as corrupted, not unset — surface that distinction to the user rather than silently re-asking as if fresh.
 - For every empty field, run the **migration check** in `context/planhat-user-profile.md` § Migrating stale data before treating it as a fresh gap — search legacy Notion `AISE Identity —` / `AISE Leadership Preferences —` pages (`notion-search` + `notion-fetch`), since this plugin never had a Documents-based intermediate design. Anything found becomes a pre-filled default in the Step 3 form, not a silent write.
 - If nothing is found anywhere for a field, treat it as unset (equivalent to the old `<TBD>`) and proceed to Step 2.
 
@@ -248,20 +248,24 @@ Workspace questions to include in the combined form — do not issue a separate 
 
 **Full mechanics (field map, read/write procedure) are in `context/planhat-user-profile.md` — follow it exactly.** One `update_model_record` call, only the fields that changed:
 
+**These are HTML rich-text fields, not plain text.** Planhat silently strips bare `\n` on write — a plain `\n`-joined string comes back as one run-on line with no way to recover the original breaks (confirmed live, 2026-08-18). Use `<p>Key: value</p>` per line, exactly like the Company/Conversation rich-text convention:
+
 ```
 update_model_record(
   MODEL: "User",
   OBJECT_ID: "{planhat_user_id}",
   PARAMETERS: {
-    "custom.AISE Identity": "Preferred name: {value}\nDisplay name: {value}\nTimezone: {value}\nWorking hours: {value}\nRole: {value}\nTeam: {value}\nManager: {value}\nEmail: {value}\nAccent variants: {value or \"none\"}",
-    "custom.AISE Profile preferences": "Sign-off: {value}\nEm dashes: {value}\nSemicolons: {value}\nEnglish variant: {value}\nCasual register: {value}\n{specific patterns from scraping, if run}",
-    "custom.AISE Leadership Workspace": "Notion templates DB URL: {value or \"not set\"}\nNotion templates DB ID: {value or \"not set\"}\nReport output format — weekly: {value}\nReport output format — monthly: {value}\nReport output format — quarterly: {value}\nDefault template name — weekly: {value}\nDefault template name — monthly: {value}\nDefault template name — quarterly: {value}\nGong session keywords: {value}\nSlack AISE channel: {value}\nSlack leadership channel: {value}\nSlack CS org channel: {value}\nManager: {value}\nCommercial partner: {value}\nPS Ops contact: {value}",
-    "custom.AISE Voice Scrape Samples": "{distilled samples, if scraping ran}"
+    "custom.AISE Identity": "<p>Preferred name: {value}</p><p>Display name: {value}</p><p>Timezone: {value}</p><p>Working hours: {value}</p><p>Role: {value}</p><p>Team: {value}</p><p>Manager: {value}</p><p>Email: {value}</p><p>Accent variants: {value or \"none\"}</p>",
+    "custom.AISE Profile preferences": "<p>Sign-off: {value}</p><p>Em dashes: {value}</p><p>Semicolons: {value}</p><p>English variant: {value}</p><p>Casual register: {value}</p><p>{specific patterns from scraping, if run}</p>",
+    "custom.AISE Leadership Workspace": "<p>Notion templates DB URL: {value or \"not set\"}</p><p>Notion templates DB ID: {value or \"not set\"}</p><p>Report output format – weekly: {value}</p><p>Report output format – monthly: {value}</p><p>Report output format – quarterly: {value}</p><p>Default template name – weekly: {value}</p><p>Default template name – monthly: {value}</p><p>Default template name – quarterly: {value}</p><p>Gong session keywords: {value}</p><p>Slack AISE channel: {value}</p><p>Slack leadership channel: {value}</p><p>Slack CS org channel: {value}</p><p>Manager: {value}</p><p>Commercial partner: {value}</p><p>PS Ops contact: {value}</p>",
+    "custom.AISE Voice Scrape Samples": "<p>{distilled samples, if scraping ran}</p>"
   }
 )
 ```
 
-`custom.AISE Identity` and `custom.AISE Profile preferences` are **shared** with aise-assistant — include every field (unchanged and newly-set) since the write replaces the whole value, not a merge. If the same person has run `/assistant-setup` in aise-assistant already, their Identity/Voice fields may already be populated — Step 1's migration check surfaces that as a pre-filled default, so most leadership-only users will just be confirming, not retyping.
+`custom.AISE Identity` and `custom.AISE Profile preferences` are **shared** with aise-assistant — include every field (unchanged and newly-set) as HTML since the write replaces the whole value, not a merge, and a partial plain-text patch would both lose untouched content and re-introduce the stripping bug. If the same person has run `/assistant-setup` in aise-assistant already, their Identity/Voice fields may already be populated — Step 1's migration check surfaces that as a pre-filled default, so most leadership-only users will just be confirming, not retyping.
+
+**Verify after writing.** Immediately re-`get_model_record` at least one of the rich-text fields just written and confirm the `<p>` boundaries survived (i.e. the value isn't one run-on string) — the API returns HTTP 200 even when a write is malformed, so a successful response alone doesn't prove the content landed correctly.
 
 `custom.AISE Leadership Workspace` is this plugin's own field — safe to omit if there's nothing to write.
 

@@ -16,7 +16,7 @@ Two modes. Read the invocation to determine which to run.
 
 **Resolve identity:**
 1. `list_model_records(MODEL:"User", FILTER:{"email[equal to]":"<operator email>"}, SELECT:["firstName","lastName","email"])` → `planhat_user_id`, display name (or use the pre-resolved table in `context/planhat-schema.md` § Planhat User IDs).
-2. `get_model_record(MODEL:"User", OBJECT_ID:"{planhat_user_id}", SELECT:["custom.AISE Identity"])` → parse name, timezone.
+2. `get_model_record(MODEL:"User", OBJECT_ID:"{planhat_user_id}", SELECT:["custom.AISE Identity"])` — both this and the field in step 3 are HTML rich text (`<p>Key: value</p>` per line, not `\n`-separated; strip tags before parsing — see `context/planhat-user-profile.md`) → parse name, timezone.
 3. `get_model_record(MODEL:"User", OBJECT_ID:"{planhat_user_id}", SELECT:["custom.AISE Leadership Workspace"])` → parse workspace fields (Notion templates DB ID, per-cadence format prefs, Gong keywords, Slack channels).
 4. `notion-get-users` (self) → `notion_user_id`, display name — still needed for Notion-scoped queries below (`Customer.Owner` filters etc.), since Planhat and Notion use different identifiers for the same person.
 

@@ -46,7 +46,7 @@ No required arguments. Optional:
 
 ### 1. Resolve the target date range
 
-Parse the date argument into an inclusive `start_date`–`end_date` pair. Resolve the user's time zone via `list_model_records(MODEL:"User", FILTER:{"email[equal to]":"<email>"}, SELECT:["firstName","lastName","email"])` → `planhat_user_id` (or the pre-resolved table in `context/planhat-schema.md` § Planhat User IDs), then `get_model_record(MODEL:"User", OBJECT_ID:"{planhat_user_id}", SELECT:["custom.AISE Identity"])` → parse the `Timezone` line.
+Parse the date argument into an inclusive `start_date`–`end_date` pair. Resolve the user's time zone via `list_model_records(MODEL:"User", FILTER:{"email[equal to]":"<email>"}, SELECT:["firstName","lastName","email"])` → `planhat_user_id` (or the pre-resolved table in `context/planhat-schema.md` § Planhat User IDs), then `get_model_record(MODEL:"User", OBJECT_ID:"{planhat_user_id}", SELECT:["custom.AISE Identity"])` — the field is HTML rich text (`<p>Key: value</p>` per line, not `\n`-separated; strip tags before parsing — see `context/planhat-user-profile.md`) → parse the `Timezone` line.
 
 | Argument                  | Resolves to                                                                 |
 |---------------------------|------------------------------------------------------------------------------|

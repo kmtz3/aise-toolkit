@@ -159,6 +159,26 @@ If two records tie on your sort field, you're back to arbitrary. Either pick a f
 
 **12. Filter values must match the stored type.** Booleans are `true` / `false` unquoted; picklist and text values are quoted strings and are case-sensitive. `"value": "true"` on a boolean field matches nothing.
 
+**13. `<<field>>` substituted into a filter `value` needs quotes unless it's numeric or boolean.** The `<<>>` token is replaced with raw text *before* the surrounding JSON is parsed. A number (`<<arr>>` → `150000`) or boolean (`<<custom.Is NRR>>` → `true`) is already a valid bare JSON token, so leave those unquoted. A string, date, or ObjectId field (`<<owner>>`, `<<customerFrom>>`, `<<custom.Segment>>`) substitutes as raw unquoted characters — `<<owner>>` becomes `6a44ef76c9aade50502936d5`, and `<<customerFrom>>` becomes something like `2026-01-01T00:00:00.000Z` — neither of which is a valid bare JSON literal. Left unquoted, saving the formula throws `SyntaxError: Unexpected token '<' ... is not valid JSON` (you'll see the literal `<<` in the error snippet, meaning substitution never even ran before the parser choked). Fix: wrap it — `"value": "<<owner>>"`, `"value": "<<customerFrom>>"`. Pattern D below was corrected for this; treat any older copy of that example (or anything hand-written before this note existed) as needing the same fix.
+
+**14. The field's declared data type is separate from the formula text, and mismatches fail 100% silently — confirmed in production.** A field built with a `FIND(Conversation.date & {...})` formula but created as fieldType **Text** instead of **Date** returned blank on every single record, even ones with a confirmed matching Conversation. `get_model_action_parameters` on the model will show the mismatch directly (e.g. `{"id": "custom.Last AISE Email", "fieldType": "text"}` when the formula clearly returns a date) — check this before re-debugging the formula logic itself. Changing the formula text does nothing; the field's type has to be edited in Manage Fields.
+
+**15. `DATES_MAXOF` (and likely `MIN`/`MAX` generally) does not treat a missing side as "ignore it" — confirmed in production.** If either input is empty, the whole function returns blank instead of falling back to the populated one. When either side can legitimately be empty (e.g. an account with sessions logged but no AISE-involved email yet, or vice versa), guard it:
+
+```
+IF(
+  IS_EMPTY(<<custom.Field A>>),
+  <<custom.Field B>>,
+  IF(
+    IS_EMPTY(<<custom.Field B>>),
+    <<custom.Field A>>,
+    DATES_MAXOF(<<custom.Field A>>, <<custom.Field B>>)
+  )
+)
+```
+
+Returns whichever side is populated when the other is empty, and the true max only when both have values. Same-model `IS_EMPTY()` works on custom fields exactly as it does on `FIND()` results (see gotcha #4).
+
 ---
 
 ## Worked patterns
@@ -215,13 +235,13 @@ Return `""` rather than a partial label when the name is missing — a bare vers
 COUNT(Conversation & {
   "filters": [
     {"op": "equal to", "field": {"id": "type"}, "value": "🏗️ Architecting"},
-    {"op": "more than", "field": {"id": "date"}, "value": <<customerFrom>>},
-    {"op": "less than", "field": {"id": "date"}, "value": <<renewalDate>>}
+    {"op": "more than", "field": {"id": "date"}, "value": "<<customerFrom>>"},
+    {"op": "less than", "field": {"id": "date"}, "value": "<<renewalDate>>"}
   ]
 })
 ```
 
-Field type: **Number**. Same-model `<<>>` references can be used as filter *values* inside a cross-model query.
+Field type: **Number**. Same-model `<<>>` references can be used as filter *values* inside a cross-model query — but quote them (see gotcha #13). Unquoted, this exact formula throws a JSON syntax error the moment `customerFrom` or `renewalDate` has a real date in it.
 
 ### E. Most recent completed renewal date
 
@@ -237,23 +257,40 @@ FIND(License.renewalDate & {
 
 Field type: **Date**.
 
+### F. Filtering on a same-model field that identifies "who owns this record" (e.g. the assigned rep)
+
+```
+FIND(Conversation.date & {
+  "filters": [
+    {"op": "equal to", "field": {"id": "type"}, "value": "email"},
+    {"op": "equal to", "field": {"id": "users.id"}, "value": "<<owner>>"}
+  ],
+  "sort": {"date": -1},
+  "limit": 1
+})
+```
+
+Field type: **Date**. `owner` is an ObjectId field on the base model (e.g. Company) — quoted per gotcha #13. Note the limitation this doesn't solve: `Conversation.users` does not distinguish To/CC/BCC (confirmed against raw Gmail headers — a cc'd participant appears in `users` identically to a To recipient). This filter tells you "the assigned rep was somewhere on the thread," not "was directly addressed." True To/CC precision requires an automation reading the raw `parts[].toAddresses` / `ccAddresses` array, which formula filters can't reach (see gotcha #11 and `planhat-automations`).
+
 ---
 
 ## Debugging checklist
 
 Work this in order — the causes are roughly ordered by how often they're the culprit.
 
-1. **Field data type matches the return value?** Text formula in a Number field renders blank with no error.
+1. **Field data type matches the return value?** Text formula in a Number field renders blank with no error — check `fieldType` in `get_model_action_parameters` against what the formula actually returns (see gotcha #14). This has been the root cause more than once; check it before re-reading the formula text.
 2. **Direction legal?** Confirm the formula lives on the parent model, not the child.
 3. **Does the field exist on this model at all?** Check Manage Fields. A non-existent field returns empty with no error — this is the single fastest thing to rule out.
 4. **Prefix is `custom.`?** Not `custom_fields.` (REST API form) and not `customFields.`.
 5. **Filter field IDs stripped of the model name?** `{"id": "status"}`, not `{"id": "LineItem.status"}`.
 6. **Filter values the right type and case?** Unquoted booleans, exact-case picklist strings.
-7. **Blank result — no match, or blank field?** Add a temporary `COUNT()` with identical filters to tell them apart.
-8. **Wrong record returned?** You have `"limit": 1` without `"sort"`, or your sort field ties. Check whether the account has overlapping active child records.
-9. **Repeated lookups drifted?** Diff the options blocks character by character — a stray filter in one branch is the classic cause of a formula that works on most records and fails on a few.
-10. **Custom model root key bare?** `subscription_line_item.field`, not `custom.subscription_line_item.field`.
-11. **Still stuck?** Narrow to a single `FIND()` with one filter, confirm it returns anything at all on a record you know should match, then add filters back one at a time.
+7. **`SyntaxError: Unexpected token '<' ... is not valid JSON` on save?** A `<<field>>` replacement code in a filter `value` needs quotes — see gotcha #13. This is a save-time JSON parse failure, not a runtime formula bug.
+8. **Blank result — no match, or blank field?** Add a temporary `COUNT()` with identical filters to tell them apart.
+9. **Wrong record returned?** You have `"limit": 1` without `"sort"`, or your sort field ties. Check whether the account has overlapping active child records.
+10. **Repeated lookups drifted?** Diff the options blocks character by character — a stray filter in one branch is the classic cause of a formula that works on most records and fails on a few.
+11. **Custom model root key bare?** `subscription_line_item.field`, not `custom.subscription_line_item.field`.
+12. **Still stuck?** Narrow to a single `FIND()` with one filter, confirm it returns anything at all on a record you know should match, then add filters back one at a time.
+13. **Combining two formula fields with `MAX`/`MIN`/`DATES_MAXOF` and it's blank whenever one input is empty?** That's expected behavior, not a bug — see gotcha #15 for the `IF(IS_EMPTY(...))` guard.
 
 ---
 
@@ -265,5 +302,6 @@ Move to an automation (see `planhat-automations`) when you need:
 - A **written, stamped value** rather than a live computed one
 - Multi-key sorting or tiebreaker logic the `sort` object can't express
 - Any transformation needing real procedural logic — string parsing, loops, conditionals more than a couple of levels deep
+- To/CC/BCC-precise participant matching on emails (see Pattern F) — the raw header split lives in `Conversation.parts`, which formula filters cannot reach
 
 Formulas recalculate live and never go stale; that's their advantage. Reach for an automation only when the formula engine genuinely can't express the thing.

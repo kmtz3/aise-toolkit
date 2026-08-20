@@ -1,6 +1,6 @@
 ---
 name: ph-migrate-notion-data
-description: Migrate Notion Customer Tracker data into Planhat — Company field sync (phase, Journey Status, Spark, Priority), Delivered sessions as Conversations, and all Tasks as Tasks. Scoped per customer, a list, or all of an AISE's book. Uses externalId/sourceId dedup — safe to re-run.
+description: Migrate Notion Customer Tracker data into Planhat — Company field sync (phase, Journey Status, Spark, Priority), Delivered sessions as Conversations, and all Tasks as Tasks. Scoped per customer, a list, or all of an AISE's book. Uses normalized externalId/sourceId dedup, checked in both hyphen-stripped and dashed form — safe to re-run.
 argument-hint: "[--customer <name> | --customers <n1,n2>] [--aise <name>] [--dry-run]"
 ---
 
@@ -36,4 +36,8 @@ Read the procedure in [`agents/ph-migrate-notion-data.md`](../../agents/ph-migra
 
 ## Safe to re-run
 
-The migration uses `externalId` (Conversations) and `sourceId` (Tasks) as dedup keys. Re-running against a customer that was already migrated will skip existing records and only create net-new ones. Company field sync is always a write (idempotent — same value overwrites same value).
+The migration uses `externalId` (Conversations) and `sourceId` (Tasks) as dedup keys, always normalized to hyphen-stripped lowercase hex before writing or comparing (the Notion MCP returns page `id` as a dashed UUID — writing that raw form breaks dedup and silently duplicates records). Re-running against a customer that was already migrated will skip existing records and only create net-new ones. Company field sync is always a write (idempotent — same value overwrites same value). A post-run verification pass checks for duplicate `externalId` groups and unattributed (`users: []`) Conversations — see `agents/ph-migrate-notion-data.md` §5.
+
+## Note on session-type counts vs Notion
+
+Notion `🎓 Training` maps to Planhat `🎓 Enablement`, and both Notion `📦 Other` and `🗣️ Sync` collapse into Planhat's `🔁 Sync`. This is intentional (see `context/notion-planhat-field-mapping.md`) — it means Notion and Planhat session-type counts will never tie out exactly for these categories. Don't mistake the discrepancy for data loss during reconciliation.

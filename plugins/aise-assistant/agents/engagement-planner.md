@@ -57,7 +57,7 @@ Read (or grep for relevant sections):
 
 ### 4.5 Fetch voice preferences (mandatory before drafting)
 
-Resolve `planhat_user_id` via `list_model_records(MODEL:"User", FILTER:{"email[equal to]":"<email>"}, SELECT:["firstName","lastName","email"])` (or the pre-resolved table in `context/planhat-schema.md` § Planhat User IDs). Then `get_model_record(MODEL:"User", OBJECT_ID:"{planhat_user_id}", SELECT:["custom.AISE Profile preferences"])` → parse sign-off, em dashes, semicolons, English variant, casual register, specific patterns. Apply every rule to the plan prose (phase descriptions, session rationales, risks, asks). Pull fresh — don't rely on memorized rules. If the field is empty, warn inline and fall back to `context/communication-style-guide.md`.
+Resolve `planhat_user_id` via `list_model_records(MODEL:"User", FILTER:{"email[equal to]":"<email>"}, SELECT:["firstName","lastName","email"])` (or the pre-resolved table in `context/planhat-schema.md` § Planhat User IDs). Then `get_model_record(MODEL:"User", OBJECT_ID:"{planhat_user_id}", SELECT:["custom.AISE Profile preferences"])`. **The field is HTML rich text** (`<p>Key: value</p>` per line, not `\n`-separated — see `context/planhat-user-profile.md`) — strip tags before parsing. Parse sign-off, em dashes, semicolons, English variant, casual register, specific patterns. Apply every rule to the plan prose (phase descriptions, session rationales, risks, asks). Pull fresh — don't rely on memorized rules. If the field is empty, warn inline and fall back to `context/communication-style-guide.md`.
 
 ### 5. Draft the plan
 
