@@ -17,6 +17,7 @@ If the Planhat User lookup fails, or `custom.AISE Identity` is empty: run the **
 **1. Load universal context:**
 - `${CLAUDE_PLUGIN_ROOT}/context/project-instructions.md` — full workflow rules and ground rules
 - `${CLAUDE_PLUGIN_ROOT}/context/notion-schema.md` — Customer Tracker database schema
+- `${CLAUDE_PLUGIN_ROOT}/context/initiatives/README.md` — active time-boxed motions. If any initiative file has `Status: Active`, read it before customer-session work; it overrides the general workflow for accounts in its scope.
 
 After loading, confirm you are ready and summarize: the user's name, their Notion user ID, and the 3 most relevant commands for what they've described (if anything). If identity values still show `<TBD>` placeholders, prompt the user to run `/assistant-setup` first.
 

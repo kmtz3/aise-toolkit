@@ -29,6 +29,11 @@ These are the canonical references for how I run sessions and think about the wo
 | `pb-aise-reference-guide.md` | Program structure, session-by-session "what good looks like" standards, Productboard data model, architecture rules, seat licensing, integrations landscape, setup checklists, common risks. **The default reference for anything about PB architecture, sessions, or methodology.** |
 | `context/score-cards.md` | Detailed scorecards for each session type (Discovery, Spark, Foundations, Insights, Prioritization, Roadmaps, Success Planning, QBR). Use when scoring a session, prepping a session to hit scorecard criteria, or diagnosing a weak session. |
 | `context/communication-style-guide.md` (universal) + `AISE Assistant Preferences` Notion page, Voice section (personal overlay) | How the user writes. Voice, tone, structure, email vs Slack patterns, handling uncertainty. **Always apply when drafting or rewriting anything the user will send.** Personal Notion preferences win where the two differ. |
+| `context/initiatives/` | Time-boxed GTM and adoption motions that temporarily override the normal session shape, naming, reporting target, and follow-up cadence for a defined set of accounts. **Check this folder before prepping, debriefing, or drafting anything for a customer session** – an active initiative wins over the defaults in this file for the parts it explicitly covers. Read `context/initiatives/README.md` for the contract, then the individual initiative file. |
+
+**Active initiatives take precedence.** Before any customer-session work, check whether the account is in scope of an initiative file whose `Status` is `Active`. If it is, that file overrides this one for the parts it covers – agenda, meeting naming, required outputs, where results get logged, follow-up cadence. Everything it does not cover falls back to the defaults here. If an initiative contradicts a permanent context file, say so out loud rather than resolving it silently. Accounts not in scope are unaffected.
+
+Currently active: `context/initiatives/spark-in-practice.md` (Ignition Meetings, from 2026-08-11, expected to run no more than 3 months).
 
 ---
 
@@ -198,6 +203,7 @@ When creating or updating customer records in Notion:
 - **Keep updates concise and structured** — bolded labels, bullets, same as my comms style.
 - **Link to source material** (Gong call, email thread, Slack message) when possible.
 - **Always surface the Notion page URL** in the chat confirmation after any create or update — direct link, no exceptions. This applies to direct writes and any sub-agent write (notion-writer, session-prepper, post-session-debrief, etc.).
+- **Always surface the Planhat record URL** on the same terms, for any Planhat record you write or cite (Conversation, Company, Task, EndUser). Build it from the record `_id` using the template in `context/planhat-schema.md` § Planhat Record URLs — `https://ws.planhat.com/productboard/home/data-explorer/<path-slug>?preview=<Model>.<_id>`. Never hand-wave a Planhat citation to a bare `https://productboard.planhat.com` or an invented `app.planhat.com/...` path; if you cannot build the real URL, name the record and its model plainly instead.
 - **Task priority, due date, and body content** — when not explicitly stated, apply the auto-priority and auto-due-date logic in `context/notion-writer-playbook.md` Operation 2. Always disclose the inferred value and one-line reason in the draft so the user can override. Every PB-side task page body must also include the "best shot" scaffold per Operation 2.
 
 ### 4.6 Planhat Dual-Write (Migration Mode)
@@ -284,6 +290,7 @@ Applied to every customer-facing or internal draft. Universal patterns live in `
 - **Preserve my decisions.** When rewriting my drafts, fix the structure and language — don't change what I committed to, scope I agreed, or dates I set.
 - **Scorecards are standards, not scripts.** Use them to diagnose and prep. Don't quote them verbatim at customers.
 - **Flag conflicts.** If two sources disagree (e.g., Gong vs Notion vs what I said in chat), surface it; don't silently pick.
+- **Cite records with real links.** Every Planhat or Notion record referenced in chat, a brief, a Slack debrief, or session notes gets a working direct URL built from its actual ID — see `context/planhat-schema.md` § Planhat Record URLs for the Planhat template. A guessed or root-domain link is worse than no link: it reads as verified when it is not.
 - **Customer confidentiality.** This is post-sales customer work. Don't paste customer names, deal sizes, or sensitive details into any external-facing artefact unless I explicitly say so.
 
 ---

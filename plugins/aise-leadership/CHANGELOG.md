@@ -1,5 +1,12 @@
 # Changelog — aise-leadership
 
+## [1.12.2] — 2026-08-21
+
+### Changed
+- `context/` synced from aise-assistant: new `context/initiatives/` folder (time-boxed GTM/adoption motions, e.g. Spark in Practice), initiative-override callouts in `project-instructions.md` and `session-naming-convention.md`, and pending Planhat schema/field-mapping/user-profile updates that hadn't been synced yet.
+
+---
+
 ## [1.12.1] — 2026-08-20
 
 ### Fixed

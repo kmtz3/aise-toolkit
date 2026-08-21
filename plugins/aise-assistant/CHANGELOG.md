@@ -5,6 +5,24 @@ Format: `## [version] — YYYY-MM-DD` followed by bullet points grouped by type.
 
 ---
 
+## [2.38.0] — 2026-08-21
+
+### Added
+- `context/initiatives/` — new folder for time-boxed GTM and adoption motions. These arrive with their own account list, gates, meeting shape, and success measure, and they contradict the permanent workflow on purpose; keeping each as a self-contained file means the contradictions do not outlive the motion and an ended motion can be archived in one move. `README.md` defines the file contract (status block, scoped accounts, mandatory § Assistant rules), the precedence model (an active initiative wins over `project-instructions.md` for the parts it explicitly covers, defaults apply to everything else), the "never resolve a conflict silently" rule, and the `Last synced from source` staleness convention.
+- `context/initiatives/spark-in-practice.md` — the Ignition Meetings motion (active from 2026-08-11, expected ≤ 3 months), summarized from Boge's [PB operating doc](https://pb.productboard.com/document/MTpQcm9kdWN0RG9jdW1lbnRCb2FyZDozZWUzMjZjMi1jMjI4LTRjOGMtYmY0OS01ZGU5M2QxYmJiNzE=). Covers: the one-job-on-their-data premise and the return-rate problem behind it; the hard separation from the Sept 1 Ignite conversion push; the T1–T6 tiering with Klara's 30 scoped accounts listed by tier, AE, ARR, health and Spark makers/wk; the three booking gates; the mandatory calendar naming key; the five AISE pre-work items including the remote-access path and its undocumented-scope caveat; the 5/5/5/35/10 meeting shape with the two required closing artifacts; the four in-room questions and four objections; the day-7/day-14 follow-up; the two day-14 pass conditions; and the three required per-meeting outputs with their Salesforce-account-notes destination.
+- `context/initiatives/spark-in-practice.md` § Assistant rules — the concrete behavior changes for this plugin's agents while the motion is active: `session-prepper` gate-checks before producing a brief and never drafts a demo agenda for an in-scope account; `post-session-debrief` records the two-week goal verbatim with a named owner, writes the three outputs to Salesforce (not Planhat) until told otherwise, creates day-7 and day-14 checks, and calls out a session that closed without both artifacts; `draft-email`/`draft-followup` never propose a demo or overview to an in-scope account and never ask the customer to run the workspace assessment, which is AISE pre-work.
+- `context/initiatives/spark-in-practice.md` § Accounts graduate into scope — the tier list is a 12 Aug snapshot, so a T5 account that enables Spark now meets the in-scope rule and must be reflagged rather than left as T5. First entry: weclapp GmbH, enabled 2026-08-20.
+
+### Changed
+- `context/project-instructions.md` § 2: added the `context/initiatives/` row to the reference table, plus an **Active initiatives take precedence** paragraph naming what an initiative may override (agenda, meeting naming, required outputs, logging destination, follow-up cadence) and what falls back to the defaults.
+- `skills/aise-context/SKILL.md`: `context/initiatives/README.md` added to the universal context load, so active motions are picked up at session start rather than discovered mid-task.
+- `context/session-naming-convention.md`: new initiative-override callout at the top. An active initiative can mandate its own calendar-event title — `spark-in-practice.md` requires `Spark in Practice — [Account] × Productboard` verbatim, since the weekly forecast report reads the title and a meeting without it does not exist in reporting. The `[TYPE][N]` convention still governs the session record; only the calendar title is overridden.
+
+### Notes
+- The `Spark in Practice — [Account] × Productboard` string is a reporting key, not prose, and is the one documented exception to the em dash ban in `context/communication-style-guide.md`. Both files say so explicitly so the string is not "corrected" into a broken key.
+
+---
+
 ## [2.37.0] — 2026-08-20
 
 ### Added

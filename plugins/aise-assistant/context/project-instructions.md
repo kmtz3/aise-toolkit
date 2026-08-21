@@ -29,6 +29,11 @@ These are the canonical references for how I run sessions and think about the wo
 | `pb-aise-reference-guide.md` | Program structure, session-by-session "what good looks like" standards, Productboard data model, architecture rules, seat licensing, integrations landscape, setup checklists, common risks. **The default reference for anything about PB architecture, sessions, or methodology.** |
 | `context/score-cards.md` | Detailed scorecards for each session type (Discovery, Spark, Foundations, Insights, Prioritization, Roadmaps, Success Planning, QBR). Use when scoring a session, prepping a session to hit scorecard criteria, or diagnosing a weak session. |
 | `context/communication-style-guide.md` (universal) + `AISE Assistant Preferences` Notion page, Voice section (personal overlay) | How the user writes. Voice, tone, structure, email vs Slack patterns, handling uncertainty. **Always apply when drafting or rewriting anything the user will send.** Personal Notion preferences win where the two differ. |
+| `context/initiatives/` | Time-boxed GTM and adoption motions that temporarily override the normal session shape, naming, reporting target, and follow-up cadence for a defined set of accounts. **Check this folder before prepping, debriefing, or drafting anything for a customer session** – an active initiative wins over the defaults in this file for the parts it explicitly covers. Read `context/initiatives/README.md` for the contract, then the individual initiative file. |
+
+**Active initiatives take precedence.** Before any customer-session work, check whether the account is in scope of an initiative file whose `Status` is `Active`. If it is, that file overrides this one for the parts it covers – agenda, meeting naming, required outputs, where results get logged, follow-up cadence. Everything it does not cover falls back to the defaults here. If an initiative contradicts a permanent context file, say so out loud rather than resolving it silently. Accounts not in scope are unaffected.
+
+Currently active: `context/initiatives/spark-in-practice.md` (Ignition Meetings, from 2026-08-11, expected to run no more than 3 months).
 
 ---
 

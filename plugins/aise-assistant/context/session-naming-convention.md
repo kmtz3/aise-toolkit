@@ -1,5 +1,7 @@
 # Session Naming Convention
 
+> **Initiative override.** An active initiative in `context/initiatives/` can mandate its own calendar-event title, in which case that title wins for the calendar event and this convention still applies to the session record. Currently: `spark-in-practice.md` requires `Spark in Practice — [Account] × Productboard` verbatim on the calendar invite, because the weekly forecast report reads the title. Check the initiatives folder before renaming anything.
+
 ## Format
 
 ```

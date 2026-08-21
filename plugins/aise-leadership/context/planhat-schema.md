@@ -1,8 +1,8 @@
 # Planhat Schema & Notion↔Planhat Traversal Guide
 
-> **Status:** In-transition. Notion remains the primary AISE working record (sessions, tasks, program plans). Planhat is the CS platform of record for account health, revenue, and Spark/AI readiness tracking. During the transition, **both systems must be kept in sync** for Spark fields. Agents should read from Notion for session/program context and from Planhat for CS health signals.
+> **Status:** In-transition, moving toward Planhat as the primary AISE working record. Session debrief (`post-session-debrief`), product feedback discovery (`/log-feedback`), and account health/revenue/Spark tracking are Planhat-only as of 2026-08-19. Notion remains the working record only for agents/skills not yet migrated (session-prep, account-plan, engagement-planner, and historical data via `/session-backfill`) — treat it as a legacy system being phased out, not a co-equal source of truth. During the transition, Spark fields must still be kept in sync both ways until the remaining Notion-based agents migrate.
 >
-> **Last updated:** 2026-07-10
+> **Last updated:** 2026-08-19
 
 ---
 
@@ -12,7 +12,46 @@
 |---|---|
 | MCP server ID | `7441c372-4b65-4805-95b0-baf2a081ceb3` |
 | Key tools | `list_model_records`, `get_model_record`, `update_model_record`, `search_records`, `get_model_action_parameters` |
-| Available models | `Company`, `EndUser`, `Task`, `Conversation`, `Deal`, `Nps`, `Issue`, `Workflow`, `Churn`, `Document`, `User`, `Product`, `LineItem`, `EmailTemplate`, `Comment` |
+| Available models | `Company`, `EndUser`, `Task`, `Conversation`, `Deal`, `Nps`, `Issue`, `Workflow`, `Churn`, `Document`, `User`, `Product`, `LineItem`, `EmailTemplate`, `Comment`, `Attachment` |
+
+---
+
+## Planhat Record URLs
+
+Planhat record links follow the workspace data-explorer route. Build them from the record's `_id` — do not invent `app.planhat.com/...` paths, and never cite a Planhat record without a link when one can be built.
+
+**Template**
+
+```
+https://ws.planhat.com/productboard/home/data-explorer/<path-slug>?preview=<Model>.<_id>
+```
+
+- `productboard` — tenant slug for this workspace. Constant.
+- `<path-slug>` — lowercase model slug in the route (see table below).
+- `<Model>` — model name exactly as the MCP names it (`Conversation`, `Company`, `Task`, …), capitalized.
+- `<_id>` — the record `_id` returned by `list_model_records` / `get_model_record` / `search_records`.
+
+**Worked example** — Conversation `6a8495b8855d99d003a36277`:
+
+```
+https://ws.planhat.com/productboard/home/data-explorer/conversation?preview=Conversation.6a8495b8855d99d003a36277
+```
+
+**Path slugs**
+
+| Model | `<path-slug>` | Status |
+|---|---|---|
+| `Conversation` | `conversation` | ✅ Verified 2026-08-19 |
+| `Company` | `company` | ⚠️ Inferred from the pattern — confirm before first use |
+| `Task` | `task` | ⚠️ Inferred |
+| `EndUser` | `enduser` | ⚠️ Inferred |
+| `User` | `user` | ⚠️ Inferred |
+| `Deal` | `deal` | ⚠️ Inferred |
+| `Asset` | `asset` | ⚠️ Inferred |
+
+To confirm an inferred slug: open the record in Planhat, copy the address bar, compare against the template, and update this table — mark it Verified with the date. If a model's route turns out not to follow the pattern, record the real route here rather than leaving agents to guess.
+
+**When citing a Planhat record** (chat responses, briefs, Slack debriefs, session notes): use `[<subject or name>](<url>)`. If the `_id` is unknown, or the path slug for that model is still Inferred and you cannot confirm it, name the record and its model plainly instead of shipping a link that 404s.
 
 ---
 
@@ -375,31 +414,47 @@ Used when setting `ownerId`, `users`, or `followers` on Planhat records.
 
 > **Design note:** Planhat Conversations are the canonical home for AISE session history. AISE writes all delivered sessions (external and internal) as Conversations with `source: "AISE"`, using `externalId` as the dedup key back to Notion. Existing Conversations in Planhat are mostly Zendesk tickets (`source: "zendesk"`) and calendar events synced as Tasks (`mainType: event`). AISE-originated sessions are a distinct type and won't collide with those sources.
 
+### `externalId` convention — two live sources, no collision risk
+
+Two different tools write Conversations from session data, each with its own `externalId` format:
+
+| Path | `externalId` source | Notes |
+|---|---|---|
+| `/session-backfill` | Notion Session page ID (32-char hex) | Historical migration — one-time backfill of past sessions still tracked in Notion. |
+| `/session-debrief` (`post-session-debrief`) | Google Calendar event ID | Live, per-session debrief path — Notion is not consulted. |
+
+`externalId` is scoped per-company, and the two ID formats never collide (different length/character set), so both conventions coexist safely. Don't assume a Conversation's `externalId` is a Notion page ID just because older records use that format — check the format before parsing it.
+
 ### How to look up a Planhat Conversation for a given session
 
-**Check before creating:** use `externalId` as the dedup key.
+**Check before creating:** use `externalId` as the dedup key. ⚠️ The Notion MCP returns page `id` as a dashed UUID (`39d97e9c-7d4f-802f-add4-f23c53322209`) — Planhat `externalId` must always be the hyphen-stripped, lowercase 32-char form (`notion_id.replace('-', '').lower()`). Writing the dashed form breaks dedup and silently duplicates the session on the next run. Until historical data is confirmed clean, check **both** forms:
 
 ```
 list_model_records(
   MODEL: "Conversation",
-  FILTER: {"externalId[equal to]": "<notion-session-page-id>"},
+  FILTER: {"externalId[equal to]": "<normalized-32-char-hex>"},
+  SELECT: ["subject", "type", "date", "companyId", "externalId"]
+)
+list_model_records(
+  MODEL: "Conversation",
+  FILTER: {"externalId[equal to]": "<original-dashed-uuid>"},
   SELECT: ["subject", "type", "date", "companyId", "externalId"]
 )
 ```
 
-If a result is returned, update it rather than creating a duplicate.
+If either query returns a result, update it rather than creating a duplicate — and rewrite `externalId` to the normalized form if it was stored dashed.
 
 ### Field-level mapping: Notion Session → Planhat Conversation
 
 | Notion field | Planhat field | Type | Direction | Notes |
 |---|---|---|---|---|
-| Session page ID (URL) | `externalId` | string | Write on create | **Dedup key.** Extract the 32-char hex ID from the Notion page URL. Unique within a company. |
+| Session page ID (URL) | `externalId` | string | Write on create | **Dedup key.** Extract the Notion page `id`, then normalize: strip hyphens, lowercase. The Notion MCP returns a dashed UUID — never write that raw form. Unique within a company. |
 | `Name` (title) | `subject` | string | Write | Session name as-is. |
 | `Type` (select) | `type` | string | Write | See value mapping below. Custom string — Planhat accepts any value. |
 | `Call Date` | `date` | datetime | Write | ISO 8601. Use `date:Call Date:start` from Notion. |
 | `Session Length (h)` | `custom.Call Duration` | number | Write | Convert hours to minutes: `Session Length (h) × 60`. |
 | `Customers` (relation) | `companyId` | string | Write | Planhat Company `_id`. Resolve via name-search or `sourceId` lookup (see Company section). |
-| `Delivered By` (person) | `users` | array | Write | Array of `{"id": "<planhat-user-id>"}`. Resolve from AISE User ID table above. |
+| `Delivered By` (person, all values) | `users` | array | Write | Array of `{"id": "<planhat-user-id>"}`, one per presenter — never truncate to the first value (co-delivered sessions must keep all presenters). Resolve each: static User ID table above first, then live lookup (`notion-get-users` → email → `list_model_records(MODEL: "User", FILTER: {"email[equal to]": "<email>"})`) on a table miss. If still unresolvable, fall back to the session's `Current Account Owner`, then the Company's `owner`. Omit only if all fail, and log a `NEEDS ATTRIBUTION` warning. |
 | `Next Steps` / session page body | `description` | string | Write | Summary/notes from the session. Truncate to ~2000 chars if long. |
 | `Gong call` (url) | `custom.Gong URL` | string | Write | Write the URL to `custom.Gong URL`. Do **not** append to `description`. |
 | `Call Status` | _(not mapped)_ | — | — | Notion-only status lifecycle. Not meaningful in Planhat. |
@@ -465,7 +520,7 @@ If a result is returned, update it rather than creating a duplicate.
 | `externalId` | string | — | Notion Session page ID. **Dedup key.** |
 | `source` | string | — | Always `"AISE"`. |
 | ~~`activityTags`~~ | array | — | ~~`["Spark"]` if `Spark conversation = YES`.~~ **Not writable via MCP — silently rejected. Apply manually in Planhat UI.** |
-| `custom.Prep Notes` | string | — | Plain-text prep brief written by session-prepper before the session. Format: HTML — `<p><strong>Goals</strong></p><p>...</p><p><strong>Open Items</strong></p><ul><li><p>...</p></li></ul><p><strong>Watch-fors</strong></p><ul><li><p>...</p></li></ul>`. No `<h>` tags — use `<strong>` for section labels.. Carry over from the linked Task when writing the Conversation post-session. |
+| `custom.Prep Notes` | string | — | Prep brief written by session-prepper before the session. Format: HTML — `<p><strong>Goals</strong></p><p>...</p><p><br></p><p><strong>Open Items</strong></p><ul><li><p>...</p></li></ul><p><br></p><p><strong>Watch-fors</strong></p><ul><li><p>...</p></li></ul>`. No `<h>` tags — use `<strong>` for section labels. **Insert an empty `<p><br></p>` spacer between sections** — consecutive `<p>` tags render with no gap in Planhat's UI otherwise. **Apply the user's `custom.AISE Profile preferences` voice rules to the sentence content** (dash style, etc.) — see `agents/session-prepper.md` § 1b/5b; this field has shipped with em dashes and no section spacing before that was fixed. Carry over from the linked Task when writing the Conversation post-session. |
 | `transcript` | string | — | Full transcript text if available. |
 | `taskId` | objectId | — | Links this conversation to its originating Planhat Task. Set when writing a Done Notion Task as a Conversation — look up the existing Planhat Task by `sourceId` and pass its `_id` here. Optional on backfill if the Task doesn't exist yet in Planhat. |
 | `category` | string | — | One of: `Support`, `Feedback`, `Sales`, `Expansion`, `Billing & Contracts`, `Renewals`, `Legal`, `General Enquires`, `Spam`, `Marketing`. Leave blank for AISE sessions unless relevant. |
@@ -524,7 +579,7 @@ Alternatively, use `search_records(QUERY: "<task title>")` and scan results for 
 
 | Notion field | Planhat field | Type | Direction | Notes |
 |---|---|---|---|---|
-| Notion Task page ID (URL) | `sourceId` | string | Write on create | **Dedup key.** Extract 32-char hex ID. |
+| Notion Task page ID (URL) | `sourceId` | string | Write on create | **Dedup key.** Extract the Notion page `id`, then normalize: strip hyphens, lowercase — same rule as Conversation `externalId` above. |
 | `Task` (title) | `action` | string | Write | Task title as-is. |
 | `Status` | `status` | string | Write | See value mapping below. |
 | `Due Date` | `endTime` | datetime | Write | ISO 8601. Set time to `T00:00:00.000Z` for date-only values. |
@@ -576,7 +631,7 @@ All Notion Task statuses write to the Planhat Task model. Only a `status` *trans
 | `ownerId` | objectId | — | Planhat User `_id` of the person responsible. |
 | `sourceId` | string | — | Notion Task page ID. **Dedup key.** |
 | `custom.Priority` | string | — | `"P1"`, `"P2"`, `"P3"` mapped from Notion `Priority` field. |
-| `custom.Prep Notes` | string | — | Plain-text prep brief written by session-prepper. Format: HTML — `<p><strong>Goals</strong></p><p>...</p><p><strong>Open Items</strong></p><ul><li><p>...</p></li></ul><p><strong>Watch-fors</strong></p><ul><li><p>...</p></li></ul>`. No `<h>` tags — use `<strong>` for section labels.. Read and carried to the linked Conversation during post-session debrief. |
+| `custom.Prep Notes` | string | — | Prep brief written by session-prepper. Format: HTML — `<p><strong>Goals</strong></p><p>...</p><p><br></p><p><strong>Open Items</strong></p><ul><li><p>...</p></li></ul><p><br></p><p><strong>Watch-fors</strong></p><ul><li><p>...</p></li></ul>`. No `<h>` tags — use `<strong>` for section labels. **Insert an empty `<p><br></p>` spacer between sections** — consecutive `<p>` tags render with no gap in Planhat's UI otherwise. **Apply the user's `custom.AISE Profile preferences` voice rules to the sentence content** (dash style, etc.) — see `agents/session-prepper.md` § 1b/5b. Read and carried to the linked Conversation during post-session debrief. |
 | ~~`activityTags`~~ | array | — | ~~Freeform tags for filtering.~~ **Not writable via MCP — silently rejected. Apply manually in Planhat UI.** |
 | `endusers` | array | — | Customer contacts involved: `[{"id": "<enduser-id>"}]`. |
 
@@ -904,6 +959,45 @@ list_model_records(
 
 ---
 
+## Comment (Planhat)
+
+> Used by `post-session-debrief` to post next-session planning + account-notable updates on the Company after every debrief (replaces the old Notion "Customer page update" + "next-session planning notes" writes).
+
+### Key fields
+
+| Field ID | Type | Notes |
+|---|---|---|
+| `commentableType` | string | **Required.** Target model — `"Company"` for AISE account-level comments. Also supports `Conversation`, `Task`, and most other models. |
+| `commentableId` | objectId | **Required.** `_id` of the target record. |
+| `text` | string | **HTML restricted to `<p>`, `<a>`, and mention tags only** — bold, bullets, and other markup are not supported and will render broken or get stripped. Structure multi-part content as separate `<p>` paragraphs, not a bulleted list. |
+
+### Write rules
+
+- **Content is plain-paragraph HTML only.** Don't reuse the `<strong>`/`<ul>` patterns used for Conversation/Task rich-text fields — Comment doesn't render them.
+- No dedup key — comments are additive. Don't post an empty or redundant comment; skip the write if there's nothing to say.
+
+---
+
+## Attachment (Planhat)
+
+> Used by `post-session-debrief` to attach the KDD doc (`kdd-builder` output) to the session's Conversation — the Planhat equivalent of the old Notion `KDDs — …` sub-page.
+
+### Key fields
+
+| Field ID | Type | Notes |
+|---|---|---|
+| `name` | string | Display name for the attachment. |
+| `documentableType` | string | **Required.** Target model — `"Conversation"` for session KDD attachments. |
+| `documentableId` | objectId | **Required.** `_id` of the target record. |
+| `sourceUrl` | string | **Required.** A public `http`/`https` URL, ≤25MB — **Planhat's server fetches and stores the file itself; there is no raw-content upload path.** |
+
+### Write rules
+
+- **`sourceUrl` must be directly fetchable, not a viewer page.** For Google Drive files, `https://drive.google.com/file/d/{id}/view` is an HTML wrapper and will not work — use `https://drive.google.com/uc?export=download&id={id}` instead, and only after the file has been explicitly shared "anyone with the link, reader" (Planhat's fetch isn't an authenticated Drive user, so default sharing silently fails).
+- Confidentiality: sharing a customer-facing doc "anyone with the link" is a deliberate, minimal-necessary exposure — apply the same judgment already used for diagrams leaving the Notion boundary. Don't widen sharing beyond what the Attachment step needs.
+
+---
+
 ## Models To Be Documented
 
 The following models exist in Planhat but have no current AISE migration use case. Use `get_model_action_parameters(MODEL: "<model>")` if needed.
@@ -911,6 +1005,4 @@ The following models exist in Planhat but have no current AISE migration use cas
 | Model | Notion equivalent | Notes |
 |---|---|---|
 | `Line Item` | Individual credit/session lines on Active Packages | SF SSOT. Read only. Contains `custom.AISE Working Sessions` (session quota per SKU). |
-| `Comment` | Notion page comments | Planhat Comments can be added to any record. No migration path. |
-| `Attachment` | Notion file attachments | Not mapped. |
 | `Email Template` | N/A | Planhat-native marketing/CS email templates. |
