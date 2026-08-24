@@ -5,6 +5,12 @@ Format: `## [version] — YYYY-MM-DD` followed by bullet points grouped by type.
 
 ---
 
+## [2.41.0] — 2026-08-24
+
+### Added
+- `agents/session-log-auditor.md` — new agent reconciling logged Planhat session history against what actually happened, rebuilt from Google Calendar and Gong per AISE, customer, or date range. Classifies every gap, wrong type, duplicate, artifact, and attribution error against Planhat Conversations; read-only by default, applies corrections with per-write read-back verification under `--fix`. Procedure encodes eleven hard-won rules from a full reference run over one AISE's 35-account book (source filtering, pagination caps, title-vs-date matching, calendar-title unreliability, shared-domain collisions, Gong-over-RSVP attendance, silent `endusers` write failures, `archived` writability, attribution root cause, session-type vocabulary drift, and duplicate-keeper selection).
+- `skills/session-audit/SKILL.md` — new `/session-audit` command exposing the auditor with `--aise`, `--customer`, `--from`/`--to`, `--fix`, `--attribution`, `--duplicates`, and `--dry-run` flags plus natural-language equivalents.
+
 ## [2.40.0] — 2026-08-24
 
 ### Added
