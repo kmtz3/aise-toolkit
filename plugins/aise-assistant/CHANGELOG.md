@@ -5,6 +5,13 @@ Format: `## [version] — YYYY-MM-DD` followed by bullet points grouped by type.
 
 ---
 
+## [2.39.0] — 2026-08-24
+
+### Changed
+- `agents/session-prepper.md` § 1: added a calendar agenda signal classification — a generic event description (blank, or only conferencing boilerplate like Zoom/Meet links and dial-in numbers) is discarded, while a specific one (named topics, an "Agenda:" line, questions to cover, a doc/deck link, a decision to make) is now treated as a first-class agenda source rather than ignored.
+- `agents/session-prepper.md` § 4 "Agenda + questions": reordered the primary-structure priority so a specific calendar agenda signal anchors the draft ahead of a Gmail/Slack customer-proposed agenda; if both exist, they're merged with the calendar description as the backbone.
+- `agents/daily-brief.md` topic-resolution priority order: moved the calendar event description check up (from priority 4/5 to priority 2/6), gated on the same specific/generic classification, so a real inserted agenda isn't buried behind weaker Glean signals. Generic calendar text remains a last-resort fallback, unchanged from before.
+
 ## [2.38.0] — 2026-08-21
 
 ### Added

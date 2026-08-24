@@ -28,6 +28,10 @@ This prevents context-window exhaustion before any writes land.
 - Session types: `🏗️ Architecting`, `🗣️ Sync`, `🎓 Training`, `👟 Kick off`, `🔎 Discovery`, `📦 Other`.
 - Map to specific program session (Discovery, Foundations, Insights, Prioritization, Roadmaps, Spark, Success Planning, QBR) — this drives which scorecard rows and reference-guide section to pull.
 
+**Calendar agenda signal:** read the event's `description` field. Classify it:
+- **Generic** — empty/whitespace, or only conferencing boilerplate (Zoom/Meet/Teams links, dial-in numbers, auto-generated scheduling footers). Discard; contributes nothing to the brief.
+- **Specific** — anything beyond that: named topics, an explicit "Agenda:" line or bullet list, questions to cover, links to a doc/deck for the call, references to a decision that needs to be made. Treat this as a **first-class agenda source**, not a fallback — carry it into Step 4's agenda synthesis alongside (and generally ahead of) a Gmail-sourced agenda, since it's what was put directly on the invite for this session. If both a specific calendar description and a customer-proposed Gmail agenda exist, merge them: the calendar description anchors the structure, email content fills gaps. Credit the source inline either way (e.g. _"From the calendar invite"_ / _"Adapted from [name]'s May 13 email"_).
+
 ### 1b. Fetch voice preferences (mandatory before drafting anything)
 
 Resolve `planhat_user_id` via `list_model_records(MODEL:"User", FILTER:{"email[equal to]":"<email>"}, SELECT:["firstName","lastName","email"])` (or the pre-resolved table in `context/planhat-schema.md` § Planhat User IDs). Then `get_model_record(MODEL:"User", OBJECT_ID:"{planhat_user_id}", SELECT:["custom.AISE Profile preferences"])`.
@@ -108,7 +112,7 @@ Keep the brief short and skimmable — bold labels, tight bullets, no prose para
 - **Program phase**: AP Working Notes + last session page → if empty or stale, Glean `chat` fallback tagged `⚠️ [Glean]`.
 - **Since last session**: pull from all four sources — (a) last session's Next Steps block in Notion, (b) Glean `gmail_search` past 14 days, (c) Glean Slack channel search (`source:slack "<#channel>" after:<last-session-date>`), (d) Glean search for open support tickets (`"<Customer>" support ticket` or `case`). Synthesize into tight bullets — one signal per bullet, source in parentheses when useful (e.g. `_(Slack, May 18)_`).
 - **Risks**: draw from the AP Working Notes, Glean signals above, and the common-risks table in `context/pb-aise-reference-guide.md`. Only include risks with real evidence — don't manufacture generic bullets.
-- **Agenda + questions**: synthesize from all context gathered. If a customer-proposed agenda was found in Gmail or Slack, use it as the **primary structure** — adapt by adding scorecard-required elements, not by replacing it. Credit the source inline (e.g. _"Adapted from [name]'s May 13 email"_).
+- **Agenda + questions**: synthesize from all context gathered. Primary structure, in priority order: (1) a **specific** calendar agenda signal from Step 1 — use it as the backbone; (2) a customer-proposed agenda found in Gmail or Slack, if no specific calendar signal exists; (3) otherwise synthesize from the rest of the gathered context. Whichever source anchors the structure, adapt by adding scorecard-required elements — don't replace it outright. Credit the source inline (e.g. _"From the calendar invite"_ / _"Adapted from [name]'s May 13 email"_).
 
 ### 4b. PM survey / usage data (Strategic Planning and Roadmaps sessions)
 

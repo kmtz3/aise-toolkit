@@ -80,10 +80,11 @@ Filter results to `model: "Task"`, `companyId = <resolved company id>`, and `sta
 For each external session, derive a 2-sentence topic summary using this priority order:
 
 1. **Planhat Task first** — if `custom.Prep Notes` has content (from B/C above), extract the `Goals` line. If empty but the Task has a `description`, use that.
-2. **Most recent Planhat Conversation** — if no usable Task content, query `list_model_records(MODEL: "Conversation", FILTER: {"companyId[equal to]": "<company-id>"}, SORT: "-date", LIMIT: 5)` and read the most recent `description`/`subject` for context on where things left off.
-3. **Glean fallback** — if Planhat has nothing, call `mcp__claude_ai_Glean__search` or `mcp__claude_ai_Glean__meeting_lookup` with the customer name + approximate date to find the most recent Gong call, Slack thread, or Gmail thread referencing this session. Extract the agreed agenda or topic. Use `mcp__claude_ai_Glean__gmail_search` as a secondary check if Gong/Slack return nothing useful.
-4. **Calendar event description** — if Glean also returns nothing, fall back to the first 150 chars of the calendar event's `description` field (already fetched in Step 2).
-5. **If no signal found** — leave topic blank; do not fabricate.
+2. **Specific calendar event description** — check the event's `description` (already fetched in Step 2) before reaching for weaker signals. Classify it: generic (empty/whitespace, or only conferencing boilerplate — Zoom/Meet/Teams links, dial-in numbers, scheduling footers) → skip to 3; specific (named topics, an "Agenda:" line/bullet list, questions to cover, a doc/deck link, a decision to make) → use it directly as the topic, since it's what was put on the invite for this session.
+3. **Most recent Planhat Conversation** — if no usable Task content and no specific calendar signal, query `list_model_records(MODEL: "Conversation", FILTER: {"companyId[equal to]": "<company-id>"}, SORT: "-date", LIMIT: 5)` and read the most recent `description`/`subject` for context on where things left off.
+4. **Glean fallback** — if the above have nothing, call `mcp__claude_ai_Glean__search` or `mcp__claude_ai_Glean__meeting_lookup` with the customer name + approximate date to find the most recent Gong call, Slack thread, or Gmail thread referencing this session. Extract the agreed agenda or topic. Use `mcp__claude_ai_Glean__gmail_search` as a secondary check if Gong/Slack return nothing useful.
+5. **Generic calendar text as last resort** — if Glean also returns nothing and the calendar description was generic, fall back to the first 150 chars of it anyway rather than leaving the topic blank.
+6. **If no signal found** — leave topic blank; do not fabricate.
 
 Store the resolved topic string per session for use in Step 7.
 
