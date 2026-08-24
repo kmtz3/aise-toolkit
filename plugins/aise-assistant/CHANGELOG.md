@@ -5,6 +5,17 @@ Format: `## [version] — YYYY-MM-DD` followed by bullet points grouped by type.
 
 ---
 
+## [2.40.0] — 2026-08-24
+
+### Added
+- `skills/log-feedback/SKILL.md` — new **Mode B** entry path: when Klara names a customer or a specific call directly (e.g. "log Symphony AI feedback") and no matching open Task exists, the skill now sources feedback ad-hoc straight from Gong transcripts and/or Planhat Conversations instead of requiring a pre-existing `Product Feedback` Task. Distills every distinct pain point in the call into its own Problem/Workaround/Desired-outcome draft, each running through the same platform-capability check, HITL confirmation, and PB submission as Mode A.
+- `context/planhat-schema.md` — documented new Conversation custom field `custom.Link to PB Note`, written by `/log-feedback` onto the auto-created Conversation when a `Product Feedback` Task transitions to `done`, linking the touchpoint back to the submitted PB note URL.
+
+### Changed
+- `skills/log-feedback/SKILL.md` Step 4 — added a cost-saving check: if a Task's `description` already has enough distilled content (problem/workaround/desired-outcome, ideally with session date and quote), the skill now drafts from it directly and skips the `meeting_lookup`/`read_document` Gong lookup entirely, falling back only when the description is thin or a Gong URL is still missing.
+- `skills/log-feedback/SKILL.md` Step 8 — after transitioning a Task to `done` and capturing the auto-created Conversation's `noteId`, the skill now writes the PB note URL to `custom.Link to PB Note` on that Conversation alongside the existing `type: "Task"` fixup. Mode B (no source Task) instead appends the confirmation to the sourcing Planhat Conversation, or to the chat summary only if no Conversation exists.
+- `CLAUDE.md` — updated the `/log-feedback` command table entry to describe the new ad-hoc sourcing path.
+
 ## [2.39.0] — 2026-08-24
 
 ### Changed

@@ -525,6 +525,7 @@ If either query returns a result, update it rather than creating a duplicate —
 | `taskId` | objectId | — | Links this conversation to its originating Planhat Task. Set when writing a Done Notion Task as a Conversation — look up the existing Planhat Task by `sourceId` and pass its `_id` here. Optional on backfill if the Task doesn't exist yet in Planhat. |
 | `category` | string | — | One of: `Support`, `Feedback`, `Sales`, `Expansion`, `Billing & Contracts`, `Renewals`, `Legal`, `General Enquires`, `Spam`, `Marketing`. Leave blank for AISE sessions unless relevant. |
 | `custom.Gong URL` | string | — | Gong call link. **Use this instead of appending to `description`.** Write the raw URL. |
+| `custom.Link to PB Note` | string | — | Productboard feedback note URL. Written by `/log-feedback` onto the Conversation auto-created when a `Product Feedback` Task transitions to `done` (see § Planhat Task auto-Conversation behavior) — links the touchpoint back to the submitted PB note. Write the raw URL. |
 | `custom.Call Duration` | number | — | Session length in minutes. Derive from Notion `Session Length (h)` × 60. |
 | `custom.Services Package` | string | — | Links to a `LineItem` record (Services Package). Optional — only set if the session is clearly associated with a specific active package. |
 

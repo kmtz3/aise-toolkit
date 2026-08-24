@@ -1,5 +1,12 @@
 # Changelog — aise-leadership
 
+## [1.12.3] — 2026-08-24
+
+### Changed
+- `context/` synced from aise-assistant: new `custom.Link to PB Note` Conversation field documented in `planhat-schema.md` (written by aise-assistant's `/log-feedback` skill when closing out a Product Feedback Task).
+
+---
+
 ## [1.12.2] — 2026-08-21
 
 ### Changed

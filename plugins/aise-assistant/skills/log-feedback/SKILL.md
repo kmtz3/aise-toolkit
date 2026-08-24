@@ -1,11 +1,11 @@
 ---
 name: log-feedback
-description: Discover outstanding Planhat product-feedback Tasks, draft structured Productboard GTM feedback notes, and submit with HITL confirmation on customer mapping and content. Triggers: /log-feedback, 'log PB feedback', 'submit feedback to productboard', 'log outstanding customer feedback'.
+description: Discover outstanding Planhat product-feedback Tasks, OR source feedback ad-hoc from a named customer/call, draft structured Productboard GTM feedback notes, and submit with HITL confirmation on customer mapping and content. Triggers: /log-feedback, 'log PB feedback', 'submit feedback to productboard', 'log outstanding customer feedback', 'log <customer> feedback'.
 ---
 
-Discover outstanding `type: "Product Feedback"` Tasks in Planhat (created by `post-session-debrief` step 8), draft structured Productboard feedback notes in the GTM format, and submit them via the PB MCP — with explicit HITL confirmation before every submission.
+Log customer feedback to Productboard in the GTM format, from either of two sources — **Mode A**: outstanding `type: "Product Feedback"` Tasks in Planhat (created by `post-session-debrief` step 8), or **Mode B**: an ad-hoc named customer/call with no pre-existing Task, sourced directly from Gong transcripts and/or Planhat Conversations. Both modes converge on the same draft format, platform-capability check, and HITL confirmation before every submission via the PB MCP.
 
-**Trigger phrases:** /log-feedback · "log PB feedback" · "submit feedback to productboard" · "any outstanding feedback to log" · "log outstanding customer feedback"
+**Trigger phrases:** /log-feedback · "log PB feedback" · "submit feedback to productboard" · "any outstanding feedback to log" · "log outstanding customer feedback" · "log [customer] feedback" · "log feedback from the [customer] call"
 
 ---
 
@@ -21,7 +21,14 @@ Resolve `planhat_user_id` via `list_model_records(MODEL:"User", FILTER:{"email[e
 
 ---
 
-## Step 3: Discover outstanding feedback tasks
+## Step 3: Determine entry mode and discover source material
+
+**Decide the mode from how the skill was invoked:**
+
+- **Mode A — Task-driven** (default for bare `/log-feedback` or `/log-feedback <customer/topic>` when a matching open Task exists): discover outstanding Planhat Tasks as below.
+- **Mode B — Ad-hoc, source-driven** (triggered when Klara names a customer or a specific call directly, e.g. "log Symphony AI feedback", "log feedback from the Acme call", or when Mode A's Task query for a named customer/topic comes back empty): skip the Task query and go straight to Gong/Planhat Conversation sourcing. Mode B does not require a pre-existing `Product Feedback` Task — it's for feedback surfaced live in conversation that hasn't been logged as a Task yet.
+
+### Mode A — discover outstanding feedback tasks
 
 Query Planhat for open product-feedback Tasks:
 ```
@@ -32,17 +39,32 @@ list_model_records(MODEL: "Task", FILTER: {"type[equal to]": "Product Feedback",
 
 If the user invoked with a customer name or topic as an argument (e.g. `/log-feedback LumApps API linking`), scope to that customer/topic.
 
-If no matching tasks are found, say so and stop.
+If no matching tasks are found for a named customer/topic, drop into **Mode B** for that customer rather than stopping. If no customer/topic was given and no tasks are found at all, say so and stop.
+
+### Mode B — source directly from Gong/Planhat for a named customer or call
+
+1. Resolve the Planhat Company record for the named customer: `search_records(QUERY: "<customer name>")` filtered to `model: "Company"`, or `list_model_records(MODEL: "Company", FILTER: {"name[equal to]": "<customer name>"})`. If ambiguous (multiple matches), ask which one.
+2. Find the relevant call(s) — try both, in parallel:
+   - `mcp__claude_ai_Glean__meeting_lookup` for Gong calls matching the customer name (and any topic keywords given, e.g. "Symphony AI API linking").
+   - Planhat Conversations on the Company record: `list_model_records(MODEL: "Conversation", FILTER: {"companyId[equal to]": "<companyId>"}, SELECT: ["title", "date", "notes", "custom.Gong URL"])`, sorted most recent first.
+3. If a specific call was named, use that one. If multiple candidate calls exist and none was specified, prefer the most recent one that plausibly touches product feedback (title/notes mention a gap, blocker, or feature ask); if still ambiguous, ask Klara which call to source from.
+4. Read the transcript/notes (Gong via `mcp__claude_ai_Glean__read_document`, or the Conversation's `notes` field) and distill every distinct pain point raised into a Problem / Current workaround / Desired outcome triple. **A single call can surface more than one feedback item** — treat each distinct pain point as its own candidate note and run it through Steps 4–8 independently (including its own HITL confirmation in Step 6).
+5. Continue into Step 4 to fill in ARR, contact, and remaining context for each candidate item — Step 4's context-gathering applies to both modes; where it references "the task's description," Mode B uses the transcript/Conversation notes distilled in step 4 above instead.
+
+If no feedback-worthy content is found in the named call/customer's recent activity, say so and stop rather than fabricating a note.
 
 ---
 
-## Step 4: For each candidate task — gather context
+## Step 4: For each candidate item — gather context
 
-For each task found, pull supporting context in parallel:
+For each candidate (a Task in Mode A, or a distilled pain point in Mode B), pull supporting context in parallel:
 
-1. Read the task's `description` field (already returned by the list query) — this is the full PM-formatted log entry `post-session-debrief` wrote, including session date and any customer quote captured at debrief time.
-2. Use `mcp__claude_ai_Glean__meeting_lookup` to find the relevant Gong call(s) for the linked customer (`companyName`). Try the customer name and/or keywords from the task's `action`.
-3. If a Gong transcript is found, use `mcp__claude_ai_Glean__read_document` on it to extract:
+1. **Mode A:** read the task's `description` field (already returned by the list query) — this is the full PM-formatted log entry `post-session-debrief` wrote, including session date and any customer quote captured at debrief time.
+   **Mode B:** use the Problem/Workaround/Desired-outcome distillation already produced in Step 3B.4 as the equivalent source material.
+
+   **Cost-saving check (Mode A only) — skip steps 2–3 when the description is already sufficient:** if the task's `description` already contains enough to populate Problem, Current workaround, and Desired outcome (i.e. `post-session-debrief` already distilled it at debrief time — check for language covering what's broken, what they're doing instead, and what good looks like, plus a session date/quote if present), use it directly and **do not** call `meeting_lookup` or `read_document`. Only fall through to steps 2–3 if the description is thin (e.g. just a one-line action with no business context or quote) or a Gong URL is needed and isn't already present in the description/task fields.
+2. Use `mcp__claude_ai_Glean__meeting_lookup` to find the relevant Gong call(s) for the linked customer (`companyName`), if not already identified in Mode B and not skipped by the cost-saving check above. Try the customer name and/or keywords from the task's `action` (Mode A) or the pain point topic (Mode B).
+3. If a Gong transcript is found (or wasn't already fully read in Mode B, and wasn't skipped by the cost-saving check above), use `mcp__claude_ai_Glean__read_document` on it to extract:
    - Exact customer quotes (attributed to name + role)
    - Business context
    - Workaround description
@@ -219,9 +241,9 @@ For confirmed items, call `mcp__claude_ai_Productboard__feedback_create_feedback
 
 ---
 
-## Step 8: Mark Planhat task complete
+## Step 8: Record the submission back in Planhat
 
-After successful submission, execute exactly these two calls — no others:
+**Mode A — mark the Planhat task complete.** After successful submission, execute exactly these three steps — no others:
 
 **Step 8a — Append confirmation to `description`:**
 Fetch the task's current `description` (already in context from Step 4), append this block (exactly — no variation):
@@ -234,16 +256,27 @@ https://pb.productboard.com/all-notes/notes/XXXXXXXX
 Replace the date with the actual submission date (YYYY-MM-DD) and the URL with the actual PB note URL. If the PB MCP does not return a URL or ID, still append the block with "Note submitted — no URL returned by API" in place of the URL. Write it back: `update_model_record(MODEL: "Task", OBJECT_ID: "<task_id>", PARAMETERS: {"description": "<appended text>"})`.
 
 **Step 8b — Transition status to done:**
-`update_model_record(MODEL: "Task", OBJECT_ID: "<task_id>", PARAMETERS: {"status": "done"})`. This must be a separate `update_model_record` call, not combined with the create or with any other field — per `context/planhat-schema.md`, only a `status` *transition* via update triggers Planhat's auto-Conversation creation, and it's a reasonable side effect here: it logs the feedback submission as a company touchpoint.
+`update_model_record(MODEL: "Task", OBJECT_ID: "<task_id>", PARAMETERS: {"status": "done"})`. This must be a separate `update_model_record` call, not combined with the create or with any other field — per `context/planhat-schema.md`, only a `status` *transition* via update triggers Planhat's auto-Conversation creation, and it's a reasonable side effect here: it logs the feedback submission as a company touchpoint. Capture `noteId` from this update's response (per `context/planhat-schema.md` § Planhat Task auto-Conversation behavior — `noteId` is absent from a create response, only present on the transitioning update).
+
+**Step 8c — Write the PB note link onto the auto-created Conversation:**
+Using the `noteId` captured in 8b, fetch the Conversation's current `type` (`get_model_record(MODEL: "Conversation", OBJECT_ID: "<noteId>", SELECT: ["type"])`), then write both in a single `update_model_record` call:
+- `custom.Link to PB Note`: the PB note URL from the submission response (same URL used in the 8a confirmation block)
+- `type: "Task"` — only include this if the fetched `type` isn't already `"Task"`; skip it if it already is, per the idempotency note in `context/planhat-schema.md`.
+
+If the PB MCP didn't return a note URL, skip this step's `custom.Link to PB Note` write (there's nothing to link) but still run the `type` check/fix if needed.
+
+**Mode B — no Task exists to close.** There's nothing to transition to `done`. Instead:
+- If the source was a Planhat Conversation (Step 3B.2), append the same `✅ Logged to PB — <date> / <PB note URL>` confirmation block to that Conversation's `notes` field via `update_model_record(MODEL: "Conversation", OBJECT_ID: "<conversation_id>", PARAMETERS: {"notes": "<appended text>"})`.
+- If the source was a Gong call with no corresponding Planhat Conversation, skip the write-back entirely — do not create a new Task or Conversation just to hold the confirmation. Note the PB link in the Step 9 summary instead so it isn't lost.
 
 ---
 
 ## Step 9: Summary
 
 After processing all items (or after "stop"), show a summary:
-- X submitted successfully
+- X submitted successfully (note which mode each came from: Task-driven vs. ad-hoc)
 - X skipped
-- Links to submitted notes (if the MCP returns a URL/ID)
+- Links to submitted notes (if the MCP returns a URL/ID) — for Mode B items with no Conversation to write the confirmation to, this is the only place the link is recorded
 
 ---
 
@@ -273,3 +306,5 @@ After processing all items (or after "stop"), show a summary:
 6. **Every section gets a value or a literal dash (`-`)** — never leave a section blank or omit it.
 7. **Owner-filter every Task query** (`ownerId` = current user's Planhat id) — always scope to the current user's records.
 8. **`status: "done"` must be its own `update_model_record` transition** — never combine it with the `description` append in the same call, and never set it on create.
+9. **Reuse an already-sufficient Task `description` instead of re-fetching Gong** — only call `meeting_lookup`/`read_document` when the description is too thin to draft from, or a Gong URL is still missing (Step 4's cost-saving check).
+10. **Mode B never fabricates a Task.** If no Product Feedback Task exists for the item, don't create one solely to satisfy Step 8 — either write the confirmation to the sourcing Planhat Conversation, or note it in the Step 9 summary if there's no Conversation to write to.
