@@ -5,6 +5,34 @@ Format: `## [version] — YYYY-MM-DD` followed by bullet points grouped by type.
 
 ---
 
+## [2.44.0] — 2026-08-24
+
+### Fixed
+- `agents/session-log-auditor.md` — **creates no longer trust an accepted RSVP.** Step 6a now runs an **occurrence check** on every create candidate before it earns the label: a cancellation signal (Gong reporting the meeting cancelled/declined, or an email within ±2 days matching `cancel` / `reschedul` / `sorry I missed` / `sorry for cancelling` / `move this` / `push this`) marks it **not held**; otherwise at least one piece of positive evidence is required — a Gong call in the window, an email within ±1 day presupposing the meeting happened, an existing `note` / `👾 Gong Call` record that day, or Granola/Notion notes. Neither signal → **hold**. Step 9.2 re-runs the check before writing, since evidence can arrive between report and fix. New **rule #19** records the asymmetry: an explicit cancellation statement is strong evidence of non-occurrence, but zero Gong calls alone is weak and means "hold", never "create".
+- `agents/session-log-auditor.md` — **every emitted `_id` is now validated against its own row.** New **rule #20** requires re-reading each record before the row is emitted and confirming `date[:10]`, normalized `subject` and `companyId` match, plus asserting no `_id` appears on two rows with different `(date, subject)`. On mismatch: drop the id, block every write keyed on it, flag for a human.
+
+### Added
+- `agents/session-log-auditor.md` — new **Step 9.5**, reversing a create that should not have been made: **archive, do not delete.** Archiving removes the record from the counted set while leaving its `externalId` in place, and that key is what stops the next `--fix` run from recreating the record off the same calendar event. A user-instructed hard delete must be followed by an entry in `context/planhat-schema.md` § Known non-sessions.
+- `context/planhat-schema.md` — new **§ Known non-sessions (do not recreate)**, seeded with the two events below.
+- `skills/session-audit/SKILL.md` — both guarantees added to § Non-negotiables and reflected in § What it does.
+
+### Context
+- Found while continuing the 2026-06-01 → 2026-08-24 audit of Denae Foster's book. The `--fix` pass had created three records from calendar RSVPs alone; **two of the three were meetings that never happened** — Appspace 8/18 ("canceled last minute by Sean Duffy") and Zoom 6/16 (declined, zero Gong calls). Both had been counted as delivered `🔁 Sync` sessions. Only Archer 6/18 was real, corroborated by a same-day recap email. Both bad records were hard-deleted at the user's instruction and are now listed as known non-sessions.
+- The same run's CSV carried the wrong `_id` on the Honeywell 6/10 attribution row — it held the `_id` of the adjacent 6/23 row, a session belonging to another AISE and classified "no action". The row's own date, subject, company and users were all correct, so the error was invisible in review. It did not fire only because the attribution item was held pending Gong corroboration that never arrived; had it run, it would have credited Denae with a teammate's session and reported success. Re-verification of all 51 rows against live Planhat found this was the only such error.
+
+## [2.43.0] — 2026-08-24
+
+### Fixed
+- `agents/session-log-auditor.md` — **rule #2 was wrong and is corrected.** It previously said to paginate "until a page returns fewer than 200", but the Planhat API truncates any response at roughly 100KB and returns fewer records than `LIMIT` with no error and no truncation flag, so a short page does not mean the end of the data. Measured during the tenant-wide duplicate sweep: a `🔁 Sync` pull at `LIMIT: 200` looked complete at 384 records when the true count was **440** (56 silently dropped), and `🏗️ Architecting` returned 162 against a true 170. The rule now mandates keeping `description`/`transcript` out of `SELECT` on wide sweeps, using `LIMIT: 100`, and paging until a request returns **zero** records — plus re-pulling at a smaller page size to confirm any total that will be reported as a count.
+
+### Added
+- `agents/session-log-auditor.md` — **rule #17, the duplicate invariant**: one counted session per customer per calendar date, with the evidence needed to overturn it (two calendar events, two Gong calls, or clearly different subjects) and the four signatures that confirm a duplicate (near-identical subjects, same type twice, shared `externalId` prefix, midnight-stamp beside a clock time). **Rule #18**: run the invariant tenant-wide with eight per-type queries rather than per-account, since `type` is filterable and covers every company at once.
+- `agents/session-log-auditor.md` — new **Step 6d**, the standing duplicate-invariant check, reporting the excess as `sum(group size − 1)`; the former 6d (other-AISE records) becomes 6e. The check must be re-run after any `--fix` pass, since creating records can introduce a collision.
+- `skills/session-audit/SKILL.md` — new `--invariant` flag exposing the tenant-wide duplicate check on its own, with natural-language equivalents.
+
+### Context
+- First tenant-wide run of the invariant over 2026 found **28 duplicate groups across 38 same-day collisions, inflating counted sessions by 34 records (~4%)**, spread over seven AISEs. Two recurring causes: the Notion→Planhat migration writing a midnight-stamped record alongside a calendar-synced one, and the same migration running twice under different `externalId` seeds.
+
 ## [2.42.0] — 2026-08-24
 
 ### Added

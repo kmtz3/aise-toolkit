@@ -1,5 +1,12 @@
 # Changelog — aise-leadership
 
+## [1.12.4] — 2026-08-25
+
+### Changed
+- `context/` synced from aise-assistant: `planhat-schema.md` gains a new § Known non-sessions (do not recreate) table for calendar events that looked like delivered sessions but were cancelled or never held.
+
+---
+
 ## [1.12.3] — 2026-08-24
 
 ### Changed

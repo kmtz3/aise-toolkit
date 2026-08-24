@@ -28,7 +28,7 @@ Violate any of these and the audit reports confident nonsense.
 
 1. **Never filter Conversations on `source`.** A large fraction of real session records carry no `source` value at all — in the reference run, filtering on `source = "AISE"` silently hid ~40 sessions including one account's entire five-session architecting programme. Sweep per `companyId` and filter by `type` locally.
 
-2. **`list_model_records` on Conversation caps at 200.** Paginate with `OFFSET` until a page returns fewer than 200. A single-page pull looks complete and is not.
+2. **Pagination has TWO limits, and the second one is silent.** `list_model_records` caps at `LIMIT: 200`, *and* the API truncates any response at roughly 100KB — returning fewer records than `LIMIT` **with no error and no truncation flag**. A short page is therefore NOT proof you reached the end. Two consequences, both measured: a `🔁 Sync` pull at `LIMIT: 200` returned 200 then 184 and looked complete at 384 — the true count was **440**, so 56 records were silently dropped; a `🏗️ Architecting` pull returned 162 where the truth was 170. **Always: keep `description` and `transcript` out of `SELECT` on wide sweeps, use `LIMIT: 100`, and page until a request returns ZERO records — never until it returns "fewer than the limit".** On any sweep whose result you will report a count from, re-pull at a smaller page size and compare ids before trusting the total.
 
 3. **Match on title similarity, not date proximity alone.** Customer + date with a ±2-day window cross-pairs same-day records: one event consumes the wrong record, and you report both a phantom gap and a phantom orphan. In the reference run this produced 5 false "missing" rows. Use the scored one-to-one matcher in Step 5.
 
@@ -57,6 +57,14 @@ Violate any of these and the audit reports confident nonsense.
 15. **Before creating, check the calendar event id against existing `externalId`s on that company.** `externalId` is unique per company, and a calendar-derived record may already hold the event id under a wrong type and a wrong date. In the 2026-08 run, an EQS Group session had a `👾 Gong Call` record dated two days late that already carried the Aug 10 event id and the only substantive body for that call — creating would have collided or double-logged. **A hit means repair the existing record (retype + redate), not create.** Run this check across every candidate create before writing any of them.
 
 16. **A cross-AISE duplicate is merged by unioning `users`, never by picking a winner.** When one session is logged twice because two AISEs each wrote their own record, the survivor must carry *both* in `users` — then neither loses delivery credit and the account stops being double-counted. This is the only safe way to dedupe across people, and it is what makes the merge defensible to the AISE who did not ask for it.
+
+17. **Invariant: one counted session per customer per calendar date.** Two counted-type records on the same `companyId` and the same day are a duplicate until proven otherwise. Run this check as a standing step (§ Step 6d) and re-run it after every `--fix` pass — a fix that creates a record can introduce one. Proving otherwise needs positive evidence of two distinct sessions: two separate calendar events, two Gong calls, or clearly different subjects naming different work. Signals that a same-day pair IS a duplicate: identical or near-identical subjects; one record stamped midnight UTC (the backfill signature) alongside one with a real clock time; both sharing an `externalId` prefix (same migration run); a `🗣️`-prefixed subject beside a clean one (Notion-migrated vs calendar-synced). In the 2026 tenant-wide sweep, 28 of 38 same-day groups were duplicates, inflating counted sessions by 34 records — about 4%.
+
+18. **A tenant-wide duplicate sweep is cheaper per-type than per-account.** `type` is filterable, so eight queries (one per counted type, `{"type[equal to]": "<type>", "date[more than]": "<from>"}`) cover every company at once — far cheaper than iterating accounts. Group the union by `(companyId, date[:10])` and flag every group larger than one. Use this for the standing invariant check; use per-`companyId` sweeps only when scoped to one AISE's book.
+
+19. **An accepted RSVP is not evidence a session happened.** Calendar invites outlive their own cancellation: the event stays on the calendar, the RSVP stays `accepted`, and only Gong or the surrounding email traffic shows the meeting was called off. In the 2026-08 Denae run, three records were created from RSVP evidence alone and **two of the three were meetings that never took place** — an Appspace session Gong reported as "canceled last minute by Sean Duffy", and a Zoom session Gong showed as declined with zero calls. Both landed as counted `🔁 Sync` deliveries and overstated the accounts' delivery until a later pass caught them. **Before any create, require positive occurrence evidence and check for a cancellation signal** (§ Step 6a). Mind the asymmetry: an explicit Gong or email statement that a meeting was cancelled is *strong* evidence it did not happen, but zero Gong calls on its own is *weak* — plenty of real sessions are never recorded. Zero Gong calls means "no positive evidence", which sends the event to **hold**, never to create.
+
+20. **Validate every `_id` you emit against the row it sits on.** The `_id` is the only thing `--fix` acts on, and a wrong one is invisible in review: the row's date, subject and company all read correctly while the id points somewhere else entirely. In the 2026-08 Denae run, the Honeywell attribution row carried the `_id` of the *adjacent* row — the 6/23 session belonging to another AISE, classified "no action". Had the fix pass acted on it, it would have added Denae to a session she never delivered, on a teammate's account, and reported the write as a success. Two cheap assertions catch it: before emitting a row, re-read the record by `_id` and confirm its `date[:10]`, normalized `subject` and `companyId` match the row; and confirm no `_id` appears on two rows carrying different `(date, subject)` pairs. On any mismatch, drop the id from the row, block every write keyed on it, and flag the row for a human.
 
 ---
 
@@ -149,8 +157,16 @@ Output three sets: matched pairs, calendar events with no record, records with n
 - account has no Planhat Company → **blocked**, goes in the separate deliverable
 - title starts `Canceled:` or `Hold for` → **skip**
 - another event the same day for the same account already matched a record → **skip** as a duplicate invite (blocks + option-1/option-2 slots are common)
-- AISE `responseStatus` is `accepted` or they are the organizer → **create candidate**
+- AISE `responseStatus` is `accepted` or they are the organizer → run the **occurrence check** below, which decides between **create candidate** and **hold**
 - otherwise (`needsAction`, `tentative`) → **hold**. Do not create. Report with the full calendar signal — organizer, whether other PB people accepted, how many customers accepted — so the user can judge in one line.
+
+> **Occurrence check — every create candidate must pass this before it earns the label (§ Hard-won rules #19).**
+>
+> First look for a **cancellation signal**: Gong stating the meeting was cancelled, declined or never held; or an email on the account within ±2 days carrying `cancel`, `reschedul`, `sorry I missed`, `sorry for cancelling`, `move this`, or `push this`. Any hit → **not held**. Do not create; report it as a resolved non-gap with the quote that settled it.
+>
+> Otherwise require at least one piece of **positive evidence it took place**: a Gong call inside the window; an email within ±1 day that presupposes the meeting happened (a recap, an "as discussed", a follow-up naming next steps); a `note` or `👾 Gong Call` record already on the account for that day; or meeting notes in Granola or Notion. One is enough.
+>
+> No cancellation signal and no positive evidence → **hold**, with the calendar signal laid out, exactly as for a `tentative` RSVP. A gap is better than a fabricated touchpoint.
 
 **6b — Type.** For matched pairs and for records with no calendar event, flag only where the **Planhat `subject`** explicitly names a session type that differs from the record's `type`: `kick off` · `architecting` · `discovery` · `demo` · `training`/`enablement`/`fundamentals`/`101` · `audit`/`setup review` · `webinar`. Do not flag on ambiguous names (office hours, ad-hoc Q&A, follow-up, catch-up, intro) and never on the calendar title (§ Hard-won rules #4). Any record whose `type` is outside the live vocabulary — `note` especially — is a defect regardless of title.
 
@@ -161,7 +177,9 @@ Classify each `note`:
 
 **6c — Duplicates.** For each record, look for another record on the same company within ±3 days with `sim ≥ 0.6`. For each cluster, fetch both sides in full (`description`, `endusers`, `custom.Gong URL`, `custom.Call Duration`, `transcript`) and compare payloads. Nominate the keeper as the **well-named, correctly-dated, correctly-typed** record, not the largest one (§ Hard-won rules #12).
 
-**6d — Other AISE.** Records where the target AISE is absent from `users` and another AISE is present. Not defects; list separately so the audit does not appear to claim someone else's work.
+**6d — Duplicate invariant: one counted session per customer per date.** Independently of 6c, group every counted-type record by `(companyId, calendar date)` and flag each group of more than one. Classify each group: **duplicate** (similar subjects, or two records of the *same* type, or a shared `externalId` prefix, or a midnight/clock-time pair), **review** (partially similar), or **genuine** (clearly different sessions — e.g. two distinct workshops booked the same day). Report the excess count (`sum(group size - 1)`) as the amount the log over-states delivery. Re-run this check after any `--fix` pass.
+
+**6e — Other AISE.** Records where the target AISE is absent from `users` and another AISE is present. Not defects; list separately so the audit does not appear to claim someone else's work.
 
 ### Step 7 — Attribution
 
@@ -188,12 +206,13 @@ Every count must reconcile: `correct + fixed + blocked + held + skipped + artifa
 Order matters. Build the full write plan first, print it, and only then execute (fanned out, see § Fan-out).
 
 1. **Retypes** — `update_model_record(MODEL: "Conversation", OBJECT_ID, PARAMETERS: {"type": "<exact value>"})`. Emoji are a literal part of the option string; never strip or substitute them. Add `users: [{"id": "<aise>"}]` where attribution is missing and evidence supports it.
-2. **Creates** — first, cross-check every candidate's Google Calendar event id against every `externalId` already present on that company (§ Hard-won rules #15). Any hit is a **repair**, not a create: retype and redate the existing record instead. For the remainder, one Conversation per confirmed missing session:
+2. **Creates** — first, cross-check every candidate's Google Calendar event id against every `externalId` already present on that company (§ Hard-won rules #15). Any hit is a **repair**, not a create: retype and redate the existing record instead. Then re-run the occurrence check (§ Step 6a) on every remaining candidate and drop any that now shows a cancellation signal — evidence can arrive between the report and the fix. For what survives, one Conversation per confirmed missing session:
    `companyId`, `type` (inferred from the calendar title, defaulting to `🔁 Sync`), `subject` (the calendar title), `date` (the event start, ISO), `source: "AISE"`, `externalId` (**the Google Calendar event id** — this is the dedup key that makes the audit safe to re-run), `users`, and a `description` that states plainly it was backfilled and that no debrief notes were captured. Do not invent session content.
 3. **Duplicate merges** — consolidate onto the keeper *before* archiving anything: append the duplicate's `description` under a provenance line naming the source record and date; carry `custom.Gong URL` if the keeper lacks one; union `endusers`. Then verify. Only if every merge verifies, archive each duplicate with `{"archived": true}`.
 4. **Attribution repairs** — add the AISE to `users`; do not remove the existing person unless the user said to. For contact consolidation, repoint `endusers` to the canonical End User (prefer the Salesforce-synced record on the current email domain), rewriting the whole array and preserving non-target contacts. **Skip `ticket` and `email` type Conversations** — Zendesk and Gmail syncs own those and will overwrite you.
-5. **Verify every write.** Re-read each record and compare against the intended value. `endusers` in particular fails silently. Report any silent drop rather than retrying blindly — an unresolvable id is invalid data, not a transient error.
-6. Republish the artifact with post-fix numbers, and say plainly what was left undone and why.
+5. **Reversing a create that should not have been made.** When a backfilled record turns out to be a session that never happened, **archive it (`{"archived": true}`) rather than deleting it.** Archiving takes it out of the counted set while leaving its `externalId` in place, and that `externalId` is what stops the next `--fix` run from recreating the same record off the same calendar event. If the user explicitly instructs a hard delete, honour it — then add the calendar event id to `context/planhat-schema.md` § Known non-sessions, because a deleted record takes its dedup key with it and the event will otherwise look like a fresh gap on the next run.
+6. **Verify every write.** Re-read each record and compare against the intended value. `endusers` in particular fails silently. Report any silent drop rather than retrying blindly — an unresolvable id is invalid data, not a transient error.
+7. Republish the artifact with post-fix numbers, and say plainly what was left undone and why.
 
 ---
 
@@ -208,7 +227,8 @@ Order matters. Build the full write plan first, print it, and only then execute 
 
 - Write anything without `--fix`.
 - Hard-delete a Conversation, or delete an End User, without explicit per-record instruction.
-- Create a session record for a meeting with no evidence the AISE attended.
+- Create a session record for a meeting with no evidence that it happened **and** that the AISE attended — an accepted RSVP is neither (§ Hard-won rules #19).
+- Emit, report or act on a Planhat `_id` you have not validated against its own row (§ Hard-won rules #20).
 - Reassign or strip attribution on another AISE's session.
 - Trust `context/planhat-schema.md` over the live data on the type vocabulary or on `archived`.
 - Ask the user for a calendar export, an attendee list or a transcript. Discover it.

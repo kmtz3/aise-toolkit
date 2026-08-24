@@ -1050,6 +1050,19 @@ list_model_records(
 
 ---
 
+## Known non-sessions (do not recreate)
+
+Calendar events that look like delivered sessions but were cancelled, declined or never held. `session-log-auditor` must treat a matching event id as **not held** and skip it as a create candidate (§ Step 6a occurrence check).
+
+An entry belongs here only when the erroneous record was **hard-deleted**. Archiving is the default reversal precisely because it leaves the `externalId` in place, which already blocks recreation — archived records need no entry.
+
+| Date | Account | Calendar event id | Evidence it was not held | Removed |
+|---|---|---|---|---|
+| 2026-06-16 | Zoom | `4qrmdmlnsbol0t10orqo76vv5l_20260616T170000Z` | Gong (`001f400000yx4MtAAI`): zero calls, meeting declined. Corroborated by the 2026-06-26 email "Spark is now GA – ready when Zoom is". | Deleted 2026-08-24 (was `6a8cb62e6665ec9ae3c8e695`) |
+| 2026-08-18 | Appspace | `0h4g3el21p8s0h1625u8on1neb_20260818T183000Z` | Gong: "canceled last minute by Sean Duffy from Appspace". Corroborated by Denae's 2026-08-19 email "Sorry for cancelling last minute". | Deleted 2026-08-24 (was `6a8cb6326665ec9ae3c8e73f`) |
+
+---
+
 ## Models To Be Documented
 
 The following models exist in Planhat but have no current AISE migration use case. Use `get_model_action_parameters(MODEL: "<model>")` if needed.
