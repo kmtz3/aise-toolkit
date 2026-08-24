@@ -44,11 +44,19 @@ Violate any of these and the audit reports confident nonsense.
 
 9. **`users` misattribution has a known cause.** The Notion → Planhat migration maps `users` from Notion `Delivered By`, falling back to `Current Account Owner`, then Company `owner`. A session with a blank `Delivered By` lands on whoever owns the account. When an AISE says "my sessions are counted under someone else", this is almost always why — and it is equally often *not* true for a given account, so check before agreeing.
 
-10. **The session type vocabulary drifts.** `context/planhat-schema.md` is not exhaustive — the reference run found `🏁 Audit / Setup Review` in live use and absent from the doc. Derive the live vocabulary from the data (distinct `type` values on the account set) and treat anything outside it as suspect rather than assuming the doc is complete.
+10. **The session type vocabulary drifts — but the *counted* set is fixed and knowable.** Derive the live option list from `get_model_action_parameters(MODEL: "Conversation")` rather than trusting `context/planhat-schema.md`. Then apply rule 13 below: only eight types count as delivery, and every conclusion about "how many sessions" must be computed on that subset, not on "looks like a session".
 
 11. **`note` is not one thing.** Some `note` records are real sessions that lost their type. Most are prep scaffolds, KDD sub-pages (`📋 Overview`, `1️⃣ Company Context`) and task notes auto-created by the Task→Conversation mechanism. Classify before acting, or you will "fix" the type on a checklist.
 
 12. **A richer duplicate is not automatically the keeper.** Frequently the badly-named `note` holds the real debrief and the well-named record is nearly empty. Keep the well-named, correctly-dated record and merge the content *into* it. Swapping which record survives loses session numbering and correct dates.
+
+13. **Only eight types count as a delivered session.** `🎓 Enablement` · `🔁 Sync` · `🏗️ Architecting` · `👟 Kick off` · `🔎 Discovery` · `🏁 Audit / Setup Review` · `🎙️ Demo` · `📆 Onsite Workshop`. Everything else — including `📺 Webinar`, `Internal Alignment`, `Sales Handover`, `🧑‍💻 Billable Task`, `👾 Gong Call` and `note` — is invisible to the count. Two rules follow, and both were learned the hard way. **Never propose a retype between two uncounted types as a fix** (`note` → `👾 Gong Call` changes no number and is pure churn). **Always state count impact in terms of this set**, never in terms of record totals. The formula is recorded in `context/planhat-schema.md` § Which session types count toward delivery; re-read it rather than reconstructing it.
+
+14. **The Gong → Planhat sync writes call records under two different types.** In the 2026-08 run, five call syncs landed as `note` and two as `👾 Gong Call` in a single 12-week window. Identify them by `externalId`: the Gong pattern is `<digits>-001<salesforce-id>`. These are **evidence that a call happened**, not session records — use them to corroborate attendance, exclude them from the session count, and do not retype them. The systemic mapping problem is an escalation, not a per-record fix.
+
+15. **Before creating, check the calendar event id against existing `externalId`s on that company.** `externalId` is unique per company, and a calendar-derived record may already hold the event id under a wrong type and a wrong date. In the 2026-08 run, an EQS Group session had a `👾 Gong Call` record dated two days late that already carried the Aug 10 event id and the only substantive body for that call — creating would have collided or double-logged. **A hit means repair the existing record (retype + redate), not create.** Run this check across every candidate create before writing any of them.
+
+16. **A cross-AISE duplicate is merged by unioning `users`, never by picking a winner.** When one session is logged twice because two AISEs each wrote their own record, the survivor must carry *both* in `users` — then neither loses delivery credit and the account stops being double-counted. This is the only safe way to dedupe across people, and it is what makes the merge defensible to the AISE who did not ask for it.
 
 ---
 
@@ -171,7 +179,7 @@ Produce:
 - a CSV keyed on Planhat record `_id` so every row is actionable
 - a separate deliverable listing touches on accounts with no Planhat Company, marked with their evidence source
 
-Every count must reconcile: `correct + fixed + blocked + held + skipped + artifacts + other-AISE = total`. State the window, the account count, the sources, and that nothing was written.
+Every count must reconcile: `correct + fixed + blocked + held + skipped + artifacts + other-AISE = total`. **Report session counts on the eight counted types only** (§ Hard-won rules #13), and give the before/after for each affected account — both total counted records and the number carrying the audited AISE. Where the AISE's figure is expected to equal the sessions they delivered, say so and show that it does. State the window, the account count, the sources, and that nothing was written.
 
 **Stop here without `--fix`.**
 
@@ -180,7 +188,7 @@ Every count must reconcile: `correct + fixed + blocked + held + skipped + artifa
 Order matters. Build the full write plan first, print it, and only then execute (fanned out, see § Fan-out).
 
 1. **Retypes** — `update_model_record(MODEL: "Conversation", OBJECT_ID, PARAMETERS: {"type": "<exact value>"})`. Emoji are a literal part of the option string; never strip or substitute them. Add `users: [{"id": "<aise>"}]` where attribution is missing and evidence supports it.
-2. **Creates** — one Conversation per confirmed missing session:
+2. **Creates** — first, cross-check every candidate's Google Calendar event id against every `externalId` already present on that company (§ Hard-won rules #15). Any hit is a **repair**, not a create: retype and redate the existing record instead. For the remainder, one Conversation per confirmed missing session:
    `companyId`, `type` (inferred from the calendar title, defaulting to `🔁 Sync`), `subject` (the calendar title), `date` (the event start, ISO), `source: "AISE"`, `externalId` (**the Google Calendar event id** — this is the dedup key that makes the audit safe to re-run), `users`, and a `description` that states plainly it was backfilled and that no debrief notes were captured. Do not invent session content.
 3. **Duplicate merges** — consolidate onto the keeper *before* archiving anything: append the duplicate's `description` under a provenance line naming the source record and date; carry `custom.Gong URL` if the keeper lacks one; union `endusers`. Then verify. Only if every merge verifies, archive each duplicate with `{"archived": true}`.
 4. **Attribution repairs** — add the AISE to `users`; do not remove the existing person unless the user said to. For contact consolidation, repoint `endusers` to the canonical End User (prefer the Salesforce-synced record on the current email domain), rewriting the whole array and preserving non-target contacts. **Skip `ticket` and `email` type Conversations** — Zendesk and Gmail syncs own those and will overwrite you.

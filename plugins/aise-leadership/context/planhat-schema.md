@@ -484,6 +484,57 @@ If either query returns a result, update it rather than creating a duplicate —
 > **Planhat types with no Notion equivalent:** `📺 Webinar`, `👾 Gong Call` — logged directly in Planhat, not from Notion. `🎙️ Demo` is also available and applied automatically to `Other` sessions with "Demo" in the title.
 > **Generic Planhat types** (avoid for AISE writes): `note`, `email`, `chat`, `call`, `ticket`, `other` — these are Planhat system defaults for inbox/helpdesk syncs. AISE should only use the custom configured values above.
 
+#### Which session types count toward delivery
+
+Two different things get confused constantly: the **full option list** on `type`, and the **subset the reporting
+formulas treat as a delivered session**. Leadership's session counts and the Company field
+`custom.Last AISE Session` read the counted subset only.
+
+**The counted set — exactly these eight:**
+
+`🎓 Enablement` · `🔁 Sync` · `🏗️ Architecting` · `👟 Kick off` · `🔎 Discovery` · `🏁 Audit / Setup Review` · `🎙️ Demo` · `📆 Onsite Workshop`
+
+The live formula behind `custom.Last AISE Session`:
+
+~~~
+FIND(Conversation.date & {
+  "filters": [
+    {"op": "any of", "field": {"id": "type"}, "value": [
+      "🎓 Enablement", "🔁 Sync", "🏗️ Architecting", "👟 Kick off",
+      "🔎 Discovery", "🏁 Audit / Setup Review", "🎙️ Demo", "📆 Onsite Workshop"
+    ]}
+  ],
+  "sort": {"date": -1},
+  "limit": 1
+})
+~~~
+
+**NOT counted, even though they are valid `type` values:** `📺 Webinar`, `Internal Alignment`, `Sales Handover`,
+`🧑‍💻 Billable Task`, `👾 Gong Call`, `Task`, `Product Feedback`, `💬 Slack Chat`, and every generic type
+(`note`, `email`, `chat`, `call`, `ticket`, `other`).
+
+Consequences worth remembering:
+
+- **`📺 Webinar` does not count.** If webinar delivery is supposed to show up in session counts, that needs a
+  different type or a formula change. Flag it rather than logging webinars and assuming they register.
+- **Retyping between two uncounted types changes no number.** Moving a record from `note` to `👾 Gong Call` is
+  pure hygiene. Never present it as a count fix.
+- **Retyping across the boundary changes the count.** `👾 Gong Call` → `🔁 Sync` makes a previously invisible
+  record count — a real fix, and a real risk if that record duplicates a counted one.
+- **`archived: true` removes a record from the counted set.** Verified in the 2026-08 run: an archived record
+  stops being returned by account-scoped queries and drops out of the count. This is how duplicates are retired
+  without hard deletion.
+- `custom.Not counted` is a separate, manual discount flag for Architecting/Enablement sessions that should not
+  burn the roster. It does **not** affect `custom.Last AISE Session`.
+
+**Live full option list on `Conversation.type`** — derive from `get_model_action_parameters` rather than trusting
+this snapshot, it drifts:
+
+`note` · `email` · `chat` · `call` · `ticket` · `other` · `🎓 Enablement` · `🔁 Sync` · `Internal Alignment` ·
+`🏗️ Architecting` · `👟 Kick off` · `🔎 Discovery` · `🏁 Audit / Setup Review` · `📺 Webinar` · `🎙️ Demo` ·
+`👾 Gong Call` · `Task` · `Sales Handover` · `💬 Slack Chat` · `🧑‍💻 Billable Task` · `📆 Onsite Workshop` ·
+`Product Feedback`
+
 #### Status mapping
 
 | Notion `Call Status` | Action |

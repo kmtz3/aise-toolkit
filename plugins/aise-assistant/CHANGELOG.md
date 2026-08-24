@@ -5,6 +5,16 @@ Format: `## [version] — YYYY-MM-DD` followed by bullet points grouped by type.
 
 ---
 
+## [2.42.0] — 2026-08-24
+
+### Added
+- `context/planhat-schema.md` — new § **Which session types count toward delivery**, recording the eight `type` values that register in leadership's session counts and in `custom.Last AISE Session` (`🎓 Enablement`, `🔁 Sync`, `🏗️ Architecting`, `👟 Kick off`, `🔎 Discovery`, `🏁 Audit / Setup Review`, `🎙️ Demo`, `📆 Onsite Workshop`) together with the live `FIND` formula behind that field, the explicit not-counted list, and the current full `Conversation.type` option list. Documents four consequences verified in the 2026-08 audit run: `📺 Webinar` does not count, retyping between two uncounted types changes no number, retyping across the boundary does, and `archived: true` removes a record from the count.
+- `agents/session-log-auditor.md` — four new hard-won rules from the Bombera run. **#13** the counted-type subset and the ban on presenting an uncounted→uncounted retype as a fix; **#14** the Gong→Planhat sync writing call records as both `note` and `👾 Gong Call`, identifiable by the `<digits>-001<sf-id>` externalId pattern, to be treated as attendance evidence and never retyped; **#15** check every candidate create's calendar event id against existing `externalId`s on that company first — a hit is a repair (retype + redate), not a create; **#16** cross-AISE duplicates are merged by unioning `users` so neither AISE loses delivery credit.
+
+### Changed
+- `agents/session-log-auditor.md` — rule #10 rewritten: the type vocabulary drifts, but the counted subset is fixed and knowable, so derive the option list live and compute every session count on the counted subset. Step 9.2 (Creates) now opens with the externalId collision pre-check. Step 8 (Report) now requires counts stated on the counted types with a before/after per affected account.
+- `skills/session-audit/SKILL.md` — new § **What counts as a delivered session**; steps 6, 8 and 9 updated for the counted/uncounted split, the create-vs-repair check, and redating.
+
 ## [2.41.0] — 2026-08-24
 
 ### Added

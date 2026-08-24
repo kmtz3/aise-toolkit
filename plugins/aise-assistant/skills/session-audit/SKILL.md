@@ -29,10 +29,10 @@ Canonical syntax uses flags; also recognize natural language equivalents.
 3. Pulls Google Calendar for the window and reduces it to genuine external customer sessions.
 4. Corroborates with Gong where the calendar is the only evidence, and for attendance.
 5. Reconciles calendar against Planhat with a scored, one-to-one matcher.
-6. Classifies every row: correct · missing · wrong type · typed as `note` · duplicate · not-a-session artifact · blocked (no Planhat Company) · another AISE's.
+6. Classifies every row: correct · missing · wrong type · typed as `note` · duplicate · not-a-session artifact · blocked (no Planhat Company) · another AISE's — and separates records that **count** as delivery from those that don't.
 7. Checks the AISE is in the `users` (team members) field on their own sessions.
-8. Reports — a published artifact plus a CSV keyed on Planhat record ID.
-9. With `--fix`: creates, retypes, merges-and-archives, and repairs attribution. Every write is read back.
+8. Reports — a published artifact plus a CSV keyed on Planhat record ID, with session counts stated on the counted-type subset and a before/after per affected account.
+9. With `--fix`: creates, retypes, redates, merges-and-archives, and repairs attribution. Candidate creates are checked against existing `externalId`s first — a hit becomes a repair, not a create. Every write is read back.
 
 ## Non-negotiables
 
@@ -41,3 +41,15 @@ Canonical syntax uses flags; also recognize natural language equivalents.
 - **Never reassign a session another AISE delivered**, and never strip an AISE off a record to add someone else — add, don't replace, unless the user names the record.
 - **Do not create a record for a session with no evidence the AISE attended.** A gap is better than a fabricated touchpoint. Report the unconfirmed ones and let the user decide.
 - **Read back every write.** `endusers` fails silently; see § Hard-won rules.
+
+### What counts as a delivered session
+
+Only these eight `type` values register in leadership's session counts and in `custom.Last AISE Session`:
+
+`🎓 Enablement` · `🔁 Sync` · `🏗️ Architecting` · `👟 Kick off` · `🔎 Discovery` · `🏁 Audit / Setup Review` · `🎙️ Demo` · `📆 Onsite Workshop`
+
+`📺 Webinar`, `Internal Alignment`, `Sales Handover`, `🧑‍💻 Billable Task`, `👾 Gong Call` and `note` do **not** count.
+Consequences: never offer a retype between two uncounted types as a count fix; always express impact as counted
+records before → after; and remember `archived: true` removes a record from the count, which is why duplicates are
+archived rather than deleted. Full detail and the live formula: `context/planhat-schema.md`
+§ Which session types count toward delivery.
