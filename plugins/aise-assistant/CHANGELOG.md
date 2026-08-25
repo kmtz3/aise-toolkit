@@ -5,6 +5,11 @@ Format: `## [version] — YYYY-MM-DD` followed by bullet points grouped by type.
 
 ---
 
+## [2.49.0] — 2026-08-25
+
+### Added
+- `agents/post-session-debrief.md` § Conversation identification — new step **C. Gong soft-integration stub — backfill and clean up.** Planhat's Gong soft integration auto-creates a separate `note`-type Conversation (empty `description`, `externalId` formatted `<gong-call-id>-<sf-account-id>`) whenever it detects a Gong call for an account, which the existing dedup check never catches since it doesn't match the GCal event ID. This step now finds those stubs after the main Conversation is written, backfills `custom.Gong URL` on the main Conversation from the parsed call ID if not already set, and deletes the stub — logging non-conforming stubs for manual review instead of deleting them.
+
 ## [2.48.0] — 2026-08-25
 
 ### Added

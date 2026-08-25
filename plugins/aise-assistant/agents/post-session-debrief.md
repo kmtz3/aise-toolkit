@@ -144,6 +144,17 @@ list_model_records(MODEL: "Conversation", FILTER: {"externalId[equal to]": "<gca
 - **Found** → update if `type`, `description`, or `endusers` drifted.
 - **Not found** → create.
 
+**C. Gong soft-integration stub — backfill and clean up (always run after the Conversation is identified).** Planhat's Gong soft integration auto-creates a separate `note`-type Conversation when it detects a Gong call for an account. Its `externalId` is formatted as `<gong-call-id>-<sf-account-id>` — not the GCal event ID — so Step B's dedup check never finds it. This stub carries the Gong call ID but its `description` is always empty.
+
+After the main Conversation is written or confirmed:
+
+1. List Conversations for this company+date and find any with `type: "note"` and empty `description` whose `_id` doesn't match the main Conversation.
+2. For each such stub: parse the Gong call ID from its `externalId` (the segment before the first `-` that is a pure numeric string, e.g. `"917839733835032505-001f400001PN7shAAD"` → call ID `917839733835032505`).
+3. If the main Conversation's `custom.Gong URL` is not yet set, write it: `update_model_record(MODEL:"Conversation", OBJECT_ID:"<main _id>", PARAMETERS:{"custom.Gong URL":"https://us-71146.app.gong.io/call?id=<gong-call-id>"})`.
+4. Delete the stub: `delete_model_record(MODEL:"Conversation", OBJECT_ID:"<stub _id>")`.
+
+If the stub's `externalId` doesn't match the `<numeric>-<sf-id>` format, or its description has content, do not delete — log it in the final report for manual review.
+
 **Conversation payload:**
 
 | Field | Value |
