@@ -128,8 +128,9 @@ All Notion Tasks write to the **Planhat Task model**. For done/canceled tasks, P
 | `Customer` (title) | `name` | Read | May differ — see name mapping table in `planhat-schema.md`. |
 | `SFDC` URL | `sourceId` | Read | Extract 18-char SF Account ID from URL. Cross-system lookup key. |
 | `Domain` | `domains[0]` | Read | Array in Planhat. |
-| `Slack Channel` URL | `custom.Slack URL` | **SF-synced — do not write** | Synced from Salesforce. Do not populate manually. |
-| _(no Notion equivalent)_ | `custom.Slack ID` | **SF-synced — do not write** | Synced from Salesforce. |
+| `Slack Channel` URL | `custom.Slack URL` | **SF-synced — do not write** | Synced from Salesforce. **Internal** PB account channel, not the shared customer channel. |
+| _(no Notion equivalent)_ | `custom.Slack ID` | **SF-synced — do not write** | Synced from Salesforce. **Internal** PB account channel. |
+| _(no Notion equivalent)_ | `custom.External_Slack_Channel_ID` | AISE-writable | The **shared external** channel with the customer in it, cached by `/log-slack-threads`. Not an SF field and unrelated to the two above. See `planhat-schema.md` § The three Slack fields on Company. |
 | `Account Executive` | `custom.Account Executive` | **SF-synced — do not write** | Synced from Salesforce. User relationship (objectId). |
 | `Renewal Manager` | `custom.Renewals Manager` | **SF-synced — do not write** | Synced from Salesforce. User relationship (objectId). |
 | _(no Notion equivalent)_ | `custom.Salesforce URL` | Read-only | SF-managed — cannot write. |
@@ -239,8 +240,8 @@ Planhat `Deal` records are the functional equivalent of Notion `Active Packages`
 | `custom.Renewals Manager` | RM — User relationship. Managed by RevOps via SF. |
 | `custom.Purchased Makers` | Contracted maker seat count. |
 | `custom.Current Makers` | Current active maker seat count. |
-| `custom.Slack URL` | Slack channel URL. |
-| `custom.Slack ID` | Slack channel ID. |
+| `custom.Slack URL` | **Internal** PB account Slack channel, as a URL. Not the shared customer channel. |
+| `custom.Slack ID` | **Internal** PB account Slack channel ID. The shared external channel lives on `custom.External_Slack_Channel_ID` instead. |
 | `custom.Salesforce URL` | SF account URL — Planhat read-only system field. |
 | `custom.⚡️ Days in Current Ignite Stage` | Auto-computed. **Renamed 2026-08-07:** gained a `⚡️` prefix (was `custom.Days in Current Ignite Stage`). |
 | `custom.AI Readiness – SF` | SF-synced AI readiness. Options: `AI-Forward (Inferred/Validated)` · `AI-Interested (Inferred/Validated)` · `AI Resistant/AI-Resistant (Inferred/Validated)`. |

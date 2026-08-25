@@ -311,7 +311,7 @@ Planhat only — Notion does not track these in real time.
 | `custom.Purchased Makers` | number | — | Contracted maker seats |
 | `custom.Current Makers` | number | — | Active maker seat count |
 | `custom.Purchased - Current Makers` | number | — | Seat gap roll-up |
-| `custom.Slack URL` | string | — | Slack channel URL |
+| `custom.Slack URL` | string | — | **Internal** Productboard Slack channel for this account – the channel where PB staff discuss the customer. **Not** the shared external channel. See the Slack-fields callout below. |
 | `custom.Salesforce URL` | string | — | SF account URL |
 | `custom.AI Readiness – SF` | string | `AI-Forward (Inferred/Validated)`, `AI-Interested (Inferred/Validated)`, `AI-Resistant (Inferred/Validated)` | SF-synced AI readiness |
 | `custom.AI Readiness Score` | number | — | Auto-computed. **Read-only as of the 2026-08-25 check** – an earlier version of this doc described it as manually settable. Do not write. |
@@ -328,6 +328,29 @@ Planhat only — Notion does not track these in real time.
 | `custom.Last AISE Email` | string | — | Most recent AISE email |
 | `custom.Total AISE Sessions` | number | — | Count of AISE session Conversations |
 | `custom.PHS example` | string | — | Health-score scratch field. Ignore. |
+
+#### The three Slack fields on Company – internal vs external
+
+There are three, they look interchangeable, and they are not. Getting this wrong is not a cosmetic error: it
+writes Productboard's internal discussion of a customer onto that customer's own timeline.
+
+| Field | Which channel | Who owns it | Use |
+|---|---|---|---|
+| `custom.Slack ID` | **Internal.** The PB-only channel for discussing this account. Channel ID, e.g. `C02N37LS25C`. | RevOps / SF | Read for internal context only. Never write. **Never log its messages to a customer-visible record.** |
+| `custom.Slack URL` | **Internal.** Same channel as above, as an `/archives/` link. | RevOps / SF | Same. Never write. |
+| `custom.External_Slack_Channel_ID` | **External.** The shared channel with the customer in it – Slack Connect or a guest channel, conventionally `#ext-{customer}`. | AISE, via `/log-slack-threads` | The only field that records a customer-facing channel, and the only one `/log-slack-threads` may resolve a sweep target from. |
+
+> **Why the distinction is load-bearing.** `custom.Slack ID` is populated on a large share of accounts, so it
+> reads as the obvious source for "which Slack channel belongs to this customer" – and it is the wrong answer
+> every time. Everything in an internal account channel was written on the assumption the customer would never
+> see it. `/log-slack-threads` renders channel messages near-verbatim into a Planhat Conversation, and Planhat
+> records are customer-adjacent. Any tool asking "what is this customer's Slack channel?" wants
+> `custom.External_Slack_Channel_ID` and nothing else.
+
+> **A fourth field, `custom.customerSlackChannelId`, is not ours.** It was created by the Technical Account
+> Manager team, is empty on every account, and is slated for removal. Do not read it, do not write it, and do
+> not wire anything new to it – the AISE cache is `custom.External_Slack_Channel_ID`. When it disappears from
+> the Company model, that is the planned deletion, not schema drift.
 
 > **Writable in the API but RevOps-owned – do not write:** `custom.Segment`, `custom.Region`
 > (`EMEA`/`NOAM`/`APAC`/`LATAM`/`AUNZ`/`Missing`/`Exclude`/`Blacklisted`), and `custom.Slack ID`. These report as
@@ -364,7 +387,7 @@ Planhat only — Notion does not track these in real time.
 | `custom.AIPA Journey Status` | string | `Spark Activation`, `Re-Engagement` | AIPA-segment equivalent of `custom.AISE Journey Status`. Do not write for AISE-managed accounts. |
 | `custom.Gong Summary` | string | — | Rolling Gong-derived account summary. |
 | `custom.CAB Customer` | boolean | `true` / `false` | Customer Advisory Board member. |
-| `custom.customerSlackChannelId` | string | — | Shared Slack channel ID, used by `/log-slack-threads`. |
+| `custom.External_Slack_Channel_ID` | string | — | **The customer ↔ shared external Slack channel pairing, cached.** Channel **ID** only, upper-case (`C0AKKLJCB5E`) – never a `#name` (channels get renamed), never a URL (the value feeds `slack_read_channel` and the `/log-slack-threads` `externalId` builder directly). Written by `/log-slack-threads` the first time it resolves a channel for the account; read on every later run, which is what lets that skill take a channel *or* a customer name as input. Write only when empty or when the user has just corrected it – a resolved channel that disagrees with a populated value is a conflict to surface, not a value to overwrite (an account can have two shared channels; the field holds one). **New field: Planhat custom fields lag in MCP metadata, so it may be absent from `get_model_action_parameters` and reject writes for a while. A failed write is reported, not fatal.** Strictly the **external** channel – see the Slack-fields callout above; `custom.Slack ID` / `custom.Slack URL` are the internal channel and are never a substitute. |
 
 #### `phase` vs `custom.AISE Journey Status`
 
@@ -485,6 +508,15 @@ close a session gap or retyped into a counted type to move a number.
 | `custom.Slack message Id` | Parent ts, dotted form | |
 | `custom.Slack initiated by` | `Customer` \| `Productboard` | From the parent author's email domain. |
 | `custom.First message time` | `YYYY-MM-DD HH:MM {tz}` | Human-readable local time of the first message. |
+
+**Channel resolution and the cache.** The skill accepts either half of the pair. Given a channel, the company
+is resolved from the modal non-`productboard.com` email domain across the channel's authors matched against
+`Company.domains`, falling back on the channel name (`#ext-acme-corp-productboard` → `acme corp`) matched
+against `Company.name`. Given a customer, the channel comes from `Company.custom.External_Slack_Channel_ID`, then a
+`slack_search_channels` sweep for the `#ext-{customer}` convention, then the user. `custom.Slack ID` and
+`custom.Slack URL` are **never** consulted – they hold the internal PB account channel, not the shared one. Whatever resolves is written back to `custom.External_Slack_Channel_ID` (ID only,
+upper-case, read back and asserted) so the next run is a single field read. A cached ID that fails to read is
+reported rather than used as a trigger to fall through the ladder and overwrite the field.
 
 **Reply backfill.** Slack threads gain replies for months after they are logged, so every run re-checks
 existing `💬 Slack Chat` records on the company dated within the last 365 days. There is no writable sync-cursor

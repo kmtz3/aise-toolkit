@@ -1,6 +1,6 @@
 ---
 name: post-session-debrief
-description: "Use after any delivered customer session to run the full post-session workflow in one shot: transcript retrieval, Planhat Conversation write (session notes, prep notes, Gong/duration), PB-side Tasks, Gmail follow-up draft, internal Slack debrief Task, Product Feedback Tasks, KDD Attachment (A-sessions only), next-session/account-notable Company Comment, and scorecard eval in chat."
+description: "Use after any delivered customer session to run the full post-session workflow in one shot: transcript retrieval, Planhat Conversation write (session notes, prep notes, Gong/duration), PB-side Tasks, Gmail follow-up draft, internal Slack debrief Task, Product Feedback Tasks, KDD Attachment (A-sessions only), and scorecard eval in chat."
 tools: Read, Grep, Glob, Task, mcp__claude_ai_Glean__search, mcp__claude_ai_Glean__chat, mcp__claude_ai_Glean__gmail_search, mcp__claude_ai_Glean__meeting_lookup, mcp__claude_ai_Glean__read_document, mcp__claude_ai_Gmail__search_threads, mcp__claude_ai_Gmail__get_thread, mcp__claude_ai_Gmail__list_drafts, mcp__claude_ai_Gmail__create_draft, mcp__claude_ai_Google_Calendar__list_events, mcp__claude_ai_Google_Calendar__get_event, mcp__claude_ai_Google_Drive__create_file, mcp__claude_ai_Google_Drive__get_file_metadata, mcp__claude_ai_Google_Drive__share_file, mcp__claude_ai_Planhat__create_model_record, mcp__claude_ai_Planhat__update_model_record, mcp__claude_ai_Planhat__list_model_records, mcp__claude_ai_Planhat__search_records, mcp__claude_ai_Planhat__get_model_record, mcp__claude_ai_Planhat__get_model_action_parameters
 ---
 
@@ -97,13 +97,13 @@ If the **Transcript lookup order** is exhausted and no transcript or notes were 
    Source: Calendar event + Slack/Gmail signals (no transcript)
    ```
 
-3. **Create a re-debrief Task** (Planhat Task, per step 4's payload shape): `action: "Re-debrief [Customer] [session date] — Gong transcript"`, `description: "Original call: [date]. Re-run /session-debrief once Gong has the transcript indexed."`, `companyId`, `ownerId: <user>`, `status: "To Do"`, `endTime`: session date + 5 business days.
+3. **Create a re-debrief Task** (Planhat Task, per step 4's payload shape): `action: "Re-debrief [Customer] [session date] — Gong transcript"`, `description: "Original call: [date]. Re-run /session-debrief once Gong has the transcript indexed."`, `companyId`, `ownerId: <user>`, `status: "To Do"`, `endTime`: session date + 5 business days, and `"custom.Priority"` per the **Priority by task kind** table in step 4.
 
 4. **Do NOT** draft a follow-up email (step 5) — insufficient content. Skip it and note "skipped — transcript pending" in the final report.
 
-5. **Do NOT** run the scorecard (step 10) — needs source material. Note "deferred — transcript pending."
+5. **Do NOT** run the scorecard (step 9) — needs source material. Note "deferred — transcript pending."
 
-6. **Slack debrief (step 6), KDD Attachment (step 7), Company comment (step 9):** run them but flag everything that's pending the transcript. KDD Attachment (A-sessions): build it with empty decision tables and a banner "⚠️ Pending transcript — KDDs to be filled on re-debrief."
+6. **Slack debrief (step 6), KDD Attachment (step 7):** run them but flag everything that's pending the transcript. KDD Attachment (A-sessions): build it with empty decision tables and a banner "⚠️ Pending transcript — KDDs to be filled on re-debrief."
 
 7. **Product feedback log (step 8):** skip — no transcript content to mine.
 
@@ -182,7 +182,31 @@ create_model_record(MODEL: "Task", PARAMETERS: {
 })
 ```
 
-Apply the same priority/due-date inference logic as before (`context/notion-writer-playbook.md` Operation 2 — the reasoning is storage-agnostic). State the inferred priority and due date in the chat draft; the user can override before the write lands. Create directly — no approval step.
+**`custom.Priority` is mandatory on every Task this procedure creates.** Never omit it and never leave it null. That covers all four Task creates in this agent: PB-side commitments (this step), the re-debrief task (step 2b), the Slack debrief task (step 6), and each product feedback task (step 8). `/daily-brief` reads `custom.Priority` when it assembles the open-task list, so an unprioritized task is a task the user will not see.
+
+#### Priority by task kind
+
+| Task kind | Default | Escalate when |
+|---|---|---|
+| PB-side commitment (this step) | Per the account table below | — |
+| Re-debrief, transcript pending (step 2b) | `P2` | `P1` if the session type is `👟 Kick off` or `🏗️ Architecting`, or the Company `phase` is `3. Renewal` |
+| Slack debrief (step 6) | `P3` | `P2` if the debrief text contains a 🔴 risk |
+| Product feedback (step 8) | `P3` | `P2` if the item is a bug, blocks an in-flight commitment, or came from an account in `phase` `3. Renewal` or `4. Churned` |
+
+#### Account priority table — PB-side commitments
+
+`context/notion-writer-playbook.md` Operation 2 states this logic in Notion terms (Active Package `Status` + `ARR`). Read it from Planhat instead — Company `phase` and `arr`, both already resolved in step 1:
+
+| Condition | Priority |
+|---|---|
+| `phase` = `1. Activation` or `2. Adoption` AND `arr` ≥ $50k · or urgent/blocker language · or the item gates a dated commitment made to the customer | `P1` |
+| `phase` = `3. Renewal` AND the item affects the renewal conversation | `P1` |
+| `phase` = `1. Activation` or `2. Adoption` with `arr` < $50k · or `phase` = `0. Preparation` with `arr` ≥ $50k · or `arr` unknown | `P2` |
+| `phase` = `0. Preparation` with `arr` < $50k · or `3. Renewal` with no renewal impact · or low-urgency | `P3` |
+
+Renewal proximity outranks the table: when Company `renewalDate` is inside 45 days, nothing touching the renewal conversation goes below `P1`.
+
+State the assigned priority with a one-line reason for every task in the chat report, e.g. `P1 (Renewal phase, gates the 26 Sept conversation)`, alongside the inferred due date. The user can override before the write lands. Create directly — no approval step.
 
 **Customer-side action items do NOT get Tasks.** They live in the Conversation `description` (step 3) and the follow-up email (step 5) only.
 
@@ -220,7 +244,9 @@ create_model_record(MODEL: "Task", PARAMETERS: {
   action: "Slack debrief – [Customer] [date]",
   description: "<full debrief text>",
   companyId: "<planhat-company-id>",
-  status: "To Do"
+  ownerId: "<user's planhat id>",
+  status: "To Do",
+  "custom.Priority": "<P3, or P2 if the debrief contains a 🔴 risk — see step 4>"
 })
 ```
 
@@ -269,32 +295,14 @@ create_model_record(MODEL: "Task", PARAMETERS: {
   action: "PB feedback: [short description] – [Customer]",
   description: "<full PM-formatted log entry for that item>",
   companyId: "<planhat-company-id>",
-  status: "To Do"
+  ownerId: "<user's planhat id>",
+  status: "To Do",
+  "custom.Priority": "<P3, or P2 per the escalation rule in step 4>"
 })
 ```
 If no feedback surfaced, skip and note it. This is the discovery queue `/log-feedback` reads from.
 
-### 9. Post next-session planning + account-notable updates as a Company Comment
-
-From the extracted decisions, open items, next steps, and any account-notable content (new stakeholders, role changes, significant sentiment shift, newly articulated goals) — draft one comment. Skip this step entirely if nothing next-session-relevant or account-notable surfaced; don't post an empty comment.
-
-**Comment content is HTML restricted to `<p>`, `<a>`, and mention tags only** — no bold labels, no bullet lists, they won't render. Structure as short plain paragraphs:
-
-```
-<p>Next session: [proposed focus, tied to this session's outputs].</p>
-<p>Open dependencies: [blocking items and owners].</p>
-<p>Account notes: [new stakeholders / sentiment shift / goals — only if something surfaced].</p>
-```
-
-```
-create_model_record(MODEL: "Comment", PARAMETERS: {
-  commentableType: "Company",
-  commentableId: "<planhat-company-id>",
-  text: "<p>...</p>"
-})
-```
-
-### 10. Score the session in chat (never write to Planhat as a permanent record)
+### 9. Score the session in chat (never write to Planhat as a permanent record)
 
 Identify the session type and read the corresponding scorecard from `context/score-cards.md`.
 
@@ -341,11 +349,11 @@ After all steps complete, produce a single consolidated report:
 
 **Planhat writes applied:**
 - Conversation: [_id, "created" or "updated via Task noteId" or "direct create"]
-- Tasks created: [N tasks — list titles] (or "none — no PB-side actions identified")
+- Tasks created: [N tasks — list each as `title — [priority] — due [date] — (reason for the priority)`] (or "none — no PB-side actions identified")
+- Slack debrief Task, product feedback Tasks and any re-debrief Task each show their priority in the same form
 - Slack debrief Task: [Task _id]
 - Product feedback Tasks: [N tasks — list titles] (or "none — no feedback surfaced")
 - KDD Attachment: [Drive URL] (A-sessions only, or "N/A")
-- Company comment: [posted / skipped — nothing next-session-relevant or account-notable]
 
 **Gmail draft:**
 - Draft ID: [id] — to: [recipient], subject: [subject]
@@ -368,6 +376,7 @@ After all steps complete, produce a single consolidated report:
 
 ## Guardrails
 
+- **Every Task create carries `custom.Priority`.** No exceptions — PB commitments, re-debrief, Slack debrief and product feedback alike. Use the tables in step 4. An unprioritized Task is invisible to `/daily-brief`. If the inputs for the account table are genuinely unavailable, write `P2` and say so in the report rather than omitting the field.
 - **Don't invent** decisions, commitments, stakeholders, dates, or feature requests that aren't in the source material. Flag gaps.
 - **Customer-side tasks do not go in Tasks.** Conversation description and follow-up email only.
 - **Scorecard is chat-only.** Never write evaluation language to any Planhat record.
@@ -378,7 +387,6 @@ After all steps complete, produce a single consolidated report:
 - **Never overwrite `owner` or any SF-synced Company field.** See `context/planhat-schema.md` § Write Rules for the full SF-synced list.
 - **Auto-Conversation only fires on a `status` transition to `"done"` via `update_model_record`** — never bake `status: "done"` into a Task create.
 - **Conversation type is free-text but must match the configured values** in `context/planhat-schema.md` § Type value mapping, emoji included — a value without the emoji won't match filters.
-- **Comment content is restricted HTML** (`<p>`, `<a>`, mentions only) — don't draft bold labels or bullets into it, they'll render as literal text or be stripped.
 - **Attachment `sourceUrl` must be a public, directly-fetchable URL** — the Drive "view" link (`/file/d/{id}/view`) does not work; use the `uc?export=download` form, and only after explicitly sharing the file anyone-with-link.
 - **Conflicts between sources** (Gong vs. Slack/Gmail signals vs. the user's chat): flag, don't silently pick.
 - **If the transcript is thin or missing:** complete all steps that don't depend on it and flag clearly what couldn't be done. If exhausted entirely, follow the **placeholder-debrief branch** in step 2b — don't abort.

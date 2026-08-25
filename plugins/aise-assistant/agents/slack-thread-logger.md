@@ -1,6 +1,6 @@
 ---
 name: slack-thread-logger
-description: Procedure for logging shared-Slack-channel threads as Planhat Conversations of type "💬 Slack Chat" on the customer – one Conversation per thread, dated on the first message, deduplicated on a deterministic Slack externalId, with a reply-backfill pass over the previous 365 days. Invoked by `/log-slack-threads`.
+description: Procedure for logging shared-Slack-channel threads as Planhat Conversations of type "💬 Slack Chat" on the customer – one Conversation per thread, dated on the first message, deduplicated on a deterministic Slack externalId, with a reply-backfill pass over the previous 365 days. Resolves the customer↔channel pairing in either direction and caches it on `Company.custom.External_Slack_Channel_ID` so later runs skip resolution. Invoked by `/log-slack-threads`.
 tools: mcp__Slack__slack_read_channel, mcp__Slack__slack_read_thread, mcp__Slack__slack_search_channels, mcp__Slack__slack_read_user_profile, mcp__Planhat__list_model_records, mcp__Planhat__get_model_record, mcp__Planhat__create_model_record, mcp__Planhat__update_model_record, mcp__Planhat__get_model_action_parameters, Bash, Read, Write
 ---
 
@@ -18,23 +18,126 @@ session gap.
 
 ## 0. Resolve scope
 
-**Channel.** Accept any of: a pasted archive URL (`https://<workspace>.slack.com/archives/C0AKKLJCB5E` –
-the ID is the segment after `/archives/`), a raw channel ID, or a `#name`. For a name, resolve with
-`slack_search_channels` and confirm the match in chat before reading. A pasted URL is authoritative – do not
-"verify" it with a search that may return a different channel.
+Two entry shapes, resolving in opposite directions. Both end in the same place: a channel ID, a company
+`_id`, and `custom.External_Slack_Channel_ID` populated on that company so the next run skips this whole
+section.
 
-**Company.** If `--customer` is given, resolve it:
+**The cache field.** `Company.custom.External_Slack_Channel_ID` (string, AISE-writable) holds the shared
+channel's Slack **ID** – `C0AKKLJCB5E`, upper-case, ID only, never a `#name` and never a URL. It is the
+customer ↔ channel pairing, written once and reused by every later run. Populate it on any invocation where
+it is empty and you have resolved a channel with confidence.
+
+> **`custom.Slack ID` and `custom.Slack URL` are a different thing entirely and must never be used here.**
+> Those two are the **internal** Productboard channel for talking about the account – RevOps/SF-owned, often
+> populated, and pointing at a channel with no customer in it. Sweeping one would log Productboard's own
+> internal chatter about a customer onto that customer's timeline, where the customer can read it. This
+> procedure neither reads nor writes them. The only channel it touches is the **shared external** channel, and
+> the only field that records it is `custom.External_Slack_Channel_ID`.
+
+> **Propagation caveat.** `custom.External_Slack_Channel_ID` is new, and Planhat custom fields take time to
+> appear in MCP's field metadata. If it is missing from `get_model_action_parameters(MODEL: "Company")`, or a
+> write to it is rejected, or it reads back empty after a write: **say so once and carry on with the sweep**.
+> The cache is an optimization, not a prerequisite – losing it costs the next run a resolution pass, and
+> aborting a sweep over it costs the whole run.
+
+### Path A – the user gave a channel
+
+A pasted archive URL, a raw channel ID, or a `#name`.
+
+1. **Extract the channel ID.**
+   - Archive URL – the segment after `/archives/`: `https://productboard.slack.com/archives/C0AKKLJCB5E`.
+     If a `/p{digits}` tail is present the user pasted a *message* permalink; the channel ID is still the
+     `/archives/` segment, and the tail is a thread parent ts you can use as a starting point.
+   - Raw ID – use as-is, upper-cased.
+   - `#name` – resolve with `slack_search_channels` and confirm the match in chat before reading. A pasted URL
+     or ID is authoritative; do not "verify" it with a search that may return a different channel.
+
+2. **Resolve the company from the external participants.** If `--customer` was also given, skip to step 4 and
+   just verify it. Otherwise read the first page of channel history (`slack_read_channel`, `limit: 100`) and
+   take the **modal non-`productboard.com` email domain** across the message authors – every message from the
+   Slack MCP carries the author's email, and guests are marked `external: <Org>`. Match it against
+   `Company.domains`:
+
+```
+list_model_records(MODEL: "Company", FILTER: {"domains[contains]": "<domain>"},
+                   SELECT: ["name", "domains", "phase", "owner",
+                            "custom.External_Slack_Channel_ID"])
+```
+
+3. **Fall back to the channel name** when the domain pass is inconclusive – an all-internal channel, guest
+   emails not exposed, or zero/multiple `domains` matches. Derive a candidate from the channel name: strip a
+   leading `ext-` or `shared-`, strip a trailing `-productboard` / `-pb`, turn hyphens into spaces
+   (`#ext-acme-corp-productboard` → `acme corp`), then:
+
+```
+list_model_records(MODEL: "Company", FILTER: {"name[contains]": "<candidate>"},
+                   SELECT: ["name", "domains", "custom.External_Slack_Channel_ID"])
+```
+
+   The channel name is a weaker signal than the domain – it is a label a human typed once and never renamed.
+   Treat a name-only match as a proposal, not a resolution.
+
+4. **Confirm the resolved company name in chat before any write.** A mis-resolved company writes a customer's
+   private support history onto the wrong account, which is the worst failure this procedure can produce.
+   Zero or multiple matches after both passes: stop and ask.
+
+5. **Cache write-back** (§ 0.1), then continue to § 1.
+
+### Path B – the user gave a company, no channel
+
+1. **Resolve the company**, pulling the cache field in the same call:
 
 ```
 list_model_records(MODEL: "Company", FILTER: {"name[contains]": "<name>"},
-                   SELECT: ["name", "domains", "phase", "owner"])
+                   SELECT: ["name", "domains", "phase", "owner",
+                            "custom.External_Slack_Channel_ID"])
 ```
 
-If not given, derive it from the channel's external participants. Every message from the Slack MCP carries the
-author's email; take the modal non-`productboard.com` domain across the channel and match it against
-`Company.domains`. Confirm the resolved company name in chat before any write – a mis-resolved company writes
-a customer's private support history onto the wrong account, which is the worst failure this procedure can
-produce. Zero or multiple matches: stop and ask.
+2. **`custom.External_Slack_Channel_ID` populated → use it.** This is the fast path and the reason the field
+   exists. Validate it with a one-message read (`slack_read_channel`, `limit: 1`) so a stale ID fails loudly
+   here rather than three passes later, then go straight to § 1 with that channel. A read failure – archived
+   channel, renamed workspace, bot removed, ID no longer valid – is **reported to the user**, not silently
+   routed into the fallback ladder that then overwrites the field with something else.
+
+3. **Empty → two steps, in this order.** Stop at the first confident hit.
+
+   | Step | Source | How to check it |
+   |---|---|---|
+   | a | `slack_search_channels` for the `#ext-` convention | Shared external channels are named `#ext-{customer}` or `#ext-{customer}-productboard`. Query `ext-{customer slug}`, and if that misses, `ext-{primary domain's second-level label}` (`emplifi.io` → `ext-emplifi`). Include `private_channel` in `channel_types` – shared channels are usually private. |
+   | b | Ask the user | "I could not find a shared external channel for {customer} – paste the channel URL or ID and I will store it on the account." |
+
+   On step a, require the match to actually look right, and require it to be **external**. Two tests, both
+   cheap: the name starts with `ext-`, and a one-page read shows at least one non-`productboard.com` author.
+   A channel that fails either test is an internal channel that happens to be named after the customer – skip
+   it and go to step b. More than one plausible hit, or a hit whose name does not contain the customer or
+   their domain label: present the candidates and ask. Never sweep a channel you are not sure about – see
+   step 4 of path A for why.
+
+   **Do not consult `custom.Slack ID` or `custom.Slack URL` at this step.** They hold the internal account
+   channel, which is exactly the wrong answer and looks exactly like the right one.
+
+4. **Cache write-back** (§ 0.1), then continue to § 1.
+
+### 0.1 Cache write-back
+
+Once channel and company are both settled, and **before** the legacy-repair and backfill passes:
+
+```
+update_model_record(MODEL: "Company", OBJECT_ID: "<company _id>",
+  PARAMETERS: {"custom.External_Slack_Channel_ID": "<CHANNEL ID, upper-case>"})
+
+get_model_record(MODEL: "Company", OBJECT_ID: "<company _id>",
+  SELECT: ["custom.External_Slack_Channel_ID"])
+```
+
+| Rule | Why |
+|---|---|
+| Write when the field is empty, or when the user has just corrected it. | The point is to stop re-resolving. An empty field after a successful sweep means the next run repeats path A or the whole path B ladder. |
+| ID only, upper-case. No `#`, no URL, no `p{digits}` tail. | Path B feeds the value straight into `slack_read_channel` and into the `externalId` builder in § 3, both of which want the bare ID. A URL stored here breaks the dedup key format. |
+| Never overwrite a populated value silently. | A value that disagrees with the channel just swept is a **conflict, not a stale cache**. Report both and ask. A customer with two shared channels is a real thing and one field cannot hold both – say so rather than flip-flopping the field between runs. |
+| Read it back and assert. | Same failure mode as `externalId` in § 3: a custom-field write that does not stick fails silently, and the only symptom is that the next run is slow again. |
+| On `--dry-run`, print the write and skip it. | |
+| A rejected write, or a field missing from `get_model_action_parameters`, is a one-line note and then business as usual. | The field is new and MCP metadata lags behind Planhat. Never abort a sweep because the cache would not take. |
 
 **Window.** `--since` filters on the thread's **first** message, not its last reply. Default is the whole
 channel.
@@ -183,7 +286,10 @@ list_model_records(MODEL: "Conversation",
    older threads are effectively closed and re-reading them every run is waste.
 
 2. For each record, parse `externalId` → channel + parent ts. Skip any whose `externalId` does not match the
-   `slack_*` shape (it came from a different tool).
+   `slack_*` shape (it came from a different tool). Records whose channel ID differs from the one resolved in
+   § 0 are **still backfilled** – an account can have had more than one shared channel over time, and the
+   `externalId` carries its own channel so no cache lookup is needed. Do not repoint the cache at a channel
+   found this way.
 
 3. Read the live thread (`slack_read_thread`) and compare its total message count against the record's
    footer watermark:
@@ -318,7 +424,11 @@ A table: `date · thread topic · action (created / backfilled / unchanged / ski
 
 - counts per action,
 - any thread held back and why (unresolvable company, malformed `externalId`, thread read failure),
-- the record IDs for spot-checking.
+- the record IDs for spot-checking,
+- **how the channel was resolved** and what happened to the cache – one line: `channel C0AKKLJCB5E from
+  custom.External_Slack_Channel_ID (cached)`, `resolved from #ext- search, cached on Acme Corp`, or
+  `cache conflict, left as-is` – so a wrong pairing is visible in the run that made it rather than three runs
+  later.
 
 ---
 
@@ -338,3 +448,13 @@ A table: `date · thread topic · action (created / backfilled / unchanged / ski
    of the timeline faster than missing threads do.
 6. **Slack is read-only from this procedure.** No posting, no reacting, no thread replies.
 7. **`💬 Slack Chat` is uncounted.** Never present logging Slack threads as increasing session delivery.
+8. **Cache the channel ID, once, on the company.** `custom.External_Slack_Channel_ID` is what turns the second
+   run on an account from "resolve the customer from email domains and guess at channel names" into a single
+   read. Write it the first time you resolve a channel; never overwrite a populated value without asking.
+9. **`custom.Slack ID` / `custom.Slack URL` are the internal account channel. Never sweep them.** They are
+   Productboard's own channel for discussing the customer, and everything said in them was said on the
+   assumption the customer would never read it. Logging one onto the customer's Planhat timeline puts it
+   somewhere the customer can. The only channel this procedure reads is the shared external one.
+10. **A cached ID that will not read is a report, not a fallback trigger.** Falling through to the `#ext-`
+   search on a read failure and then caching the result is how an account silently ends up pointed at the
+   wrong channel. Say the cached channel failed and let the user decide.
