@@ -294,25 +294,48 @@ Planhat only — Notion does not track these in real time.
 
 ### Custom fields (Productboard workspace)
 
+> **Last verified against live `get_model_action_parameters` output: 2026-08-25.** Field sets drift. When a
+> write silently no-ops or a field is missing from a read, re-pull the metadata before assuming the doc is right.
+
 > Fields marked **[SF-SYNCED]** are populated by the Salesforce → Planhat sync. **Never write these via MCP.** The exact SF mapping is WIP; treat any unmarked field as writable only if it appears as writable in `notion-planhat-field-mapping.md`.
 
 #### SF-synced — do not write
 
 | Field ID | Type | Options | Notes |
 |---|---|---|---|
-| `custom.ARR – Salesforce` | number | — | ARR from SF |
+| `custom.ARR – SF` | number | — | ARR from SF. **Field ID is `ARR – SF`, not `ARR – Salesforce`.** |
 | `custom.Customer Status – SF` | string | `1.0 Customer`, `2.0 Pipeline`, `4.0 Lost`, `5.0 Churn` | SF lifecycle |
-| `custom.Account Executive` | objectId → User | — | AE — managed by RevOps via SF |
-| `custom.Renewals Manager` | objectId → User | — | RM — managed by RevOps via SF |
-| `custom.Segment` | string | — | Customer segment |
-| `custom.Region` | string | `EMEA`, `NOAM`, `APAC`, `LATAM`, `AUNZ`, `Missing`, `Exclude`, `Blacklisted` | Region |
+| `custom.Account Executive` | objectId → User | — | AE relation, managed by RevOps via SF |
+| `custom.Account Executive Name – SF` | string | — | AE name as text. Writable in the API but RevOps-owned in practice; do not write. |
+| `custom.Renewals Manager` | objectId → User | — | RM relation, managed by RevOps via SF |
 | `custom.Purchased Makers` | number | — | Contracted maker seats |
 | `custom.Current Makers` | number | — | Active maker seat count |
+| `custom.Purchased - Current Makers` | number | — | Seat gap roll-up |
 | `custom.Slack URL` | string | — | Slack channel URL |
-| `custom.Slack ID` | string | — | Slack channel ID |
-| `custom.Salesforce URL` | string | — | SF account URL — system read-only |
+| `custom.Salesforce URL` | string | — | SF account URL |
 | `custom.AI Readiness – SF` | string | `AI-Forward (Inferred/Validated)`, `AI-Interested (Inferred/Validated)`, `AI-Resistant (Inferred/Validated)` | SF-synced AI readiness |
-| `custom.⚡️ Days in Current Ignite Stage` | string | — | Auto-computed. Read-only. **Renamed 2026-08-07** (was `custom.Days in Current Ignite Stage`). |
+| `custom.AI Readiness Score` | number | — | Auto-computed. **Read-only as of the 2026-08-25 check** – an earlier version of this doc described it as manually settable. Do not write. |
+| `custom.Customer Type` | string | `Contract`, `Subscription`, `Contract - SatisMeter Only` | Contract shape |
+| `custom.Customer Since – SF` | string | — | First customer date |
+| `custom.Subscription Start Date (Earliest)` | string | — | Earliest subscription start |
+| `custom.Plan Names` | string | — | All plan names on the account |
+| `custom.Plan Name + Version (Highest ARR)` | string | — | Dominant plan by ARR |
+| `custom.Plan Version (Highest ARR)` | string | — | Version of the dominant plan |
+| `custom.Services Plan` | string | — | Services SKU roll-up |
+| `custom.Recent Opportunity Notes` | string | — | Latest SF opportunity notes. Useful discovery context before a first call. |
+| `custom.Last AISE Touch` | string | — | Most recent AISE interaction |
+| `custom.Last AISE Session` | string | — | Date of the most recent **counted** session. Driven by the eight-type formula in the Conversation section below. |
+| `custom.Last AISE Email` | string | — | Most recent AISE email |
+| `custom.Total AISE Sessions` | number | — | Count of AISE session Conversations |
+| `custom.PHS example` | string | — | Health-score scratch field. Ignore. |
+
+> **Writable in the API but RevOps-owned – do not write:** `custom.Segment`, `custom.Region`
+> (`EMEA`/`NOAM`/`APAC`/`LATAM`/`AUNZ`/`Missing`/`Exclude`/`Blacklisted`), and `custom.Slack ID`. These report as
+> writable in `get_model_action_parameters` but are maintained upstream. An earlier version of this doc listed them
+> as SF-synced read-only; the accurate statement is that the API will accept a write and you still should not make one.
+
+> **Removed since the previous snapshot:** `custom.⚡️ Days in Current Ignite Stage` is no longer present on the
+> Company model. Do not read or write it.
 
 #### AISE-writable
 
@@ -324,12 +347,24 @@ Planhat only — Notion does not track these in real time.
 | `custom.⚡️ Igniting?` | boolean | `true` / `false` | ← Notion `Igniting?`. **Renamed 2026-08-07** (was `custom.Igniting?`). |
 | `custom.AISE Journey Status` | string | `Presales`, `Active (no Services)`, `Active (Services)`, `Contracted to Scale`, `Churned` | ← Notion `Account Status`. **AISE-managed accounts only (30k+ ARR).** Do not write for AIPA accounts. **`Not started` is not a valid option — omit.** Note: field ID is `custom.AISE Journey Status`, not `custom.Journey Status`. |
 | `phase` | string | **Configured options (not free-text):** `0. Preparation` · `1. Activation` · `2. Adoption` · `3. Renewal` · `4. Churned` | Universal field — applies to **all** Planhat companies (AISE and AIPA). Derived from the customer's current Active Package `Status` — see full mapping table in `notion-planhat-field-mapping.md`. `4. Churned` is set manually and aligns with `custom.AISE Journey Status = Churned`. |
-| `custom.AI Readiness Score` | number | — | Set manually in Planhat if needed |
 | `custom.SH_Current State` | string (Rich text) | — | **Sales Handoff** (SH_ = "Sales Handoff"): current state from pre-sales. Auto-populated on deal close for AISE-segment accounts — not manually written by AISE. Read for discovery context. |
 | `custom.SH_Future State` | string (Rich text) | — | Sales Handoff: desired future state from pre-sales. Auto-populated on deal close. |
 | `custom.SH_Negative Impacts` | string (Rich text) | — | Sales Handoff: pain points from pre-sales. Auto-populated on deal close. |
 | `custom.SH_Positive Outcomes` | string (Rich text) | — | Sales Handoff: value / expected outcomes from pre-sales. Auto-populated on deal close. |
 | `custom.Services Package?` | array | `V13`, `Premier Services`, `Custom SOW`, `Essentials`, `N/A` | **To be architected in Planhat** as a roll-up from the Active Product with the services SKU toggle — not a direct Notion field write. Do not populate from Notion during migration. |
+| `custom.Next Step` | string | — | **The account's current next action.** Free text. Written after an outbound touchpoint actually lands, not when a draft is created. Keep it a short dated sequence with owners: what was just done, what is being waited on, what happens when it clears. Overwrite rather than append – this is a current-state field, not a log. Session history belongs in Conversations. |
+| `custom.[SIP] Tier` | string | `T1 - Priority outreach: enabled + visible, not yet ignited` · `T2 - Second wave: ignited, not yet adopted` · `T3 - Adopted/transitioned (sustain)` · `T4 - Open visibility first: enabled, admins-only` · `T5 - Enablement motion: Spark not enabled` · `T6 - No outreach: churned / planning to churn` | Spark in Practice tiering. Pass the **full option string**, not just `T1`. See `context/initiatives/spark-in-practice.md` for what each tier changes about the motion. |
+| `custom.[SIP] Rank in Tier` | number | — | Priority rank within the tier. Lower is higher priority. |
+| `custom.⚡️ Spark Enabled` | boolean | `true` / `false` | Whether Spark is switched on for the account at all. The gate for Spark in Practice scope. |
+| `custom.⚡️ Spark Enabled Date` | string | — | When Spark was enabled. |
+| `custom.⚡️ Spark Active For Since` | string | — | When the current `⚡️ Spark Stage` visibility setting took effect. |
+| `custom.⚡️ Spark Engaged` | boolean | `true` / `false` | Someone in the account reached L2 – ran a skill or submitted a Spark prompt. **Live value, not the weekly snapshot.** |
+| `custom.⚡️ Spark Engaged Date` | string | — | When engagement was first detected. |
+| `custom.⚡️ AI Consent` | string | — | Where the account stands on AI terms. Set this when a terms review, extension request, or acceptance moves – it is the field that tells the rest of the team the account is mid-flight rather than untouched. |
+| `custom.AIPA Journey Status` | string | `Spark Activation`, `Re-Engagement` | AIPA-segment equivalent of `custom.AISE Journey Status`. Do not write for AISE-managed accounts. |
+| `custom.Gong Summary` | string | — | Rolling Gong-derived account summary. |
+| `custom.CAB Customer` | boolean | `true` / `false` | Customer Advisory Board member. |
+| `custom.customerSlackChannelId` | string | — | Shared Slack channel ID, used by `/log-slack-threads`. |
 
 #### `phase` vs `custom.AISE Journey Status`
 
@@ -565,8 +600,12 @@ FIND(Conversation.date & {
 ~~~
 
 **NOT counted, even though they are valid `type` values:** `📺 Webinar`, `Internal Alignment`, `Sales Handover`,
-`🧑‍💻 Billable Task`, `👾 Gong Call`, `Task`, `Product Feedback`, `💬 Slack Chat`, and every generic type
-(`note`, `email`, `chat`, `call`, `ticket`, `other`).
+`🧑‍💻 Billable Task`, `👾 Gong Call`, `Task`, `Product Feedback`, `💬 Slack Chat`, `🔁 Renewal Call`, and every
+generic type (`note`, `email`, `chat`, `call`, `ticket`, `other`).
+
+- **`🔁 Renewal Call` does not count.** It is not in the eight-value formula above. A renewal conversation logged
+  under this type is correct for engagement history but will not move session counts or `custom.Last AISE Session`.
+  Do not retype it to `🔁 Sync` to make a number move – that misrepresents what the call was.
 
 Consequences worth remembering:
 
@@ -588,7 +627,10 @@ this snapshot, it drifts:
 `note` · `email` · `chat` · `call` · `ticket` · `other` · `🎓 Enablement` · `🔁 Sync` · `Internal Alignment` ·
 `🏗️ Architecting` · `👟 Kick off` · `🔎 Discovery` · `🏁 Audit / Setup Review` · `📺 Webinar` · `🎙️ Demo` ·
 `👾 Gong Call` · `Task` · `Sales Handover` · `💬 Slack Chat` · `🧑‍💻 Billable Task` · `📆 Onsite Workshop` ·
-`Product Feedback`
+`Product Feedback` · `🔁 Renewal Call`
+
+*(23 values, verified against `get_model_action_parameters` on 2026-08-25. `🔁 Renewal Call` was added since the
+previous snapshot – note it shares the 🔁 emoji with `🔁 Sync`, so match on the full string, never the emoji alone.)*
 
 #### Status mapping
 
@@ -633,11 +675,20 @@ this snapshot, it drifts:
 | `custom.Gong URL` | string | — | Gong call link. **Use this instead of appending to `description`.** Write the raw URL. |
 | `custom.Link to PB Note` | string | — | Productboard feedback note URL. Written by `/log-feedback` onto the Conversation auto-created when a `Product Feedback` Task transitions to `done` (see § Planhat Task auto-Conversation behavior) — links the touchpoint back to the submitted PB note. Write the raw URL. |
 | `custom.Call Duration` | number | — | Session length in minutes. Derive from Notion `Session Length (h)` × 60. |
-| `custom.Services Package` | string | — | Links to a `LineItem` record (Services Package). Optional — only set if the session is clearly associated with a specific active package. |
+| `custom.Opportunity` | string → Deal | — | The customer contract the session was delivered under. Relation to a `Deal` record. Optional – set when the session is clearly attributable to one contract. **Replaces the former `custom.Services Package` field, which no longer exists on this model.** |
+| `custom.Call Recording` | string | — | Recording link when the call was not captured in Gong (for example a Zoom cloud recording). Use `custom.Gong URL` for Gong calls. Write the raw URL. |
+| `custom.Handover Status` | string | — | `Not started` · `In progress` · `Validated – Ready`. Tracks the sales-to-AISE handover on a Sales Handover conversation. |
+| `custom.SH_Current State` | string (rich text) | — | Sales Handoff context captured at conversation level. Mirrors the Company-level `SH_` fields. Read for discovery context; not written by this assistant. |
+| `custom.SH_Future State` | string (rich text) | — | As above. |
+| `custom.SH_Negative Consequences` | string (rich text) | — | As above. **Note the Conversation field is `SH_Negative Consequences`; the Company field is `SH_Negative Impacts`.** Different names, same idea – do not copy one field ID to the other model. |
+| `custom.SH_Positive Business Outcomes` | string (rich text) | — | As above. **Note the Conversation field is `SH_Positive Business Outcomes`; the Company field is `SH_Positive Outcomes`.** |
 
 #### Read-only fields
 
-`snippet`, `numberOfParts`, `parentId`, `parentType`, `createDate`, `companyName`, `isClassified`, `isSignalAnalyzed`, `shortSummary`, `isSeen`, `isOpen`, `isBounced`, `archived`, `scheduled`, `createdAt`, `updatedAt`
+`snippet`, `numberOfParts`, `parentId`, `parentType`, `createDate`, `companyName`, `isClassified`, `isSignalAnalyzed`, `shortSummary`, `isSeen`, `isOpen`, `isBounced`, `archived`, `scheduled`, `createdAt`, `updatedAt`, `custom.AISE Conversation`
+
+`custom.AISE Conversation` is a system-derived boolean marking the record as AISE-originated. It is read-only – do not
+attempt to set it to force a record into AISE reporting.
 
 ---
 

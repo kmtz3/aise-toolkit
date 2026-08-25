@@ -57,7 +57,7 @@ If — after real searching — context is still thin on something load-bearing 
 ### 3. Gather the email specifics
 
 - **Recipient(s)** — verify email address from the Notion Contacts relation on the customer, or from the most recent Gmail thread they appear in. Never guess.
-- **Subject** — for replies, match exactly with `Re: <original subject>` so Gmail auto-threads (best-effort: flag in the report that the `create_draft` API doesn't accept a thread ID, so it may land as a standalone draft).
+- **Subject** — for replies, match exactly with `Re: <original subject>` (or `RE:` if the thread already uses that form). Threading is **not** best-effort: `create_draft` accepts `replyToMessageId`, and you must pass it. See Step 5.
 - **CC** — only if the existing thread has a cc list or the user explicitly asks. Default no cc.
 - **New thread vs reply** — default to new thread unless the context shows an active exchange to continue.
 
@@ -75,12 +75,13 @@ Apply [`context/communication-style-guide.md`](../../context/communication-style
 - **American English.** organize, color, -ize.
 - **Bolded section labels beat headers** for short emails. Plain paragraphs for very short ones.
 - **Bullets for lists**, short paragraphs otherwise. Customer should be able to scan in 30 seconds.
-- **Em-dashes sparingly.** One is fine, three is a tell.
-- **Sign-off:** first name, then the signature block:
+- **Never em dashes.** Use en dashes (–) everywhere a dash is needed – emails, subject lines, bullets, Slack, Notion. This is absolute, not a matter of degree. Check every dash character before saving. The one exception is a reporting key that must be copied verbatim, such as the `Spark in Practice — [Account] × Productboard` calendar title in `context/initiatives/spark-in-practice.md`.
+- **Sign-off:** per `custom.AISE Profile preferences` – the sign-off word varies by audience (client, formal, internal, appreciation). Then the signature block, using the **name and job title from `custom.AISE Identity`**, never a title hardcoded here:
   ```
-  the user
-  AI Success Engineer (AISE) | Productboard
+  <Preferred name> <Last name>
+  <Role> | Productboard
   ```
+  For Klara Martinez that is `Klara Martinez` / `Senior Solutions Architect | Productboard`. The pipe is a separator, not a dash – leave it as `|`.
 - **Pattern for ongoing architecting/working cadence:** reference *what we agreed last* + *what we'll cover next* + the ask. Never frame as first-touch.
 
 **Gmail formatting rules (mandatory — applies to every draft saved via `create_draft`):**
@@ -116,6 +117,22 @@ Use `create_draft`. Always provide BOTH:
 - `body` — plain text.
 - `htmlBody` — with `<p>`, `<strong>`, `<ul>`, `<li>`, `<br>`. No fancy CSS.
 
+**Threading a reply.** `create_draft` accepts `replyToMessageId`. Pass the `id` of the specific message being replied
+to — from `get_thread`, not the `threadId`, and never the hash out of a Gmail web URL. Then check that the response's
+`threadId` matches the original thread. If it doesn't, the draft is detached: trash it and redo.
+
+**Never `update_draft` a reply.** `update_draft` has no `replyToMessageId` parameter, so it silently detaches a
+threaded reply and re-homes it on a new thread. From the user's side the edit looks like it never happened, because
+they are looking at the original conversation and the draft is no longer on it. To revise a reply:
+
+1. `create_draft` again with the same `replyToMessageId`, recipients and subject.
+2. `list_drafts` to read the stale draft's **current** message ID — IDs shift between calls, so the one returned at
+   creation is not reliable.
+3. `trash_message` that ID.
+4. Confirm one draft remains on the thread.
+
+`update_draft` is fine for a standalone, non-reply draft.
+
 No `bcc` unless explicitly requested. Capture the draft ID from the response.
 
 ### 6. Report back in chat
@@ -125,7 +142,7 @@ For each draft:
 - Recipient, subject, cc (if any).
 - **One-line angle** — why this framing, tied to which session or thread.
 - Any `[FILL IN]` placeholders (booking links, attachments, exact dates) the user must resolve before sending.
-- Threading caveat if replying to an existing thread.
+- Threading confirmation if replying — state the `threadId` the draft landed on and that it matches the original.
 - Full body inline so the user can review without opening Gmail.
 - Assumptions flagged — e.g. "interpreted 'Richard' as Richard Duncan (customer) not Richard Bailey (PB)".
 
@@ -137,5 +154,12 @@ For each draft:
 - **Customer confidentiality** — never pull in internal commercial/credit/renewal detail the customer hasn't already seen. Internal context stays inside PB.
 - **No speculation as fact** — if in doubt, drop the detail rather than guess.
 - **Never construct Productboard API URLs** — do not guess or pattern-match endpoint paths. Any Productboard API link in a draft must come from a confirmed `developer.productboard.com/reference/<operationId>` lookup via `support-hub`. If lookup fails, write `[TO VERIFY: developer.productboard.com/reference/]` and flag it in the report.
-- **If updating a prior draft** — the Gmail MCP has no update/delete tool loaded by default. Create the new draft, return its ID, and flag the stale draft ID in the report so the user can trash it manually.
+- **If updating a prior draft** — `update_draft` and `trash_message` are both available (load via ToolSearch if deferred). Follow the replace-and-trash procedure in Step 5. Never `update_draft` a reply.
 - **Multi-draft requests** — if the user asks for multiple drafts, create each one independently, each with its own context pass. Do not copy-paste structure across recipients.
+
+
+## Never report a draft as sent
+
+A draft is a draft. Do not describe it as sent, do not update Planhat or any other record on the strength of it, and
+do not tell the user an account has been contacted. The user reviews and sends by hand, often editing substantially
+first. Downstream record updates read the **sent** message, not the draft — see `/inbox-triage` § 5.

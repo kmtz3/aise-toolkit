@@ -1,5 +1,12 @@
 # Changelog — aise-leadership
 
+## [1.12.5] — 2026-08-25
+
+### Changed
+- `context/` synced from aise-assistant: `communication-style-guide.md` and `planhat-schema.md` repointed voice source of truth to the Planhat User record (`custom.AISE Profile preferences` / `custom.AISE Identity`), corrected Company/Conversation custom-field documentation (renamed and removed fields, 20+ previously missing fields, `🔁 Renewal Call` added to the Conversation `type` options), and dated the Company custom-field section as last verified 2026-08-25.
+
+---
+
 ## [1.12.4] — 2026-08-25
 
 ### Changed

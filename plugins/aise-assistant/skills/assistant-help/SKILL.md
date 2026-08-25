@@ -47,6 +47,7 @@ Commands are grouped by family. Type `/<family>` (or `/<family>-`) in autocomple
 | **Run a full post-session debrief in one shot** | `/session-debrief <customer> [session-id]` |
 | **Just summarize a delivered call** | `/session-summary [customer or session]` |
 | **Draft a follow-up email** | `/draft-email <who/what>` (saves to Gmail Drafts, never sends) |
+| **Work through the inbox and reply to what needs it** | `/inbox-triage [window]` (sweeps recent mail, batch-drafts threaded replies, updates Planhat Next Step after you send) |
 | **Plan the next 2–4 sessions** | `/customer-plan --next <customer>` |
 | **Build a full program plan** | `/customer-plan --full <customer>` |
 | **Set up a brand-new or inherited account** | `/customer-setup <customer>` |

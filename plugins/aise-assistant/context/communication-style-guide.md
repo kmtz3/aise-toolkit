@@ -1,6 +1,8 @@
 # Communication Style Guide — universal AISE-comms
 
-> **Universal layer.** This guide covers PB-AISE comms patterns that apply to any user in this role (structure, tone-by-context, transformation rules, action/ownership conventions). Personal preferences (sign-offs, em-dash rules, language quirks, name-spelling) live in the `AISE Assistant Preferences` Notion page (Voice section) and **override** anything here.
+> **Universal layer.** This guide covers PB-AISE comms patterns that apply to any user in this role (structure, tone-by-context, transformation rules, action/ownership conventions). Personal preferences (sign-offs, dash rules, language quirks, name-spelling, job title) live on the user's **Planhat User record** in `custom.AISE Profile preferences` and `custom.AISE Identity`, and **override** anything here.
+>
+> **Planhat is the source of truth as of 2026-08-18.** The former `AISE Assistant Preferences` Notion page is legacy and read-only – do not read voice rules from it. Always pull the Planhat fields fresh before drafting; never draft from memory or from this file alone.
 
 Use this guide alongside the `AISE Assistant Preferences` Notion page (Voice section) to rewrite drafts, braindumps, or raw notes into clear, send-ready messages for **customers** and **internal colleagues**, primarily via **email** and **Slack**.
 
@@ -69,7 +71,7 @@ When there are follow-ups or decisions:
 
 - Professional, clear, and concise; avoid corporate buzzwords.
 - Short intro, then quickly move into the substance.
-- Close with a short, warm sign-off — see the `AISE Assistant Preferences` Notion page (Voice section) for the user's specific sign-off preferences per audience.
+- Close with a short, warm sign-off — see `custom.AISE Profile preferences` on the user's Planhat User record for their sign-off preferences per audience (client, formal, internal, appreciation).
 
 **Recommended email layout**
 
@@ -169,10 +171,10 @@ Before finalizing, ensure the rewritten message:
 - Uses **plain, direct language** with enough but not excessive detail.
 - Uses **inline code** or code blocks for technical references where appropriate.
 - Ends with a sign-off appropriate to the audience (per the `AISE Assistant Preferences` Notion page, Voice section).
-- Punctuation conforms to the user's preferences in the `AISE Assistant Preferences` Notion page, Voice section (em-dashes, semicolons, etc.).
+- Punctuation conforms to `custom.AISE Profile preferences` on the user's Planhat User record (dashes, semicolons, etc.).
 
 ---
 
 ## 8. User-specific overrides
 
-Personal preferences (sign-offs, em-dash rules, semicolons, casual register, English variant, name-spelling, forbidden phrases) live in the `AISE Assistant Preferences` Notion page (Voice section). Always cross-reference both files before producing any draft on the user's behalf — the Notion page wins where they differ.
+Personal preferences (sign-offs, dash rules, semicolons, casual register, English variant, name-spelling, job title, forbidden phrases) live on the user's Planhat User record in `custom.AISE Profile preferences` and `custom.AISE Identity`. Always cross-reference both before producing any draft on the user's behalf — the Planhat record wins where they differ.
