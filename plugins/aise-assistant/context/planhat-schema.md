@@ -425,6 +425,61 @@ Two different tools write Conversations from session data, each with its own `ex
 
 `externalId` is scoped per-company, and the two ID formats never collide (different length/character set), so both conventions coexist safely. Don't assume a Conversation's `externalId` is a Notion page ID just because older records use that format — check the format before parsing it.
 
+A third writer was added in v2.45.0:
+
+| Path | `externalId` source | Notes |
+|---|---|---|
+| `/log-slack-threads` | `slack_{channelId}_{parentTsDigits}` | Shared-channel Slack threads logged as `💬 Slack Chat` touchpoints. Prefixed, so it never collides with the two ID formats above and is trivially identifiable. |
+
+---
+
+### Slack Chat Conversations (`/log-slack-threads`)
+
+Threads from a shared customer Slack channel are logged as touchpoints, one Conversation per thread. These are
+**not sessions** – `💬 Slack Chat` is in the not-counted list above, and a Slack record must never be used to
+close a session gap or retyped into a counted type to move a number.
+
+| Field | Value | Notes |
+|---|---|---|
+| `type` | `💬 Slack Chat` | Exact string including the emoji. |
+| `source` | `Slack` | |
+| `date` | First message of the thread, UTC | **Not** the last reply, **not** the run date. Slack renders local time – convert per message, since a channel's history crosses the DST boundary. |
+| `externalId` | `slack_{channelId}_{parentTsDigits}` | **Dedup key. Required on every record, one format only.** Lower-case `slack_` prefix, Slack channel **ID** upper-case (never the `#name` – channels get renamed), thread **parent** ts with the dot removed. Canonical shape: `^slack_[A-Z0-9]+_\d{16}$`, e.g. `slack_C0AKKLJCB5E_1786006420396099`. The digit string is exactly what Slack uses in a permalink, so the key is reversible (`ts = digits[:10] + "." + digits[10:]`) – that reversibility is what makes the reply-backfill pass possible without a side table. Never include the customer name, date, subject, hash or run counter. Checked before every create, read back and asserted after every create. Off-format legacy keys are normalized in place (`externalId` only, never `date` or `subject`). One drift case fixed 2026-08-25: `slack-C02N37LS25C-1786373402.520939` → `slack_C02N37LS25C_1786373402520939`. |
+| `subject` | `Slack – #{channel}: {topic} ({Mon D–D, YYYY})` | Topic names the feature or system in play, not "customer question". |
+| `description` | Rendered thread HTML | See § Planhat rich-text constraints below. |
+| `custom.Slack message Id` | Parent ts, dotted form | |
+| `custom.Slack initiated by` | `Customer` \| `Productboard` | From the parent author's email domain. |
+| `custom.First message time` | `YYYY-MM-DD HH:MM {tz}` | Human-readable local time of the first message. |
+
+**Reply backfill.** Slack threads gain replies for months after they are logged, so every run re-checks
+existing `💬 Slack Chat` records on the company dated within the last 365 days. There is no writable sync-cursor
+field on `Conversation` (`numberOfParts` is read-only), so the cursor is the last line of the `description`:
+
+```
+Sync: {N} messages · last message ts {ts} · logged {YYYY-MM-DD}
+```
+
+A live thread whose message count or last ts exceeds the watermark gets its `description` rebuilt via
+`update_model_record` on the existing `_id`. `date` and `externalId` are never touched – re-dating on backfill
+scatters the timeline and makes the update look like a duplicate.
+
+### Planhat rich-text constraints (`description` on any Conversation)
+
+Planhat's rich-text editor sanitizes HTML aggressively and reports nothing about what it dropped. Verified by
+writing a record and reading it back in the UI:
+
+| Never use | What Planhat does with it |
+|---|---|
+| `<div>` with `style` | Strips `background`, `border`, `border-radius`, `color`, `padding`; the empty container leaves a large vertical gap |
+| `<ol>` / `<ul>` | Mangles into `1.` / blank / `2.` / blank, with the real text on the even items |
+| `<table>` | Visible cell borders plus phantom empty rows and columns |
+| Literal newlines between elements | Converted into extra paragraph breaks |
+| Inline `color` on text | Dropped – colour-coded speakers all render black |
+
+**Safe set:** `<p>` · `<br>` · `<b>` · `<i>` · `<a href>` · `<hr>`, emitted as a single line with no literal
+newlines. Numbered lists are manual `1.` / `2.` prefixes on `<br>`-separated lines. This applies to every
+Conversation `description`, not just Slack ones.
+
 ### How to look up a Planhat Conversation for a given session
 
 **Check before creating:** use `externalId` as the dedup key. ⚠️ The Notion MCP returns page `id` as a dashed UUID (`39d97e9c-7d4f-802f-add4-f23c53322209`) — Planhat `externalId` must always be the hyphen-stripped, lowercase 32-char form (`notion_id.replace('-', '').lower()`). Writing the dashed form breaks dedup and silently duplicates the session on the next run. Until historical data is confirmed clean, check **both** forms:

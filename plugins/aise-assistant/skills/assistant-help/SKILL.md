@@ -57,6 +57,7 @@ Commands are grouped by family. Type `/<family>` (or `/<family>-`) in autocomple
 | **Repair ownership drift in Notion** | `/notion-sync --owner [--global]` |
 | **Flag renewals coming up** | `/notion-sync --renewals [--days N] [--dry-run]` |
 | **Build a customer-facing diagram** | `/draft-diagram <customer> <type> [description]` |
+| **Log a shared Slack channel into Planhat** | `/log-slack-threads --channel <url> [--customer <name>] [--dry-run]` – one Conversation per thread, plus a reply-backfill over the last 365 days |
 
 ## Suggested order around a customer session
 
@@ -76,7 +77,7 @@ Commands are grouped by family. Type `/<family>` (or `/<family>-`) in autocomple
 - **`notion-*`** — direct Notion operations (`-write`, `-check`, `-ask`)
 - **`notion-sync`** — push external data into Notion (`--owner`, `--renewals`)
 - **`assistant-*`** — meta / configure the assistant (`-setup`, `-help`, `-remember`, `-automate`)
-- **Standalone** — `/support-hub`, `/daily-brief`
+- **Standalone** — `/support-hub`, `/daily-brief`, `/log-slack-threads`
 
 ## Flag reference — multi-mode commands
 

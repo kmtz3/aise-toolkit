@@ -30,7 +30,7 @@ Read the CSV (uploaded file or path provided). Extract the following columns for
 | `AI consent` | Yes |
 | `Enabled` | Yes (`Yes` / `No`) |
 | `Enabled date` | No (ISO date or blank) |
-| `Activated visibility` | No (`Everyone` / `Admins only` / `Mixed` / `Off` / blank) |
+| `Activated visibility` | No (`Everyone` / `Admins only` / `Mixed` / `Off` / blank) — anything else, see Phase 3 |
 | `Activated visibility date` | No (ISO date or blank) |
 | `Engaged` | Yes (`Yes` / `No` / blank → treat blank as No) |
 | `Engaged date` | No (ISO date or blank) |
@@ -77,7 +77,7 @@ Map CSV values to Planhat field IDs:
 | `AI consent` | `custom.⚡️ AI Consent` | text | pass through verbatim |
 | `Enabled` | `custom.⚡️ Spark Enabled` | boolean | `Yes` → `true`, `No` → `false` |
 | `Enabled date` | `custom.⚡️ Spark Enabled Date` | date | ISO string or omit if blank |
-| `Activated visibility` | `custom.Spark Stage` | list | see mapping below; omit if blank |
+| `Activated visibility` | `custom.⚡️ Spark Stage` | list | see mapping below; omit if blank |
 | `Activated visibility date` | `custom.⚡️ Spark Active For Since` | date | ISO string or omit if blank |
 | `Engaged` | `custom.⚡️ Spark Engaged` | boolean | `Yes` → `true`, `No`/blank → `false` |
 | `Engaged date` | `custom.⚡️ Spark Engaged Date` | date | ISO string or omit if blank |
@@ -91,6 +91,13 @@ Map CSV values to Planhat field IDs:
 | `Mixed` | `Mixed` |
 | `Off` | `Off` |
 | _(blank)_ | omit field entirely — do not write null |
+
+The full option list on the Planhat field is
+`Off | AI Terms Review | Admins only | Everyone | Icebox | Mixed`.
+`AI Terms Review` and `Icebox` are set manually in Planhat and are **not** produced by
+the CSV export — never write them from this skill. If a row's `Activated visibility`
+value is not in the mapping table above, omit the field for that row and flag it in the
+Phase 5 report rather than guessing at a match.
 
 **Do NOT touch** `custom.⚡️ Igniting?` — this is managed manually by AISE and must
 never be overwritten by this skill.
@@ -113,13 +120,18 @@ MODEL: Company
 OBJECT_ID: <planhat _id>
 PARAMETERS: { <field_id>: <value>, ... }
 SELECT: ["name", "custom.⚡️ AI Consent", "custom.⚡️ Spark Enabled",
-         "custom.⚡️ Spark Enabled Date", "custom.⚡️ Spark Engaged",
-         "custom.⚡️ Spark Engaged Date", "custom.⚡️ Spark Active For Since"]
+         "custom.⚡️ Spark Enabled Date", "custom.⚡️ Spark Stage",
+         "custom.⚡️ Spark Engaged", "custom.⚡️ Spark Engaged Date",
+         "custom.⚡️ Spark Active For Since"]
 ```
 
-Note: `custom.Spark Stage` (list field) will not appear in the SELECT response even
-when successfully written — this is a known Planhat API behavior. Treat a successful
-HTTP response as confirmation.
+**Verify every write — do not treat a 200 as confirmation.** Planhat accepts unknown
+`custom.*` keys with a success response and silently drops them, so a mistyped field ID
+fails invisibly. Read the SELECT payload back on each response: every field the CSV had
+a value for must appear with the expected value. `custom.⚡️ Spark Stage` does read
+back like any other field — if it is missing or empty on a row where the CSV had a
+visibility value, that write failed. Re-check the field ID against
+`get_model_action_parameters` for `Company` and report the row as an error.
 
 ---
 

@@ -5,6 +5,28 @@ Format: `## [version] — YYYY-MM-DD` followed by bullet points grouped by type.
 
 ---
 
+## [2.45.0] – 2026-08-25
+
+### Added
+- **New skill `/log-slack-threads`** plus `agents/slack-thread-logger.md` – logs threads from a shared customer Slack channel as Planhat Conversations of type `💬 Slack Chat`, one Conversation per thread, dated on the thread's **first** message so the account timeline reads chronologically. Flags: `--channel`, `--customer`, `--since`, `--backfill-only`, `--new-only`, `--limit`, `--dry-run`.
+- `agents/slack-thread-logger.md` – **`externalId` convention for Slack touchpoints:** `slack_{channelId}_{parentTsDigits}`, where the digit string is the same one Slack uses in a permalink. Chosen because it is reversible (`ts = digits[:10] + "." + digits[10:]`), which is what makes the reply-backfill pass possible without a side table.
+- `agents/slack-thread-logger.md`, `context/planhat-schema.md` – **`externalId` is now specified as a single mandatory format with a builder helper, a pre-create check, a post-create read-back assertion, and a legacy repair pass.** Canonical shape `^slack_[A-Z0-9]+_\d{16}$`: lower-case prefix, channel **ID** upper-case (never the `#name`, since channels get renamed), thread **parent** ts with the dot removed. Nothing that can change between runs (customer name, date, subject, hash, run counter) may enter the key. The repair pass runs per company before the backfill pass and normalizes off-format or missing keys, recovering the parent ts from `custom.Slack message Id` or the `p{digits}` permalink segment in the footer; unrecoverable records are reported as `NEEDS EXTERNALID` rather than guessed at, because a wrong key can collide with a real thread while a missing one merely duplicates.
+- `agents/slack-thread-logger.md` – **reply-backfill pass**, run on every invocation unless `--new-only`. Slack threads keep gaining replies for months, so a record logged in March is routinely stale by August. The pass re-checks every `💬 Slack Chat` record on the company dated within the last 365 days, re-reads the live thread, and rebuilds `description` in place via `update_model_record`. `date` and `externalId` are never touched.
+- `agents/slack-thread-logger.md` – **footer sync watermark.** `Conversation` has no writable sync-cursor field (`numberOfParts` is read-only), so the cursor is the last line of `description`: `Sync: {N} messages · last message ts {ts} · logged {YYYY-MM-DD}`. It must be written on every create and every rebuild or the next run cannot distinguish a grown thread from a stale one.
+- `context/planhat-schema.md` – new § **Slack Chat Conversations (`/log-slack-threads`)** with the full field mapping, and a third row in the `externalId` convention table so the `slack_*` prefix is documented alongside the Notion-page-ID and calendar-event-ID writers.
+- `context/planhat-schema.md` – new § **Planhat rich-text constraints (`description` on any Conversation)**, see below.
+
+### Fixed
+- `context/planhat-schema.md`, `agents/slack-thread-logger.md` – **documented what Planhat's rich-text sanitizer silently destroys.** Established by writing a record and reading it back in the UI: `<div style>` loses `background` / `border` / `color` / `padding` and the empty container leaves a large vertical gap; `<ol>` and `<ul>` mangle into a `1.` / blank / `2.` / blank ladder with the real text on the even items; `<table>` renders with visible cell borders plus phantom empty rows and columns; literal newlines between elements become extra paragraph breaks; inline `color` is dropped so colour-coded speakers all render black. Safe set is `<p>` · `<br>` · `<b>` · `<i>` · `<a href>` · `<hr>`, emitted as a single line with no literal newlines. Applies to every Conversation `description`, not only Slack ones.
+
+### Context
+- Built while logging the full history of `#ext-kpler-productboard` (95 top-level messages: 33 threads with replies, 36 standalone, 26 noise). First render used styled `<div>` boxes, an `<ol>` for a three-option answer, and a `<table>` for follow-ups. All three broke in the Planhat UI, which is why the renderer spec is now a hard constraint list rather than a style suggestion.
+- Message classification is a judgement call the procedure now records explicitly: a standalone customer question with no in-channel reply is still a touchpoint worth logging (it was usually answered on a call), while joins, canvas notices, bare emoji and pure logistics one-liners are never logged – noise on a customer timeline destroys the timeline's value faster than a missing thread does.
+- Consecutive messages from one author within a few minutes are folded into a single record keyed on the first message's ts, since Slack users press enter mid-thought.
+- The `externalId` hardening came out of finding drift already present in the tenant with only two `💬 Slack Chat` records in existence: one used `slack-{channel}-{dotted ts}` (hyphens, dot retained), the other `slack_{channel}_{digits}`. Both are now canonical. The same record also turned out to be dated on its **last** message rather than its first, because it was logged as a multi-day channel digest rather than a single thread – the procedure now flags that shape for a human decision instead of re-dating it automatically.
+
+---
+
 ## [2.44.0] — 2026-08-24
 
 ### Fixed
