@@ -508,6 +508,8 @@ close a session gap or retyped into a counted type to move a number.
 | `custom.Slack message Id` | Parent ts, dotted form | |
 | `custom.Slack initiated by` | `Customer` \| `Productboard` | From the parent author's email domain. |
 | `custom.First message time` | `YYYY-MM-DD HH:MM {tz}` | Human-readable local time of the first message. |
+| `users` | `[{_id, name}]` of the Productboard people who posted | **Required, not optional.** Resolved from `User` by email. Omit the key entirely if no PB person spoke – never write `[]`. |
+| `endusers` | `[{_id, name}]` of the customer contacts who posted | **Required, not optional.** Resolved from `End User` scoped to the company. Authors only – an `@`-mention or a named follow-up owner is not a participant. Fails silently on write, so always read back and assert. A participant with no contact record is reported, never auto-created. Omit the key rather than writing `[]`. |
 
 **Channel resolution and the cache.** The skill accepts either half of the pair. Given a channel, the company
 is resolved from the modal non-`productboard.com` email domain across the channel's authors matched against
@@ -517,6 +519,14 @@ against `Company.name`. Given a customer, the channel comes from `Company.custom
 `custom.Slack URL` are **never** consulted – they hold the internal PB account channel, not the shared one. Whatever resolves is written back to `custom.External_Slack_Channel_ID` (ID only,
 upper-case, read back and asserted) so the next run is a single field read. A cached ID that fails to read is
 reported rather than used as a trigger to fall through the ladder and overwrite the field.
+
+**Contact identity data is never edited by this skill.** Slack logging *links* to `End User` records; it does
+not modify `name` / `firstName` / `lastName` / `email` / `position` on them. Those fields are customer identity
+data and are frequently Salesforce-synced, so a change propagates outward. Contacts that render badly (e.g.
+`Philippe Not provided`, a missing last name) are reported in the run summary and corrected only on the user's
+explicit instruction, as a separate action. Note that Planhat caches the contact's display name inside each
+Conversation's `endusers` array, so renaming an `End User` does not refresh links already written – rewrite the
+array on affected records if you want the display name to follow.
 
 **Reply backfill.** Slack threads gain replies for months after they are logged, so every run re-checks
 existing `💬 Slack Chat` records on the company dated within the last 365 days. There is no writable sync-cursor

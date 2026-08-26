@@ -68,6 +68,14 @@ overwrite – an account can legitimately have two shared channels, and the fiel
 - **Backfill never re-dates and never re-creates.** A thread that gained replies is an `update_model_record` on the existing `_id`, keeping `date` and `externalId` untouched.
 - **`💬 Slack Chat` does not count toward session delivery.** It is a touchpoint record, not a session. Never use it to fill a session gap, and never retype an uncounted Slack record into a counted session type to make a number move.
 - **Renderer constraints are not cosmetic** – Planhat's rich-text editor silently mangles common HTML. Follow § Description HTML in the agent file exactly: no `<div>`, no `<table>`, no `<ol>`/`<ul>`, no `background`/`border`/`color` styles, no literal newlines in the markup.
+- **Every record names its participants.** `users` (Productboard) and `endusers` (customer) are written on
+  every Conversation, resolved from who actually **authored** messages in the thread – never from `@`-mentions,
+  cc's or follow-up owners. A one-sided thread gets one side and the other key omitted, never an empty array.
+  `endusers` fails silently on write, so both are read back and asserted. A participant with no `End User`
+  record is named in the report, not created.
+- **Never edit contact identity data.** This skill links to `End User` records; it never changes their `name`,
+  `firstName`, `lastName`, `email` or `position`. Those are the customer's own data, often Salesforce-synced.
+  Malformed contacts spotted during a sweep are reported and fixed only on the user's explicit go-ahead.
 - **Never post to Slack.** This skill is read-only against Slack.
 - **Never sweep a channel whose company you have not confirmed.** Writing one customer's private support
   history onto another's Planhat timeline is the worst failure this skill can produce, and it is not

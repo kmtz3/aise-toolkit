@@ -135,7 +135,7 @@ get_model_record(MODEL: "Company", OBJECT_ID: "<company _id>",
 | Write when the field is empty, or when the user has just corrected it. | The point is to stop re-resolving. An empty field after a successful sweep means the next run repeats path A or the whole path B ladder. |
 | ID only, upper-case. No `#`, no URL, no `p{digits}` tail. | Path B feeds the value straight into `slack_read_channel` and into the `externalId` builder in § 3, both of which want the bare ID. A URL stored here breaks the dedup key format. |
 | Never overwrite a populated value silently. | A value that disagrees with the channel just swept is a **conflict, not a stale cache**. Report both and ask. A customer with two shared channels is a real thing and one field cannot hold both – say so rather than flip-flopping the field between runs. |
-| Read it back and assert. | Same failure mode as `externalId` in § 3: a custom-field write that does not stick fails silently, and the only symptom is that the next run is slow again. |
+| Read it back – but treat an empty read as inconclusive, not as failure. | A custom-field write that does not stick fails silently, and the only symptom is that the next run is slow again. **However**: while the field is missing from MCP's `Company` metadata, `get_model_record(SELECT: ["custom.External_Slack_Channel_ID"])` and even `SELECT: ["custom"]` return it as absent **even when the write landed and the value is visible in the Planhat UI** (confirmed on Kpler, 2026-08-25). So report an empty read-back as "written, could not verify over MCP – check the UI", never as "the write was rejected". Do not retry the write on an empty read. |
 | On `--dry-run`, print the write and skip it. | |
 | A rejected write, or a field missing from `get_model_action_parameters`, is a one-line note and then business as usual. | The field is new and MCP metadata lags behind Planhat. Never abort a sweep because the cache would not take. |
 
@@ -343,8 +343,41 @@ create_model_record(MODEL: "Conversation", PARAMETERS: {
   `get_model_action_parameters(MODEL: "Conversation")` at the start of a run; the option list drifts.
 - **`Slack initiated by`** – `Customer` if the parent author's email is not `@productboard.com`, else
   `Productboard`.
-- **`users` / `endusers`** – optional and off by default. `endusers` fails silently on write, so if you do
-  populate it, read the record back and confirm.
+- **`users` / `endusers`** – **required on every record, not optional.** A touchpoint with no people on it is
+  half a record: it does not surface on a contact's timeline, and it cannot answer "who have we actually been
+  talking to on this account". Populate both sides from the thread's **actual authors**:
+
+  | Side | Field | Resolve from |
+  |---|---|---|
+  | Productboard | `users` | `list_model_records(MODEL: "User", FILTER: {"email[equal to]": "<addr>"})` |
+  | Customer | `endusers` | `list_model_records(MODEL: "End User", FILTER: {"companyId[equal to]": "<id>", "email[contains]": "<local part>"})` |
+
+  Shape is `[{"_id": "...", "name": "..."}]` on write; a read-back returns the same links keyed `id`.
+
+  Four rules that decide what actually goes in:
+
+  1. **Authors only, never mentions.** A person who is `@`-mentioned, cc'd, or named as a follow-up owner did
+     not take part. Counting mentions inflates every record on an account where one admin gets tagged
+     constantly, and it makes the field useless as a "who was in this conversation" signal. Resolve
+     participation from message authorship in the thread read, not from the rendered `Participants:` line
+     alone, which can list a mention.
+  2. **Never write an empty array.** A one-sided thread – a customer question nobody answered in channel, or a
+     Productboard broadcast with no reply – gets only the side that spoke. Omit the other key entirely rather
+     than writing `[]`.
+  3. **A participant with no contact record is reported, never created.** Resolve what you can, log the record
+     without them, and name the missing person and their email in the § 8 report so the user can decide.
+     Creating an End User is a change to the customer's contact data, not a side effect of logging Slack.
+  4. **Read back and assert.** `endusers` fails silently on write. After each create or participant update:
+     `get_model_record(MODEL: "Conversation", OBJECT_ID: "<id>", SELECT: ["users", "endusers"])`. Empty after
+     two attempts is a reported failure, not a shrug.
+
+- **Never edit a contact's identity fields as part of this run.** `name`, `firstName`, `lastName`, `email` and
+  `position` on an `End User` are customer identity data, frequently synced from Salesforce, and a wrong or
+  well-meaning "cleanup" propagates outward from Planhat. This procedure only ever *links* to contacts. Stale
+  or malformed contacts you meet along the way – a name rendering as `Firstname Not provided`, a missing last
+  name, an obvious typo – are **reported in § 8 and fixed only on the user's explicit go-ahead**, as a separate
+  action. Refreshing the cached display name inside a Conversation's own `endusers` array is fine; changing
+  the `End User` record behind it is not.
 
 ---
 
@@ -448,13 +481,19 @@ A table: `date · thread topic · action (created / backfilled / unchanged / ski
    of the timeline faster than missing threads do.
 6. **Slack is read-only from this procedure.** No posting, no reacting, no thread replies.
 7. **`💬 Slack Chat` is uncounted.** Never present logging Slack threads as increasing session delivery.
-8. **Cache the channel ID, once, on the company.** `custom.External_Slack_Channel_ID` is what turns the second
+8. **Every record names its people, and none of them are mentions.** `users` + `endusers` from thread
+   authorship, read back and asserted, one side omitted rather than written empty. An unresolvable
+   participant is a line in the report, never a new contact record and never a silent omission.
+8a. **Contact identity data is out of scope for this skill.** Link to `End User` records; never edit their
+   `name` / `firstName` / `lastName` / `email` / `position`. Report what looks wrong and let the user decide –
+   these fields sync outward, and a plausible-looking fix is still a change to the customer's own data.
+9. **Cache the channel ID, once, on the company.** `custom.External_Slack_Channel_ID` is what turns the second
    run on an account from "resolve the customer from email domains and guess at channel names" into a single
    read. Write it the first time you resolve a channel; never overwrite a populated value without asking.
-9. **`custom.Slack ID` / `custom.Slack URL` are the internal account channel. Never sweep them.** They are
+10. **`custom.Slack ID` / `custom.Slack URL` are the internal account channel. Never sweep them.** They are
    Productboard's own channel for discussing the customer, and everything said in them was said on the
    assumption the customer would never read it. Logging one onto the customer's Planhat timeline puts it
    somewhere the customer can. The only channel this procedure reads is the shared external one.
-10. **A cached ID that will not read is a report, not a fallback trigger.** Falling through to the `#ext-`
+11. **A cached ID that will not read is a report, not a fallback trigger.** Falling through to the `#ext-`
    search on a read failure and then caching the result is how an account silently ends up pointed at the
    wrong channel. Say the cached channel failed and let the user decide.

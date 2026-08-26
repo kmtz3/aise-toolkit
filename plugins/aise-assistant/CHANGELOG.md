@@ -5,6 +5,21 @@ Format: `## [version] — YYYY-MM-DD` followed by bullet points grouped by type.
 
 ---
 
+## [2.50.0] — 2026-08-26
+
+### Added
+- `agents/slack-thread-logger.md` § 5 – **`users` / `endusers` are now required on every record, not optional.** A touchpoint with no people on it does not surface on a contact's timeline and cannot answer "who have we actually been talking to on this account". Both sides are resolved from the thread's **authors** – a person who is `@`-mentioned, cc'd or named as a follow-up owner did not take part, and counting mentions inflates every record on an account where one admin gets tagged constantly. A one-sided thread (an unanswered customer question, a Productboard broadcast) gets only the side that spoke, with the other key **omitted rather than written as `[]`**. `endusers` fails silently on write, so both are read back and asserted, and an empty result after two attempts is a reported failure. Added the resolver calls for both models and the `[{"_id", "name"}]`-on-write / `id`-on-read shape asymmetry.
+- `context/planhat-schema.md` § Slack Chat Conversations – `users` and `endusers` rows added to the field table with the authors-only rule, the never-empty-array rule, and the mandatory read-back.
+
+### Changed
+- `agents/slack-thread-logger.md` § 0.1, `context/planhat-schema.md` – **an empty read-back on `custom.External_Slack_Channel_ID` is now inconclusive, not a failure.** While the field is missing from MCP's `Company` metadata, both `SELECT: ["custom.External_Slack_Channel_ID"]` and `SELECT: ["custom"]` return it as absent **even when the write landed and the value is visible in the Planhat UI** (confirmed on Kpler, 2026-08-26). The previous "read it back and assert" wording produced a false failure report and invited a pointless retry. Now: report as "written, could not verify over MCP – check the UI", and do not re-write.
+
+### Guardrails
+- `agents/slack-thread-logger.md` § 5 + hard-won rule 8a, `skills/log-slack-threads/SKILL.md` § Non-negotiables, `context/planhat-schema.md` – **contact identity data is out of scope for this skill.** It links to `End User` records; it never edits their `name`, `firstName`, `lastName`, `email` or `position`. Those are the customer's own data and frequently Salesforce-synced, so a plausible-looking cleanup propagates outward from Planhat. Malformed contacts met during a sweep (a name rendering as `Firstname Not provided`, a missing last name, an obvious typo) are **reported in the run summary and corrected only on the user's explicit go-ahead**, as a separate action. Same rule for missing contacts: a participant with no `End User` record is named in the report, never auto-created.
+- `context/planhat-schema.md` – noted that Planhat caches a contact's display name inside each Conversation's `endusers` array, so renaming an `End User` does not refresh links already written; the array has to be rewritten on affected records for the display name to follow.
+
+---
+
 ## [2.49.0] — 2026-08-25
 
 ### Added
