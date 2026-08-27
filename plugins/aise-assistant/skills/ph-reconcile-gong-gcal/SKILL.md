@@ -1,6 +1,6 @@
 ---
 name: ph-reconcile-gong-gcal
-description: Merge standalone "👾 Gong Call" Planhat Conversations into the matching GCal-synced session Conversation (transcript, Gong URL, description) and delete the redundant Gong Call record. Scoped per customer or the whole workspace, dry-run by default.
+description: Merge standalone "👾 Gong Call" Planhat Conversations into the matching GCal-synced session Conversation (transcript, Gong URL → target's custom.Call Recording, description) and delete the redundant Gong Call record. Scoped per customer or the whole workspace, dry-run by default.
 argument-hint: "[--customer <name>] [--since YYYY-MM-DD] [--apply] [--window-hours N]"
 ---
 
@@ -37,7 +37,7 @@ Every match is reported with its full score breakdown, not just a confidence lab
 ## What it does per matched pair
 
 1. Finds the target session Conversation (GCal-synced, same company) by weighted-scoring every candidate in the date window on attendee overlap, subject similarity, and date proximity, then taking the top scorer if it clears the confidence threshold and isn't within 0.05 of a runner-up.
-2. Writes `custom.Gong URL` and `transcript` onto the target **only if those fields are currently empty** — a populated field is treated as a conflict and reported, never overwritten.
+2. Writes the Gong URL onto the target's **`custom.Call Recording`** field (not `custom.Gong URL` — that field is retired for this purpose, see below) and `transcript` **only if those fields are currently empty** — a populated field is treated as a conflict and reported, never overwritten.
 3. Appends the Gong call summary (reformatted into Planhat's rich-text vocabulary) to the target's `description`, after a divider — additive, never replaces existing content.
 4. Reads the target back to confirm the write landed, then deletes the Gong Call Conversation.
 
@@ -45,7 +45,7 @@ Every match is reported with its full score breakdown, not just a confidence lab
 
 - Never creates a Conversation or Task.
 - Never deletes a Gong Call record without a verified merge write-back.
-- Never overwrites a non-empty Gong URL or transcript.
+- Never overwrites a non-empty `custom.Call Recording` or transcript. Never writes to `custom.Gong URL` on the target — that field is only ever read from the source Gong Call record (Gong's own sync writes it there; corrected 2026-08-27).
 - Never auto-resolves an ambiguous match (top score below threshold, or two-plus candidates scoring within 0.05 of each other) — always reported with full score breakdowns for manual review.
 
 ## Safe to re-run

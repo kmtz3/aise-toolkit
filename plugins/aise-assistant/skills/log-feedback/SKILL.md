@@ -46,7 +46,7 @@ If no matching tasks are found for a named customer/topic, drop into **Mode B** 
 1. Resolve the Planhat Company record for the named customer: `search_records(QUERY: "<customer name>")` filtered to `model: "Company"`, or `list_model_records(MODEL: "Company", FILTER: {"name[equal to]": "<customer name>"})`. If ambiguous (multiple matches), ask which one.
 2. Find the relevant call(s) — try both, in parallel:
    - `mcp__claude_ai_Glean__meeting_lookup` for Gong calls matching the customer name (and any topic keywords given, e.g. "Symphony AI API linking").
-   - Planhat Conversations on the Company record: `list_model_records(MODEL: "Conversation", FILTER: {"companyId[equal to]": "<companyId>"}, SELECT: ["title", "date", "notes", "custom.Gong URL"])`, sorted most recent first.
+   - Planhat Conversations on the Company record: `list_model_records(MODEL: "Conversation", FILTER: {"companyId[equal to]": "<companyId>"}, SELECT: ["title", "date", "notes", "custom.Call Recording"])`, sorted most recent first.
 3. If a specific call was named, use that one. If multiple candidate calls exist and none was specified, prefer the most recent one that plausibly touches product feedback (title/notes mention a gap, blocker, or feature ask); if still ambiguous, ask Klara which call to source from.
 4. Read the transcript/notes (Gong via `mcp__claude_ai_Glean__read_document`, or the Conversation's `notes` field) and distill every distinct pain point raised into a Problem / Current workaround / Desired outcome triple. **A single call can surface more than one feedback item** — treat each distinct pain point as its own candidate note and run it through Steps 4–8 independently (including its own HITL confirmation in Step 6).
 5. Continue into Step 4 to fill in ARR, contact, and remaining context for each candidate item — Step 4's context-gathering applies to both modes; where it references "the task's description," Mode B uses the transcript/Conversation notes distilled in step 4 above instead.
@@ -75,7 +75,7 @@ For each candidate (a Task in Mode A, or a distilled pain point in Mode B), pull
 - [ ] ARR — from Planhat Company `arr`
 - [ ] Contract end date (renewal) — from Planhat Company `renewalDate`
 - [ ] Salesforce Account URL — reconstructed from Planhat Company `sourceId`
-- [ ] Gong call URL — from the task's `description` or `custom.Gong URL` on the linked Conversation (use as `sourceUrl` AND in the Gong section)
+- [ ] Gong call URL — from the task's `description` or `custom.Call Recording` on the linked Conversation (use as `sourceUrl` AND in the Gong section)
 - [ ] Contact email — via the lookup chain below
 
 Do not begin drafting until all five are resolved (or explicitly marked `-`).

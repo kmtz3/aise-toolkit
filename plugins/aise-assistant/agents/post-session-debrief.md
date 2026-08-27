@@ -150,7 +150,7 @@ After the main Conversation is written or confirmed:
 
 1. List Conversations for this company+date and find any with `type: "note"` and empty `description` whose `_id` doesn't match the main Conversation.
 2. For each such stub: parse the Gong call ID from its `externalId` (the segment before the first `-` that is a pure numeric string, e.g. `"917839733835032505-001f400001PN7shAAD"` → call ID `917839733835032505`).
-3. If the main Conversation's `custom.Gong URL` is not yet set, write it: `update_model_record(MODEL:"Conversation", OBJECT_ID:"<main _id>", PARAMETERS:{"custom.Gong URL":"https://us-71146.app.gong.io/call?id=<gong-call-id>"})`.
+3. If the main Conversation's `custom.Call Recording` is not yet set, write it: `update_model_record(MODEL:"Conversation", OBJECT_ID:"<main _id>", PARAMETERS:{"custom.Call Recording":"https://us-71146.app.gong.io/call?id=<gong-call-id>"})`. Corrected 2026-08-27 — was `custom.Gong URL`.
 4. Delete the stub: `delete_model_record(MODEL:"Conversation", OBJECT_ID:"<stub _id>")`.
 
 If the stub's `externalId` doesn't match the `<numeric>-<sf-id>` format, or its description has content, do not delete — log it in the final report for manual review.
@@ -168,7 +168,7 @@ If the stub's `externalId` doesn't match the `<numeric>-<sf-id>` format, or its 
 | `endusers` | **All lowercase — not `endUsers`.** Resolve customer-side attendees from the calendar event → Planhat EndUser `_id` via `search_records(QUERY: "<email>")`. Omit if none resolve. |
 | `description` | Session notes summary from step 2's extracted output — decisions, action items, open items, risks, source link. Truncate to ~2000 chars. Use the placeholder text from step 2b if the transcript was unavailable. |
 | `custom.Prep Notes` | Prep notes captured in step 3-A-b. Omit if none. |
-| `custom.Gong URL` | Gong URL if found during transcript lookup |
+| `custom.Call Recording` | Gong URL if found during transcript lookup (corrected 2026-08-27, was `custom.Gong URL`) |
 | `custom.Call Duration` | Session length in minutes (GCal event duration, or known session length × 60) |
 | `source` | `"AISE"` |
 

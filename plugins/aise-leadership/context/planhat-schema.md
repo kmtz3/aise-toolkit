@@ -663,7 +663,7 @@ If either query returns a result, update it rather than creating a duplicate —
 | `Customers` (relation) | `companyId` | string | Write | Planhat Company `_id`. Resolve via name-search or `sourceId` lookup (see Company section). |
 | `Delivered By` (person, all values) | `users` | array | Write | Array of `{"id": "<planhat-user-id>"}`, one per presenter — never truncate to the first value (co-delivered sessions must keep all presenters). Resolve each: static User ID table above first, then live lookup (`notion-get-users` → email → `list_model_records(MODEL: "User", FILTER: {"email[equal to]": "<email>"})`) on a table miss. If still unresolvable, fall back to the session's `Current Account Owner`, then the Company's `owner`. Omit only if all fail, and log a `NEEDS ATTRIBUTION` warning. |
 | `Next Steps` / session page body | `description` | string | Write | Summary/notes from the session. Truncate to ~2000 chars if long. |
-| `Gong call` (url) | `custom.Gong URL` | string | Write | Write the URL to `custom.Gong URL`. Do **not** append to `description`. |
+| `Gong call` (url) | `custom.Call Recording` | string | Write | Write the URL to `custom.Call Recording`. Do **not** append to `description`. **Corrected 2026-08-27** — was `custom.Gong URL`; see § Conversation Full Field Reference. |
 | `Call Status` | _(not mapped)_ | — | — | Notion-only status lifecycle. Not meaningful in Planhat. |
 | `Consumed Package` | _(not mapped)_ | — | — | Notion credit-ledger concept. No Planhat equivalent. |
 | `Do not count` | _(not mapped)_ | — | — | Notion-only billing flag. |
@@ -777,7 +777,7 @@ previous snapshot – note it shares the 🔁 emoji with `🔁 Sync`, so match o
 |---|---|---|---|
 | `type` | string | ✅ | Kind of interaction. Use AISE-prefixed values (see mapping above). |
 | `subject` | string | — | Session name / title. |
-| `description` | string | — | Summary, notes, Gong URL. |
+| `description` | string | — | Summary, notes. |
 | `date` | datetime | — | When the session took place (ISO 8601). |
 | `startDate` | date | — | Call start date. Not used for session duration — use `custom.Call Duration` instead. |
 | `endDate` | date | — | Call end date. Not used for session duration — use `custom.Call Duration` instead. |
@@ -791,11 +791,10 @@ previous snapshot – note it shares the 🔁 emoji with `🔁 Sync`, so match o
 | `transcript` | string | — | Full transcript text if available. |
 | `taskId` | objectId | — | Links this conversation to its originating Planhat Task. Set when writing a Done Notion Task as a Conversation — look up the existing Planhat Task by `sourceId` and pass its `_id` here. Optional on backfill if the Task doesn't exist yet in Planhat. |
 | `category` | string | — | One of: `Support`, `Feedback`, `Sales`, `Expansion`, `Billing & Contracts`, `Renewals`, `Legal`, `General Enquires`, `Spam`, `Marketing`. Leave blank for AISE sessions unless relevant. |
-| `custom.Gong URL` | string | — | Gong call link. **Use this instead of appending to `description`.** Write the raw URL. |
 | `custom.Link to PB Note` | string | — | Productboard feedback note URL. Written by `/log-feedback` onto the Conversation auto-created when a `Product Feedback` Task transitions to `done` (see § Planhat Task auto-Conversation behavior) — links the touchpoint back to the submitted PB note. Write the raw URL. |
 | `custom.Call Duration` | number | — | Session length in minutes. Derive from Notion `Session Length (h)` × 60. |
 | `custom.Opportunity` | string → Deal | — | The customer contract the session was delivered under. Relation to a `Deal` record. Optional – set when the session is clearly attributable to one contract. **Replaces the former `custom.Services Package` field, which no longer exists on this model.** |
-| `custom.Call Recording` | string | — | Recording link when the call was not captured in Gong (for example a Zoom cloud recording). Use `custom.Gong URL` for Gong calls. Write the raw URL. |
+| `custom.Call Recording` | string | — | **Call recording link — Gong or otherwise.** Use this instead of appending to `description`. Write the raw URL. **Corrected 2026-08-27** — `custom.Gong URL` is no longer written by any agent; `custom.Call Recording` is the single field for every recording link regardless of source (was previously Gong-only reserved for `custom.Gong URL`, non-Gong-only reserved for this field — that split is retired). Existing records may still carry a populated `custom.Gong URL` from before this correction; treat it as historical, don't backfill it going forward, and don't clear it. |
 | `custom.Handover Status` | string | — | `Not started` · `In progress` · `Validated – Ready`. Tracks the sales-to-AISE handover on a Sales Handover conversation. |
 | `custom.SH_Current State` | string (rich text) | — | Sales Handoff context captured at conversation level. Mirrors the Company-level `SH_` fields. Read for discovery context; not written by this assistant. |
 | `custom.SH_Future State` | string (rich text) | — | As above. |

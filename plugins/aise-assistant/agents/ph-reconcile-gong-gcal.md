@@ -1,6 +1,6 @@
 ---
 name: ph-reconcile-gong-gcal
-description: Finds Planhat Conversations of type "👾 Gong Call" (created by the Gong→Planhat sync as standalone records) and merges their transcript, Gong URL, and description into the matching GCal-synced session Conversation for the same call, then deletes the Gong Call record. Interim manual fix while the Planhat↔Gong integration is reworked to do this automatically. Invoked by `/ph-reconcile-gong-gcal`.
+description: Finds Planhat Conversations of type "👾 Gong Call" (created by the Gong→Planhat sync as standalone records) and merges their transcript, Gong URL (written to the target's `custom.Call Recording`), and description into the matching GCal-synced session Conversation for the same call, then deletes the Gong Call record. Interim manual fix while the Planhat↔Gong integration is reworked to do this automatically. Invoked by `/ph-reconcile-gong-gcal`.
 tools: Read, mcp__claude_ai_Planhat__list_model_records, mcp__claude_ai_Planhat__get_model_record, mcp__claude_ai_Planhat__get_model_action_parameters, mcp__claude_ai_Planhat__update_model_record, mcp__claude_ai_Planhat__delete_model_record, mcp__claude_ai_Planhat__search_records
 ---
 
@@ -76,6 +76,8 @@ list_model_records(
 )
 ```
 
+**`custom.Gong URL` here is the SOURCE field, read-only for this agent's purposes.** Gong's own native sync writes its call link there on the Gong Call record it creates — that's how Gong's integration works and is outside this agent's control. It has no bearing on which field *we* write to on the target session Conversation when merging — that is always `custom.Call Recording` (§4), never `custom.Gong URL`. Do not confuse the two: read from `gong.custom['Gong URL']`, write to `target.custom['Call Recording']`.
+
 **Conversation `list_model_records` has an effective ~36-record cap regardless of the true match count.** If the returned count equals the page size, page forward with `OFFSET` and repeat until a page returns fewer records than `LIMIT`, so a large unscoped run doesn't silently stop at the cap. Report the total pulled at the top of the plan.
 
 **`endusers`/`users` come pre-resolved to Planhat IDs — this is the strongest available signal.** Gong's native sync already resolves call participants to Planhat `EndUser`/`User` records (verified live: a Gong Call Conversation and its GCal-synced target session shared the exact same `endusers[].id`). No Gong or Glean lookup is needed to get attendee identity — it's already on the record.
@@ -95,7 +97,7 @@ list_model_records(
     "date[more than]": "<window_start>",
     "date[less than]": "<window_end>"
   },
-  SELECT: ["subject", "type", "externalId", "date", "description", "transcript", "custom.Gong URL", "custom.Call Duration", "endusers", "users"],
+  SELECT: ["subject", "type", "externalId", "date", "description", "transcript", "custom.Call Recording", "custom.Call Duration", "endusers", "users"],
   SORT: "date",
   LIMIT: 50
 )
@@ -125,7 +127,7 @@ Only **high** and **medium** confidence matches proceed to step 4. **unmatched**
 
 ### 4. Build the merge payload for the matched target
 
-- **`custom.Gong URL`** — write `gong.custom['Gong URL']` only if the target's own `custom.Gong URL` is empty. If the target already has a *different* non-empty Gong URL, do not overwrite — flag as **conflict: gong_url_exists** and skip the whole merge for this record (do not partially merge; do not delete the Gong Call record while a conflict is open).
+- **`custom.Call Recording`** — write `gong.custom['Gong URL']` (the URL Gong's sync wrote onto the source record) into the target's `custom.Call Recording` field, only if the target's `custom.Call Recording` is empty. If the target already has a *different* non-empty `custom.Call Recording` value, do not overwrite — flag as **conflict: recording_url_exists** and skip the whole merge for this record (do not partially merge; do not delete the Gong Call record while a conflict is open). Never write to `custom.Gong URL` on the target — that field is retired for this purpose (`context/planhat-schema.md` § Conversation Full Field Reference, corrected 2026-08-27).
 - **`transcript`** — same rule: write only if the target's `transcript` is empty. Non-empty and different → **conflict: transcript_exists**, skip merge and deletion for this record.
 - **`custom.Call Duration`** — write only if the target's is empty and the Gong record has a value. Not a blocking conflict if both are populated and differ — keep the target's existing value, note the discrepancy.
 - **`description`** — always additive, never a conflict. Reformat the Gong description into the Planhat rich-text vocabulary (`context/planhat-schema.md` § Rich Text Field Formatting) before appending — the raw Gong-sync description uses `<h2>` and a wrapping `<p>` around block content, which is not in the allowed tag set and will render badly:
@@ -135,7 +137,7 @@ Only **high** and **medium** confidence matches proceed to step 4. **unmatched**
   - Append to the target's existing `description` with a divider first: `<hr><p><strong>Gong Call Summary</strong></p>` + the reformatted content — never prepend, never replace what's already there.
   - Final payload must be a single line — no literal `\n` anywhere in the concatenation.
 
-If **every** field is a conflict (Gong URL and transcript both already populated and differ), skip the record entirely — outcome **conflict: fully_populated**, do not touch `description` either in that case, since a fully-conflicting record likely means this pair was already reconciled once and needs a human to look at why a second Gong Call record exists.
+If **every** field is a conflict (`custom.Call Recording` and transcript both already populated and differ), skip the record entirely — outcome **conflict: fully_populated**, do not touch `description` either in that case, since a fully-conflicting record likely means this pair was already reconciled once and needs a human to look at why a second Gong Call record exists.
 
 ### 5. Write (only in a confirmed `--apply` pass)
 
@@ -149,7 +151,7 @@ update_model_record(
 
 **Read back before deleting — do not trust a 200 response.** Immediately after the write:
 ```
-get_model_record(MODEL: "Conversation", OBJECT_ID: "<target._id>", SELECT: ["custom.Gong URL", "transcript", "description"])
+get_model_record(MODEL: "Conversation", OBJECT_ID: "<target._id>", SELECT: ["custom.Call Recording", "transcript", "description"])
 ```
 Confirm every field you wrote actually landed. If any field silently didn't write, **do not delete the Gong Call record** — log outcome **write_unverified** and leave both records in place for manual follow-up.
 
@@ -171,7 +173,7 @@ Append this record's outcome to `records_completed` in the checkpoint file (§ C
 <Company> — <Gong call subject> (<date>)
   Target: <target subject> (<target type>, <target date>) — <target._id>
   Confidence: high | medium   score 0.81 (attendee 1.00 · subject 1.00 · date 0.76)
-  Would write: custom.Gong URL, transcript, description (+142 chars)
+  Would write: custom.Call Recording, transcript, description (+142 chars)
   Would delete: Gong Call Conversation <gong._id>
 ```
 
@@ -192,7 +194,7 @@ List every **conflict**, **unmatched**, **pending_task_conversion**, and **ambig
 
 - **Dry-run by default.** Never write or delete without `--apply` and an explicit confirmation on the plan.
 - **Never delete a Gong Call Conversation without a verified merge write-back.** A failed or unconfirmed write leaves both records in place.
-- **Never overwrite a non-empty `custom.Gong URL` or `transcript` on the target** — conflicts are reported, not resolved automatically.
+- **Never overwrite a non-empty `custom.Call Recording` or `transcript` on the target** — conflicts are reported, not resolved automatically. **Never write to `custom.Gong URL` on the target** — retired for this purpose; only read from it on the source Gong Call record.
 - **`description` is always append, never replace.**
 - **Ambiguous matches (top score below 0.4, or two-plus candidates within 0.05 of each other) are never auto-resolved** — list all candidates with score breakdowns and stop.
 - **Never create a Conversation or Task** — this agent only merges and deletes existing records.

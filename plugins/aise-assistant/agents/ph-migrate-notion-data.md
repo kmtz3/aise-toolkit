@@ -280,7 +280,7 @@ LIMIT 500
      Write format: `users: [{"id": "<planhat user _id>"}, ...]` — one entry per resolved presenter.
    - `endusers`: array of Planhat EndUser `_id` values resolved in step 2, as `[{"_id": "<EndUser _id>"}, ...]`. Omit if empty. **All lowercase — not `endUsers`.**
    - `description`: `Next Steps` or session notes (truncate to ~2000 chars) — session content only. `custom.Prep Notes` is omitted during migration (prep notes are not stored in Notion's session records).
-   - `custom.Gong URL`: `Gong call` field value (if present)
+   - `custom.Call Recording`: `Gong call` field value (if present) — corrected 2026-08-27, was `custom.Gong URL`
    - `custom.Call Duration`: `Session Length (h)` × 60 (integer minutes)
    - `source`: always `"AISE"`
 

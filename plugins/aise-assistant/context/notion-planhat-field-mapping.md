@@ -85,9 +85,9 @@ All Notion Tasks write to the **Planhat Task model**. For done/canceled tasks, P
 | `Customers` (relation) | `companyId` | objectId | Resolve via company name or SF `sourceId`. See `planhat-schema.md`. **Required.** |
 | `Delivered By` (person, all values) | `users` | array | `[{"id": "<planhat-user-id>"}, ...]` — one entry per presenter, never truncated to the first value. Resolve each: try the static User ID table in `planhat-schema.md` first, then fall back to a live lookup (`notion-get-users` → email → `list_model_records(MODEL: "User", FILTER: {"email[equal to]": "<email>"})`) on a table miss. If still unresolvable for every presenter, fall back to the session's `Current Account Owner`, then the Company's `owner`. Only omit `users` (and log a `NEEDS ATTRIBUTION` warning) if all of the above fail. |
 | _(from Gong/GCal backfill)_ | `endusers` | array | **Field is all-lowercase — not `endUsers`.** Write format: `[{"_id": "<EndUser _id>"}, ...]`. Read-response format uses `id` instead: `[{"id": "...", "name": "..."}]`. Planhat returns HTTP 200 and silently drops the field if written as `endUsers` (camelCase) — no error surfaces. Omit if no attendees resolve. **Brandwatch / Cision dual-email:** Brandwatch contacts may have two separate Planhat EndUser records — one with `@brandwatch.com` (original) and one with `@cision.com` (post-migration). When resolving attendees for Brandwatch sessions, search by both domains if the first lookup returns no match. |
-| `Next Steps` / session body | `description` | string | Actual session notes/summary. Truncate to ~2000 chars. Do **not** use this for prep notes — see `custom.Prep Notes`. Do **not** append Gong URL here — use `custom.Gong URL` instead. |
+| `Next Steps` / session body | `description` | string | Actual session notes/summary. Truncate to ~2000 chars. Do **not** use this for prep notes — see `custom.Prep Notes`. Do **not** append Gong URL here — use `custom.Call Recording` instead. |
 | _(from session prep)_ | `custom.Prep Notes` | string (HTML) | Prep brief written by session-prepper. HTML format: single-line `ph-editor` HTML — section labels as `<p><strong>…</strong></p>` (no `<h>` tags), lists as `<ul class="ph-editor__bullet-list"><li class="ph-editor__list-item"><p>…</p></li></ul>`. Spec: `context/planhat-schema.md` § Rich Text Field Formatting. On Task: write during prep. Carry to Conversation when Task is marked done (debrief). |
-| `Gong call` (url) | `custom.Gong URL` | string | Gong call link. **Write to `custom.Gong URL`, not appended to `description`.** |
+| `Gong call` (url) | `custom.Call Recording` | string | Gong call link. **Write to `custom.Call Recording`, not appended to `description`.** Corrected 2026-08-27 — was `custom.Gong URL`. |
 | `Session Length (h)` | `custom.Call Duration` | number | Multiply by 60 → minutes. |
 | _(constant)_ | `source` | string | Always `"AISE"`. Distinguishes from Zendesk/GCal entries. |
 
@@ -334,7 +334,7 @@ All fields verified against live Planhat API schema (`get_model_action_parameter
 - `noSpecificTime` — boolean ✓
 
 **Conversation custom fields (confirmed):**
-- `custom.Gong URL` — string. Use this for Gong links — do NOT append to `description`.
+- `custom.Call Recording` — string. Use this for Gong (and any other) call recording links — do NOT append to `description`. Corrected 2026-08-27 — was `custom.Gong URL`; that field is no longer written.
 - `custom.Call Duration` — number (minutes). Derive from Notion `Session Length (h)` × 60.
 - `custom.Prep Notes` — string (HTML rich text). Prep brief for this session. HTML format: single-line `ph-editor` HTML — section labels as `<p><strong>…</strong></p>` (no `<h>` tags), lists as `<ul class="ph-editor__bullet-list"><li class="ph-editor__list-item"><p>…</p></li></ul>`. Spec: `context/planhat-schema.md` § Rich Text Field Formatting. Written by session-prepper (via Task → Conversation carry-over on mark-done). **Do not populate during migration** — Notion session records do not hold prep content.
 

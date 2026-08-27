@@ -1,5 +1,12 @@
 # Changelog — aise-leadership
 
+## [1.12.10] — 2026-08-27
+
+### Fixed
+- `context/planhat-schema.md` and `context/notion-planhat-field-mapping.md` — synced from aise-assistant: Gong call recording links now go to `custom.Call Recording`, not `custom.Gong URL`. `custom.Gong URL` is still read (Gong's own native sync writes it on the Conversation it creates) but never written by any agent going forward.
+
+---
+
 ## [1.12.9] — 2026-08-27
 
 ### Added

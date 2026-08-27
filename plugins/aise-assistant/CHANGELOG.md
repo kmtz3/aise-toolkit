@@ -5,6 +5,12 @@ Format: `## [version] — YYYY-MM-DD` followed by bullet points grouped by type.
 
 ---
 
+## [2.56.1] — 2026-08-27
+
+### Fixed
+- **Corrected the Planhat field used for Gong call recording links, workspace-wide: `custom.Call Recording`, not `custom.Gong URL`.** `custom.Call Recording` is now the single field for every recording link regardless of source (Gong or otherwise) — the prior split (`custom.Gong URL` for Gong, `custom.Call Recording` for non-Gong) is retired. Swept every agent/skill/context reference that wrote or read the field: `agents/ph-migrate-notion-data.md`, `agents/post-session-debrief.md`, `agents/session-log-auditor.md`, `agents/ph-reconcile-gong-gcal.md`, `skills/log-feedback/SKILL.md`, `skills/ph-reconcile-gong-gcal/SKILL.md`, `context/planhat-schema.md`, `context/notion-planhat-field-mapping.md`, `context/project-instructions.md`.
+- **`custom.Gong URL` is still read, never written** — it's the field Gong's own native sync populates on the standalone Gong Call Conversation it creates; that's outside our control. Only the field *we* write to when merging/logging a Gong link onto a session record changed. Existing records with a populated `custom.Gong URL` from before this correction are historical — not backfilled, not cleared.
+
 ## [2.56.0] — 2026-08-27
 
 ### Added
