@@ -145,6 +145,8 @@ Run sessions **sequentially**, not in parallel — same reasoning as `bulk-prep-
 
 **Known limitation — carry over from session-prepper, do not silently paper over it:** session-prepper's § 5b currently gates its Planhat write behind the Notion Customer page's `PH migrated` checkbox. For a customer not yet run through `/ph-migrate-notion-data`, session-prepper will still write the Notion Session page but may skip the Planhat Task update. When this happens, surface it plainly in this agent's step 9 report and in the HTML tomorrow section: `⚠️ Prep written to Notion only — [Customer] not yet Planhat-migrated (run /ph-migrate-notion-data --customer "[Customer]")`. Don't report "prep done" without qualification if the Planhat write was skipped.
 
+**Artifact publishing.** Each auto-prepped session also publishes its prep artifact per `context/session-artifact-convention.md` — session-prepper § 6.8 does the work. Resolve the `Customer Session Artifacts` folder **once for the whole run** (creating it if missing) and pass the cached folder ID and per-customer Salesforce Account Id into each session-prepper invocation so it isn't re-resolved per session. Report folder creation once, at the top of step 9.
+
 After this step, re-check `custom.Prep Notes` on each affected Task (same lookup as step 3/4-C) so step 7's badges reflect the just-written state rather than the stale pre-run status.
 
 ### 6. Pull open Planhat Tasks
@@ -254,6 +256,8 @@ Tomorrow:
 ⚠️ Flags: [overdue tasks | sessions not in Planhat | blocked prep slots with no room | task count may be incomplete (migration gap)]
 ```
 
+When `--auto-prep` published artifacts, add an **Artifacts** block underneath: one line per session with the Drive file name, link, and the Planhat record the link landed on — plus a single line if the `Customer Session Artifacts` folder had to be created this run.
+
 ---
 
 ## Guardrails
@@ -267,5 +271,5 @@ Tomorrow:
 - **`--auto-prep` is opt-in, not default** — never run session-prepper without it being explicitly passed; the everyday brief should stay fast.
 - **Never include customer names in the HTML filename.** Date only.
 - **If no free slot exists today and tomorrow morning is <90 min before the session**, note "no room for prep block" in chat rather than placing a block that would be useless.
-- **Customer confidentiality.** The HTML file is saved locally; do not upload or share it.
+- **Customer confidentiality.** The daily-brief HTML stays local by default — do not upload or share it unless the user explicitly asks for it to be filed in Drive, in which case it follows `context/session-artifact-convention.md` as `{UserName}_{YYYY-MM-DD}_NA_Brief.html`. Per-session prep artifacts published under `--auto-prep` are a separate thing and do go to the `Customer Session Artifacts` folder.
 - **Migration transparency.** Never report a session as "prep done" or a task list as complete without checking whether the underlying customer has been through `/ph-migrate-notion-data` when the signal looks suspiciously absent (a Company with zero Tasks/Conversations ever, for an account you know is active). Flag rather than silently under-report.

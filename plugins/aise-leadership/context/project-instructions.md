@@ -350,6 +350,6 @@ Planhat's public API docs are thin. When a write is being silently ignored, a fi
 
 **Known confirmed quirks** (do not re-investigate these — answers already confirmed):
 - `activityTags` — listed in schema but **not writable via MCP**. Apply manually in Planhat UI.
-- Rich text custom fields — accept **HTML** (`<p>`, `<strong>`, `<ul><li><p>`) not Tiptap JSON, not plain text.
+- Rich text custom fields — accept **single-line HTML** in the `ph-editor` vocabulary (`<p>`, `<strong>`, `<em>`, `<blockquote><p>`, `<hr>`, and lists as `<ul class="ph-editor__bullet-list">` / `<ol class="ph-editor__ordered-list">` with `<li class="ph-editor__list-item"><p>…</p></li>`), not Tiptap JSON, not plain text. Literal `\n` is stripped on write. Bare `<ul><li>text</li></ul>` renders mangled — the classes and the inner `<p>` are both required. Full spec: `context/planhat-schema.md` § Rich Text Field Formatting.
 - `list_model_records` on Task — **36-record hard cap**; filters unreliable. Use attempt-create dedup or `search_records`.
 - `PARAMETERS` not `DATA` — the MCP requires `PARAMETERS` key; `DATA` returns "Missing required parameter".

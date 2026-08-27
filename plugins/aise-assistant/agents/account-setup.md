@@ -75,7 +75,7 @@ Show the full write-up in chat before writing anything. Flag any heading left th
 
 ### 6. Write the Planhat Conversation note
 
-Format the write-up as HTML per `context/planhat-schema.md` § Rich Text Field Formatting (`<ul><li>` for bullets, `<strong>` for bold, no markdown).
+Format the write-up as single-line HTML per `context/planhat-schema.md` § Rich Text Field Formatting — `<p><strong>…</strong></p>` section labels, `<ul class="ph-editor__bullet-list"><li class="ph-editor__list-item"><p>…</p></li></ul>` bullets, `<strong>` for bold, no markdown, no literal newlines.
 
 Get the current UTC datetime via Bash: `date -u +"%Y-%m-%dT%H:%M:%S.000Z"`.
 

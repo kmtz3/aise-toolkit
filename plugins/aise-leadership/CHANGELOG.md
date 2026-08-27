@@ -1,5 +1,13 @@
 # Changelog — aise-leadership
 
+## [1.12.6] — 2026-08-27
+
+### Changed
+- `context/` synced from aise-assistant: `planhat-schema.md` rewrites the Rich Text Field Formatting section into the full verified `ph-editor` tag reference (paragraphs, classed `ul`/`ol` lists, blockquote, `hr`, table) and corrects the earlier "never use `<ol>`/`<ul>`" guidance — bare lists were the actual cause of rendering mangling, not lists themselves. `notion-planhat-field-mapping.md` and `planhat-user-profile.md` updated to the same convention.
+- `context/session-artifact-convention.md` — new file synced from aise-assistant: naming and Drive-folder convention for session artifacts (prep briefs, KDDs, facilitation guides, debrief exports), with Salesforce duplicate-account and Planhat `externalId` write-failure guardrails.
+
+---
+
 ## [1.12.5] — 2026-08-25
 
 ### Changed

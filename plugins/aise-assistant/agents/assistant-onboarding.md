@@ -240,7 +240,7 @@ Workspace questions to include in the combined form — do not issue a separate 
 
 **Full mechanics (field map, read/write procedure) are in `context/planhat-user-profile.md` — follow it exactly.** Summary — one `update_model_record` call, only the fields that changed:
 
-**These are HTML rich-text fields, not plain text.** Planhat silently strips bare `\n` on write — a plain `\n`-joined string comes back as one run-on line with no way to recover the original breaks (confirmed live, 2026-08-18). Use `<p>Key: value</p>` per line and `<ul><li>` for bulleted content, exactly like the Company/Conversation rich-text convention:
+**These are HTML rich-text fields, not plain text.** Planhat silently strips bare `\n` on write — a plain `\n`-joined string comes back as one run-on line with no way to recover the original breaks (confirmed live, 2026-08-18). Use `<p>Key: value</p>` per line and `<ul class="ph-editor__bullet-list"><li class="ph-editor__list-item"><p>…</p></li></ul>` for bulleted content — the classes and inner `<p>` are required, bare `<ul><li>` renders mangled. Same convention as every other Planhat rich-text field; full spec in `context/planhat-schema.md` § Rich Text Field Formatting:
 
 ```
 update_model_record(

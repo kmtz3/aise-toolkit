@@ -45,6 +45,7 @@ Read these when the task touches their subject. Don't duplicate their content he
 | [context/project-instructions.md](context/project-instructions.md) | Overall workflow rules, search strategy, ground rules. **Default reference.** |
 | [context/pb-aise-reference-guide.md](context/pb-aise-reference-guide.md) | Program structure, session "what good looks like", PB data model, architecture, licensing, common risks |
 | [context/score-cards.md](context/score-cards.md) | Per-session scorecards — use when prepping to hit criteria or scoring a delivered session |
+| [context/session-artifact-convention.md](context/session-artifact-convention.md) | **Any workflow that produces a file for a customer session** (prep, facilitation guide, KDD, deck, diagram, debrief export). Drive folder resolve-or-create, the `{Customer}_{YYYY-MM-DD}_{SFAccountId}_{ArtifactType}.ext` naming convention, Salesforce account verification, and the Planhat link-back step. |
 | [context/communication-style-guide.md](context/communication-style-guide.md) | Universal AISE-comms patterns (structure, tone-by-context, transformation rules). Personal preferences override via `custom.AISE Profile preferences` on the user's Planhat User record. |
 | [context/planhat-user-profile.md](context/planhat-user-profile.md) | Personal profile field schema — the `custom.AISE *` field map and read/write procedure `/assistant-setup` uses to store Identity/Preferences/Workspace/Voice-Scrape-Samples/Calendly links directly on the user's Planhat User record. |
 | [context/planhat-schema.md](context/planhat-schema.md) | **Primary reference for account/session/task/feedback data.** Planhat model schemas (Company, Conversation, Task, Comment, Attachment, EndUser, etc.), field mappings, and write rules. Read for any work touching session debrief, product feedback, or account health/revenue/Spark tracking. |
@@ -67,6 +68,7 @@ Read these when the task touches their subject. Don't duplicate their content he
 - **Flag conflicts** between sources instead of silently picking one.
 - **Customer confidentiality.** Never exfil customer names / deal sizes / sensitive detail to external artefacts without explicit authorization.
 - **Owner-filter every query, Planhat or legacy Notion.** The workspace is shared with other PB AISEs. For Planhat: filter Tasks by `ownerId`, Conversations by `users`, scoped to the current user's Planhat id (resolve via `context/planhat-schema.md` § Planhat User IDs). For the legacy Notion-based agents still in use: every Notion query must be scoped to the user's records — Full Ownership Model (which field to filter per DB, the Resync button mechanic, `Delivered By` semantics) in `context/notion-schema.md` § Ownership Model. The user's Notion user ID is a Notion-specific credential, unrelated to the Planhat profile — resolve it live via `notion-get-users(user_id: "self")` before constructing any filtered Notion query. Single-customer Notion workflows must verify `Customer.Owner` contains the current user before continuing; if it doesn't, surface the conflict.
+- **Every session artifact goes to Drive and gets linked back into Planhat.** Any file a session workflow produces — prep brief, facilitation guide, KDD, deck, diagram, debrief export — is uploaded to the `Customer Session Artifacts` Drive folder, named `{CustomerName}_{YYYY-MM-DD}_{SalesforceAccountId}_{ArtifactType}.ext`, and its link written onto the session's Planhat record (calendar-event Task first, Conversation as fallback). **Resolve the folder before every upload and create it if it doesn't exist** — never skip an artifact because the folder was missing. Full procedure, including the Salesforce duplicate-account guard and the `externalId` write failure fallback, in `context/session-artifact-convention.md`.
 - **Dedup before create.** Before creating any Task or Session, check whether one already exists where Owner contains the current user and the candidate is a match (Tasks: same Customer + similar title + open status, or same `Source Call` + similar title; Sessions: same Customer + same date ±1 day + same Type). If a match is found, skip the create and link the existing record. Full criteria in `agents/notion-writer.md` §Pre-create dedup check.
 
 ---
@@ -227,6 +229,32 @@ At the end of any skill run, if you notice efficiency gaps — redundant tool ca
 > **Spotted a possible skill improvement.** Want me to run `/assistant-improvement` to generate a fix prompt you can send to the plugin admin?
 
 Keep it brief and specific. Only surface it when you have a concrete observation — not as a generic close to every run.
+
+---
+
+## Planhat rich-text fields (universal write format)
+
+Every Planhat rich-text field — Task `custom.Prep Notes`, Conversation `description` and `custom.Prep Notes`, Company / Conversation `SH_*`, and any other field typed `Rich text` — is a ProseMirror editor (`ph-editor`) that stores **HTML on a single line**. Literal `\n` / `\r\n` are **stripped on write** (verified 2026-08-27), so structure must come from tags, never from line breaks.
+
+Emit only this verified tag set — it is what the editor itself serializes, so anything outside it is silently sanitized or renders broken:
+
+| Element | Markup |
+|---|---|
+| Paragraph | `<p>text</p>` |
+| Blank line / spacer | `<p></p>` |
+| Section label | `<p><strong>Label</strong></p>` — **never `<h1>`–`<h6>`** |
+| Emphasis | `<strong>text</strong>` · `<em>text</em>` |
+| Bulleted list | `<ul class="ph-editor__bullet-list"><li class="ph-editor__list-item"><p>text</p></li></ul>` |
+| Numbered list | `<ol class="ph-editor__ordered-list"><li class="ph-editor__list-item"><p>text</p></li></ol>` |
+| Quote / callout | `<blockquote><p>text</p></blockquote>` |
+| Divider | `<hr>` |
+| Table | `<table><colgroup><col style="width: 301px;"></colgroup><tbody><tr><td data-colwidth="301"><p>cell</p></td></tr></tbody></table>` |
+
+**Two mistakes that break rendering.** (1) List items need *both* the `ph-editor__*` classes and an inner `<p>` — bare `<ul><li>text</li></ul>` is what produced the historical "1. / blank / 2. / blank" mangling, and it is no longer the documented format. (2) The payload must be a single line; any literal newline between elements is dropped and takes its structure with it.
+
+**Write for skimming, not for prose.** Bold section label, then a list. Lead each list item with a bolded subject, date, or owner, then one sentence of detail. Prefer 3–6 short items per section over one dense paragraph. Voice rules from `custom.AISE Profile preferences` (dash style, English variant, forbidden filler) apply to the sentence content exactly as they do to any draft.
+
+Per-field notes and the Conversation-specific constraints: `context/planhat-schema.md` § Rich Text Field Formatting.
 
 ---
 

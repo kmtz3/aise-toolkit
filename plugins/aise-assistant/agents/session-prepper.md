@@ -62,7 +62,7 @@ If the field is empty, warn the user inline and fall back to `context/communicat
   - **Program phase fallback:** if the AP Working Notes are empty or give no clear signal on current program phase, fall back to Glean `chat`: "What phase of their Productboard onboarding is <Customer> in, based on recent emails, Gong calls, or Slack?" Use the result to populate the program phase line in the brief; tag it `⚠️ [Glean]`.
 - **Pre-read materials** — search Gmail and Google Drive for attachments or docs the customer shared in the lead-up to this session (PPTs, decks, spreadsheets, org charts, shared docs). When found, retrieve and extract key content: org structure, product hierarchy, tool landscape, stated priorities, sample artifacts. This feeds the **Pre-read highlights** section in Step 4 — keep source references (e.g. "PPT slide 2") so the brief is traceable.
 - Past chats — `conversation_search` if available.
-- **Tracker Memory (Planhat):** Resolve `planhat_user_id` via `list_model_records(MODEL:"User", FILTER:{"email[equal to]":"<email>"}, SELECT:["firstName","lastName","email"])` (or the pre-resolved table in `context/planhat-schema.md` § Planhat User IDs), then `get_model_record(MODEL:"User", OBJECT_ID:"{planhat_user_id}", SELECT:["custom.AISE Tracker Memory"])` — the field is HTML rich text (`<p>`/`<ul><li>` per entry, not `\n`-separated; strip tags before parsing — see `context/planhat-user-profile.md`) → parse cross-customer patterns (one entry per pattern: Pattern / Source / Action). Look for patterns whose session type, program phase, or risk profile matches this session or customer context. Surface any applicable patterns in the prep brief under a brief "**Patterns from past accounts**" callout — one line per pattern, actionable implication only. If the field is empty, skip silently.
+- **Tracker Memory (Planhat):** Resolve `planhat_user_id` via `list_model_records(MODEL:"User", FILTER:{"email[equal to]":"<email>"}, SELECT:["firstName","lastName","email"])` (or the pre-resolved table in `context/planhat-schema.md` § Planhat User IDs), then `get_model_record(MODEL:"User", OBJECT_ID:"{planhat_user_id}", SELECT:["custom.AISE Tracker Memory"])` — the field is HTML rich text (`<p>` blocks, or classed `<ul class="ph-editor__bullet-list">` lists, per entry — not `\n`-separated; strip tags before parsing — see `context/planhat-user-profile.md`) → parse cross-customer patterns (one entry per pattern: Pattern / Source / Action). Look for patterns whose session type, program phase, or risk profile matches this session or customer context. Surface any applicable patterns in the prep brief under a brief "**Patterns from past accounts**" callout — one line per pattern, actionable implication only. If the field is empty, skip silently.
 
 **Ownership check (mandatory):** After resolving the Customer page, fetch its `Owner` field. If it does not contain the user's Notion ID (from the `AISE Identity` Notion page) (`<user-uuid>`), do **not** continue silently — the workspace is shared with other PB AISEs and this may be a teammate's account. Surface the situation: "<Customer> has Owner = [list]; you're not in it. Take ownership now (set Owner to you) or stop?". Wait for the user's call.
 
@@ -217,17 +217,17 @@ update_model_record(
 )
 ```
 
-**`custom.Prep Notes` format** (HTML — Planhat rich text accepts HTML; no `<h>` tags, use `<strong>` for section labels and `<ul><li><p>` for bullets):
+**`custom.Prep Notes` format** — single-line HTML in the `ph-editor` vocabulary. The full tag table, the rules that break rendering, and the canonical example live in `context/planhat-schema.md` § Rich Text Field Formatting; read it before writing. In short: no `<h>` tags (section labels are `<p><strong>…</strong></p>`), lists must be `<ul class="ph-editor__bullet-list">` / `<ol class="ph-editor__ordered-list">` with `<li class="ph-editor__list-item"><p>…</p></li>` items, `<p></p>` is a blank line, `<hr>` separates the header block from the body, and the whole payload is one line — literal `\n` is stripped on write.
 
 **Apply the voice rules fetched in Step 1b to every word inside this HTML** — most importantly the dash rule (en dash `–`, never em dash `—`, if that's the profile's rule). This field has shipped with em dashes and zero visual spacing between sections in the past because voice rules were never fetched and consecutive `<p>` tags render with no gap in Planhat's UI. Both are fixed by this spec:
 
-- **Spacing:** insert an empty `<p><br></p>` spacer between every section (after each `</p>` or `</ul>` that ends a section, before the next `<strong>` heading). Do not rely on CSS margins — Planhat's rich-text sanitizer may strip inline `style` attributes; a literal blank paragraph survives.
+- **Spacing:** a properly classed `<ul>` / `<ol>` already renders with its own gap, so no spacer is needed between a `<strong>` label and its list. Where a blank line is genuinely wanted between two paragraph blocks, use an empty `<p></p>` — that is what the editor itself emits. Never rely on CSS margins; inline `style` may be stripped.
 - **Dashes and other voice rules:** apply them to the actual sentence content (goal line, open items, watch-fors) — not just the fixed labels.
 
 ```
-<p><strong>Goals</strong></p><p><1-line session objective, voice rules applied></p><p><br></p><p><strong>Open Items</strong></p><ul><li><p><open item 1></p></li><li><p><open item 2></p></li></ul><p><br></p><p><strong>Watch-fors</strong></p><ul><li><p><risk or context point></p></li></ul>
+<p><strong><Customer> — <Session type> — <Day DD Mon YYYY, HH:MM–HH:MM TZ> (<duration>, <tool>)</strong></p><p><attendee name (role); who else may join></p><blockquote><p>Booking note: <verbatim customer ask + what it implies for the session></p></blockquote><hr><p><strong>Agenda (<duration>)</strong></p><ol class="ph-editor__ordered-list"><li class="ph-editor__list-item"><p><strong><topic></strong> — <n> min. <what to establish></p></li></ol><p><strong>Goals</strong></p><ul class="ph-editor__bullet-list"><li class="ph-editor__list-item"><p><outcome to leave with></p></li></ul><p><strong>Open items</strong></p><ul class="ph-editor__bullet-list"><li class="ph-editor__list-item"><p><item + owner + since when></p></li></ul><p><strong>Watch-fors</strong></p><ul class="ph-editor__bullet-list"><li class="ph-editor__list-item"><p><risk or context point></p></li></ul>
 ```
-Keep to ~400–500 chars of visible text (the spacer paragraphs don't count against this — they're structural, not content). `description` is reserved for actual session content written during or after the call.
+Keep to roughly 1,200–2,000 chars of visible text — enough for the full skimmable brief (header, booking note, agenda, goals, open items, what changed since last session, watch-fors) without turning into prose. Markup doesn't count against this. `description` is reserved for actual session content written during or after the call.
 
 **If the Task already has `type` set correctly:** only update `custom.Prep Notes`; do not overwrite an intentionally set type.
 
@@ -284,11 +284,31 @@ Context carried forward from steps 1–6 (do not re-fetch):
 - Watch-fors and scorecard from step 3.
 - Notion Session page ID from step 5.
 
+### 6.8 Publish artifacts to Drive and link back into Planhat
+
+Run this after every file artifact for the session exists locally (prep brief export, KDD doc, facilitation guide) and **before** the step 7 report, so the report can quote real links.
+
+Follow `context/session-artifact-convention.md` in full. Condensed:
+
+1. **Resolve the folder.** `get_file_metadata` on the known `Customer Session Artifacts` folder ID; if it errors, is trashed, or is not a folder, search by title; if still nothing, **create it** and say so in the report. Never skip an artifact because the folder was missing. Cache the resolved ID for the rest of the run.
+2. **Resolve the Salesforce Account Id.** Read `sourceId` off the Planhat Company (natively SF-synced, so it is by definition the live account), then verify with `SELECT Id, Name, Type, IsDeleted FROM Account WHERE Name LIKE '%<customer>%'`. **Duplicate and churned accounts under the same name are common** — if the Planhat `sourceId` isn't among the SOQL results or maps to a deleted/churned record, stop and ask the user which account is live rather than guessing.
+3. **Upload each artifact** as `{CustomerName}_{YYYY-MM-DD}_{SalesforceAccountId}_{ArtifactType}.ext` — `SessionPrep`, `KDD`, `Facilitation` respectively. Date = the **session** date, not today. `disableConversionToGoogleType: true` on every HTML and SVG upload, or Drive converts the file to a Google Doc and destroys the styling. If a file with that exact name is already in the folder, update it in place instead of creating a second copy.
+4. **Link back into Planhat.** Prepend the artifact block to `custom.Prep Notes` on the session's Planhat calendar-event Task (`mainType: "event"`, GCal-synced, matching company + date) — the same record § 5b writes prep notes to. If no event Task exists, use the session Conversation on the Company. Prepend; never overwrite existing prep content.
+
+```
+SESSION PREP ARTIFACT — {filename}
+Drive file: {webViewLink}
+Folder: Customer Session Artifacts — {folder URL}
+Salesforce Account: {SalesforceAccountId}
+```
+
+**If the Planhat write fails with `{"el":"externalId","error":"Not valid type"}`** the target record has no `externalId` and cannot be updated through the API — supplying one in the same call does not clear it. Fall back to the sibling GCal-synced record for the same session, note in the report which record actually received the link and which one is stuck, and don't retry the same PUT more than once.
+
 ### 7. Report in chat
 
 Post a summary with these sections:
 
-**a) Links** — Notion pages created/updated (Session page, KDD sub-page when applicable, Tasks, diagram) + facilitation guide file path when generated.
+**a) Links** — Notion pages created/updated (Session page, KDD sub-page when applicable, Tasks, diagram) + facilitation guide file path when generated + **one line per Drive artifact: file name, Drive link, and which Planhat record received the link**. State explicitly if the `Customer Session Artifacts` folder had to be created, if an existing file was updated in place, or if a Planhat link write failed.
 
 **b) Pre-call checklist** — concrete actions the user should take before the call. Include any of these that apply:
 - Overdue tasks from prior sessions that affect this one

@@ -5,6 +5,43 @@ Format: `## [version] — YYYY-MM-DD` followed by bullet points grouped by type.
 
 ---
 
+## [2.52.0] — 2026-08-27
+
+### Changed
+- **`CLAUDE.md` — new root section "Planhat rich-text fields (universal write format)".** One canonical spec now governs every Planhat rich-text write instead of each agent carrying its own half-right version. Verified against the `ph-editor` (ProseMirror) serialization by formatting a field by hand in the Planhat UI and reading the stored value back through MCP: paragraphs, `<p></p>` spacers, `<strong>`/`<em>`, `<blockquote><p>`, `<hr>`, classed `<ul class="ph-editor__bullet-list">` / `<ol class="ph-editor__ordered-list">` lists with `<li class="ph-editor__list-item"><p>…</p></li>` items, and `<table>` with `colgroup` + `data-colwidth`. No heading nodes exist — section labels stay `<p><strong>…</strong></p>`.
+- `context/planhat-schema.md` § Rich Text Field Formatting — rewritten as the full reference: tag table, the canonical prep-brief example, structure-for-skimming rules, and an explicit unverified list (`<a href>`, `<u>`, `<s>`, `<code>`).
+- `context/planhat-schema.md` § Planhat rich-text constraints — the "never use `<ol>`/`<ul>`" row and the safe-set line were wrong. Lists work; **bare** `<ul><li>text</li></ul>` is what mangles into `1.` / blank / `2.` / blank, because the editor drops a list item with no paragraph node inside it. The manual `1.` / `2.` prefix workaround is retired.
+- `agents/session-prepper.md` § 5b — prep-notes spec points at the canonical section, the example is now the full skimmable shape (header line, attendees, booking-note blockquote, `<hr>`, numbered agenda with timings, goals, open items, watch-fors), the `<p><br></p>` spacer rule is replaced (classed lists carry their own spacing; `<p></p>` where a blank line is genuinely wanted), and the visible-text budget goes from ~400–500 to ~1,200–2,000 chars so the fuller brief fits.
+- Same convention propagated to `context/project-instructions.md`, `context/planhat-user-profile.md`, `context/notion-planhat-field-mapping.md` (both `custom.Prep Notes` rows), `agents/account-setup.md`, `agents/assistant-onboarding.md`, `agents/post-session-debrief.md`, `agents/context-keeper.md`.
+
+### Guardrails
+- **Literal newlines are stripped on write.** Confirmed live 2026-08-27: `\n` and `\r\n` in a rich-text payload are silently removed by the API, so a `\n`-structured brief lands as one run-on block. Every rich-text payload is emitted as a single line and gets its structure from tags only.
+- **Storage acceptance is not rendering.** The API stores whatever HTML it is given, so a read-back proves nothing about what the editor will show. Anything outside the verified tag set is checked in the UI before it goes into a write path.
+
+### Known inconsistency
+- `context/project-instructions.md` § session-notes template still writes Conversation `description` with `<h3>` headings and bare `<ul><li>`. Left as-is: `description` behaves differently from the `ph-editor` custom fields (existing records store plain text with literal newlines intact), and it has not been verified in the UI. Do not "fix" it by copying the custom-field spec without checking first.
+
+---
+
+## [2.51.0] — 2026-08-27
+
+### Added
+- `context/session-artifact-convention.md` — **new canonical context file.** Every file artifact a session workflow produces (prep brief, facilitation guide, KDD, deck, diagram, debrief export) now goes to one flat Google Drive folder, `Customer Session Artifacts`, named `{CustomerName}_{YYYY-MM-DD}_{SalesforceAccountId}_{ArtifactType}.ext` — e.g. `Emplifi_2026-08-27_001f400000FwmeqAAB_SessionPrep.html`. Covers the resolve-or-create folder procedure, the `ArtifactType` registry, the upload contract (`disableConversionToGoogleType: true` on HTML/SVG or Drive eats the styling), and the Planhat link-back block.
+- `agents/session-prepper.md` § 6.8 — new step publishing every generated artifact to Drive and prepending the artifact link block to `custom.Prep Notes` on the session's Planhat calendar-event Task (Conversation as fallback), run before the step 7 report so the report quotes real links.
+- `agents/bulk-prep-week.md` § 5.5 and `agents/daily-brief.md` § 5.5 — same publish step, with the bulk rule that the Drive folder and each customer's Salesforce Account Id are resolved **once per run** and cached, never per session.
+
+### Changed
+- `CLAUDE.md` — added the artifact convention to the canonical context table and a ground rule: every session artifact goes to Drive and gets linked back into Planhat, and the folder is resolved (and created if absent) before every upload.
+- `skills/session-prep/SKILL.md`, `skills/bulk/SKILL.md` (both `--prep` and `--debrief`), `skills/daily-brief/SKILL.md` — artifact publish step added and the report step now requires the Drive link plus the Planhat record each link landed on, per artifact.
+- `agents/daily-brief.md` — the "saved locally, do not upload" guardrail now distinguishes the daily brief itself (stays local unless the user asks for it in Drive) from per-session prep artifacts published under `--auto-prep`, which always go to the folder.
+
+### Guardrails
+- **Never assume the Drive folder exists.** `get_file_metadata` on the known ID → search by title → create. The hardcoded folder ID belongs to the install it was configured on; a teammate's install, or a moved/renamed/trashed folder, resolves to nothing. A missing folder is created and reported, never a reason to drop an artifact.
+- **Salesforce duplicate-account guard.** Take the Account Id from the Planhat Company `sourceId` (natively SF-synced, so by definition the live record) and verify it against SOQL. Duplicate and churned accounts share customer names — if `sourceId` isn't in the SOQL results or maps to a deleted record, stop and ask rather than guessing. (Emplifi has two SF accounts under the same name; only `001f400000FwmeqAAB` is live.)
+- **Planhat `externalId: Not valid type` fallback.** A Conversation with no `externalId` rejects every API update and supplying one in the same call does not clear it. Fall back to the sibling GCal-synced record for the session, report which record took the link and which is stuck, and don't retry the same PUT more than once.
+
+---
+
 ## [2.50.0] — 2026-08-26
 
 ### Added

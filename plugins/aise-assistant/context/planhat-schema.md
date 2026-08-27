@@ -414,26 +414,35 @@ writes Productboard's internal discussion of a customer onto that customer's own
 
 ### Rich Text Field Formatting
 
-Planhat rich text fields (type `Rich text`) require **HTML** — plain text with markdown-style `- ` bullets or `\n` line breaks does not render as formatted content.
+Planhat rich text fields (type `Rich text`) are a ProseMirror editor (`ph-editor`) backed by **single-line HTML**. Markdown-style `- ` bullets do not render, and literal `\n` / `\r\n` are **stripped by the API on write** (verified 2026-08-27 against Task `custom.Prep Notes`) — every element must be adjacent on one line.
 
-**Bullet lists:** use `<ul><li>` tags:
+The tag set below is the editor's own serialization, captured by formatting a field by hand in the Planhat UI and reading the stored value back through MCP. Treat it as the whole allowed vocabulary: markup outside it is sanitized on load or renders broken.
+
+| Element | Markup |
+|---|---|
+| Paragraph | `<p>text</p>` |
+| Blank line / spacer | `<p></p>` |
+| Section label | `<p><strong>Label</strong></p>` — **no `<h1>`–`<h6>`; the editor has no heading node** |
+| Emphasis | `<strong>text</strong>` · `<em>text</em>` |
+| Bulleted list | `<ul class="ph-editor__bullet-list"><li class="ph-editor__list-item"><p>text</p></li></ul>` |
+| Numbered list | `<ol class="ph-editor__ordered-list"><li class="ph-editor__list-item"><p>text</p></li></ol>` |
+| Quote / callout | `<blockquote><p>text</p></blockquote>` |
+| Divider | `<hr>` |
+| Table | `<table><colgroup><col style="width: 301px;"><col style="width: 301px;"></colgroup><tbody><tr><td data-colwidth="301"><p>cell</p></td><td data-colwidth="301"><p>cell</p></td></tr></tbody></table>` |
+
+**List items require both the `ph-editor__*` classes and an inner `<p>`.** Bare `<ul><li>text</li></ul>` is the documented cause of the old "1. / blank / 2. / blank" mangling — the editor drops a list item that has no paragraph node inside it. The earlier guidance in this file to use bare `<ul><li>` was wrong and has been replaced.
+
+Optional attributes the editor emits and accepts, but that are not needed on write: `style="text-align: left;"` on `<p>`, and `style=""` on `<table>`.
+
+**Unverified:** `<a href>` inside these fields (the editor has a link control, so it is very likely fine), `<u>`, `<s>`, `<code>`. Don't introduce them into a shipped write path without checking the rendered result first.
+
+**Combined example** (the canonical prep-brief shape):
+
 ```html
-<ul><li>First point</li><li>Second point</li><li>Third point</li></ul>
+<p><strong>Customer — Session type — Thu 27 Aug 2026, 13:30–14:00 CEST (30 min, Zoom)</strong></p><p>Attendee name (role). Second attendee may join.</p><blockquote><p>Booking note: verbatim customer ask, plus what it implies for how the session should run.</p></blockquote><hr><p><strong>Agenda (30 min)</strong></p><ol class="ph-editor__ordered-list"><li class="ph-editor__list-item"><p><strong>Topic</strong> — 10 min. What to establish.</p></li></ol><p><strong>Goals</strong></p><ul class="ph-editor__bullet-list"><li class="ph-editor__list-item"><p>Outcome to leave the session with.</p></li></ul><p><strong>Watch-fors</strong></p><ul class="ph-editor__bullet-list"><li class="ph-editor__list-item"><p>Risk to keep an eye on.</p></li></ul>
 ```
 
-**Numbered lists:**
-```html
-<ol><li>First step</li><li>Second step</li></ol>
-```
-
-**Bold text:** `<strong>text</strong>`
-
-**Line breaks:** `<br>` or wrap paragraphs in `<p>` tags.
-
-**Combined example:**
-```html
-<ul><li><strong>Current tool:</strong> Aha! for product management</li><li>Azure DevOps for delivery execution</li></ul>
-```
+**Structure rules for any rich-text write.** Bold section label, then a list — not prose paragraphs. Lead each list item with a bolded subject, date, or owner, then one sentence of detail. 3–6 items per section. Apply the user's `custom.AISE Profile preferences` voice rules (dash style, English variant, forbidden filler) to the sentence content.
 
 > **Custom field reads:** Custom fields are returned nested under a `custom` key in the response — e.g. `{"custom": {"SH_Current State": "<ul>...</ul>", "AISE Journey Status": "Active (Services)"}}`. Use `list_model_records` (not `get_model_record`) with an `_id[equal to]` filter for the most reliable custom field retrieval.
 >
@@ -548,14 +557,16 @@ writing a record and reading it back in the UI:
 | Never use | What Planhat does with it |
 |---|---|
 | `<div>` with `style` | Strips `background`, `border`, `border-radius`, `color`, `padding`; the empty container leaves a large vertical gap |
-| `<ol>` / `<ul>` | Mangles into `1.` / blank / `2.` / blank, with the real text on the even items |
-| `<table>` | Visible cell borders plus phantom empty rows and columns |
+| Bare `<ol>` / `<ul>` (no `ph-editor__*` classes, no inner `<p>`) | Mangles into `1.` / blank / `2.` / blank, with the real text on the even items. **Lists themselves are fine** — emit them in the editor's own form, see § Rich Text Field Formatting |
+| `<table>` | Visible cell borders plus phantom empty rows and columns. Works structurally, but reads badly in a Conversation body — keep tables out of `description` |
 | Literal newlines between elements | Converted into extra paragraph breaks |
 | Inline `color` on text | Dropped – colour-coded speakers all render black |
 
-**Safe set:** `<p>` · `<br>` · `<b>` · `<i>` · `<a href>` · `<hr>`, emitted as a single line with no literal
-newlines. Numbered lists are manual `1.` / `2.` prefixes on `<br>`-separated lines. This applies to every
-Conversation `description`, not just Slack ones.
+**Safe set:** the verified vocabulary in § Rich Text Field Formatting — `<p>` · `<p></p>` · `<strong>` · `<em>` ·
+`<br>` · `<hr>` · `<blockquote><p>` · `<ul class="ph-editor__bullet-list">` / `<ol class="ph-editor__ordered-list">`
+with `<li class="ph-editor__list-item"><p>` items — emitted as a single line with no literal newlines. Properly
+classed lists render correctly; the manual `1.` / `2.` prefix workaround is no longer needed. This applies to
+every Conversation `description`, not just Slack ones.
 
 ### How to look up a Planhat Conversation for a given session
 
@@ -710,7 +721,7 @@ previous snapshot – note it shares the 🔁 emoji with `🔁 Sync`, so match o
 | `externalId` | string | — | Notion Session page ID. **Dedup key.** |
 | `source` | string | — | Always `"AISE"`. |
 | ~~`activityTags`~~ | array | — | ~~`["Spark"]` if `Spark conversation = YES`.~~ **Not writable via MCP — silently rejected. Apply manually in Planhat UI.** |
-| `custom.Prep Notes` | string | — | Prep brief written by session-prepper before the session. Format: HTML — `<p><strong>Goals</strong></p><p>...</p><p><br></p><p><strong>Open Items</strong></p><ul><li><p>...</p></li></ul><p><br></p><p><strong>Watch-fors</strong></p><ul><li><p>...</p></li></ul>`. No `<h>` tags — use `<strong>` for section labels. **Insert an empty `<p><br></p>` spacer between sections** — consecutive `<p>` tags render with no gap in Planhat's UI otherwise. **Apply the user's `custom.AISE Profile preferences` voice rules to the sentence content** (dash style, etc.) — see `agents/session-prepper.md` § 1b/5b; this field has shipped with em dashes and no section spacing before that was fixed. Carry over from the linked Task when writing the Conversation post-session. |
+| `custom.Prep Notes` | string | — | Prep brief written by session-prepper before the session. Format: single-line HTML in the `ph-editor` vocabulary — see § Rich Text Field Formatting for the tag table and the canonical prep-brief example. Section labels are `<p><strong>…</strong></p>` (no `<h>` tags); lists **must** carry `ph-editor__bullet-list` / `ph-editor__ordered-list` + `<li class="ph-editor__list-item"><p>…</p></li>`; use `<p></p>` for a blank line and `<hr>` to separate the header block from the body. **Apply the user's `custom.AISE Profile preferences` voice rules to the sentence content** (dash style, etc.) — see `agents/session-prepper.md` § 1b/5b; this field has shipped with em dashes and no section spacing before that was fixed. Carry over from the linked Task when writing the Conversation post-session. |
 | `transcript` | string | — | Full transcript text if available. |
 | `taskId` | objectId | — | Links this conversation to its originating Planhat Task. Set when writing a Done Notion Task as a Conversation — look up the existing Planhat Task by `sourceId` and pass its `_id` here. Optional on backfill if the Task doesn't exist yet in Planhat. |
 | `category` | string | — | One of: `Support`, `Feedback`, `Sales`, `Expansion`, `Billing & Contracts`, `Renewals`, `Legal`, `General Enquires`, `Spam`, `Marketing`. Leave blank for AISE sessions unless relevant. |
@@ -831,7 +842,7 @@ All Notion Task statuses write to the Planhat Task model. Only a `status` *trans
 | `ownerId` | objectId | — | Planhat User `_id` of the person responsible. |
 | `sourceId` | string | — | Notion Task page ID. **Dedup key.** |
 | `custom.Priority` | string | — | `"P1"`, `"P2"`, `"P3"` mapped from Notion `Priority` field. |
-| `custom.Prep Notes` | string | — | Prep brief written by session-prepper. Format: HTML — `<p><strong>Goals</strong></p><p>...</p><p><br></p><p><strong>Open Items</strong></p><ul><li><p>...</p></li></ul><p><br></p><p><strong>Watch-fors</strong></p><ul><li><p>...</p></li></ul>`. No `<h>` tags — use `<strong>` for section labels. **Insert an empty `<p><br></p>` spacer between sections** — consecutive `<p>` tags render with no gap in Planhat's UI otherwise. **Apply the user's `custom.AISE Profile preferences` voice rules to the sentence content** (dash style, etc.) — see `agents/session-prepper.md` § 1b/5b. Read and carried to the linked Conversation during post-session debrief. |
+| `custom.Prep Notes` | string | — | Prep brief written by session-prepper. Format: single-line HTML in the `ph-editor` vocabulary — see § Rich Text Field Formatting for the tag table and the canonical prep-brief example. Section labels are `<p><strong>…</strong></p>` (no `<h>` tags); lists **must** carry `ph-editor__bullet-list` / `ph-editor__ordered-list` + `<li class="ph-editor__list-item"><p>…</p></li>`; use `<p></p>` for a blank line and `<hr>` to separate the header block from the body. **Apply the user's `custom.AISE Profile preferences` voice rules to the sentence content** (dash style, etc.) — see `agents/session-prepper.md` § 1b/5b. Read and carried to the linked Conversation during post-session debrief. |
 | ~~`activityTags`~~ | array | — | ~~Freeform tags for filtering.~~ **Not writable via MCP — silently rejected. Apply manually in Planhat UI.** |
 | `endusers` | array | — | Customer contacts involved: `[{"id": "<enduser-id>"}]`. |
 

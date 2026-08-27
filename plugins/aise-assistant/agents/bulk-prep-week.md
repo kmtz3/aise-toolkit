@@ -94,6 +94,15 @@ Follow the full procedure in [`agents/session-prepper.md`](session-prepper.md) f
 - **Case C:** create the Session page (`Call Status = Planned`) then append the prep toggle. **Also set `Current Account Owner`** to the Customer page's `Owner` UUID confirmed during the Step 2 ownership check — pass it as a Person field array `["<bare-uuid>"]` in the `notion-create-pages` call. The Notion automation that propagates this field does not fire reliably on SA-created pages, so it must be set explicitly on create.
 - **Run sessions sequentially**, not in parallel — each context pull is heavy and parallel execution causes Notion write conflicts.
 
+### 5.5 Publish artifacts to Drive and link back into Planhat
+
+Follow `context/session-artifact-convention.md`, with two bulk-specific rules:
+
+- **Resolve the `Customer Session Artifacts` folder once, at the start of the run** — before session 1, not per session. Create it if it doesn't exist (`get_file_metadata` → search by title → create), report that once at the top of the step 6 summary, and reuse the cached ID for every artifact in the run.
+- **Resolve each customer's Salesforce Account Id once** (Planhat Company `sourceId`, verified against SOQL for duplicate/churned accounts) and reuse it across that customer's artifacts.
+
+Per session, upload each generated file as `{CustomerName}_{YYYY-MM-DD}_{SalesforceAccountId}_{ArtifactType}.ext` and prepend the artifact link block to `custom.Prep Notes` on that session's Planhat calendar-event Task (Conversation as fallback). A folder-resolution failure aborts the artifact step for the run and is reported loudly — it does not silently skip per session.
+
 ### 6. Report
 
 After all sessions are processed, post a summary table:
@@ -107,7 +116,7 @@ After all sessions are processed, post a summary table:
 | StartupCo — Check-in | StartupCo | Fri May 16 | ⏭️ Skipped (--skip flag) |
 | ClientCo — Weekly Sync | ClientCo | Wed May 21 | ⚠️ Duplicate pages — review required (page 1, page 2) |
 
-Include: total events scanned, external sessions found, prepped, skipped, flagged. Link each prepped Notion Session page directly. Duplicate-page entries must list both page URLs.
+Include: total events scanned, external sessions found, prepped, skipped, flagged. Link each prepped Notion Session page directly. Duplicate-page entries must list both page URLs. Add an **Artifacts** block listing, per session, the Drive file name + link and the Planhat record the link landed on — plus a single line at the top if the `Customer Session Artifacts` folder had to be created this run.
 
 ## Guardrails
 
