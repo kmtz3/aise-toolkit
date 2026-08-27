@@ -146,6 +146,7 @@ Grouped by family. Type `/<family>-` in autocomplete to see siblings.
 | Command | Purpose |
 |---|---|
 | `/ph-migrate-notion-data [--customer <name> \| --customers <n1,n2>] [--aise <name>] [--dry-run]` | Migrate Notion Customer Tracker data into Planhat — Company field sync (phase, Journey Status, Priority, csmScore), all Delivered sessions (including Do not count) as Conversations, and all Tasks as Tasks. Scoped per customer, a list, or all of an AISE's book. Uses externalId/sourceId dedup — safe to re-run. |
+| `/ph-reconcile-gong-gcal [--customer <name>] [--since YYYY-MM-DD] [--apply] [--window-hours N]` | Merges standalone `👾 Gong Call` Conversations (from Gong's native Planhat sync) into the matching GCal-synced session Conversation — transcript, Gong URL, description — then deletes the redundant Gong Call record. Matches via a weighted score (attendee overlap via `endusers`/`users` 0.40 · subject similarity 0.35 · date proximity 0.25) within a companyId + time window, not ID (Gong Call `externalId` is `{gongCallId}-{sfAccountId}`, not a GCal event ID). Dry-run by default. Stopgap until the Planhat↔Gong integration is reworked to do this automatically. |
 
 ### `assistant-*` — meta / configure the assistant itself
 
@@ -205,6 +206,7 @@ Full spec per skill in [`skills/`](skills/).
 | `notion-ask` | Executes `/notion-ask`. Reads `context/notion-schema.md` as the canonical source to answer questions about DB structure, field fill requirements, auto-calculated fields, and interconnections. Does live Notion queries only when a specific customer is named or the question requires real-value verification. |
 | `daily-brief` | Pulls today's schedule and open Planhat Tasks, flags tomorrow's unprepped sessions (prep status read from the Planhat calendar-event Task's `custom.Prep Notes`), creates calendar prep blocks, optionally invokes `session-prepper` (`--auto-prep`) so prep lands on the Planhat Task directly, and renders a styled HTML daily briefing page saved to `~/Desktop/`. |
 | `ph-migrate-notion-data` | Executes `/ph-migrate-notion-data`. Reads `context/planhat-schema.md` as the canonical field mapping, migrates Notion Company/Session/Task records into Planhat scoped per customer, list, or AISE book, using externalId/sourceId dedup so re-runs are safe. Presents a confirmation queue before writing; `--dry-run` previews the plan only. |
+| `ph-reconcile-gong-gcal` | Executes `/ph-reconcile-gong-gcal`. Finds `👾 Gong Call` Conversations (Gong's native Planhat sync), matches each to its GCal-synced session Conversation with a weighted score across attendee overlap (`endusers`/`users`, already Planhat-ID-resolved), subject similarity, and date proximity (no shared ID exists between the two), merges transcript/Gong URL/description onto the target, verifies the write, then deletes the Gong Call record. Dry-run by default; conflicts and ambiguous matches are always reported, never auto-resolved. |
 
 Full spec per agent in [`agents/`](agents/).
 

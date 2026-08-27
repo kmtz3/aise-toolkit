@@ -1,5 +1,12 @@
 # Changelog — aise-leadership
 
+## [1.12.9] — 2026-08-27
+
+### Added
+- `context/planhat-schema.md` § Conversation type mapping — synced from aise-assistant. Notes that `👾 Gong Call` Conversations cannot be matched to their GCal-synced target by ID (Gong Call `externalId` is `{gongCallId}-{salesforceAccountId}`, `Conversation` has no `sourceId`, and neither the Gong MCP tools nor Glean's indexed Gong metadata expose a calendar event ID) — matching instead uses a weighted score across attendee overlap, subject similarity, and date proximity. See aise-assistant's new `ph-reconcile-gong-gcal` agent.
+
+---
+
 ## [1.12.8] — 2026-08-27
 
 ### Added

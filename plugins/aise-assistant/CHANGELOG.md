@@ -5,6 +5,16 @@ Format: `## [version] — YYYY-MM-DD` followed by bullet points grouped by type.
 
 ---
 
+## [2.56.0] — 2026-08-27
+
+### Added
+- New agent + `/ph-reconcile-gong-gcal` skill: merges standalone `👾 Gong Call` Planhat Conversations (from Gong's native sync) into their matching GCal-synced session Conversation — transcript, Gong URL, and a reformatted description — then deletes the redundant Gong Call record. Interim manual cleanup while the Planhat↔Gong integration is reworked to do this merge automatically.
+- Matching is weighted-score based, not ID-based: verified live that Gong Call `externalId` is `{gongCallId}-{salesforceAccountId}` (not a GCal event ID) and that `Conversation` has no `sourceId` field at all — neither the Gong MCP tools (synthesis-only) nor Glean's indexed Gong metadata expose a calendar event ID either. Score combines attendee overlap via `endusers`/`users` (0.40 — already Planhat-ID-resolved by Gong's sync, not fuzzy text), subject similarity (0.35), and date proximity (0.25), with a type-sanity floor and an ambiguous-match threshold that always reports full score breakdowns rather than guessing.
+- `context/planhat-schema.md` — new note under the Conversation type-mapping section documenting the Gong Call matching limitations and the weighted-score approach, so future agents don't repeat the ID-based assumption.
+
+### Changed
+- Checkpointed per Gong Call record (`/tmp/ph-reconcile-gong-gcal-<scope-slug>.json`) since a run can span the whole workspace — resumable, and never deletes a record without a verified post-write read-back first.
+
 ## [2.55.0] — 2026-08-27
 
 ### Added
