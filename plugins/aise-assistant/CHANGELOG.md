@@ -5,6 +5,12 @@ Format: `## [version] — YYYY-MM-DD` followed by bullet points grouped by type.
 
 ---
 
+## [2.56.2] — 2026-08-27
+
+### Added
+- One-time workspace-wide data migration: copied `custom.Gong URL` into `custom.Call Recording` on every Conversation where the legacy field was populated and the new field was still empty. 394 records scanned, 394 migrated, **zero conflicts** (no record had a pre-existing, differing `custom.Call Recording` value). Independently spot-checked afterward via a direct query for any remaining `custom.Gong URL[has value]` + `custom.Call Recording[has no value]` record — zero results, confirming full coverage.
+- `context/planhat-schema.md` § Conversation Full Field Reference — `custom.Gong URL` marked deprecated/pending deletion (struck through, removed from the live field list) with the migration result and a required pre-deletion check: confirm with whoever owns the Gong↔Planhat integration config before deleting the field in Planhat, since Gong's own native sync writes its call link to that exact field name on the Conversations it creates — deleting it may break that write path or cause Planhat to silently recreate the field on the next Gong write, depending on how the integration is configured. `agents/ph-reconcile-gong-gcal.md` still reads from `custom.Gong URL` as the source field for this reason; update that agent if the Gong integration is reconfigured to target a different field.
+
 ## [2.56.1] — 2026-08-27
 
 ### Fixed

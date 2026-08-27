@@ -1,5 +1,12 @@
 # Changelog — aise-leadership
 
+## [1.12.11] — 2026-08-27
+
+### Added
+- `context/planhat-schema.md` — synced from aise-assistant: `custom.Gong URL` marked deprecated/pending deletion after a one-time workspace-wide migration copied every populated value into `custom.Call Recording` (394 records, zero conflicts). See aise-assistant's `ph-reconcile-gong-gcal` context note for the pre-deletion check against the Gong↔Planhat integration config.
+
+---
+
 ## [1.12.10] — 2026-08-27
 
 ### Fixed
