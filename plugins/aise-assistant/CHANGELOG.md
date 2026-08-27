@@ -5,6 +5,58 @@ Format: `## [version] — YYYY-MM-DD` followed by bullet points grouped by type.
 
 ---
 
+## [2.55.0] — 2026-08-27
+
+### Added
+- `context/planhat-schema.md` § **Session record resolution — never create a duplicate.** New canonical section. GCal-synced Tasks carry the calendar event ID in `sourceId`; the Conversation Planhat creates when that Task is completed carries the same ID in `externalId` (verified live: Task `6a73dff47c78485e7c3daa27` `sourceId: ip5dj5rdolaa07e56is5m19lo4`, `noteId` = own `_id`, `status: done`; Conversation `6a8d3837e1a0f3e92ccf461c` `externalId: dve92b3b7dcmhd8ampmkquob18`). Documents both ID shapes — bare for one-offs, `{eventId}_{YYYYMMDDTHHMMSSZ}` for recurring instances — and the four-step ladder: Conversation by `externalId` → Task by `sourceId` → title/company/date fallback → create as last resort with the event ID set.
+
+### Changed
+- `agents/session-prepper.md` § 5b-2 — **the title search is gone.** Resolution is now the event-ID ladder, with an explicit branch for "Conversation hit → write prep notes there and skip the Task path entirely". Previously a `search_records(QUERY: title)` miss fell straight through to a create, which is how sessions that already had a record got a second one.
+- `agents/session-prepper.md` § 5b-4 — create is last-resort-only and reachable only after the full ladder misses. `sourceId` is mandatory on the create, and the record is `mainType: "event"` with real `startTime`/`endTime` rather than `mainType: "task"` with a midnight due date, so the next run resolves it at step 2 and Planhat converts it on completion like any calendar Task.
+- `agents/daily-brief.md` § 3B/3C/4 — prep-status resolution switched to the same ladder; badges now read `custom.Prep Notes` off whichever record resolved (Task or Conversation) rather than assuming a Task.
+- `agents/bulk-prep-week.md` § 5 — ladder required per session, with a note that a week-sized run is where title-search misses mass-produce duplicates. Report anything matched by title rather than event ID, and anything created.
+- `CLAUDE.md` — new ground rule covering the ladder and its three prohibitions.
+- Section mirrored into `aise-leadership/context/planhat-schema.md`.
+
+### Guardrails
+- **A create with no `sourceId` / `externalId` is a bug, not a fallback.** It has no dedup key so no later run can match it, and Planhat additionally refuses every API update to a Conversation that has no `externalId` (`{"el":"externalId","error":"Not valid type"}`) — the record becomes permanently unwritable. Emplifi Conversation `6a8fde7b774dcb77a5a22ea4` is the live example.
+- **One session, one record.** If the Conversation lookup hits, any surviving Task is historical and must be left alone. If the Task lookup hits, the Conversation does not exist yet and must not be created ahead of the Task's completion — Planhat creates it.
+- **Never title-search as the primary match.** It misses on renamed events, matches sibling meetings on the same account, and its miss path is a create.
+
+---
+
+## [2.54.0] — 2026-08-27
+
+### Changed
+- **`💬 Slack Chat` records are now dated on the thread's LAST message, not its first.** `agents/slack-thread-logger.md`, `skills/log-slack-threads/SKILL.md` and `context/planhat-schema.md` all updated: create writes `date` = last message in the thread, and the reply-backfill pass now moves `date` forward alongside the rebuilt `description` instead of leaving it pinned to the parent ts. `externalId` and `custom.First message time` are still never touched, and `date` never moves backward.
+
+### Why
+- `Company.custom.Last AISE Touch` is a max over `Conversation.date` across the AISE type list, and `💬 Slack Chat` is in that list. Dating on the first message made every multi-day thread understate the account by its own duration – on SAP SE, 16 of 46 records spanned more than one day and the worst was off by 50 days (Feb 18 – Apr 9 company-merge thread reading as a February touch).
+- Verified against Planhat's own behaviour: synced email conversations carry `date` = most recent message and `createDate` = thread start, and Planhat re-dates them as the thread grows. `💬 Slack Chat` was the only AISE-counted type using the opposite convention, so the formula was mixing two meanings of `date`.
+- `Conversation.endDate` and `startDate` were evaluated as a separate "last activity" field and rejected: both are empty on every Gmail-synced record, so nothing would populate them for email.
+- Nothing is lost by re-dating. `createDate` is read-only on records we create, but the thread start is preserved in `custom.First message time` and exactly recoverable from the `externalId` parent ts.
+
+### Migration
+- One-off correction run across the whole AISE portfolio on 2026-08-27: every `💬 Slack Chat` record with a canonical `slack_*` externalId re-dated to its footer watermark (`Sync: … last message ts …`). Records with `manual-slack-*` or absent externalIds were left alone – they carry no thread watermark.
+
+---
+
+## [2.53.0] — 2026-08-27
+
+### Changed
+- `context/planhat-schema.md` § Rich Text Field Formatting — added the **canonical prep-brief structure table**: 11 fixed sections (header → attendees → booking note → `<hr>` → session artifact → account snapshot → agenda → goals → carried open items → since last session → watch-fors) with the per-section markup and content rule, a pre-write sanity checklist, and an explicit statement that the format governs **every** rich-text field — `custom.Prep Notes` on Task and Conversation, `Conversation.description`, `Task.description`, `Company.custom.Next Step`, the `custom.SH_*` fields, and Comment bodies — with plain text and `\n`-separated text banned outright.
+- `CLAUDE.md` § Planhat rich-text fields — the root section now carries the fixed prep-brief section order, the named reference record, and the pre-write check. The 2.52.0 ground-rule bullet was collapsed into a pointer so there is one spec rather than two.
+- `agents/session-prepper.md` § 5b — the inline `custom.Prep Notes` template is now the full canonical shape including the session-artifact block, followed by the fixed section order and the pre-write sanity check.
+- Same additions mirrored into `aise-leadership/context/planhat-schema.md`.
+
+### Added
+- **Named gold-standard record.** Task `6a73dff47c78485e7c3daa27` (Unit4 program sync, 27 Aug 2026) → `custom.Prep Notes` is now cited in `CLAUDE.md`, `planhat-schema.md`, and `session-prepper.md` as the record to read before writing a prep brief. The spec described the tags; nothing showed what a good brief actually looks like rendered.
+
+### Guardrails
+- **Em dashes in Planhat are a live bug source, not a style reference.** `custom.AISE Profile preferences` mandates en dashes (`–`) everywhere. Records already in Planhat predate that rule and are full of em dashes, so agents copying style off real data reproduced the wrong one. Every example in the spec now uses en dashes literally, and all three files say explicitly not to treat existing records as the style reference.
+
+---
+
 ## [2.52.0] — 2026-08-27
 
 ### Changed

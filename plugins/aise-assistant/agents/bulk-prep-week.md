@@ -92,6 +92,7 @@ Follow the full procedure in [`agents/session-prepper.md`](session-prepper.md) f
 - **Ownership check:** if the matched Notion Customer record's `Owner` does not include the current user, log as **⚠️ Ownership mismatch** and skip — do not continue or reassign.
 - **Case B (existing page, no prep):** write the `📋 Prep — YYYY-MM-DD` toggle into the existing page body rather than creating a new page.
 - **Case C:** create the Session page (`Call Status = Planned`) then append the prep toggle. **Also set `Current Account Owner`** to the Customer page's `Owner` UUID confirmed during the Step 2 ownership check — pass it as a Person field array `["<bare-uuid>"]` in the `notion-create-pages` call. The Notion automation that propagates this field does not fire reliably on SA-created pages, so it must be set explicitly on create.
+- **Resolve every session's Planhat record by GCal event ID before writing** — the ladder in `context/planhat-schema.md` § Session record resolution (Conversation by `externalId` → Task by `sourceId` → title/company/date fallback → create as last resort with `sourceId` set). Across a week's worth of sessions this is where duplicates get mass-produced: a title search that misses creates a second record for a session that already has one. Report any session that resolved by title rather than event ID, and any that had to be created.
 - **Run sessions sequentially**, not in parallel — each context pull is heavy and parallel execution causes Notion write conflicts.
 
 ### 5.5 Publish artifacts to Drive and link back into Planhat

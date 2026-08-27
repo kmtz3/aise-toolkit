@@ -1,14 +1,16 @@
 ---
 name: slack-thread-logger
-description: Procedure for logging shared-Slack-channel threads as Planhat Conversations of type "💬 Slack Chat" on the customer – one Conversation per thread, dated on the first message, deduplicated on a deterministic Slack externalId, with a reply-backfill pass over the previous 365 days. Resolves the customer↔channel pairing in either direction and caches it on `Company.custom.External_Slack_Channel_ID` so later runs skip resolution. Invoked by `/log-slack-threads`.
+description: Procedure for logging shared-Slack-channel threads as Planhat Conversations of type "💬 Slack Chat" on the customer – one Conversation per thread, dated on the last message in the thread, deduplicated on a deterministic Slack externalId, with a reply-backfill pass over the previous 365 days. Resolves the customer↔channel pairing in either direction and caches it on `Company.custom.External_Slack_Channel_ID` so later runs skip resolution. Invoked by `/log-slack-threads`.
 tools: mcp__Slack__slack_read_channel, mcp__Slack__slack_read_thread, mcp__Slack__slack_search_channels, mcp__Slack__slack_read_user_profile, mcp__Planhat__list_model_records, mcp__Planhat__get_model_record, mcp__Planhat__create_model_record, mcp__Planhat__update_model_record, mcp__Planhat__get_model_action_parameters, Bash, Read, Write
 ---
 
 # Slack thread logger
 
 Turn a shared Slack channel into a readable Planhat touchpoint history: one `💬 Slack Chat` Conversation per
-thread, dated on the thread's first message, so the customer's Planhat timeline interleaves Slack support
-traffic with sessions, emails and Gong calls in the right order.
+thread, dated on the thread's **last** message, matching how Planhat dates a multi-part email conversation, so
+the customer's Planhat timeline interleaves Slack support traffic with sessions, emails and Gong calls, and so
+`Company.custom.Last AISE Touch` reflects the real date of the last touch rather than the date the thread
+opened.
 
 This is a **touchpoint** logger, not a session logger. `💬 Slack Chat` is not in the counted-delivery set
 (`context/planhat-schema.md` § Which session types count toward delivery) and must never be used to close a
@@ -307,9 +309,10 @@ update_model_record(MODEL: "Conversation", OBJECT_ID: "<existing _id>",
   PARAMETERS: {"description": "<full re-render>", "subject": "<updated window/outcome if it changed>"})
 ```
 
-   `date` and `externalId` are never touched. If the new replies changed the outcome, update `subject` and the
-   header's `Outcome:` line – a thread that was "open, awaiting customer confirmation" in June and closed in
-   August should read as closed.
+   `date` **moves forward to the new last message** in the same call, so the record stays consistent with the
+   footer watermark and with `Last AISE Touch`. `externalId` is never touched, and `date` never moves backward.
+   If the new replies changed the outcome, update `subject` and the header's `Outcome:` line – a thread that was
+   "open, awaiting customer confirmation" in June and closed in August should read as closed.
 
 **Why the watermark lives in the footer.** There is no writable field on `Conversation` for a sync cursor
 (`numberOfParts` is read-only), so the footer line is the cursor. It has to be written on every create and
@@ -324,7 +327,7 @@ create_model_record(MODEL: "Conversation", PARAMETERS: {
   "type": "💬 Slack Chat",
   "companyId": "<planhat company _id>",
   "source": "Slack",
-  "date": "<first message, ISO 8601 UTC>",
+  "date": "<last message in the thread, ISO 8601 UTC – see the note below>",
   "subject": "Slack – #<channel>: <what the thread was about> (<Mon D–D, YYYY>)",
   "externalId": "<slack_external_id(channel, parent_ts) – see § 3, required, never omitted>",
   "description": "<rendered HTML – § 6>",
@@ -336,9 +339,17 @@ create_model_record(MODEL: "Conversation", PARAMETERS: {
 })
 ```
 
-- **`date`** – the first message, converted to UTC. Slack renders local (CEST/CET); convert, don't copy. The
-  offset changes across the DST boundary in the same channel, so convert per message rather than applying one
-  offset to the whole sweep.
+- **`date`** – the **last** message in the thread, converted to UTC. Slack renders local (CEST/CET); convert,
+  don't copy. The offset changes across the DST boundary in the same channel, so convert per message rather than
+  applying one offset to the whole sweep. For a single-message record this is the parent message, so `date` and
+  the parent ts coincide.
+
+  This matches Planhat's own convention for multi-part conversations: a synced email thread carries `date` =
+  most recent message and `createDate` = thread start, and Planhat re-dates it as the thread grows. Every AISE
+  conversation type feeding `custom.Last AISE Touch`, `custom.Last AISE Email` and native `lastTouch` therefore
+  means "last activity", and Slack Chat has to mean the same thing or those fields understate the account by the
+  length of the thread. `createDate` is read-only on records we create, so the **thread start** is preserved in
+  `custom.First message time` and, exactly, in the `externalId` parent ts – it is never lost by re-dating.
 - **`type`** – exactly `💬 Slack Chat`, including the emoji. Verify against
   `get_model_action_parameters(MODEL: "Conversation")` at the start of a run; the option list drifts.
 - **`Slack initiated by`** – `Customer` if the parent author's email is not `@productboard.com`, else
@@ -449,6 +460,19 @@ channel ID, the renderer spec from § 6, and the exact create/update call shape.
 `{externalId, action, _id, subject}` it wrote. Reconcile the returned list against the plan from § 2 and report
 anything missing – a subagent that silently skipped a thread is the likely failure mode here.
 
+Two things that bite on a parallel fan-out, both confirmed on the 2026-08-27 portfolio re-date:
+
+- **Give every subagent its own scratch directory.** Parallel agents share one filesystem, and a fixed path like
+  `scratchpad/ph/rows.tsv` gets clobbered mid-run by a sibling working a different channel. The symptom is a
+  working file that silently gains rows belonging to another account, which is a data-corruption path straight
+  into Planhat. Namespace the directory per channel, and have each agent verify its dataset against the tool
+  responses rather than trusting a file it wrote earlier.
+- **`externalId[starts with]` does not work on `Conversation`.** Every call using it returns
+  `Failed to fetch Conversation records`; the operator itself is rejected for this field, not the value. Use
+  `externalId[contains]: "<CHANNEL ID>"` instead – a Slack channel ID is unique, so the match set is identical –
+  and assert in post-processing that every returned key actually starts with `slack_{channelId}_`.
+  `externalId[equal to]`, which the § 3 dedup check uses, is unaffected and works normally.
+
 ---
 
 ## 8. Report
@@ -469,8 +493,12 @@ A table: `date · thread topic · action (created / backfilled / unchanged / ski
 
 1. **Render, read it back in the UI, then sweep.** Planhat's sanitizer is the single biggest source of ugly
    output here and it fails silently. Log one record first and look at it before writing fifty.
-2. **`date` is the first message.** Dating on the last reply scatters a thread that ran for three weeks into
-   the wrong place on the timeline, and makes the backfill pass look like it created a duplicate.
+2. **`date` is the last message in the thread, and it moves on backfill.** This is the platform convention –
+   Planhat dates a multi-part email conversation on its most recent message and re-dates it as the thread grows.
+   Dating on the first message makes `custom.Last AISE Touch` understate the account by the whole length of the
+   thread (a Feb 18 – Apr 9 thread reads as a February touch). The thread start is never lost: it lives in
+   `custom.First message time` and in the `externalId` parent ts. `date` moves forward only, and only when the
+   thread actually gained messages.
 3. **Never re-create on backfill.** Always `update_model_record` on the existing `_id`.
 3a. **`externalId` is never optional and never improvised.** One format, built by the § 3 helper, written on
    every create, read back and asserted on every create, repaired to canonical on every legacy record found.

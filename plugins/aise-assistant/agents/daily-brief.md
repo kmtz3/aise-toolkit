@@ -65,16 +65,17 @@ For each external session (today's and tomorrow's — do this resolution once pe
 
 **A. Resolve the Planhat Company.** `search_records(QUERY: "<org name from attendee domain or event title>")` filtered to `model: "Company"`. Check `context/planhat-schema.md` § Customer Name Mapping for known mismatches before concluding no match. Fall back to `list_model_records(MODEL: "Company", FILTER: {"domains[contains]": "<domain>"})`. If no Company resolves at all, badge `— Not in Planhat` and skip B/C below.
 
-**B. Find the GCal-synced Planhat Task for this event.** Planhat's Google Calendar sync creates a Task with `mainType: "event"` for each meeting — this is the record `session-prepper` also targets (see its § 5b), so matching logic must stay consistent:
+**B. Resolve the session's Planhat record by GCal event ID.** Run the ladder in `context/planhat-schema.md` § Session record resolution — the same one `session-prepper` § 5b uses, so the two must stay consistent. Derive both candidate IDs from the event (`event.id`, plus the segment before the first `_` for a recurring instance), then per candidate:
 ```
-search_records(QUERY: "<calendar event title>")
+list_model_records(MODEL: "Conversation", FILTER: {"externalId[equal to]": "<candidate>"})
+list_model_records(MODEL: "Task",         FILTER: {"sourceId[equal to]": "<candidate>"})
 ```
-Filter results to `model: "Task"`, `companyId = <resolved company id>`, and `startTime`/`endTime` date portion matching the event's date. `list_model_records` is not reliable for this lookup (unfiltered results and a ~36-record cap on Task) — always use `search_records`.
+An exact `externalId` / `sourceId` filter is reliable — the Task-model result cap only bites on unfiltered or non-unique queries. A **Conversation** hit means the session is already logged (Task completed and converted); read prep status from that Conversation. A **Task** hit means it is still upcoming; read prep status from the Task. Only if both miss on both forms, fall back to `search_records(QUERY: "<calendar event title>")` filtered to `companyId` + a date match, and flag that it matched on title.
 
-**C. Badge from `custom.Prep Notes` on that Task:**
-- Task found + `custom.Prep Notes` has real content (not empty/whitespace) → `✅ Prep done`
-- Task found + `custom.Prep Notes` empty or absent → `⚠️ No prep`
-- No matching Task found (Company resolved but no Task) → `— Not in Planhat` (GCal sync may not have created one yet, or the event is too recently added)
+**C. Badge from `custom.Prep Notes` on whichever record the ladder returned:**
+- Record found (Task or Conversation) + `custom.Prep Notes` has real content (not empty/whitespace) → `✅ Prep done`
+- Record found + `custom.Prep Notes` empty or absent → `⚠️ No prep`
+- Nothing resolved (Company resolved but no Task and no Conversation for the event ID) → `— Not in Planhat` (GCal sync may not have created one yet, or the event is too recently added)
 
 **Resolve session topic — today's external sessions:**
 For each external session, derive a 2-sentence topic summary using this priority order:
@@ -94,7 +95,7 @@ Same A/B/C resolution as Step 3, applied to tomorrow's external sessions. For ea
 
 - Task found + `custom.Prep Notes` has real content → `✅ Prep done` — no action needed.
 - Task found + `custom.Prep Notes` empty/absent → `🚨 Prep needed` — queue for blocker creation (step 5) and, if `--auto-prep` was passed, full prep writing (step 5.5).
-- No matching Task (or no Company at all) → `— Not in Planhat` — still queue for blocker creation and auto-prep; flag the gap separately (this may just mean GCal sync hasn't created the Task record yet — session-prepper's step 5b creates one directly if needed).
+- Nothing resolved (or no Company at all) → `— Not in Planhat` — still queue for blocker creation and auto-prep; flag the gap separately. This usually means GCal sync has not created the Task yet. Session-prepper's § 5b re-runs the full ladder itself and only creates as a last resort with `sourceId` set — it must not be relied on to create routinely.
 
 Resolve topic using the same priority order as Step 3.
 

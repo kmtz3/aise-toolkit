@@ -1,5 +1,20 @@
 # Changelog — aise-leadership
 
+## [1.12.8] — 2026-08-27
+
+### Added
+- `context/planhat-schema.md` § Session record resolution — synced from aise-assistant. The GCal-event-ID ladder (Conversation by `externalId` → Task by `sourceId`, both ID shapes → title/company/date fallback → create as last resort with the event ID set), and the rule that a create without a dedup key is a bug.
+- `context/planhat-schema.md` § Rich Text Field Formatting — canonical prep-brief structure table, pre-write sanity checklist, and the named gold-standard record (Task `6a73dff47c78485e7c3daa27`).
+
+---
+
+## [1.12.7] — 2026-08-27
+
+### Changed
+- `context/planhat-schema.md` § Rich Text Field Formatting — synced from aise-assistant: canonical prep-brief structure table (11 fixed sections), pre-write sanity checklist, the rule that the format governs every rich-text field (plain text and `\n`-separated text banned), and the named gold-standard record (Task `6a73dff47c78485e7c3daa27`). Guardrail added that existing Planhat records predate the en-dash rule and are not the style reference.
+
+---
+
 ## [1.12.6] — 2026-08-27
 
 ### Changed

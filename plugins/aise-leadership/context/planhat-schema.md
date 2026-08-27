@@ -412,6 +412,43 @@ writes Productboard's internal discussion of a customer onto that customer's own
 - **Do not overwrite `owner`** — managed by RevOps/CS leadership.
 - **Company records are SF-synced** — do not create new Company records via MCP. Creation is handled by RevOps via Salesforce sync.
 
+### Session record resolution — never create a duplicate
+
+**Rule: never create a Task or Conversation for a session until you have proven that neither exists, keyed on the Google Calendar event ID.** Title search is not proof — it misses on renamed events, matches sibling meetings, and is what historically produced duplicate session records. This ladder is mandatory for every prep-notes write, every debrief write, and every backfill.
+
+#### The key: the GCal event ID, in two forms
+
+Planhat's Google Calendar sync stamps the calendar event ID onto the records it creates:
+
+| Record | Field | Value |
+|---|---|---|
+| Task (`mainType: "event"`) | `sourceId` | The GCal event ID |
+| Conversation (created when that Task is completed) | `externalId` | The same GCal event ID |
+
+Two ID shapes exist and **both must be tried**:
+
+| Shape | Example | When |
+|---|---|---|
+| Bare event ID | `ip5dj5rdolaa07e56is5m19lo4` | One-off events |
+| Instance-stamped | `3vp2g7sd56da48ljp2qa1cgfvu_20261124T213000Z` | A single occurrence of a recurring event |
+
+The Calendar MCP returns the instance-stamped form as `event.id` for recurring occurrences. Derive both candidates before querying: `event.id` as returned, and the segment before the first `_` when one is present.
+
+#### Resolution ladder
+
+Run in order. Stop at the first hit.
+
+1. **Conversation by event ID** — `list_model_records(MODEL: "Conversation", FILTER: {"externalId[equal to]": "<candidate>"})`, once per candidate ID.
+   → **Hit** means the session is already logged: someone marked the calendar Task done and Planhat converted it into this Conversation. Write prep notes, Gong details and session notes **here**. Do not create anything, and do not write to a Task.
+2. **Task by event ID** — `list_model_records(MODEL: "Task", FILTER: {"sourceId[equal to]": "<candidate>"})`, once per candidate ID. `sourceId` is unique across Tasks, so the filter is exact and the Task-model result cap does not apply.
+   → **Hit** means the session is on the calendar and not yet logged. Write prep notes onto the **Task's** `custom.Prep Notes`, and set `type` if unset.
+3. **Fallback match on company + date + title** — only reached when both ID lookups miss on both candidate forms (GCal sync disabled for the account, event created outside the synced calendar, or an AISE-authored record predating the sync). `search_records(QUERY: "<event title>")`, filtered to `companyId` and to a `startTime`/`endTime`/`date` day match. Treat a hit here as the session's record, and **note in the run report that it was matched by title rather than event ID** so the ID drift is visible.
+4. **Create — last resort, and say so.** Only when steps 1–3 all miss. Create the record the ladder was looking for (a Task for a future session, a Conversation for a delivered one), set `sourceId` / `externalId` to the calendar event ID so the next run resolves at step 1 or 2, and report `"created — no GCal-synced record found for event <id>"`. **A create with no `sourceId` / `externalId` is a bug**: it has no dedup key, can never be matched again, and Planhat rejects later API updates to a Conversation that has no `externalId`.
+
+#### Do not write to two records for the same session
+
+If step 1 hits, the Task (if one still exists) is historical — leave it alone. If step 2 hits, the Conversation does not exist yet and must not be created ahead of the Task's completion; Planhat will create it. Writing the same prep notes to both is how the same session ends up looking like two.
+
 ### Rich Text Field Formatting
 
 Planhat rich text fields (type `Rich text`) are a ProseMirror editor (`ph-editor`) backed by **single-line HTML**. Markdown-style `- ` bullets do not render, and literal `\n` / `\r\n` are **stripped by the API on write** (verified 2026-08-27 against Task `custom.Prep Notes`) — every element must be adjacent on one line.
@@ -436,13 +473,39 @@ Optional attributes the editor emits and accepts, but that are not needed on wri
 
 **Unverified:** `<a href>` inside these fields (the editor has a link control, so it is very likely fine), `<u>`, `<s>`, `<code>`. Don't introduce them into a shipped write path without checking the rendered result first.
 
-**Combined example** (the canonical prep-brief shape):
+**Applies to every Planhat rich-text field, not just prep notes.** The same vocabulary and the same structure rules govern: `Task.custom.Prep Notes`, `Conversation.custom.Prep Notes`, `Conversation.description` (session notes), `Task.description`, `Company.custom.Next Step`, the `custom.SH_*` sales-handover fields, and Comment bodies. **Never write plain text or `\n`-separated text into any of them** – it lands as one unbroken run and is unskimmable. If a field's content has more than one part, it gets bolded labels and lists.
+
+**Gold-standard reference record:** Task `6a73dff47c78485e7c3daa27` (Unit4 program sync, 27 Aug 2026) – `custom.Prep Notes`. Read it before writing a prep brief; it is the shape below, rendered.
+
+### Canonical prep-brief structure
+
+Section order, top to bottom. Skip a section when there is genuinely nothing in it; never reorder.
+
+| # | Section | Markup | Content rule |
+|---|---|---|---|
+| 1 | Header | `<p><strong>…</strong></p>` | `{Customer} – {Session type} – {Day DD Mon YYYY, HH:MM–HH:MM TZ} ({duration}, {tool})` |
+| 2 | Attendees | `<p>…</p>` | Named attendees with role in parentheses, plus who may join. One line, no list. |
+| 3 | Booking note | `<blockquote><p>…</p></blockquote>` | The customer's verbatim ask **plus what it implies for how the session should run**. The implication is the point – a bare quote adds nothing. |
+| 4 | Divider | `<hr>` | Separates the header block from the body. Exactly one. |
+| 5 | Session artifact | `<p><strong>Session artifact</strong></p>` + `<ul>` | File name, Drive link, folder, Salesforce account – per `context/session-artifact-convention.md`. Omit when the run produced no artifact. |
+| 6 | Account snapshot | label + `<ul>` | Journey status / priority / ARR / renewal, Spark state, Makers, tenure. Each item leads with a bolded label. |
+| 7 | Agenda | label + `<ol class="ph-editor__ordered-list">` | `<strong>{topic}</strong> – {n} min. {what to establish}`. Minutes must sum to the session duration. |
+| 8 | Goals | label + `<ul>` | Outcomes to leave with, not activities. 3–5 items. |
+| 9 | Carried open items | label + `<ul>` | `<strong>{item}</strong> – {owner, and since when}`. This is the chase list. |
+| 10 | Since last session ({date}) | label + `<ul>` | Date-led: `<strong>{DD Mon}</strong> – {what happened}`. Chronological. |
+| 11 | Watch-fors | label + `<ul>` | Risks, relationship context, verbatim quotes worth having in front of you. |
+
+**Structure rules for any rich-text write.** Bold section label, then a list – not prose paragraphs. Lead each list item with a bolded subject, date, or owner, then one sentence of detail. 3–6 items per section. Length: roughly 1,200–2,000 chars of visible text for a prep brief; markup does not count.
+
+**Voice rules apply to the sentence content, every time.** Read `custom.AISE Profile preferences` on the user's Planhat User record first (§ the resolver in `CLAUDE.md`). For the current profile that means **en dashes (`–`) everywhere, never em dashes (`—`)**, US English, no semicolons in prose, and none of the listed filler openers. The examples in this file use en dashes deliberately – copy them literally rather than reaching for an em dash. Existing records in Planhat predate this rule and still contain em dashes; do not treat them as the style reference.
+
+**Combined example** (a full prep brief, one line, en dashes throughout):
 
 ```html
-<p><strong>Customer — Session type — Thu 27 Aug 2026, 13:30–14:00 CEST (30 min, Zoom)</strong></p><p>Attendee name (role). Second attendee may join.</p><blockquote><p>Booking note: verbatim customer ask, plus what it implies for how the session should run.</p></blockquote><hr><p><strong>Agenda (30 min)</strong></p><ol class="ph-editor__ordered-list"><li class="ph-editor__list-item"><p><strong>Topic</strong> — 10 min. What to establish.</p></li></ol><p><strong>Goals</strong></p><ul class="ph-editor__bullet-list"><li class="ph-editor__list-item"><p>Outcome to leave the session with.</p></li></ul><p><strong>Watch-fors</strong></p><ul class="ph-editor__bullet-list"><li class="ph-editor__list-item"><p>Risk to keep an eye on.</p></li></ul>
+<p><strong>Customer – Program sync – Thu 27 Aug 2026, 13:30–14:00 CEST (30 min, Zoom)</strong></p><p>Attendee Name (Product Operations Director). Second Attendee (Product Operations) may join.</p><blockquote><p>Booking note: "Migration update/questions" – they picked this week deliberately, right after their rollout lands, so expect live questions rather than a status readout.</p></blockquote><hr><p><strong>Agenda (30 min)</strong></p><ol class="ph-editor__ordered-list"><li class="ph-editor__list-item"><p><strong>Rollout status</strong> – 10 min. What went live, what broke, what is still open.</p></li><li class="ph-editor__list-item"><p><strong>Integration error</strong> – 5 min. Support ticket #145383; close the loop on where it stands.</p></li></ol><p><strong>Goals</strong></p><ul class="ph-editor__bullet-list"><li class="ph-editor__list-item"><p>Confirm the rollout is live and clear any blockers it surfaced.</p></li></ul><p><strong>Carried open items</strong></p><ul class="ph-editor__bullet-list"><li class="ph-editor__list-item"><p><strong>OAuth app setup</strong> – progress unconfirmed since 31 Jul.</p></li></ul><p><strong>Since last session (31 Jul)</strong></p><ul class="ph-editor__bullet-list"><li class="ph-editor__list-item"><p><strong>4 Aug</strong> – MCP closed beta confirmed live on their workspaces.</p></li></ul><p><strong>Watch-fors</strong></p><ul class="ph-editor__bullet-list"><li class="ph-editor__list-item"><p>Adoption is still single-threaded through one champion.</p></li></ul>
 ```
 
-**Structure rules for any rich-text write.** Bold section label, then a list — not prose paragraphs. Lead each list item with a bolded subject, date, or owner, then one sentence of detail. 3–6 items per section. Apply the user's `custom.AISE Profile preferences` voice rules (dash style, English variant, forbidden filler) to the sentence content.
+**Before writing, sanity-check the payload:** one line with no `\n`; every `<li>` carries `class="ph-editor__list-item"` and wraps its text in `<p>`; every `<ul>`/`<ol>` carries its `ph-editor__*` class; no `<h1>`–`<h6>`; no em dashes.
 
 > **Custom field reads:** Custom fields are returned nested under a `custom` key in the response — e.g. `{"custom": {"SH_Current State": "<ul>...</ul>", "AISE Journey Status": "Active (Services)"}}`. Use `list_model_records` (not `get_model_record`) with an `_id[equal to]` filter for the most reliable custom field retrieval.
 >
@@ -510,7 +573,7 @@ close a session gap or retyped into a counted type to move a number.
 |---|---|---|
 | `type` | `💬 Slack Chat` | Exact string including the emoji. |
 | `source` | `Slack` | |
-| `date` | First message of the thread, UTC | **Not** the last reply, **not** the run date. Slack renders local time – convert per message, since a channel's history crosses the DST boundary. |
+| `date` | **Last** message of the thread, UTC | **Not** the first message, **not** the run date. Matches Planhat's own convention for multi-part conversations (a synced email thread carries `date` = most recent message, `createDate` = thread start, and is re-dated as it grows), so `custom.Last AISE Touch` and native `lastTouch` mean the same thing across every AISE type. Slack renders local time – convert per message, since a channel's history crosses the DST boundary. Thread start is preserved in `custom.First message time` and in the `externalId` parent ts, since `createDate` is read-only on records we create. |
 | `externalId` | `slack_{channelId}_{parentTsDigits}` | **Dedup key. Required on every record, one format only.** Lower-case `slack_` prefix, Slack channel **ID** upper-case (never the `#name` – channels get renamed), thread **parent** ts with the dot removed. Canonical shape: `^slack_[A-Z0-9]+_\d{16}$`, e.g. `slack_C0AKKLJCB5E_1786006420396099`. The digit string is exactly what Slack uses in a permalink, so the key is reversible (`ts = digits[:10] + "." + digits[10:]`) – that reversibility is what makes the reply-backfill pass possible without a side table. Never include the customer name, date, subject, hash or run counter. Checked before every create, read back and asserted after every create. Off-format legacy keys are normalized in place (`externalId` only, never `date` or `subject`). One drift case fixed 2026-08-25: `slack-C02N37LS25C-1786373402.520939` → `slack_C02N37LS25C_1786373402520939`. |
 | `subject` | `Slack – #{channel}: {topic} ({Mon D–D, YYYY})` | Topic names the feature or system in play, not "customer question". |
 | `description` | Rendered thread HTML | See § Planhat rich-text constraints below. |
@@ -546,8 +609,9 @@ Sync: {N} messages · last message ts {ts} · logged {YYYY-MM-DD}
 ```
 
 A live thread whose message count or last ts exceeds the watermark gets its `description` rebuilt via
-`update_model_record` on the existing `_id`. `date` and `externalId` are never touched – re-dating on backfill
-scatters the timeline and makes the update look like a duplicate.
+`update_model_record` on the existing `_id`, and `date` moves forward to the new last message in the same call
+so the record stays consistent with its watermark and with `Last AISE Touch`. `externalId` and
+`custom.First message time` are never touched, and `date` never moves backward.
 
 ### Planhat rich-text constraints (`description` on any Conversation)
 

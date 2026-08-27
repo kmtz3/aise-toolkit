@@ -185,11 +185,19 @@ If no SF ID is available, fall back to `search_records(QUERY: "<customer name>")
 
 If the company cannot be resolved (not in Planhat, SAP sub-account, etc.): skip this step entirely and note "Planhat: company not found — skipped" in the Step 7 report.
 
-**5b-2. Search for the GCal-synced Task:**
+**5b-2. Resolve the session's existing record — run the ladder, do not title-search:**
+
+Follow `context/planhat-schema.md` § Session record resolution. Derive both candidate IDs from the calendar event (`event.id` as returned, plus the segment before the first `_` when the event is a recurring instance), then, per candidate:
+
 ```
-search_records(QUERY: "<calendar event title>")
+list_model_records(MODEL: "Conversation", FILTER: {"externalId[equal to]": "<candidate>"})   # step 1
+list_model_records(MODEL: "Task",         FILTER: {"sourceId[equal to]": "<candidate>"})     # step 2
 ```
-Filter results to `model: "Task"`, `companyId = <planhat-company-id>`, and `startTime` (or `endTime`) date portion matching the session's `Call Date`. GCal-synced Tasks typically have `mainType: "event"`.
+
+- **Conversation hit** → the session is already logged (the calendar Task was marked done and Planhat converted it). Write the prep notes to `custom.Prep Notes` on **that Conversation** and skip 5b-3/5b-4 entirely. Do not also write to a Task.
+- **Task hit** (`mainType: "event"`, `sourceId` = the event ID) → continue to 5b-3 and write onto the Task.
+- **Both miss on both candidate forms** → fall back to `search_records(QUERY: "<calendar event title>")` filtered to `model: "Task"` / `model: "Conversation"`, `companyId = <planhat-company-id>`, and a `startTime`/`endTime`/`date` day match against the session's Call Date. A hit here is the session's record — note in the Step 7 report that it matched on title rather than event ID.
+- **Only if that also misses** → 5b-4.
 
 **5b-3. If a matching Task is found — set type and add prep notes:**
 
@@ -225,32 +233,41 @@ update_model_record(
 - **Dashes and other voice rules:** apply them to the actual sentence content (goal line, open items, watch-fors) — not just the fixed labels.
 
 ```
-<p><strong><Customer> — <Session type> — <Day DD Mon YYYY, HH:MM–HH:MM TZ> (<duration>, <tool>)</strong></p><p><attendee name (role); who else may join></p><blockquote><p>Booking note: <verbatim customer ask + what it implies for the session></p></blockquote><hr><p><strong>Agenda (<duration>)</strong></p><ol class="ph-editor__ordered-list"><li class="ph-editor__list-item"><p><strong><topic></strong> — <n> min. <what to establish></p></li></ol><p><strong>Goals</strong></p><ul class="ph-editor__bullet-list"><li class="ph-editor__list-item"><p><outcome to leave with></p></li></ul><p><strong>Open items</strong></p><ul class="ph-editor__bullet-list"><li class="ph-editor__list-item"><p><item + owner + since when></p></li></ul><p><strong>Watch-fors</strong></p><ul class="ph-editor__bullet-list"><li class="ph-editor__list-item"><p><risk or context point></p></li></ul>
+<p><strong>{Customer} – {Session type} – {Day DD Mon YYYY, HH:MM–HH:MM TZ} ({duration}, {tool})</strong></p><p>{attendee name (role); who else may join}</p><blockquote><p>Booking note: {verbatim customer ask} – {what it implies for how the session should run}</p></blockquote><hr><p><strong>Session artifact</strong></p><ul class="ph-editor__bullet-list"><li class="ph-editor__list-item"><p><strong>Prep brief</strong> – {filename}</p></li><li class="ph-editor__list-item"><p><strong>Drive file</strong> – {webViewLink}</p></li></ul><p><strong>Account snapshot</strong></p><ul class="ph-editor__bullet-list"><li class="ph-editor__list-item"><p><strong>Journey status</strong> – {status}. Priority {P}. ARR {~$}. Renewal {date}.</p></li></ul><p><strong>Agenda ({duration})</strong></p><ol class="ph-editor__ordered-list"><li class="ph-editor__list-item"><p><strong>{topic}</strong> – {n} min. {what to establish}</p></li></ol><p><strong>Goals</strong></p><ul class="ph-editor__bullet-list"><li class="ph-editor__list-item"><p>{outcome to leave with}</p></li></ul><p><strong>Carried open items</strong></p><ul class="ph-editor__bullet-list"><li class="ph-editor__list-item"><p><strong>{item}</strong> – {owner, since when}</p></li></ul><p><strong>Since last session ({date})</strong></p><ul class="ph-editor__bullet-list"><li class="ph-editor__list-item"><p><strong>{DD Mon}</strong> – {what happened}</p></li></ul><p><strong>Watch-fors</strong></p><ul class="ph-editor__bullet-list"><li class="ph-editor__list-item"><p>{risk or context point}</p></li></ul>
 ```
-Keep to roughly 1,200–2,000 chars of visible text — enough for the full skimmable brief (header, booking note, agenda, goals, open items, what changed since last session, watch-fors) without turning into prose. Markup doesn't count against this. `description` is reserved for actual session content written during or after the call.
+
+**Section order is fixed** – header, attendees, booking note, `<hr>`, session artifact, account snapshot, agenda, goals, carried open items, since last session, watch-fors. Skip a section that has genuinely nothing in it; never reorder. The full table with the per-section content rule lives in `context/planhat-schema.md` § Rich Text Field Formatting → Canonical prep-brief structure, and **Task `6a73dff47c78485e7c3daa27` (Unit4, 27 Aug 2026) is the gold-standard record to read before writing one.**
+
+**Sanity-check the payload before the write:** one line with no `\n`; every `<li>` carries `class="ph-editor__list-item"` and wraps its text in `<p>`; every list carries its `ph-editor__*` class; no `<h1>`–`<h6>`; **no em dashes**; agenda minutes sum to the session duration.
+
+Keep to roughly 1,200–2,000 chars of visible text – enough for the full skimmable brief without turning into prose. Markup doesn't count against this. `description` is reserved for actual session content written during or after the call.
 
 **If the Task already has `type` set correctly:** only update `custom.Prep Notes`; do not overwrite an intentionally set type.
 
-**5b-4. If no matching Task is found — create a new Planhat Task:**
+**5b-4. Create — last resort only, and only after the full ladder has missed:**
 
-Not all sessions have a GCal-synced Planhat Task (e.g. GCal sync may be disabled, or the event was recently added). Create one so the prep notes land in Planhat:
+Reached only when the Conversation lookup, the Task lookup (both candidate ID forms) **and** the title/company/date fallback have all returned nothing. That means GCal sync is off for this account, or the event lives outside the synced calendar. Never reach this step because a title search came back empty.
+
 ```
 create_model_record(
   MODEL: "Task",
   PARAMETERS: {
     "action": "<calendar event title>",
-    "mainType": "task",
+    "mainType": "event",
+    "sourceId": "<GCal event ID — exactly as event.id was returned>",
     "type": "<inferred type from mapping above>",
     "companyId": "<planhat-company-id>",
-    "endTime": "<Call Date as ISO 8601 — YYYY-MM-DDT00:00:00.000Z>",
-    "noSpecificTime": true,
+    "startTime": "<event start, ISO 8601>",
+    "endTime": "<event end, ISO 8601>",
     "custom.Prep Notes": "<prep brief in HTML format above>",
     "status": "To Do"
   }
 )
 ```
 
-Note "Planhat Task created (prep — no GCal sync found)" in the Step 7 report.
+**`sourceId` is mandatory on this create.** Without it the record has no dedup key, the next prep or debrief run cannot resolve it, and a Conversation created without an `externalId` is additionally un-updatable through the Planhat API (`{"el":"externalId","error":"Not valid type"}`). `mainType: "event"` with real `startTime`/`endTime`, not `mainType: "task"` with a midnight `endTime` — this record represents the meeting, so it must resolve at step 2 next time and convert to a Conversation on completion like any calendar Task.
+
+Report it explicitly: `"Planhat Task created — no GCal-synced record found for event <id>"`. That line is a signal the account's calendar sync needs checking, not a routine outcome.
 
 ### 6. For architecting sessions only — build the customer-facing KDD sub-page
 

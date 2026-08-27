@@ -1,6 +1,6 @@
 ---
 name: log-slack-threads
-description: Log shared-Slack-channel threads as Planhat Conversations of type Slack Chat on the customer, one Conversation per thread, dated on the first message. Takes either a channel or a customer name – resolves the missing half and caches the pairing on the Planhat Company so later runs skip resolution. Deduplicates and backfills new replies into existing records via a deterministic Slack externalId. Triggers – /log-slack-threads, 'log this Slack channel', 'log Slack threads for {customer}', 'backfill Slack conversations'.
+description: Log shared-Slack-channel threads as Planhat Conversations of type Slack Chat on the customer, one Conversation per thread, dated on the last message in the thread. Takes either a channel or a customer name – resolves the missing half and caches the pairing on the Planhat Company so later runs skip resolution. Deduplicates and backfills new replies into existing records via a deterministic Slack externalId. Triggers – /log-slack-threads, 'log this Slack channel', 'log Slack threads for {customer}', 'backfill Slack conversations'.
 argument-hint: "[--channel <url|#name|id>] [--customer <name>] [--since YYYY-MM-DD] [--backfill-only] [--new-only] [--limit N] [--dry-run]"
 ---
 
@@ -62,10 +62,10 @@ overwrite – an account can legitimately have two shared channels, and the fiel
 ## Non-negotiables
 
 - **One Conversation per thread.** Never merge two threads into one record, and never split a thread across records.
-- **`date` is the first message of the thread**, never the last reply and never the run date. This is what makes the Planhat timeline read chronologically.
+- **`date` is the last message of the thread**, never the run date. This matches how Planhat dates a multi-part email conversation, and it is what makes `custom.Last AISE Touch` reflect the real last touch instead of the date the thread opened. The thread start is preserved in `custom.First message time` and in the `externalId` parent ts.
 - **`externalId` is the dedup key, always present, always the same format:** `slack_{channelId}_{parentTsDigits}` – lower-case prefix, upper-case Slack channel ID, thread-parent timestamp with the dot removed (`slack_C0AKKLJCB5E_1786006420396099`). Built by the helper in § 3 of the agent file, never by hand. Checked before every create, read back and asserted after every create, and repaired to canonical on any legacy record found. A record with a missing or off-format key is invisible to the next run and gets silently duplicated.
 - **Legacy repair runs before the backfill pass** on every invocation, normalizing off-format keys on existing `💬 Slack Chat` records for the account. Repairs touch `externalId` only, never `date` or `subject`.
-- **Backfill never re-dates and never re-creates.** A thread that gained replies is an `update_model_record` on the existing `_id`, keeping `date` and `externalId` untouched.
+- **Backfill re-dates forward and never re-creates.** A thread that gained replies is an `update_model_record` on the existing `_id`: `date` moves forward to the new last message alongside the rebuilt `description`, `externalId` and `custom.First message time` stay untouched, and `date` never moves backward.
 - **`💬 Slack Chat` does not count toward session delivery.** It is a touchpoint record, not a session. Never use it to fill a session gap, and never retype an uncounted Slack record into a counted session type to make a number move.
 - **Renderer constraints are not cosmetic** – Planhat's rich-text editor silently mangles common HTML. Follow § Description HTML in the agent file exactly: no `<div>`, no `<table>`, no `<ol>`/`<ul>`, no `background`/`border`/`color` styles, no literal newlines in the markup.
 - **Every record names its participants.** `users` (Productboard) and `endusers` (customer) are written on
