@@ -184,11 +184,13 @@ If the stub's `externalId` doesn't match the `<numeric>-<sf-id>` format, or its 
 
 From the extracted PB-side action items (step 2), for each item assigned to the user:
 
+Build `description` as single-line HTML per § Planhat rich-text fields (universal write format) in `CLAUDE.md` — never markdown, never literal newlines. Scaffold content per `context/notion-writer-playbook.md` Operation 2's task-type scaffolding logic, rendered as a bold `<p><strong>` label followed by a `ph-editor__bullet-list`.
+
 ```
 create_model_record(MODEL: "Task", PARAMETERS: {
   mainType: "task",
   action: "<active-voice, specific, outcome-oriented title>",
-  description: "<best-shot scaffold, per context/notion-writer-playbook.md Operation 2's task-type scaffolding logic>",
+  description: "<best-shot scaffold, per context/notion-writer-playbook.md Operation 2's task-type scaffolding logic, as single-line HTML>",
   companyId: "<planhat-company-id>",
   ownerId: "<user's planhat id>",
   status: "To Do",
@@ -241,7 +243,7 @@ If there is a known external Slack channel with this customer, note in chat that
 
 ### 6. Draft an internal Slack debrief message and log it as a Task
 
-Write this directly. Format:
+Draft the debrief in chat using this shape (markdown, for chat readability only):
 ```
 **[Customer] — [Session Name] ([date])**
 
@@ -254,13 +256,21 @@ Write this directly. Format:
 **Next — Customer:** [owner] — [what] by [timing]
 ```
 
-Apply `context/communication-style-guide.md`. No em-dashes. Return inline in chat. Then:
+Apply `context/communication-style-guide.md`. No em dashes. Return inline in chat.
+
+Then rebuild the same content as **single-line HTML** for the Task `description` — per § Planhat rich-text fields (universal write format) in `CLAUDE.md`. Never write the markdown draft or literal newlines directly into `description`. Shape:
+```
+<p><strong>[Customer] – [Session Name] ([date])</strong></p><ul class="ph-editor__bullet-list"><li class="ph-editor__list-item"><p>✅ [decision / outcome]</p></li><li class="ph-editor__list-item"><p>✅ [decision / outcome]</p></li></ul><p></p><p><strong>Risks:</strong></p><ul class="ph-editor__bullet-list"><li class="ph-editor__list-item"><p>🔴 [critical item]</p></li><li class="ph-editor__list-item"><p>🟡 [watch item]</p></li></ul><p></p><p><strong>Next – PB:</strong> [owner] – [what] by [timing]</p><p></p><p><strong>Next – Customer:</strong> [owner] – [what] by [timing]</p>
+```
+If there are no risks, drop the `<ul>` and write `<p>None.</p>` instead. Reference render: Task `6a9094627ccf4504614e798a` (Unit4 program sync, 27 Aug 2026).
+
+Then:
 ```
 create_model_record(MODEL: "Task", PARAMETERS: {
   mainType: "task",
   type: "Internal Alignment",
   action: "Slack debrief – [Customer] [date]",
-  description: "<full debrief text>",
+  description: "<full debrief, as single-line HTML>",
   companyId: "<planhat-company-id>",
   ownerId: "<user's planhat id>",
   status: "To Do",
@@ -293,7 +303,7 @@ From the source material (transcript + extracted output), identify any:
 - Product feedback (pain points, gaps, frustrations, workarounds they described).
 - Bug reports or unexpected behavior.
 
-For each item, format as:
+For each item, draft in chat using this shape (markdown, for chat readability only):
 
 ```
 **[FR / Feedback / Bug] — [topic]**
@@ -305,13 +315,18 @@ For each item, format as:
 - Session: [date]
 ```
 
-Return the full list in chat under `## Product feedback log`. Then, for each distinct feedback item:
+Return the full list in chat under `## Product feedback log`. Then, for each distinct feedback item, rebuild it as **single-line HTML** for the Task `description` — per § Planhat rich-text fields (universal write format) in `CLAUDE.md`. Never write the markdown draft or literal newlines directly into `description`. Shape:
+```
+<p><strong>[FR / Feedback / Bug] – [topic]</strong></p><ul class="ph-editor__bullet-list"><li class="ph-editor__list-item"><p>Problem: [what the customer said in their own words, or close paraphrase]</p></li><li class="ph-editor__list-item"><p>Current workaround: [what they're doing today – "none" if not mentioned]</p></li><li class="ph-editor__list-item"><p>Desired outcome: [what they want, as described]</p></li><li class="ph-editor__list-item"><p>Source: [Gong timestamp or transcript reference]</p></li><li class="ph-editor__list-item"><p>Customer: [name]</p></li><li class="ph-editor__list-item"><p>Session: [date]</p></li></ul>
+```
+
+Then:
 ```
 create_model_record(MODEL: "Task", PARAMETERS: {
   mainType: "task",
   type: "Product Feedback",
   action: "PB feedback: [short description] – [Customer]",
-  description: "<full PM-formatted log entry for that item>",
+  description: "<full log entry for that item, as single-line HTML>",
   companyId: "<planhat-company-id>",
   ownerId: "<user's planhat id>",
   status: "To Do",

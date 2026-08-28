@@ -5,6 +5,11 @@ Format: `## [version] — YYYY-MM-DD` followed by bullet points grouped by type.
 
 ---
 
+## [2.57.1] — 2026-08-28
+
+### Fixed
+- **`agents/post-session-debrief.md` §§ 4, 6, 8 — Task `description` writes now emit single-line HTML instead of raw markdown.** All three Task-creating steps (PB-side commitments, the Slack debrief, product feedback log) were writing the chat-drafted `**bold**` / emoji-bullet / literal-newline text straight into Planhat's rich-text `description` field. Since that field strips literal newlines on write and doesn't parse markdown, the content collapsed into one unstructured run with literal asterisks showing. Each step now drafts in markdown for chat readability, then rebuilds the same content as HTML (bold `<p><strong>` labels, `ph-editor__bullet-list` bullets, `<p></p>` spacers between sections) per the existing § Planhat rich-text fields convention in `CLAUDE.md`, before the `create_model_record` call. Confirmed against Task `6a9094627ccf4504614e798a` (Unit4 program sync, 27 Aug 2026), now the reference render for step 6.
+
 ## [2.57.0] — 2026-08-28
 
 ### Added
