@@ -5,6 +5,17 @@ Format: `## [version] — YYYY-MM-DD` followed by bullet points grouped by type.
 
 ---
 
+## [2.57.2] — 2026-08-28
+
+### Fixed
+- **`skills/log-feedback/SKILL.md` §§ 5, 7 — the `content` body must be passed as raw HTML, never entity-escaped.** The step 5 template is written in HTML but nothing told the agent how to hand that string to the tool, and Productboard renders `content` as HTML: an escaped `&lt;b&gt;` decodes straight back into a visible `<b>`, so every section label shipped as literal markup. Hit on the 2026-08-28 Unit4 run (note 57304585, resubmitted as 57304764, first note left orphaned for manual deletion). Step 5's strict-format box now carries the raw-HTML rule explicitly, and the step 7 `content` bullet requires scanning the outgoing argument for `&lt;` / `&gt;` / `&amp;` before the call. Added as critical rule 11.
+- **`skills/log-feedback/SKILL.md` § 7 — documented that submission is one-way, and what to do when a bad note ships.** The skill assumed every submission was correct. The PB MCP exposes only `feedback_create_feedback` and `feedback_list_feedback` — no update, archive or delete — and a fresh note cannot even be read back, since `feedback_list_feedback` filters by linked entity and an unlinked note matches nothing. The step 6 HITL preview renders as prose in chat and looks correct even when the `content` string is malformed, so it is not a real check; the tool call is the last checkpoint. New block also specifies the recovery: say so immediately, tell the user the note must be archived or deleted by hand in the Productboard UI, resubmit once confirmed, repoint the step 8 write-back, and name the orphaned note id in the Task `description`. Promptness matters because PB's AI pipeline begins extracting insights on arrival, so a duplicate left in place yields duplicate insights. Added as critical rule 12.
+- **`skills/log-feedback/SKILL.md` § 8c — stop forcing the auto-Conversation to `type: "Task"`.** The rule said to set `"Task"` whenever the fetched type was anything else, which downgrades a correct value: a Task of `type: "Product Feedback"` produces a Conversation Planhat has already typed `Product Feedback`, which is more accurate. Reframed around the actual intent — prevent an untyped or generic Conversation, do not overwrite an inherited one.
+
+### Changed
+- **`skills/log-feedback/SKILL.md` § 7 — `sourceUrl` no longer collapses to `-` whenever Gong is missing.** Plenty of feedback surfaces on calls with no Gong recording; the Unit4 portal item came from a Slack sync summary. The field now takes whatever URL actually holds the source (Slack permalink, support ticket, email thread), with `-` reserved for genuinely sourceless items. The body's `Gong snippet link` section still shows `-` when there is no Gong recording, independent of `sourceUrl`.
+- **`skills/log-feedback/SKILL.md` § 6 — added the skip-and-close path.** "Skip this item" leaves the Task open and untouched; on an explicit "skip it and mark the task ignored" the Task transitions to `status: "ignored"`, which keeps it on the customer record and out of the open queue without firing the auto-Conversation that `"done"` creates — correct, since nothing was logged to Productboard. Never inferred. Added as critical rule 13.
+
 ## [2.57.1] — 2026-08-28
 
 ### Fixed

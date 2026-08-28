@@ -114,6 +114,8 @@ Search `#releases` using `mcp__claude_ai_Slack__slack_search_public_and_private`
 ## Step 5: Draft the feedback note
 
 > ⚠️ **STRICT FORMAT REQUIREMENT:** The `content` field MUST use the exact HTML template below — no substitutions. Do not use `<p>`, `<strong>`, markdown, or any other structure. Every section must appear in order, blank sections get a literal dash (`-`), and the Klara Martinez `<small>` disclaimer must be the final line. Failure to follow this template exactly is a submission error.
+>
+> ⚠️ **Write the tags raw — never HTML-escape the body.** Productboard renders `content` as HTML, so an escaped `&lt;b&gt;` is decoded back into a visible `<b>` and every section label ships as literal markup in the note. Put `<b>`, `<br>`, `<a href>` and `<small>` directly into the tool argument, with no entity encoding anywhere in the body.
 
 Compose the feedback note using this EXACT HTML template. All section labels use `<b>` tags. Do NOT use markdown in the content body. Blank sections get a literal dash (`-`).
 
@@ -225,6 +227,8 @@ Wait for the AskUserQuestion response before calling `feedback_create_feedback`.
 
 If the user selects "Edit first", ask which section to edit and apply the change, then re-show the preview and re-trigger AskUserQuestion.
 
+"Skip this item" leaves the Planhat Task untouched and still open. If the user says to skip **and** close it out — "skip it, mark the task ignored" — transition the Task with `update_model_record(MODEL: "Task", OBJECT_ID: "<task_id>", PARAMETERS: {"status": "ignored"})`. `"ignored"` keeps the Task on the customer record and out of the open queue without triggering the auto-Conversation that `"done"` creates, which is right here: nothing was logged to Productboard, so there is no touchpoint to record. Never infer this — only on an explicit ask.
+
 ---
 
 ## Step 7: Submit confirmed items
@@ -233,11 +237,15 @@ Proceed with submission only when the user chose "I confirm and submit". Block o
 
 For confirmed items, call `mcp__claude_ai_Productboard__feedback_create_feedback` with:
 - `title`: the problem statement only — no prefix (matches the title drafted in Step 5)
-- `content`: the complete HTML body (all `<b>` section labels, `-` for empty sections)
+- `content`: the complete HTML body (all `<b>` section labels, `-` for empty sections) — **passed as raw HTML, never entity-escaped.** Before calling the tool, scan the exact string you are about to send for `&lt;`, `&gt;` and `&amp;`. If any appear, the body is escaped and will render as literal markup; fix it and re-check before submitting.
 - `customerEmail`: the customer contact's email address — **never Klara's own email (klara.martinez@productboard.com)**
 - `companyDomain`: the customer's company domain extracted from the contact's email or the Planhat Company record (e.g. `lumapps.com`) — **never `productboard.com` or any internal domain**
-- `sourceUrl`: the Gong call URL if available; if no Gong link, use `-`
+- `sourceUrl`: the Gong call URL if available. If there is no Gong recording, use whatever URL actually holds the source — a Slack thread permalink, a support ticket, an email thread — and fall back to `-` only when no source URL exists at all. The `Gong snippet link` section in the body stays `-` when there is genuinely no Gong recording, even where `sourceUrl` points elsewhere.
 - `tags`: a **JSON string array** of tag values extracted from the Select Tags section (e.g. `["API", "portal", "automation"]`) — not a comma-separated string
+
+**Submission is one-way — the tool call is the last checkpoint.** The Productboard MCP exposes `feedback_create_feedback` and `feedback_list_feedback` and nothing else: there is no update, no archive, no delete. A malformed note cannot be repaired or removed from here, and it cannot even be read back — `feedback_list_feedback` filters by linked entity, and a freshly created note has no entity. The Step 6 HITL preview renders as prose in chat and will look perfectly correct even when the `content` string is malformed, so re-read the actual tool argument, not the preview.
+
+If a bad note does ship: say so immediately rather than letting it stand, tell the user plainly that it has to be archived or deleted by hand in the Productboard UI, re-submit a corrected note once they confirm, and point the Step 8 write-back at the corrected note's URL — adding a line to the Task `description` that names the orphaned note id so the cleanup does not get lost. Do this promptly: Productboard's AI pipeline starts extracting insights and themes from a note on arrival, so a duplicate left in place produces duplicate insights.
 
 ---
 
@@ -261,7 +269,7 @@ Replace the date with the actual submission date (YYYY-MM-DD) and the URL with t
 **Step 8c — Write the PB note link onto the auto-created Conversation:**
 Using the `noteId` captured in 8b, fetch the Conversation's current `type` (`get_model_record(MODEL: "Conversation", OBJECT_ID: "<noteId>", SELECT: ["type"])`), then write both in a single `update_model_record` call:
 - `custom.Link to PB Note`: the PB note URL from the submission response (same URL used in the 8a confirmation block)
-- `type: "Task"` — only include this if the fetched `type` isn't already `"Task"`; skip it if it already is, per the idempotency note in `context/planhat-schema.md`.
+- `type: "Task"` — only include this if the fetched `type` is missing or generic; skip it if it is already `"Task"`, per the idempotency note in `context/planhat-schema.md`. **Also skip it when the auto-Conversation has inherited the Task's own type** — a Task of `type: "Product Feedback"` produces a Conversation typed `Product Feedback`, which is more accurate than `Task` and should be left alone. The point of this step is to stop the Conversation landing untyped, not to force every one to `Task`.
 
 If the PB MCP didn't return a note URL, skip this step's `custom.Link to PB Note` write (there's nothing to link) but still run the `type` check/fix if needed.
 
@@ -308,3 +316,6 @@ After processing all items (or after "stop"), show a summary:
 8. **`status: "done"` must be its own `update_model_record` transition** — never combine it with the `description` append in the same call, and never set it on create.
 9. **Reuse an already-sufficient Task `description` instead of re-fetching Gong** — only call `meeting_lookup`/`read_document` when the description is too thin to draft from, or a Gong URL is still missing (Step 4's cost-saving check).
 10. **Mode B never fabricates a Task.** If no Product Feedback Task exists for the item, don't create one solely to satisfy Step 8 — either write the confirmation to the sourcing Planhat Conversation, or note it in the Step 9 summary if there's no Conversation to write to.
+11. **Never HTML-escape the `content` body.** Productboard renders the field as HTML, so `&lt;b&gt;` decodes to a visible `<b>` and every section label ships as literal markup. Scan the argument for `&lt;` / `&gt;` before every `feedback_create_feedback` call.
+12. **PB feedback is create-only over MCP** — no update, no archive, no delete, and no read-back for an unlinked note. A malformed submission costs the user a manual cleanup in the Productboard UI, so the tool call is the last checkpoint, not the HITL preview.
+13. **`status: "ignored"` closes out a skipped item, and only on an explicit ask.** It keeps the Task on the record without creating the auto-Conversation that `"done"` triggers — correct when nothing was logged to Productboard. A plain "skip this item" leaves the Task open and untouched.
