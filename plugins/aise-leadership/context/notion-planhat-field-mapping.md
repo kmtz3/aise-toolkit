@@ -2,7 +2,7 @@
 
 > **Purpose:** Compact write-ready reference for agents backfilling or syncing data from the Notion Customer Tracker into Planhat.
 >
-> **Last updated:** 2026-08-08 (added Brandwatch/Cision dual-email EndUser resolution note; ph-migrate Company sync: removed Spark/AI Ready/Igniting? — live data SSOT, not written by migration; Do not count sessions now always migrated; added 🏁 Audit / Setup Review Conversation type)
+> **Last updated:** 2026-08-28 (added the authoritative live-pulled Planhat `type` option list; added the SAP Signavio Insight-to-Impact Circle customer-specific type override; clarified that `📦 Other`/`🗣️ Sync` are Notion-only labels, never valid Planhat values)
 >
 > **Migration architecture:**
 >
@@ -23,6 +23,22 @@
 
 > ⚠️ **Emojis are part of the exact configured option strings.** Use the Planhat column values verbatim — passing text without the emoji will save but won't match configured filters.
 
+> **Authoritative Planhat `type` option list** — pulled live via `get_model_action_parameters(MODEL: "Conversation")` on 2026-08-28. This is the complete, current set of configured values (same option list on Task `type`). **Never write a value outside this list** — anything else silently fails to match configured filters and the record renders as if untyped:
+>
+> `note` · `email` · `chat` · `call` · `ticket` · `other` · `🎓 Enablement` · `🔁 Sync` · `Internal Alignment` · `🏗️ Architecting` · `👟 Kick off` · `🔎 Discovery` · `🏁 Audit / Setup Review` · `📺 Webinar` · `🎙️ Demo` · `👾 Gong Call` · `Task` · `Sales Handover` · `💬 Slack Chat` · `🧑‍💻 Billable Task` · `📆 Onsite Workshop` · `Product Feedback` · `🔁 Renewal Call`
+>
+> **`📦 Other` and `🗣️ Sync` are Notion-only labels — neither is a valid Planhat option.** They exist only as source values in the left column below. Never write either one literally to a Planhat `type` field; always resolve through this table first. Writing an unmapped value is the documented cause of a Conversation/Task silently falling back to `note`.
+
+### Customer-specific type overrides — check before the default mapping
+
+Some recurring calls always map to the same Planhat type regardless of what a generic title/Notion-Type inference would suggest. Check this table **before** applying the general mapping below, whether the source is a Notion `Type` field or a title being classified ad hoc (untracked recurring call, no Notion Session record).
+
+| Customer | Event title pattern | Planhat `type` | Notes |
+|---|---|---|---|
+| SAP Signavio | "Insight-to-Impact Circle" / "Community of Champions" | `🏗️ Architecting` | Recurring monthly call — cadence looks like a sync, but it's a structured working session with decisions being made. Do not classify as `🔁 Sync` or leave unmapped/`Other`. |
+
+**General rule when classifying an untracked call with no Notion Type source** (ad hoc title-based classification, e.g. in `bulk-debrief`/`post-session-debrief` when no Session record exists): check the override table above first; if no match, pick directly from the **authoritative option list** above — never write a raw inferred label like "Other" — and default to `🔁 Sync` when nothing more specific applies. Prefer `🏗️ Architecting` over the `🔁 Sync` default when the call is a structured working session with decisions being made, not an ad hoc or purely social one.
+
 | Notion `Type` | Planhat `type` (exact string) | Notes |
 |---|---|---|
 | `🏗️ Architecting` | `🏗️ Architecting` | Emoji matches |
@@ -30,7 +46,7 @@
 | `🎓 Training` | `🎓 Enablement` | **Different label** — Planhat uses "Enablement" |
 | `👟 Kick off` | `👟 Kick off` | Emoji matches |
 | `🔎 Discovery` | `🔎 Discovery` | Emoji matches |
-| `📦 Other` (default) | `🔁 Sync` | Default fallback for general calls (e.g. licence discussions, commercial syncs). |
+| `📦 Other` (default) | `🔁 Sync` | Default fallback for general calls (e.g. licence discussions, commercial syncs). Check the customer-specific override table above first. |
 | `📦 Other` + "Demo" in title | `🎙️ Demo` | **Title-pattern override:** if session title contains "Demo" (case-insensitive), use `🎙️ Demo` instead of the default `🔁 Sync`. |
 | `🫥 Internal` | `Internal Alignment` | No emoji in Planhat |
 | `Do not count` session (any type) | `🏁 Audit / Setup Review` | **Type override for Do not count sessions.** Sessions with `Do not count = YES` are always migrated (never skipped) — use `🏁 Audit / Setup Review` as the Planhat type regardless of the Notion session type. These represent real interactions that need to be on record even though they don't count against the services quota. |

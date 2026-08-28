@@ -28,7 +28,7 @@ Canonical syntax uses flags; also recognize natural language equivalents.
 1. Resolves the channel and the Planhat Company – in whichever direction the input allows – and caches the
    pairing on the Company for next time (§ Channel resolution below). Then pulls the full channel history
    (paginated).
-2. Classifies every top-level message: **thread** (has replies), **standalone substantive** (a real question, update, or recap with no replies), or **noise** (joins, channel-description changes, canvas notices, bare emoji, one-line logistics). Noise is never logged.
+2. Classifies every top-level message: **thread** (has replies), **standalone substantive** (a real question, update, or recap with no replies), **broadcast reply** (a thread reply sent with "also send to channel" – looks top-level, already belongs to its parent thread's record), or **noise** (joins, channel-description changes, canvas notices, bare emoji, one-line logistics). Noise and broadcast replies are never logged.
 3. **Backfill pass** – for every existing `💬 Slack Chat` Conversation on that Company dated within the last 365 days, parses its `externalId` back to a channel + parent timestamp, re-reads the thread, and compares the live message count against the `Sync:` watermark in the record's footer. Grown threads get their `description` rebuilt in place. Same record, same `externalId`, same `date`.
 4. **Create pass** – for every in-scope thread with no existing record, reads the thread, renders it, and creates one Conversation.
 5. Reports a per-thread table – created · backfilled · unchanged · skipped-as-noise – with the record IDs.
@@ -43,7 +43,9 @@ domain across the channel's authors, matched against `Company.domains`. If that 
 the channel name (`#ext-acme-corp-productboard` → `acme corp`) matched against `Company.name`. Confirm the
 company in chat, then cache the channel ID on it.
 
-**Given a customer** – read `custom.External_Slack_Channel_ID`. Populated, and it reads: use it, no search.
+**Given a customer** – resolve the Company on `name`, and when that returns nothing retry the name as a domain
+label against `domains` (the typed name is often an acquired subsidiary: `leanix` misses on name, resolves to
+**SAP SE** on `leanix.net`). Then read `custom.External_Slack_Channel_ID`. Populated, and it reads: use it, no search.
 Empty: sweep `slack_search_channels` for the `#ext-{customer}` convention (then `ext-{domain label}`), and if
 that misses, ask for the URL or ID. Cache whatever resolves.
 

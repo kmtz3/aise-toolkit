@@ -1,5 +1,12 @@
 # Changelog — aise-leadership
 
+## [1.12.12] — 2026-08-28
+
+### Fixed
+- `context/planhat-schema.md`, `context/notion-planhat-field-mapping.md`, `context/project-instructions.md` — synced from aise-assistant: corrected `custom.Slack ID` write guidance (it is AISE-writable, gated on chat confirmation, not "never write"); `custom.Slack URL` documented as a locked formula field derived from `custom.Slack ID`, never a write target. Related to aise-assistant's new `/log-slack-threads-internal` skill, which is aise-assistant-only and not ported here.
+
+---
+
 ## [1.12.11] — 2026-08-27
 
 ### Added

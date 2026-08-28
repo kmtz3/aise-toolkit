@@ -91,6 +91,8 @@ When finding notes or a transcript for a specific session, try these sources in 
 7. **Glean `search` + `chat`** — unscoped fallback, last resort.
 8. If everything above fails, ask the user once: "Couldn't find notes/transcript for [session]. Drop a link or paste?"
 
+**Exhaust every applicable numbered step before concluding a transcript is unavailable — stopping after step 1 or 2 alone is not sufficient and is the documented cause of debriefs incorrectly falling to the placeholder-debrief branch.** A single tool returning empty (e.g. `meeting_lookup`) is not evidence the recording isn't indexed — it only means that one source missed. Only treat the transcript as genuinely unavailable once `ask_account` (step 1), `meeting_lookup` (step 2), both `app:gong`-scoped search attempts (step 3), the Notion session page / meeting-notes / adjacent-page checks (steps 3b–5), and the Gmail/Glean fallback (steps 6–7) have all returned nothing.
+
 Cross-reference across sources. If Gong says X and user notes say Y, flag the conflict — don't silently pick one.
 
 ### Attendee / participant lookup

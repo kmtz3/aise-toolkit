@@ -88,11 +88,15 @@ Trigger this when the user says they have sent, or asks for records to be update
 3. **Write `custom.Next Step`** on each sent account's Planhat Company record via `update_model_record`.
    - Current state, not a log. Overwrite; do not append. Session history belongs in Conversations.
    - Lead with the date and what was sent, then what is being waited on, then what happens when it clears.
-   - Name owners. Where the next action is gated on something external, write it as a numbered sequence so the gate
+   - Name owners. Where the next action is gated on something external, write it as a short list so the gate
      is visible.
    - Carry any commitment the user made in the sent message – something owed to the customer is the most valuable
      thing this field can hold.
    - Note a stale duplicate draft on another thread if one exists.
+   - **Rich text, not plain prose.** `custom.Next Step` is a `ph-editor` field like `custom.Prep Notes` – single-line
+     HTML, `\n` is stripped on write. Format per `context/planhat-schema.md` § Rich Text Field Formatting: a bolded
+     date lead (`<p><strong>27 Aug:</strong> …</p>`) then, when there's more than one part, a
+     `<ul class="ph-editor__bullet-list">` list – never a `\n`-joined paragraph.
 4. **Verify the write.** `custom.Next Step` is a recently added field and may not come back through `SELECT` yet.
    If a read-back returns no value, confirm with a filter on a distinctive substring instead of assuming failure:
    `list_model_records(MODEL:"Company", FILTER:{"custom.Next Step[contains]":"<distinctive phrase>"})`.

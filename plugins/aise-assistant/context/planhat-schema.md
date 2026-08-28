@@ -2,7 +2,7 @@
 
 > **Status:** In-transition, moving toward Planhat as the primary AISE working record. Session debrief (`post-session-debrief`), product feedback discovery (`/log-feedback`), and account health/revenue/Spark tracking are Planhat-only as of 2026-08-19. Notion remains the working record only for agents/skills not yet migrated (session-prep, account-plan, engagement-planner, and historical data via `/session-backfill`) — treat it as a legacy system being phased out, not a co-equal source of truth. During the transition, Spark fields must still be kept in sync both ways until the remaining Notion-based agents migrate.
 >
-> **Last updated:** 2026-08-19
+> **Last updated:** 2026-08-28 (added the authoritative live-pulled Planhat Conversation/Task `type` option list, the SAP Signavio Insight-to-Impact Circle customer-specific type override, and the transcript-lookup exhaustion rule cross-reference)
 
 ---
 
@@ -311,7 +311,7 @@ Planhat only — Notion does not track these in real time.
 | `custom.Purchased Makers` | number | — | Contracted maker seats |
 | `custom.Current Makers` | number | — | Active maker seat count |
 | `custom.Purchased - Current Makers` | number | — | Seat gap roll-up |
-| `custom.Slack URL` | string | — | **Internal** Productboard Slack channel for this account – the channel where PB staff discuss the customer. **Not** the shared external channel. See the Slack-fields callout below. |
+| `custom.Slack URL` | string (formula) | — | **Internal** Productboard Slack channel for this account – the channel where PB staff discuss the customer. **Not** the shared external channel. **Locked formula, derived from `custom.Slack ID` — never write.** See the Slack-fields callout below. |
 | `custom.Salesforce URL` | string | — | SF account URL |
 | `custom.AI Readiness – SF` | string | `AI-Forward (Inferred/Validated)`, `AI-Interested (Inferred/Validated)`, `AI-Resistant (Inferred/Validated)` | SF-synced AI readiness |
 | `custom.AI Readiness Score` | number | — | Auto-computed. **Read-only as of the 2026-08-25 check** – an earlier version of this doc described it as manually settable. Do not write. |
@@ -336,8 +336,8 @@ writes Productboard's internal discussion of a customer onto that customer's own
 
 | Field | Which channel | Who owns it | Use |
 |---|---|---|---|
-| `custom.Slack ID` | **Internal.** The PB-only channel for discussing this account. Channel ID, e.g. `C02N37LS25C`. | RevOps / SF | Read for internal context only. Never write. **Never log its messages to a customer-visible record.** |
-| `custom.Slack URL` | **Internal.** Same channel as above, as an `/archives/` link. | RevOps / SF | Same. Never write. |
+| `custom.Slack ID` | **Internal.** The PB-only channel for discussing this account, conventionally `#account-{customer}`. Channel ID, e.g. `C02N37LS25C`. | RevOps / SF, but AISE-writable | Read for internal context; written by `/log-slack-threads-internal` only after the user confirms the specific channel in chat (it syncs back toward Salesforce, so an unconfirmed write has a longer reach than a Planhat-only cache). **Never log its messages to a customer-visible record.** |
+| `custom.Slack URL` | **Internal.** Same channel as above, as an `/archives/` link. | **Formula, locked — derived from `custom.Slack ID`.** | **Never write.** Read-only, always — the archive link is computed from `custom.Slack ID`, not stored independently. Writing `custom.Slack ID` is sufficient; `/log-slack-threads-internal` never attempts a write to this field. |
 | `custom.External_Slack_Channel_ID` | **External.** The shared channel with the customer in it – Slack Connect or a guest channel, conventionally `#ext-{customer}`. | AISE, via `/log-slack-threads` | The only field that records a customer-facing channel, and the only one `/log-slack-threads` may resolve a sweep target from. |
 
 > **Why the distinction is load-bearing.** `custom.Slack ID` is populated on a large share of accounts, so it
@@ -353,9 +353,17 @@ writes Productboard's internal discussion of a customer onto that customer's own
 > the Company model, that is the planned deletion, not schema drift.
 
 > **Writable in the API but RevOps-owned – do not write:** `custom.Segment`, `custom.Region`
-> (`EMEA`/`NOAM`/`APAC`/`LATAM`/`AUNZ`/`Missing`/`Exclude`/`Blacklisted`), and `custom.Slack ID`. These report as
-> writable in `get_model_action_parameters` but are maintained upstream. An earlier version of this doc listed them
-> as SF-synced read-only; the accurate statement is that the API will accept a write and you still should not make one.
+> (`EMEA`/`NOAM`/`APAC`/`LATAM`/`AUNZ`/`Missing`/`Exclude`/`Blacklisted`). These report as writable in
+> `get_model_action_parameters` but are maintained upstream, and no skill in this plugin writes them.
+>
+> **`custom.Slack ID` is the one exception to that rule.** It syncs back toward Salesforce like the fields
+> above, but it is the intended cache for `/log-slack-threads-internal` and it **does** write it — only after
+> the user has confirmed the resolved channel in chat, never on an unconfirmed guess, and never overwriting a
+> populated value that disagrees with what was just swept without surfacing the conflict first. (Corrected
+> 2026-08-28 — an earlier version of this doc listed `custom.Slack ID` in the same "do not write" bucket as
+> `custom.Segment`/`custom.Region`; it is writable and is meant to be written, just gated on confirmation rather
+> than free.) **`custom.Slack URL` is not part of this exception** — it is a locked formula field derived from
+> `custom.Slack ID`, never written directly, by this skill or any other.
 
 > **Removed since the previous snapshot:** `custom.⚡️ Days in Current Ignite Stage` is no longer present on the
 > Company model. Do not read or write it.
@@ -579,14 +587,16 @@ close a session gap or retyped into a counted type to move a number.
 | `description` | Rendered thread HTML | See § Planhat rich-text constraints below. |
 | `custom.Slack message Id` | Parent ts, dotted form | |
 | `custom.Slack initiated by` | `Customer` \| `Productboard` | From the parent author's email domain. |
-| `custom.First message time` | `YYYY-MM-DD HH:MM {tz}` | Human-readable local time of the first message. |
+| `custom.First message time` | `YYYY-MM-DD HH:MM {tz}` | Human-readable local time of the first message. **Does not stick over MCP** – reported writable by `get_model_action_parameters`, but silently dropped on create and on a field-only update alike (confirmed twice, 2026-08-27, SAP LeanIX `6a905bcd793439e997b3f6a8`). Write it, read back, note it once, carry on – nothing is lost, since the thread start is carried exactly by `custom.Slack message Id` and the `externalId` parent ts. Do not retry past a second attempt or fail a run over it. |
 | `users` | `[{_id, name}]` of the Productboard people who posted | **Required, not optional.** Resolved from `User` by email. Omit the key entirely if no PB person spoke – never write `[]`. |
 | `endusers` | `[{_id, name}]` of the customer contacts who posted | **Required, not optional.** Resolved from `End User` scoped to the company. Authors only – an `@`-mention or a named follow-up owner is not a participant. Fails silently on write, so always read back and assert. A participant with no contact record is reported, never auto-created. Omit the key rather than writing `[]`. |
 
 **Channel resolution and the cache.** The skill accepts either half of the pair. Given a channel, the company
 is resolved from the modal non-`productboard.com` email domain across the channel's authors matched against
 `Company.domains`, falling back on the channel name (`#ext-acme-corp-productboard` → `acme corp`) matched
-against `Company.name`. Given a customer, the channel comes from `Company.custom.External_Slack_Channel_ID`, then a
+against `Company.name`. Given a customer, the Company is matched on `name` and then, when that misses, on
+`domains` using the typed name as a domain label – acquired subsidiaries only appear there (`leanix` misses on
+name and resolves to **SAP SE** via `leanix.net`). The channel then comes from `Company.custom.External_Slack_Channel_ID`, then a
 `slack_search_channels` sweep for the `#ext-{customer}` convention, then the user. `custom.Slack ID` and
 `custom.Slack URL` are **never** consulted – they hold the internal PB account channel, not the shared one. Whatever resolves is written back to `custom.External_Slack_Channel_ID` (ID only,
 upper-case, read back and asserted) so the next run is a single field read. A cached ID that fails to read is
@@ -674,6 +684,20 @@ If either query returns a result, update it rather than creating a duplicate —
 
 > ⚠️ **Emojis are part of the configured option strings.** Always use the exact values in the "Planhat `type`" column — passing the text without the emoji will save but will not match the configured option filters.
 
+> **Authoritative Planhat `type` option list** — pulled live via `get_model_action_parameters(MODEL: "Conversation")` on 2026-08-28 (same option list on Task `type`). **Never write a value outside this list**; anything else silently fails to match configured filters:
+>
+> `note` · `email` · `chat` · `call` · `ticket` · `other` · `🎓 Enablement` · `🔁 Sync` · `Internal Alignment` · `🏗️ Architecting` · `👟 Kick off` · `🔎 Discovery` · `🏁 Audit / Setup Review` · `📺 Webinar` · `🎙️ Demo` · `👾 Gong Call` · `Task` · `Sales Handover` · `💬 Slack Chat` · `🧑‍💻 Billable Task` · `📆 Onsite Workshop` · `Product Feedback` · `🔁 Renewal Call`
+>
+> **`📦 Other` and `🗣️ Sync` are Notion-only labels, not valid Planhat options.** Never write either literally — always resolve through this table. An unmapped value is the documented cause of a Conversation/Task silently falling back to `note`.
+
+##### Customer-specific type overrides — check before the default mapping
+
+| Customer | Event title pattern | Planhat `type` | Notes |
+|---|---|---|---|
+| SAP Signavio | "Insight-to-Impact Circle" / "Community of Champions" | `🏗️ Architecting` | Structured working session with decisions being made, despite the recurring cadence — not `🔁 Sync` or `Other`. |
+
+**Classifying an untracked call with no Notion Type source** (ad hoc title-based classification — no Notion Session record exists): check the override table above first; if no match, pick directly from the authoritative option list above — never write a raw inferred label like "Other" — default to `🔁 Sync` when nothing more specific applies. When in doubt between `Other`/`🔁 Sync` and `🏗️ Architecting`, prefer Architecting if the call is a structured working session with decisions being made — `🔁 Sync` is for ad hoc or purely social calls.
+
 | Notion `Type` | Planhat `type` (exact) | Notes |
 |---|---|---|
 | `🏗️ Architecting` | `🏗️ Architecting` | Emoji matches — use as-is |
@@ -681,7 +705,7 @@ If either query returns a result, update it rather than creating a duplicate —
 | `🎓 Training` | `🎓 Enablement` | **Different label.** Use Planhat's `🎓 Enablement` |
 | `👟 Kick off` | `👟 Kick off` | Emoji matches — use as-is |
 | `🔎 Discovery` | `🔎 Discovery` | Emoji matches — use as-is |
-| `📦 Other` (default) | `🔁 Sync` | Default fallback for general calls (e.g. licence discussions, commercial syncs). |
+| `📦 Other` (default) | `🔁 Sync` | Default fallback for general calls (e.g. licence discussions, commercial syncs). Check the customer-specific override table above first. |
 | `📦 Other` + "Demo" in title | `🎙️ Demo` | **Title-pattern override:** if the session title contains "Demo" (case-insensitive), use `🎙️ Demo` instead of the default `🔁 Sync`. |
 | `🫥 Internal` | `Internal Alignment` | No emoji in Planhat |
 | _(Done Notion Task — auto-created Conversation)_ | `Task` | No emoji. Planhat auto-creates this Conversation when Task `status` is set to `"done"`. Set via `noteId` post-write. Canceled (`"ignored"`) tasks do not generate a Conversation. |

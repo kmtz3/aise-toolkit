@@ -1,6 +1,6 @@
 ---
 name: post-session-debrief
-description: "Use after any delivered customer session to run the full post-session workflow in one shot: transcript retrieval, Planhat Conversation write (session notes, prep notes, Gong/duration), PB-side Tasks, Gmail follow-up draft, internal Slack debrief Task, Product Feedback Tasks, KDD Attachment (A-sessions only), and scorecard eval in chat."
+description: "Use after any delivered customer session to run the full post-session workflow in one shot: transcript retrieval, Planhat Conversation write (session notes, prep notes, Gong/duration), PB-side Tasks, Gmail follow-up draft, internal Slack debrief Task, Product Feedback Tasks, KDD Attachment (A-sessions only), a refreshed Company custom.Next Step, and scorecard eval in chat."
 tools: Read, Grep, Glob, Task, mcp__claude_ai_Glean__search, mcp__claude_ai_Glean__chat, mcp__claude_ai_Glean__gmail_search, mcp__claude_ai_Glean__meeting_lookup, mcp__claude_ai_Glean__read_document, mcp__claude_ai_Gmail__search_threads, mcp__claude_ai_Gmail__get_thread, mcp__claude_ai_Gmail__list_drafts, mcp__claude_ai_Gmail__create_draft, mcp__claude_ai_Google_Calendar__list_events, mcp__claude_ai_Google_Calendar__get_event, mcp__claude_ai_Google_Drive__create_file, mcp__claude_ai_Google_Drive__get_file_metadata, mcp__claude_ai_Google_Drive__share_file, mcp__claude_ai_Planhat__create_model_record, mcp__claude_ai_Planhat__update_model_record, mcp__claude_ai_Planhat__list_model_records, mcp__claude_ai_Planhat__search_records, mcp__claude_ai_Planhat__get_model_record, mcp__claude_ai_Planhat__get_model_action_parameters
 ---
 
@@ -42,7 +42,9 @@ Pass the Voice section verbatim into the inline executions of `session-summarize
 
 - Customer name, session date, the calendar event.
 
-It will find the transcript/notes via the **Transcript lookup order** in `context/project-instructions.md §3` (meeting_lookup → Gong search → Gmail → Glean chat → ask once — the Notion meeting-notes/session-page hops in that lookup order don't apply here, skip them) and extract: decisions (KDDs), open items, PB-side action items, customer-side action items, risks surfaced, stakeholder changes, source link.
+It will find the transcript/notes via the **Transcript lookup order** in `context/project-instructions.md §3` (`ask_account` → `meeting_lookup` → Gong-scoped Glean search, both attempts → Gmail → Glean chat → ask once — the Notion meeting-notes/session-page hops in that lookup order don't apply here, skip them) and extract: decisions (KDDs), open items, PB-side action items, customer-side action items, risks surfaced, stakeholder changes, source link.
+
+**Do not treat a single miss (e.g. `meeting_lookup` returning empty) as proof the transcript is unavailable.** Per `project-instructions.md §3`, every applicable step in the lookup order must be exhausted before falling to the placeholder-debrief branch (2b) — this is the documented cause of debriefs incorrectly going to placeholder when the recording was actually indexed and reachable via a later step.
 
 **Use `session-summarizer` for extraction only.** Ignore any of its own write instructions (it was written against Notion) — every write in this run happens in the steps below, against Planhat.
 
@@ -98,6 +100,8 @@ If the **Transcript lookup order** is exhausted and no transcript or notes were 
    ```
 
 3. **Create a re-debrief Task** (Planhat Task, per step 4's payload shape): `action: "Re-debrief [Customer] [session date] — Gong transcript"`, `description: "Original call: [date]. Re-run /session-debrief once Gong has the transcript indexed."`, `companyId`, `ownerId: <user>`, `status: "To Do"`, `endTime`: session date + 5 business days, and `"custom.Priority"` per the **Priority by task kind** table in step 4.
+
+3a. **Still run step 10 (`custom.Next Step` refresh)** — compose it from the calendar/Slack/Gmail signals gathered above instead of transcript content, and lead with the pending-transcript state so it's visible without opening the Conversation: e.g. `<p><strong>27 Aug:</strong> [Session] delivered — transcript pending Gong indexing, re-debrief queued.</p>`. Don't skip this step just because the transcript is missing.
 
 4. **Do NOT** draft a follow-up email (step 5) — insufficient content. Skip it and note "skipped — transcript pending" in the final report.
 
@@ -161,7 +165,7 @@ If the stub's `externalId` doesn't match the `<numeric>-<sf-id>` format, or its 
 |---|---|
 | `externalId` | Google Calendar event ID (see step 1) |
 | `subject` | Session title |
-| `type` | Session-type mapped Planhat type — see `context/planhat-schema.md` § Type value mapping |
+| `type` | Session-type mapped Planhat type — check the **customer-specific type overrides** table first, then the general mapping — see `context/planhat-schema.md` § Type value mapping. Must be one of the authoritative Planhat option values in that section; never write a raw Notion label (`📦 Other`, `🗣️ Sync`, etc.) or an inferred title-based label directly. |
 | `date` + `startDate` | Session date as ISO 8601 (`T00:00:00.000Z`) |
 | `companyId` | Resolved Planhat Company `_id` |
 | `users` | Delivered-by Planhat User `_id`(s), resolved via the User ID table in `context/planhat-schema.md` |
@@ -194,6 +198,8 @@ create_model_record(MODEL: "Task", PARAMETERS: {
 ```
 
 **`custom.Priority` is mandatory on every Task this procedure creates.** Never omit it and never leave it null. That covers all four Task creates in this agent: PB-side commitments (this step), the re-debrief task (step 2b), the Slack debrief task (step 6), and each product feedback task (step 8). `/daily-brief` reads `custom.Priority` when it assembles the open-task list, so an unprioritized task is a task the user will not see.
+
+**The Slack debrief Task (step 6) must always carry `type: "Internal Alignment"`.** Never leave it untyped — an untyped Task falls back to no type filter and won't match `Internal Alignment` reporting/filtering downstream.
 
 #### Priority by task kind
 
@@ -252,6 +258,7 @@ Apply `context/communication-style-guide.md`. No em-dashes. Return inline in cha
 ```
 create_model_record(MODEL: "Task", PARAMETERS: {
   mainType: "task",
+  type: "Internal Alignment",
   action: "Slack debrief – [Customer] [date]",
   description: "<full debrief text>",
   companyId: "<planhat-company-id>",
@@ -349,6 +356,23 @@ Chat only. Do not write scorecard language into any Planhat record.
 
    If confirmed, invoke `agents/context-keeper.md` to write the pattern to `custom.AISE Tracker Memory`.
 
+### 10. Refresh `custom.Next Step` on the Company record
+
+This is the last write of every run. `custom.Next Step` is the field the rest of the team reads for "what's actually happening on this account right now" — a delivered session is exactly the kind of touchpoint that makes the old value stale, so every completed run (full debrief, the placeholder-debrief branch per step 2b, and every bulk-invoked run) ends by refreshing it. Skip only if step 1 never resolved a Company.
+
+1. **Read the current value.** `get_model_record(MODEL:"Company", OBJECT_ID:"<company _id>", SELECT:["custom.Next Step"])`. Empty is fine — treat as no prior next step.
+2. **Gather what's changed since the last touch:**
+   - This session's own output (step 2): decisions, the PB-side Tasks just created (step 4), customer-side actions, risks, anything the customer is now waiting on.
+   - Email since the last touch: `mcp__claude_ai_Glean__gmail_search` for this customer, windowed from the date the prior Next Step names (or the last 14 days if it was empty/undated).
+   - Slack since the last touch: `mcp__claude_ai_Glean__search` with `app:slack` + customer name, same window.
+   - Drop anything the old Next Step said that this session has now resolved (e.g. "waiting on customer to confirm kickoff date" once this session confirmed it) — but carry forward anything still-live that this session didn't touch. Don't silently lose an open thread.
+3. **Rewrite, don't append.** `custom.Next Step` is current-state, not a log (`context/planhat-schema.md` § AISE-writable). Compose: what just happened (dated), what's now being waited on and who owns it — matching the PB-side Tasks from step 4 and the customer-side actions in the Conversation description so the field and the Tasks never disagree — then what happens when the gate clears.
+4. **Format as rich-text HTML**, single line, per `context/planhat-schema.md` § Rich Text Field Formatting — bolded date/section leads + a short list, never a plain-prose paragraph. Example shape:
+   ```
+   <p><strong>27 Aug:</strong> Architecting session delivered — data model and rollout sequence agreed.</p><ul class="ph-editor__bullet-list"><li class="ph-editor__list-item"><p><strong>Waiting on:</strong> [Customer contact] to confirm the pilot cohort by [date].</p></li><li class="ph-editor__list-item"><p><strong>Then:</strong> PB schedules the enablement session.</p></li></ul>
+   ```
+5. **Write and verify.** `update_model_record(MODEL:"Company", OBJECT_ID:"<company _id>", PARAMETERS:{"custom.Next Step":"<html>"})`. Confirm the write per `agents/inbox-triage.md` step 5.4 — `SELECT` can lag on this field; fall back to `list_model_records(FILTER:{"custom.Next Step[contains]":"<distinctive phrase>"})` before reporting it as done.
+
 ---
 
 ## Output order (what the user sees in chat)
@@ -365,6 +389,7 @@ After all steps complete, produce a single consolidated report:
 - Slack debrief Task: [Task _id]
 - Product feedback Tasks: [N tasks — list titles] (or "none — no feedback surfaced")
 - KDD Attachment: [Drive URL] (A-sessions only, or "N/A")
+- Next Step: [refreshed — one-line summary of the new value, or "unchanged — no prior value and nothing new to state"]
 
 **Gmail draft:**
 - Draft ID: [id] — to: [recipient], subject: [subject]
@@ -397,10 +422,11 @@ After all steps complete, produce a single consolidated report:
 - **`externalId` is the Conversation dedup key** — always check before creating.
 - **Never overwrite `owner` or any SF-synced Company field.** See `context/planhat-schema.md` § Write Rules for the full SF-synced list.
 - **Auto-Conversation only fires on a `status` transition to `"done"` via `update_model_record`** — never bake `status: "done"` into a Task create.
-- **Conversation type is free-text but must match the configured values** in `context/planhat-schema.md` § Type value mapping, emoji included — a value without the emoji won't match filters.
+- **Conversation type must be one of the configured option values** in `context/planhat-schema.md` § Type value mapping, emoji included — a value without the emoji won't match filters, and a value outside the authoritative list (including raw Notion labels like `📦 Other`/`🗣️ Sync`) silently falls back to `note`. Check the customer-specific overrides table first.
 - **Attachment `sourceUrl` must be a public, directly-fetchable URL** — the Drive "view" link (`/file/d/{id}/view`) does not work; use the `uc?export=download` form, and only after explicitly sharing the file anyone-with-link.
 - **Conflicts between sources** (Gong vs. Slack/Gmail signals vs. the user's chat): flag, don't silently pick.
 - **If the transcript is thin or missing:** complete all steps that don't depend on it and flag clearly what couldn't be done. If exhausted entirely, follow the **placeholder-debrief branch** in step 2b — don't abort.
 - **Never `Read` a transcript file >50K chars directly in this agent's context.** Delegate to a `general-purpose` sub-agent with the structured extraction template (step 2a).
 - **Never `Grep` Glean-output temp files** — they are single-line JSON arrays and return `[Omitted long matching line]`. Use sub-agent + chunked `Read` instead.
 - **Invoke the context-keeper procedure inline** if anything in the session output suggests a changed rule, new session type, or new standing instruction.
+- **`custom.Next Step` is refreshed on every completed run — step 10, never optional.** Rewrite, don't append; pull the "waiting on" line from the same Tasks/actions the rest of the run just wrote so the field and the Tasks never disagree; carry forward anything still-live from the old value that this session didn't touch. Applies to the placeholder-debrief branch too (step 2b), and to every session `bulk-debrief` runs through this procedure.

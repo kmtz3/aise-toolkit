@@ -186,7 +186,7 @@ Run sessions in chronological order (earliest meeting first).
    - The full text of `agents/post-session-debrief.md` (read it once at the top of step 6 and reuse).
    - The session-specific inputs: customer name, session ID, session page URL, target date.
    - The bulk-run context flag.
-   - A clear final-output contract: the sub-agent must return ONLY a structured summary block — `Customer | Session | Notion writes (what changed) | Tasks created (title + priority + due date) | Gmail draft ID + subject | Slack debrief Task URL | KDD sub-page URL (or N/A) | Product feedback Tasks | Scorecard (one-line overall) | Gaps / flags`. No raw transcript text. No tool-trace narration.
+   - A clear final-output contract: the sub-agent must return ONLY a structured summary block — `Customer | Session | Notion writes (what changed) | Tasks created (title + priority + due date) | Gmail draft ID + subject | Slack debrief Task URL | KDD sub-page URL (or N/A) | Product feedback Tasks | Next Step refreshed (one-line new value) | Scorecard (one-line overall) | Gaps / flags`. No raw transcript text. No tool-trace narration.
 3. Capture the sub-agent's structured summary.
 4. Print: `✓ [Customer] [Session ID] complete.` then move to the next.
 5. Per-session sub-agents run **sequentially**, never in parallel (concurrent Notion writes can conflict).
@@ -199,9 +199,9 @@ Run sessions in chronological order (earliest meeting first).
 ## Bulk debrief complete — [start_date] → [end_date]
 
 **Debriefed ([N]):**
-| Date | Customer | Session | Gmail draft subject | Tasks created (with priority) | Skipped (dedup) | Flags |
-|---|---|---|---|---|---|---|
-| YYYY-MM-DD | [name] | [ID] | [subject or "no draft — transcript pending"] | [N] | [e.g., "notes already existed"] | [any, e.g. "⚠️ Partial — transcript pending"] |
+| Date | Customer | Session | Gmail draft subject | Tasks created (with priority) | Next Step refreshed | Skipped (dedup) | Flags |
+|---|---|---|---|---|---|---|---|
+| YYYY-MM-DD | [name] | [ID] | [subject or "no draft — transcript pending"] | [N] | [one-line new value, or "no prior value / nothing new"] | [e.g., "notes already existed"] | [any, e.g. "⚠️ Partial — transcript pending"] |
 
 **Already debriefed — skipped ([N]):**
 | Date | Customer | Session | Signals |
@@ -223,6 +223,7 @@ Run sessions in chronological order (earliest meeting first).
 
 - **One confirmation gate (with one expansion round)** — step 5. After the final approval, run all debriefs without pausing between sessions.
 - **Discovery uses `notion-search` first; SQL is the fallback.** `notion-query-data-sources` is rate-limited and has hit 429s on multi-customer queue discovery. Reserve it for one-off disambiguation calls after a search returns ambiguous results.
+- **Every session `post-session-debrief` completes in a bulk run refreshes `custom.Next Step` on that Company** — that agent's step 10, not optional, and it applies whether the session ran inline or in a sub-agent. When running in sub-agent mode, the output contract above must report the refreshed value so it lands in the master summary — an untracked Next Step write in a bulk run is easy to lose.
 - **Every Task created anywhere in a bulk run carries `custom.Priority`.** `post-session-debrief` step 4 owns the priority tables; this agent must not relax them. When the debrief runs in a sub-agent, the sub-agent prompt must repeat this rule and the output contract must report the priority per task — an unprioritized task created in bulk is the easiest kind to lose, because nobody reviews it one at a time.
 - **Dedup is non-destructive.** "Skip" means the existing record is left exactly as-is. Never overwrite existing session notes, Tasks, or Gmail drafts silently.
 - **Bulk-run context flag is mandatory.** Pass it to `post-session-debrief` (inline or sub-agent) so dedup defaults inside that agent fall to "skip" (not "ask user") — the user gave one confirmation for the whole queue; individual interruptions break the flow.
