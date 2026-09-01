@@ -20,7 +20,7 @@ Gong's native sync into Planhat writes every call as its own standalone `👾 Go
 | `--since YYYY-MM-DD` | "since last week", "from Aug 1" | Only consider Gong Call Conversations dated on/after this date. **Recommended on a first run** to bound scope. |
 | `--apply` | "actually do it", "run it live", "apply the merges" | Write merges and delete Gong Call records. Still asks for one confirmation on the plan before executing. |
 | *(no `--apply`)* | "preview", "dry run", "show me what would happen" | **Default.** Shows the full match plan — no writes, no deletes. |
-| `--window-hours N` | "widen the match window to 6 hours" | Half-width of the date-proximity window used to find a Gong call's target session. Default `4`. |
+| `--window-hours N` | "widen the match window to 6 hours" | Half-width of the date-proximity window used to find a Gong call's target session. Default `12` — target `date` values are unreliable (Planhat stamps a converted calendar-event Conversation with the moment its Task was marked done, and older debriefs overwrote that with midnight), so a midnight-stamped target sits up to ~12h from its own call and a ±4h window cannot reach it. |
 
 ## Matching is not ID-based
 
@@ -37,15 +37,16 @@ Every match is reported with its full score breakdown, not just a confidence lab
 ## What it does per matched pair
 
 1. Finds the target session Conversation (GCal-synced, same company) by weighted-scoring every candidate in the date window on attendee overlap, subject similarity, and date proximity, then taking the top scorer if it clears the confidence threshold and isn't within 0.05 of a runner-up.
-2. Writes the Gong URL onto the target's **`custom.Call Recording`** field (not `custom.Gong URL` — that field is retired for this purpose, see below) and `transcript` **only if those fields are currently empty** — a populated field is treated as a conflict and reported, never overwritten.
-3. Appends the Gong call summary (reformatted into Planhat's rich-text vocabulary) to the target's `description`, after a divider — additive, never replaces existing content.
-4. Reads the target back to confirm the write landed, then deletes the Gong Call Conversation.
+2. Writes the Gong URL onto the target's **`custom.Call Recording`** field (not `custom.Gong URL` — that field is retired for this purpose, see below) and `transcript` **only if those fields are currently empty** — a populated field is treated as a conflict and reported, never overwritten. A target already holding the *identical* recording URL is not a conflict; the field is simply skipped.
+3. **Corrects the target's session `date`.** Planhat stamps a converted calendar-event Conversation with the moment its Task was marked done rather than the session start, so the target's time is wrong by default. The coupled Task's `startTime` — or the Gong call time as fallback — is written back, with the before/after and the source shown in the report.
+4. Appends the Gong call summary (reformatted into Planhat's rich-text vocabulary) to the target's `description`, after a divider — additive, never replaces existing content.
+5. Reads the target back to confirm the write landed, then deletes the Gong Call Conversation.
 
 ## What it never does
 
 - Never creates a Conversation or Task.
 - Never deletes a Gong Call record without a verified merge write-back.
-- Never overwrites a non-empty `custom.Call Recording` or transcript. Never writes to `custom.Gong URL` on the target — that field is only ever read from the source Gong Call record (Gong's own sync writes it there; corrected 2026-08-27).
+- Never overwrites a non-empty `custom.Call Recording` or transcript (an identical existing recording URL is skipped, not flagged). Never writes to `custom.Gong URL` on the target — that field is only ever read from the source Gong Call record (Gong's own sync writes it there; corrected 2026-08-27).
 - Never auto-resolves an ambiguous match (top score below threshold, or two-plus candidates scoring within 0.05 of each other) — always reported with full score breakdowns for manual review.
 
 ## Safe to re-run

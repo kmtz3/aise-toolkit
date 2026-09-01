@@ -63,7 +63,7 @@ Commands are grouped by family. Type `/<family>` (or `/<family>-`) in autocomple
 ## Suggested order around a customer session
 
 1. **Day before:** `/customer-whats-new <customer>` — surface what's changed since the last touch.
-2. **Day before / morning of:** `/session-prep <customer>` — pulls context, drafts brief, lands in Notion under a `📋 Prep` toggle. For A/Discovery/Kickoff sessions, also creates a KDD sub-page + interactive facilitation HTML guide saved to `~/Desktop/aise-assistant/facilitation/`.
+2. **Day before / morning of:** `/session-prep <customer>` — pulls context, drafts brief, lands in Notion under a `📋 Prep` toggle. For A/Discovery/Kickoff sessions, also creates a KDD sub-page + interactive facilitation HTML guide, published to the `Customer Session Artifacts` Drive folder and linked back onto the session's Planhat record.
 3. **Same day after the call:** `/session-debrief <customer>` — runs summary + Notion updates + Tasks + Gmail follow-up draft + Slack debrief draft + scorecard eval, all in one go.
 4. **Optional:** `/session-score <session-type>` if you want a focused scorecard review.
 

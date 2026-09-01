@@ -49,7 +49,7 @@ On start-up, check for an existing checkpoint matching this run's scope. **Befor
 - `--customer <name>` (optional) — scope to one customer. Default: whole workspace.
 - `--since YYYY-MM-DD` (optional) — only consider Gong Call Conversations dated on or after this date. Strongly recommended for a first run — bound the blast radius before running unscoped.
 - `--apply` (optional) — actually write merges and delete Gong Call records. **Default is dry-run: preview only, no writes, no deletes.** Even with `--apply`, still present the plan and get one explicit confirmation before executing (mirrors `/ph-migrate-notion-data`) — `--apply` skips nothing, it only means "you don't have to ask me to run the live pass after the dry-run looks right."
-- `--window-hours N` (optional, default `4`) — half-width of the date-proximity window used to find candidate targets around a Gong call's start time.
+- `--window-hours N` (optional, default `12`) — half-width of the date-proximity window used to find candidate targets around a Gong call's start time. **The default is 12, not 4, because target `date` values are unreliable** — Planhat stamps a converted calendar-event Conversation with the moment its Task was marked done, and older `/session-debrief` runs overwrote that with `T00:00:00.000Z` (`context/planhat-schema.md` § Session timestamp). A midnight-stamped target sits up to ~12h from its own call, so a ±4h window structurally cannot find it. Date proximity is the weakest of the three signals (0.25) and attendee overlap is exact-ID, so widening costs little precision.
 
 ---
 
@@ -86,7 +86,7 @@ list_model_records(
 
 Given `gong.companyId`, `gong.date`, `gong.subject`, `gong.endusers`, `gong.users`:
 
-**a. Compute the window:** `[gong.date - window_hours, gong.date + window_hours]` (default ±4h).
+**a. Compute the window:** `[gong.date - window_hours, gong.date + window_hours]` (default ±12h — see Inputs for why).
 
 **b. Query candidates:**
 ```
@@ -127,9 +127,10 @@ Only **high** and **medium** confidence matches proceed to step 4. **unmatched**
 
 ### 4. Build the merge payload for the matched target
 
-- **`custom.Call Recording`** — write `gong.custom['Gong URL']` (the URL Gong's sync wrote onto the source record) into the target's `custom.Call Recording` field, only if the target's `custom.Call Recording` is empty. If the target already has a *different* non-empty `custom.Call Recording` value, do not overwrite — flag as **conflict: recording_url_exists** and skip the whole merge for this record (do not partially merge; do not delete the Gong Call record while a conflict is open). Never write to `custom.Gong URL` on the target — that field is retired for this purpose (`context/planhat-schema.md` § Conversation Full Field Reference, corrected 2026-08-27).
+- **`custom.Call Recording`** — take the source URL from the Gong Call record as `gong.custom['Call Recording'] ?? gong.custom['Gong URL']`. **Read `custom.Call Recording` first** — since the 2026-08-27 field migration Gong's own sync writes the call link there and leaves `custom.Gong URL` empty (verified 2026-08-29 on Emplifi `6a9006bc8ab9b10391dc6508`); `custom.Gong URL` remains only as a fallback for pre-migration records. Write it into the target's `custom.Call Recording` field, only if the target's `custom.Call Recording` is empty. **A target already holding the identical URL is not a conflict** — skip the field, do not flag, and let the rest of the merge proceed. If the target already has a *different* non-empty `custom.Call Recording` value, do not overwrite — flag as **conflict: recording_url_exists** and skip the whole merge for this record (do not partially merge; do not delete the Gong Call record while a conflict is open). Never write to `custom.Gong URL` on the target — that field is retired for this purpose (`context/planhat-schema.md` § Conversation Full Field Reference, corrected 2026-08-27).
 - **`transcript`** — same rule: write only if the target's `transcript` is empty. Non-empty and different → **conflict: transcript_exists**, skip merge and deletion for this record.
 - **`custom.Call Duration`** — write only if the target's is empty and the Gong record has a value. Not a blocking conflict if both are populated and differ — keep the target's existing value, note the discrepancy.
+- **`date`** — correct the target's session time in the same write. The Gong call's `date` is a real call start, so it is an authoritative ladder source (`context/planhat-schema.md` § Session timestamp), and the target's `date` is unreliable by default. Prefer the coupled Task's `startTime` when the target has one (`get_model_record(MODEL: "Task", OBJECT_ID: "<target._id>")` — the Task shares the Conversation's `_id`), and fall back to `gong.date`. Write it only when it differs from the target's current `date` by more than a minute, and never write `T00:00:00.000Z`. This is not a conflict field — a wrong stored time is the defect being fixed, not content to preserve. Report the before/after with the source used.
 - **`description`** — always additive, never a conflict. Reformat the Gong description into the Planhat rich-text vocabulary (`context/planhat-schema.md` § Rich Text Field Formatting) before appending — the raw Gong-sync description uses `<h2>` and a wrapping `<p>` around block content, which is not in the allowed tag set and will render badly:
   - Strip the outer `<p style="...">...</p>` wrapper Gong's sync puts around the whole body.
   - Convert every `<h2>Label</h2>` to `<p><strong>Label</strong></p>`.
@@ -151,7 +152,7 @@ update_model_record(
 
 **Read back before deleting — do not trust a 200 response.** Immediately after the write:
 ```
-get_model_record(MODEL: "Conversation", OBJECT_ID: "<target._id>", SELECT: ["custom.Call Recording", "transcript", "description"])
+get_model_record(MODEL: "Conversation", OBJECT_ID: "<target._id>", SELECT: ["custom.Call Recording", "transcript", "description", "date"])
 ```
 Confirm every field you wrote actually landed. If any field silently didn't write, **do not delete the Gong Call record** — log outcome **write_unverified** and leave both records in place for manual follow-up.
 
@@ -174,6 +175,7 @@ Append this record's outcome to `records_completed` in the checkpoint file (§ C
   Target: <target subject> (<target type>, <target date>) — <target._id>
   Confidence: high | medium   score 0.81 (attendee 1.00 · subject 1.00 · date 0.76)
   Would write: custom.Call Recording, transcript, description (+142 chars)
+  Would correct date: 2026-08-27T00:00:00.000Z → 2026-08-27T08:30:00.000Z (source: coupled Task startTime)
   Would delete: Gong Call Conversation <gong._id>
 ```
 

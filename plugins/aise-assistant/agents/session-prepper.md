@@ -194,7 +194,8 @@ list_model_records(MODEL: "Conversation", FILTER: {"externalId[equal to]": "<can
 list_model_records(MODEL: "Task",         FILTER: {"sourceId[equal to]": "<candidate>"})     # step 2
 ```
 
-- **Conversation hit** → the session is already logged (the calendar Task was marked done and Planhat converted it). Write the prep notes to `custom.Prep Notes` on **that Conversation** and skip 5b-3/5b-4 entirely. Do not also write to a Task.
+- **Conversation hit** → the session is already logged (the calendar Task was marked done and Planhat converted it). Write the prep notes to `custom.Prep Notes` on **that Conversation** and skip 5b-3/5b-4 entirely. Do not also write to a Task. **Correct `date` in the same update if it is wrong** — Planhat's conversion stamps it with the moment the Task was ticked off, not the session start, so compare it against the calendar event start and include the corrected full UTC timestamp in this write when they differ by more than a minute (`context/planhat-schema.md` § Session timestamp). Note the correction in the Step 7 report.
+  > The Task's own `custom.Prep Notes` is **not** updated on this branch, and that is deliberate — but note the two records share an `_id` while keeping independent custom-field stores, so a Task that was prepped before its conversion keeps its old copy forever. The Conversation is the canonical one; a stale, badly formatted brief on the Task view is expected and is not a bug to chase.
 - **Task hit** (`mainType: "event"`, `sourceId` = the event ID) → continue to 5b-3 and write onto the Task.
 - **Both miss on both candidate forms** → fall back to `search_records(QUERY: "<calendar event title>")` filtered to `model: "Task"` / `model: "Conversation"`, `companyId = <planhat-company-id>`, and a `startTime`/`endTime`/`date` day match against the session's Call Date. A hit here is the session's record — note in the Step 7 report that it matched on title rather than event ID.
 - **Only if that also misses** → 5b-4.
@@ -307,6 +308,11 @@ Run this after every file artifact for the session exists locally (prep brief ex
 
 Follow `context/session-artifact-convention.md` in full. Condensed:
 
+> The `Facilitation` artifact publishes itself as part of `skills/session-facilitation` step 4. Both
+> paths are idempotent on the same filename — check the folder and `custom.Prep Notes` before
+> uploading or prepending, and if the guide is already published and linked, skip it here and say so
+> in the report rather than writing a second copy or a second link block.
+
 1. **Resolve the folder.** `get_file_metadata` on the known `Customer Session Artifacts` folder ID; if it errors, is trashed, or is not a folder, search by title; if still nothing, **create it** and say so in the report. Never skip an artifact because the folder was missing. Cache the resolved ID for the rest of the run.
 2. **Resolve the Salesforce Account Id.** Read `sourceId` off the Planhat Company (natively SF-synced, so it is by definition the live account), then verify with `SELECT Id, Name, Type, IsDeleted FROM Account WHERE Name LIKE '%<customer>%'`. **Duplicate and churned accounts under the same name are common** — if the Planhat `sourceId` isn't among the SOQL results or maps to a deleted/churned record, stop and ask the user which account is live rather than guessing.
 3. **Upload each artifact** as `{CustomerName}_{YYYY-MM-DD}_{SalesforceAccountId}_{ArtifactType}.ext` — `SessionPrep`, `KDD`, `Facilitation` respectively. Date = the **session** date, not today. `disableConversionToGoogleType: true` on every HTML and SVG upload, or Drive converts the file to a Google Doc and destroys the styling. If a file with that exact name is already in the folder, update it in place instead of creating a second copy.
@@ -325,7 +331,7 @@ Salesforce Account: {SalesforceAccountId}
 
 Post a summary with these sections:
 
-**a) Links** — Notion pages created/updated (Session page, KDD sub-page when applicable, Tasks, diagram) + facilitation guide file path when generated + **one line per Drive artifact: file name, Drive link, and which Planhat record received the link**. State explicitly if the `Customer Session Artifacts` folder had to be created, if an existing file was updated in place, or if a Planhat link write failed.
+**a) Links** — Notion pages created/updated (Session page, KDD sub-page when applicable, Tasks, diagram) + facilitation guide Drive link when generated + **one line per Drive artifact: file name, Drive link, and which Planhat record received the link**. State explicitly if the `Customer Session Artifacts` folder had to be created, if an existing file was updated in place, or if a Planhat link write failed.
 
 **b) Pre-call checklist** — concrete actions the user should take before the call. Include any of these that apply:
 - Overdue tasks from prior sessions that affect this one

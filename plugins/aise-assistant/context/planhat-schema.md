@@ -458,9 +458,48 @@ Run in order. Stop at the first hit.
 3. **Fallback match on company + date + title** — only reached when both ID lookups miss on both candidate forms (GCal sync disabled for the account, event created outside the synced calendar, or an AISE-authored record predating the sync). `search_records(QUERY: "<event title>")`, filtered to `companyId` and to a `startTime`/`endTime`/`date` day match. Treat a hit here as the session's record, and **note in the run report that it was matched by title rather than event ID** so the ID drift is visible.
 4. **Create — last resort, and say so.** Only when steps 1–3 all miss. Create the record the ladder was looking for (a Task for a future session, a Conversation for a delivered one), set `sourceId` / `externalId` to the calendar event ID so the next run resolves at step 1 or 2, and report `"created — no GCal-synced record found for event <id>"`. **A create with no `sourceId` / `externalId` is a bug**: it has no dedup key, can never be matched again, and Planhat rejects later API updates to a Conversation that has no `externalId`.
 
+#### The Task and its Conversation share an `_id`, but not their fields
+
+When Planhat converts a completed event Task, the Conversation it creates carries the **same `_id`** as the Task (and `taskId` == `_id`). They remain two records with independent custom-field stores: writing `Conversation.custom.Prep Notes` does not touch `Task.custom.Prep Notes`. Two consequences:
+
+- **The Task's copy goes stale on purpose.** Once the ladder resolves to a Conversation, the Task is historical and nobody writes to it again — so a session prepped before its conversion keeps that older brief on the Task view indefinitely. Expected, not a bug.
+- **It makes the timestamp fix cheap.** `get_model_record(MODEL: "Task", OBJECT_ID: "<conversation._id>")` returns the coupled Task — and its `startTime`, the real session start — in one call, with no `sourceId` lookup. That is why the ladder in § Session timestamp starts there.
+
 #### Do not write to two records for the same session
 
 If step 1 hits, the Task (if one still exists) is historical — leave it alone. If step 2 hits, the Conversation does not exist yet and must not be created ahead of the Task's completion; Planhat will create it. Writing the same prep notes to both is how the same session ends up looking like two.
+
+### Session timestamp — always correct `Conversation.date` from a real source
+
+**`Conversation.date` is wrong by default on every session record Planhat creates from a calendar event.** When a `mainType: "event"` Task is marked done, Planhat stamps the new Conversation's `date` with **the moment of conversion** — when the task was ticked off — not the session's start time. The drift is however long you took to mark it done. Verified 2026-08-29 on two untouched records:
+
+| Record | Task `startTime` (truth) | Conversation `date` as created | Drift |
+|---|---|---|---|
+| IBS Software `6a8c5defe1739d6cb5c88886` | 2026-08-25T10:00:00Z | 2026-08-25T11:13:47.043Z | +74 min |
+| Validity `6a75d97d97ccd97bc0fcd795` | 2026-08-25T20:30:00Z | 2026-08-27T16:00:27.712Z | +2 days, wrong day |
+
+Millisecond precision on `date` is the tell — a real session start is a round minute, a write timestamp is not.
+
+**This is a Planhat behavior we cannot switch off, so every agent that touches a session Conversation corrects it.** The correction is cheap: the true start time is preserved on the coupled Task and never overwritten.
+
+#### The timestamp ladder — run in order, stop at the first hit
+
+1. **Coupled Planhat Task `startTime`** — the record resolved by § Session record resolution. Cheapest and authoritative: the GCal sync wrote it and nothing overwrites it. Note the Task and its Conversation share an `_id`, so `get_model_record(MODEL: "Task", OBJECT_ID: "<conversation._id>")` fetches it in one call with no extra lookup.
+2. **Google Calendar event start** — `event.start.dateTime` for the event the run already has in hand.
+3. **Gong call date** — the `date` on the `👾 Gong Call` Conversation for the same call, or the call's start time from a Gong lookup the run already performed.
+4. **No source available** → leave `date` untouched and report it. Never invent a time, and never fall back to midnight.
+
+**Write the full UTC timestamp:** `date: "2026-08-27T08:30:00.000Z"`. Never `T00:00:00.000Z` — a midnight stamp is a silent data-loss bug, not a neutral default. It breaks date-proximity matching (`ph-reconcile-gong-gcal` scores a midnight target ~511 minutes off its own call and misses it inside the default ±4h window), it misorders same-day sessions on the account timeline, and it makes duration and same-day dedup checks meaningless.
+
+`startDate` / `endDate` are typed `date` (day granularity), not `date time` — set the session day there, and keep the time in `date`.
+
+**Correct on every touch, not only on create.** If a run resolves an existing session Conversation whose `date` disagrees with the ladder's source by more than a minute, include the corrected `date` in the same `update_model_record` call it was already making, and say so in the run report:
+
+```
+Corrected date: 2026-08-27T00:00:00.000Z → 2026-08-27T08:30:00.000Z (source: coupled Task startTime)
+```
+
+**Applies to session-type Conversations only** — the counted session types plus `📆 Onsite Workshop`, `📺 Webinar`, `🎙️ Demo` and `Internal Alignment`. Do **not** apply it to `💬 Slack Chat` (dated on the thread's last message by its own documented rule), to `email` / `chat` / `ticket` records (the source system's timestamp is correct), or to `👾 Gong Call` records (Gong's own call time is already right).
 
 ### Rich Text Field Formatting
 

@@ -145,7 +145,7 @@ If found without an `externalId` matching this session: update it with the full 
 ```
 list_model_records(MODEL: "Conversation", FILTER: {"externalId[equal to]": "<gcal-event-id>"})
 ```
-- **Found** → update if `type`, `description`, or `endusers` drifted.
+- **Found** → update if `type`, `description`, `endusers`, or **`date`** drifted. A found record was almost certainly created by Planhat's own Task→Conversation conversion, which stamps `date` with the conversion moment rather than the session start — so assume `date` is wrong until checked against the timestamp ladder, and correct it here.
 - **Not found** → create.
 
 **C. Gong soft-integration stub — backfill and clean up (always run after the Conversation is identified).** Planhat's Gong soft integration auto-creates a separate `note`-type Conversation when it detects a Gong call for an account. Its `externalId` is formatted as `<gong-call-id>-<sf-account-id>` — not the GCal event ID — so Step B's dedup check never finds it. This stub carries the Gong call ID but its `description` is always empty.
@@ -166,11 +166,12 @@ If the stub's `externalId` doesn't match the `<numeric>-<sf-id>` format, or its 
 | `externalId` | Google Calendar event ID (see step 1) |
 | `subject` | Session title |
 | `type` | Session-type mapped Planhat type — check the **customer-specific type overrides** table first, then the general mapping — see `context/planhat-schema.md` § Type value mapping. Must be one of the authoritative Planhat option values in that section; never write a raw Notion label (`📦 Other`, `🗣️ Sync`, etc.) or an inferred title-based label directly. |
-| `date` + `startDate` | Session date as ISO 8601 (`T00:00:00.000Z`) |
+| `date` | **The session's real start time as a full UTC timestamp** – never `T00:00:00.000Z`. Resolve via the timestamp ladder in `context/planhat-schema.md` § Session timestamp: coupled Task `startTime` (same `_id` as the Conversation, so `get_model_record(MODEL: "Task", OBJECT_ID: "<conversation._id>")` gets it in one call) → GCal event start from step 1 → Gong call time from step 2. If the record already exists and its `date` disagrees with the ladder by more than a minute, correct it in this same write and report the before/after. If no source resolves, leave `date` untouched and flag it in the report. |
+| `startDate` | Session **day** only – the field is typed `date`, not `date time`. The time lives in `date`. |
 | `companyId` | Resolved Planhat Company `_id` |
 | `users` | Delivered-by Planhat User `_id`(s), resolved via the User ID table in `context/planhat-schema.md` |
 | `endusers` | **All lowercase — not `endUsers`.** Resolve customer-side attendees from the calendar event → Planhat EndUser `_id` via `search_records(QUERY: "<email>")`. Omit if none resolve. |
-| `description` | Session notes summary from step 2's extracted output — decisions, action items, open items, risks, source link. Truncate to ~2000 chars. Use the placeholder text from step 2b if the transcript was unavailable. |
+| `description` | Session notes summary from step 2's extracted output — decisions, action items, open items, risks, source link. Truncate to ~2000 chars of visible text. Use the placeholder text from step 2b if the transcript was unavailable. **Build it as single-line HTML per § Planhat rich-text fields (universal write format) in `CLAUDE.md` — never markdown, never literal newlines.** Section labels are `<p><strong>Decisions</strong></p>` etc., each section's items a `<ul class="ph-editor__bullet-list">` with `<li class="ph-editor__list-item"><p>…</p></li>` items. Literal `\n` is stripped on write, so a plain-text payload lands as one unskimmable run — this is the single most common way this field has shipped broken. |
 | `custom.Prep Notes` | Prep notes captured in step 3-A-b. Omit if none. |
 | `custom.Call Recording` | Gong URL if found during transcript lookup (corrected 2026-08-27, was `custom.Gong URL`) |
 | `custom.Call Duration` | Session length in minutes (GCal event duration, or known session length × 60) |
@@ -399,6 +400,7 @@ After all steps complete, produce a single consolidated report:
 
 **Planhat writes applied:**
 - Conversation: [_id, "created" or "updated via Task noteId" or "direct create"]
+- Session time: [`corrected 2026-08-27T00:00:00.000Z → 2026-08-27T08:30:00.000Z (source: coupled Task startTime)`, or "already correct", or "not resolved — no timestamp source available"]
 - Tasks created: [N tasks — list each as `title — [priority] — due [date] — (reason for the priority)`] (or "none — no PB-side actions identified")
 - Slack debrief Task, product feedback Tasks and any re-debrief Task each show their priority in the same form
 - Slack debrief Task: [Task _id]
@@ -435,6 +437,7 @@ After all steps complete, produce a single consolidated report:
 - **KDD Attachment for A-sessions only.** Confirm session type before reading `agents/kdd-builder.md` and executing its procedure.
 - **`companyId` is required on every Planhat create** — never write a Conversation or Task without it.
 - **`externalId` is the Conversation dedup key** — always check before creating.
+- **Never write a session `date` of `T00:00:00.000Z`.** Planhat's own event→Conversation conversion already stamps `date` with the conversion moment rather than the session start, so the field is wrong by default and a midnight overwrite only replaces one wrong value with another. Resolve the real start via `context/planhat-schema.md` § Session timestamp and correct it on every touch, create or update.
 - **Never overwrite `owner` or any SF-synced Company field.** See `context/planhat-schema.md` § Write Rules for the full SF-synced list.
 - **Auto-Conversation only fires on a `status` transition to `"done"` via `update_model_record`** — never bake `status: "done"` into a Task create.
 - **Conversation type must be one of the configured option values** in `context/planhat-schema.md` § Type value mapping, emoji included — a value without the emoji won't match filters, and a value outside the authoritative list (including raw Notion labels like `📦 Other`/`🗣️ Sync`) silently falls back to `note`. Check the customer-specific overrides table first.

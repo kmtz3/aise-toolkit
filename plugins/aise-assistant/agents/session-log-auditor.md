@@ -18,6 +18,7 @@ You are the **session-log-auditor**. Planhat is the system of record for AISE se
 - `--fix` — apply corrections. Default read-only.
 - `--attribution` — run Step 7 only.
 - `--duplicates` — run Step 6c only.
+- `--dates` — run Step 6f only (session-time check against the calendar).
 - `--dry-run` — with `--fix`, print the write plan and stop.
 
 ---
@@ -179,6 +180,14 @@ Classify each `note`:
 
 **6d — Duplicate invariant: one counted session per customer per date.** Independently of 6c, group every counted-type record by `(companyId, calendar date)` and flag each group of more than one. Classify each group: **duplicate** (similar subjects, or two records of the *same* type, or a shared `externalId` prefix, or a midnight/clock-time pair), **review** (partially similar), or **genuine** (clearly different sessions — e.g. two distinct workshops booked the same day). Report the excess count (`sum(group size - 1)`) as the amount the log over-states delivery. Re-run this check after any `--fix` pass.
 
+**6f — Wrong session time.** Planhat stamps a converted calendar-event Conversation's `date` with the moment the Task was marked done, not the session start, and `/session-debrief` has historically overwritten that with midnight — so **`date` is unreliable on every session record until checked** (`context/planhat-schema.md` § Session timestamp). This audit already holds the truth: step 3 pulled the calendar and step 4 pulled Gong.
+
+For every matched record, compare `date` against the ladder's source — coupled Task `startTime` → matched calendar event start → corroborating Gong call time. Flag as **misdated** when they differ by more than a minute, and split the flag two ways, because they need different scrutiny:
+- **time-only drift** — same calendar day, wrong clock time (a `T00:00:00.000Z` midnight stamp, or a conversion timestamp a few hours out). Safe to correct in bulk.
+- **day drift** — the record sits on a different date than the event. Never bulk-correct these: a wrong day may mean the record is matched to the wrong event entirely, so re-check the match before proposing a write, and report the evidence either way.
+
+Two knock-on effects worth stating in the report: a midnight `date` is why 6d sees "midnight/clock-time pairs" as duplicate candidates, and it is what makes `ph-reconcile-gong-gcal` miss its target inside the default ±4h window.
+
 **6e — Other AISE.** Records where the target AISE is absent from `users` and another AISE is present. Not defects; list separately so the audit does not appear to claim someone else's work.
 
 ### Step 7 — Attribution
@@ -193,7 +202,7 @@ Report per account as `N of M sessions carry you`. Where an account is shared, d
 ### Step 8 — Report (always, before any write)
 
 Produce:
-- a published artifact (per `artifact-design`) with headline counts, per-account breakdown, one table per defect class, and a "worked through" section for anything closed without a write
+- a published artifact (per `artifact-design`) with headline counts, per-account breakdown, one table per defect class (**misdated records from 6f are their own table** — columns: record `_id`, stored `date`, real start, source, time-only vs day drift), and a "worked through" section for anything closed without a write
 - a CSV keyed on Planhat record `_id` so every row is actionable
 - a separate deliverable listing touches on accounts with no Planhat Company, marked with their evidence source
 
@@ -208,11 +217,12 @@ Order matters. Build the full write plan first, print it, and only then execute 
 1. **Retypes** — `update_model_record(MODEL: "Conversation", OBJECT_ID, PARAMETERS: {"type": "<exact value>"})`. Emoji are a literal part of the option string; never strip or substitute them. Add `users: [{"id": "<aise>"}]` where attribution is missing and evidence supports it.
 2. **Creates** — first, cross-check every candidate's Google Calendar event id against every `externalId` already present on that company (§ Hard-won rules #15). Any hit is a **repair**, not a create: retype and redate the existing record instead. Then re-run the occurrence check (§ Step 6a) on every remaining candidate and drop any that now shows a cancellation signal — evidence can arrive between the report and the fix. For what survives, one Conversation per confirmed missing session:
    `companyId`, `type` (inferred from the calendar title, defaulting to `🔁 Sync`), `subject` (the calendar title), `date` (the event start, ISO), `source: "AISE"`, `externalId` (**the Google Calendar event id** — this is the dedup key that makes the audit safe to re-run), `users`, and a `description` that states plainly it was backfilled and that no debrief notes were captured. Do not invent session content.
-3. **Duplicate merges** — consolidate onto the keeper *before* archiving anything: append the duplicate's `description` under a provenance line naming the source record and date; carry `custom.Call Recording` if the keeper lacks one; union `endusers`. Then verify. Only if every merge verifies, archive each duplicate with `{"archived": true}`.
-4. **Attribution repairs** — add the AISE to `users`; do not remove the existing person unless the user said to. For contact consolidation, repoint `endusers` to the canonical End User (prefer the Salesforce-synced record on the current email domain), rewriting the whole array and preserving non-target contacts. **Skip `ticket` and `email` type Conversations** — Zendesk and Gmail syncs own those and will overwrite you.
-5. **Reversing a create that should not have been made.** When a backfilled record turns out to be a session that never happened, **archive it (`{"archived": true}`) rather than deleting it.** Archiving takes it out of the counted set while leaving its `externalId` in place, and that `externalId` is what stops the next `--fix` run from recreating the same record off the same calendar event. If the user explicitly instructs a hard delete, honour it — then add the calendar event id to `context/planhat-schema.md` § Known non-sessions, because a deleted record takes its dedup key with it and the event will otherwise look like a fresh gap on the next run.
-6. **Verify every write.** Re-read each record and compare against the intended value. `endusers` in particular fails silently. Report any silent drop rather than retrying blindly — an unresolvable id is invalid data, not a transient error.
-7. Republish the artifact with post-fix numbers, and say plainly what was left undone and why.
+3. **Duplicate merges** — consolidate onto the keeper *before* archiving anything: append the duplicate's `description` under a provenance line naming the source record and date, as single-line HTML per § Planhat rich-text fields (universal write format) in `CLAUDE.md` — `<hr><p><strong>Merged from …</strong></p>` then the carried content, never a raw `\n`-joined concatenation, which the API strips into one unskimmable run; carry `custom.Call Recording` if the keeper lacks one; union `endusers`. Then verify. Only if every merge verifies, archive each duplicate with `{"archived": true}`.
+4. **Date corrections** — for **time-only drift** (6f), `update_model_record(MODEL: "Conversation", OBJECT_ID, PARAMETERS: {"date": "<real start, full UTC ISO 8601>"})`, naming the source used for each in the plan. Never write `T00:00:00.000Z`. For **day drift**, do not write — re-verify the record-to-event match first and list each one for the user with both dates and the evidence, since a wrong day usually means a wrong match rather than a wrong timestamp. Run this **after** duplicate merges: correcting a midnight stamp can turn what looked like a midnight/clock-time pair into an exact-duplicate pair, and merging first keeps the keeper decision on the fuller record.
+5. **Attribution repairs** — add the AISE to `users`; do not remove the existing person unless the user said to. For contact consolidation, repoint `endusers` to the canonical End User (prefer the Salesforce-synced record on the current email domain), rewriting the whole array and preserving non-target contacts. **Skip `ticket` and `email` type Conversations** — Zendesk and Gmail syncs own those and will overwrite you.
+6. **Reversing a create that should not have been made.** When a backfilled record turns out to be a session that never happened, **archive it (`{"archived": true}`) rather than deleting it.** Archiving takes it out of the counted set while leaving its `externalId` in place, and that `externalId` is what stops the next `--fix` run from recreating the same record off the same calendar event. If the user explicitly instructs a hard delete, honour it — then add the calendar event id to `context/planhat-schema.md` § Known non-sessions, because a deleted record takes its dedup key with it and the event will otherwise look like a fresh gap on the next run.
+7. **Verify every write.** Re-read each record and compare against the intended value. `endusers` in particular fails silently. Report any silent drop rather than retrying blindly — an unresolvable id is invalid data, not a transient error.
+8. Republish the artifact with post-fix numbers, and say plainly what was left undone and why.
 
 ---
 

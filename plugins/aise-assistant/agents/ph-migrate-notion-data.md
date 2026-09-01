@@ -269,8 +269,8 @@ LIMIT 500
    - `externalId`: normalized Notion session page ID (32-char hex, no hyphens, lowercase — see normalization note at the top of this section). ⚠️ The Notion MCP returns `id` as a dashed UUID (`39d97e9c-7d4f-802f-...`) — writing that raw form instead of the normalized hex breaks `externalId` dedup and silently duplicates every session on the next run.
    - `subject`: session `Name`
    - `type`: mapped Planhat type — for `📦 Other` sessions, use `🎙️ Demo` if the session title contains "Demo" (case-insensitive), otherwise use `🔁 Sync`. See full type mapping in `notion-planhat-field-mapping.md`.
-   - `date`: `Call Date` as ISO 8601 (`T00:00:00.000Z`)
-   - `startDate`: same date value
+   - `date`: **the session's real start time as a full UTC timestamp**, resolved via the ladder in `context/planhat-schema.md` § Session timestamp — coupled Task `startTime` (step 4 already resolved that Task; its `startTime` is the GCal event start and is authoritative) → GCal event start via `Google_Calendar__list_events` on the `Call Date` window → Gong call time. Notion's `Call Date` carries no time, so `<Call Date>T00:00:00.000Z` is the **last resort only** — when it is used, count the session under a `⚠️ DATE TIME UNRESOLVED` line in the run report so the midnight stamps are visible and can be repaired later rather than passing as real times.
+   - `startDate`: the session **day** — the field is typed `date`, not `date time`. The time lives in `date`.
    - `companyId`: resolved Planhat Company `_id`
    - `users`: resolve every `Delivered By` person to a Planhat User `_id` (co-delivered sessions must carry all presenters — do not truncate to the first value). For each person:
      1. Try the static User ID table in `planhat-schema.md` first (fast path).
@@ -279,7 +279,7 @@ LIMIT 500
      4. If all three fail for every presenter, omit `users` and log a `⚠️ NEEDS ATTRIBUTION` warning naming the customer and session date — do not silently drop attribution.
      Write format: `users: [{"id": "<planhat user _id>"}, ...]` — one entry per resolved presenter.
    - `endusers`: array of Planhat EndUser `_id` values resolved in step 2, as `[{"_id": "<EndUser _id>"}, ...]`. Omit if empty. **All lowercase — not `endUsers`.**
-   - `description`: `Next Steps` or session notes (truncate to ~2000 chars) — session content only. `custom.Prep Notes` is omitted during migration (prep notes are not stored in Notion's session records).
+   - `description`: `Next Steps` or session notes (truncate to ~2000 chars of visible text) — session content only. **Single-line HTML per § Planhat rich-text fields (universal write format) in `CLAUDE.md`** — bold `<p><strong>` section labels and `<ul class="ph-editor__bullet-list">` lists with `<li class="ph-editor__list-item"><p>…</p></li>` items. Notion content arrives as markdown with newlines; convert it, never paste it raw — literal `\n` is stripped on write and the field lands as one unskimmable run. `custom.Prep Notes` is omitted during migration (prep notes are not stored in Notion's session records).
    - `custom.Call Recording`: `Gong call` field value (if present) — corrected 2026-08-27, was `custom.Gong URL`
    - `custom.Call Duration`: `Session Length (h)` × 60 (integer minutes)
    - `source`: always `"AISE"`
@@ -452,7 +452,7 @@ These are non-obvious patterns from live Planhat API experience. Apply to all wr
 
 **Parameter name is `PARAMETERS`.** Not `DATA` or `data`. Using the wrong name returns "Missing required parameter: PARAMETERS".
 
-**Dates must be ISO 8601 with time:** `"2025-08-11T00:00:00.000Z"` — plain date strings cause silent failure.
+**Dates must be ISO 8601 with a time component:** `"2025-08-11T09:30:00.000Z"` — a plain date string like `"2025-08-11"` causes silent failure. This is about the *format*, not the value: for a genuine date-only field (a Task `endTime` from a Notion due date) `T00:00:00.000Z` is the correct padding, but for a session Conversation's `date` it is a data-loss bug — that field takes the real start time, per `context/planhat-schema.md` § Session timestamp.
 
 **`sourceId` collision = dedup signal.** For Tasks, creation failure due to a `sourceId` that already exists is the dedup mechanism (not a real error). Treat as "exists" and switch to update.
 

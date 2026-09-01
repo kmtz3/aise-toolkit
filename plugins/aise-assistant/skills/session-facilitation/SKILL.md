@@ -3,9 +3,10 @@ name: session-facilitation
 description: >
   Generate a self-contained interactive HTML facilitation guide for a customer session — live
   timer, sidebar nav, decision capture panels (one per KDD for A-sessions), open items check-in,
-  attendee presence, watch-fors, and action items. Saves to ~/Desktop/aise-assistant/facilitation/
-  and adds a file-path callout to the Notion Session page. For A-sessions this runs automatically
-  after KDD sub-page creation in /session-prep. Also standalone via /session-facilitation.
+  attendee presence, watch-fors, and action items. Publishes the file to the `Customer Session
+  Artifacts` Drive folder per `context/session-artifact-convention.md` and links it back onto the
+  session's Planhat record. For A-sessions this runs automatically after KDD sub-page creation in
+  /session-prep. Also standalone via /session-facilitation.
 ---
 
 Generate an interactive HTML facilitation guide for the session named in the user's message.
@@ -26,7 +27,8 @@ and offered (not auto-run) for `🔎 Discovery` and `👟 Kick off` sessions.
 
 - `customer` (required) — customer name used for Notion lookup and file naming.
 - `session-id` (optional) — e.g. `A5`. If omitted, use the next upcoming session for this customer.
-- `--output <path>` (optional) — output directory. Default: `~/Desktop/aise-assistant/facilitation/`.
+- `--output <path>` (optional) — directory for the **local working copy** only. Default: `~/Desktop/aise-assistant/facilitation/` in CLI context, the Cowork outputs folder in Cowork context. Does not affect the Drive publish, which is mandatory in every context.
+- `--no-drive` (optional) — skip the Drive publish and Planhat link-back. Use only when Drive is unreachable; the run report must say the artifact was left unpublished.
 
 ---
 
@@ -83,6 +85,17 @@ then `get_model_record(MODEL:"User", OBJECT_ID:"{planhat_user_id}", SELECT:["cus
 subtitle (see Header spec in Step 2). If the field is empty, fall back to the session-context
 user display name and note in the Step 5 report that `/assistant-setup` should be run.
 
+**j) Artifact identity (needed by Steps 2 and 4)** — resolve once, here, so the publish step never
+stalls mid-run:
+- `list_model_records(MODEL:"Company", FILTER:{"name[equal to]":"<customer>"}, SELECT:["name","sourceId"])`
+  → `Company.name` for the filename and `sourceId` as the Salesforce Account Id.
+- Verify with `SELECT Id, Name, Type, IsDeleted FROM Account WHERE Name LIKE '%<customer>%'`.
+  Duplicate and churned accounts under one name are common — if `sourceId` is not among the results,
+  or maps to a deleted/churned record, stop and ask the user which account is live. Never guess.
+- The session **date** for the filename is the session's own date, not today.
+
+See `context/session-artifact-convention.md` § 3.
+
 ---
 
 ## Step 2 — Generate the HTML file
@@ -91,12 +104,19 @@ Produce a single self-contained `.html` file. No external dependencies except th
 
 ### File name
 
+Follow `context/session-artifact-convention.md` § 2 — the Drive name is the canonical name, and
+the local working copy uses the same name so the two are never confused:
+
 ```
-{customer-slug}-{session-id-or-type}-facilitation-{YYYY-MM-DD}.html
+{CustomerName}_{YYYY-MM-DD}_{SalesforceAccountId}_Facilitation.html
 ```
-- `{customer-slug}` = customer name lowercased, spaces/special chars → hyphens.
-- `{session-id-or-type}` = session ID if known (e.g. `a5`), else session type slug (e.g. `discovery`).
-- `{YYYY-MM-DD}` = session date.
+- `{CustomerName}` = Planhat / Salesforce `Company.name`, spaces stripped, casing kept (`CFC Underwriting` → `CFCUnderwriting`).
+- `{YYYY-MM-DD}` = the **session** date, not today.
+- `{SalesforceAccountId}` = resolved per convention § 3 (Planhat `Company.sourceId`, verified against Salesforce).
+- `ArtifactType` is always `Facilitation` for this skill.
+
+Resolve the Salesforce Account Id in Step 1 alongside the rest of the session context, so Step 4
+never has to stop and look it up.
 
 ### Design rules (mandatory — do not deviate)
 
@@ -316,13 +336,16 @@ function addRow() {
 
 ---
 
-## Step 3 — Save the file
+## Step 3 — Save the local working copy
+
+The Drive copy in Step 4 is the deliverable. This step just puts the file somewhere you can open it
+in a browser before the call.
 
 **Context detection (mandatory — do this before writing):**
 
 - **Cowork context** (detected by: `$CLAUDE_PLUGIN_DATA` is set and `$CLAUDE_PLUGIN_DATA/about/identity.md` exists):
   - Use the `Write` tool to write the file to the Cowork outputs folder. Do **not** use Bash for file creation — `~` in the Linux sandbox resolves to the VM home, not the Mac home.
-  - After writing, call `mcp__cowork__present_files` to surface the file to the user.
+  - After writing, surface the file to the user (`present_files`, or the host's file-delivery tool).
   - The Desktop path is inaccessible from the Cowork sandbox. Do not attempt `mkdir ~/Desktop/...`.
 
 - **CLI (Claude Code) context** (all other cases):
@@ -332,38 +355,78 @@ function addRow() {
   Write the file to: `~/Desktop/aise-assistant/facilitation/{filename}`.
   Use the `Write` tool with the absolute path (expand `~` to the actual home directory) or Bash.
 
+A local write that fails does **not** abort the run — carry on to Step 4 and note it in the report.
+The reverse is not true: a missing Drive publish is a failed run.
+
 ---
 
-## Step 4 — Add reference to Notion Session page
+## Step 4 — Publish to Drive and link back into Planhat
 
-**This step is mandatory — do not skip even if the Notion session page ID was not pre-resolved.**
+**This step is mandatory in every context — do not skip it, and do not treat the local copy as the
+deliverable.** A facilitation guide that lives only on one laptop cannot be opened from a phone, a
+second screen, or by a colleague covering the session.
 
-After the file is saved, add a single paragraph block to the Notion Session page body
-(outside the `📋 Prep` toggle — append below all existing content):
+Follow `context/session-artifact-convention.md` in full. Condensed:
 
-- **CLI context:** `💻 **Facilitation guide:** \`~/Desktop/aise-assistant/facilitation/{filename}\` — open in browser before the call.`
-- **Cowork context:** `💻 **Facilitation guide generated** — open \`{filename}\` from the Cowork outputs folder before the call.`
+1. **Resolve the folder.** `get_file_metadata` on the `Customer Session Artifacts` folder ID
+   (`1jqk8QqRqOJczneOCIjm0-uslf6D5bOJt`); if it errors, is trashed, or is not a folder, search by
+   title; if still nothing, **create it** and say so in the report.
+2. **Upload** with `create_file`: `title` = the Step 2 filename, `parentId` = the resolved folder,
+   `contentMimeType: "text/html"`, `textContent` = the file, and
+   **`disableConversionToGoogleType: true`** — without it Drive converts the guide to a Google Doc
+   and every panel, timer and capture table is destroyed.
+3. **Idempotency.** Search the folder by that exact title first. If it exists, update it in place
+   rather than creating a second copy, and say so in the report.
+4. **Link back into Planhat.** Prepend this block to `custom.Prep Notes` on the session's
+   calendar-event Task (`MODEL: "Task"`, `mainType: "event"`, GCal-synced, matching company + date),
+   falling back to the session Conversation on the Company when no event Task exists. **Prepend —
+   never overwrite existing prep content.** `custom.Prep Notes` is `ph-editor` rich text: emit it as
+   single-line HTML per `CLAUDE.md` § Planhat rich-text fields, with en dashes, never literal `\n`.
 
-Use `notion-update-page` with `command: append_content`.  Do not modify the `📋 Prep` toggle or KDD sub-page.
+   ```
+   FACILITATION ARTIFACT — {filename}
+   Drive file: {webViewLink}
+   Folder: Customer Session Artifacts — {folder URL}
+   Salesforce Account: {SalesforceAccountId}
+   ```
 
-If the Notion session page ID is not already in context, look it up from the Sessions DB (customer + date + type) before attempting the write.
+5. **Verify.** Re-read the target record's `custom.Prep Notes` and confirm the block is present and
+   the prior content survived. Report the record `_id` the link landed on.
 
-If the Notion write fails, surface the failure explicitly in the Step 5 report — do not silently skip.
-The file is still usable, but the failure must be visible.
+**When invoked by `session-prepper` (step 6.5),** that agent's step 6.8 also publishes every session
+artifact. Both paths are idempotent on the same filename, so whichever runs first creates the file and
+the other updates it in place — never create a second copy or a second link block. If the artifact
+block for this filename is already present in `custom.Prep Notes`, leave it and say so in the report.
+
+**If the Planhat write fails with `{"el":"externalId","error":"Not valid type"}`** the target has no
+`externalId` and cannot be updated through the API — supplying one in the same call does not clear
+it. Fall back to the sibling GCal-synced record for the same session, report which record received
+the link and which is stuck, and do not retry the same PUT more than once.
+
+**Notion is no longer written by this skill.** Planhat is the system of record for session artifacts.
+The former Notion file-path callout is retired — do not re-add it, and do not write a Drive link to a
+Notion session page unless the user explicitly asks for one in that run.
 
 ---
 
 ## Step 5 — Report in chat
 
 ```
-✅ Facilitation guide saved:
+✅ Facilitation guide published:
    {filename}
    {N} panels · {session-type} · {customer}
+   Drive: {webViewLink}
+   Planhat: linked on {Task|Conversation} {_id} (custom.Prep Notes)
+   Local copy: {local path or "not written — see below"}
    Open in any browser. Timer in header — click to start/pause.
 ```
 
-If Notion write succeeded: add `   📌 File path added to Notion session page.`
-If Notion write failed: add `   ⚠️ Notion callout write failed — add manually to the session page.`
+Report explicitly, when it applies:
+- `   📁 Drive folder was missing — created at {folder URL}.`
+- `   ♻️ Existing file with the same name updated in place.`
+- `   ⚠️ Planhat link-back failed on {record} — link manually into custom.Prep Notes.`
+- `   ⚠️ Local copy not written ({reason}) — Drive copy is unaffected.`
+- `   ⚠️ Published skipped (--no-drive) — artifact exists only locally.`
 
 ---
 
@@ -374,3 +437,6 @@ If Notion write failed: add `   ⚠️ Notion callout write failed — add manua
 - **Non-A-session invoked directly:** generate a simplified facilitation guide with agenda topic panels instead of decision panels. Still include framing, open items, synthesis, watch-fors, action items.
 - **KDD template mismatch:** flag in chat, fall back to a generic decision panel structure (D# / Question / Options / Capture). Don't block file generation.
 - **`warningMinutes` unknown (session duration not set in Notion):** default to 85 minutes.
+- **Salesforce Account Id unresolvable** (Planhat `sourceId` empty, or SOQL returns several accounts and none matches it): stop and ask the user which account is live — do not improvise a filename without the ID, and do not fall back to the old slug format.
+- **Drive upload fails:** retry once. If it fails again, keep the local copy, report the failure loudly, and still attempt the Planhat link-back with the local filename and no Drive URL so the session record shows the artifact exists.
+- **No calendar-event Task and no Conversation for the session in Planhat:** create nothing — report that the link-back had no target and name the file and Drive link in chat so the user can attach it manually.

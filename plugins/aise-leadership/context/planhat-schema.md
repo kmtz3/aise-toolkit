@@ -2,7 +2,7 @@
 
 > **Status:** In-transition, moving toward Planhat as the primary AISE working record. Session debrief (`post-session-debrief`), product feedback discovery (`/log-feedback`), and account health/revenue/Spark tracking are Planhat-only as of 2026-08-19. Notion remains the working record only for agents/skills not yet migrated (session-prep, account-plan, engagement-planner, and historical data via `/session-backfill`) — treat it as a legacy system being phased out, not a co-equal source of truth. During the transition, Spark fields must still be kept in sync both ways until the remaining Notion-based agents migrate.
 >
-> **Last updated:** 2026-08-28 (added the authoritative live-pulled Planhat Conversation/Task `type` option list, the SAP Signavio Insight-to-Impact Circle customer-specific type override, and the transcript-lookup exhaustion rule cross-reference)
+> **Last updated:** 2026-08-28 (added the three new `custom.PM Reach-Out Status/Note/Reviewed` Company fields and their Salesforce/PB mirror, verified live against `get_model_action_parameters`; also added the authoritative live-pulled Planhat Conversation/Task `type` option list, the SAP Signavio Insight-to-Impact Circle customer-specific type override, and the transcript-lookup exhaustion rule cross-reference)
 
 ---
 
@@ -396,6 +396,11 @@ writes Productboard's internal discussion of a customer onto that customer's own
 | `custom.Gong Summary` | string | — | Rolling Gong-derived account summary. |
 | `custom.CAB Customer` | boolean | `true` / `false` | Customer Advisory Board member. |
 | `custom.External_Slack_Channel_ID` | string | — | **The customer ↔ shared external Slack channel pairing, cached.** Channel **ID** only, upper-case (`C0AKKLJCB5E`) – never a `#name` (channels get renamed), never a URL (the value feeds `slack_read_channel` and the `/log-slack-threads` `externalId` builder directly). Written by `/log-slack-threads` the first time it resolves a channel for the account; read on every later run, which is what lets that skill take a channel *or* a customer name as input. Write only when empty or when the user has just corrected it – a resolved channel that disagrees with a populated value is a conflict to surface, not a value to overwrite (an account can have two shared channels; the field holds one). **New field: Planhat custom fields lag in MCP metadata, so it may be absent from `get_model_action_parameters` and reject writes for a while. A failed write is reported, not fatal.** Strictly the **external** channel – see the Slack-fields callout above; `custom.Slack ID` / `custom.Slack URL` are the internal channel and are never a substitute. |
+| `custom.PM Reach-Out Status` | string (list) | `Free to Contact`, `Ask First`, `Do Not Contact` | **Added 2026-08-28** — built out of the Aug 2026 Anthony Amenta (Product Ops) thread on flagging accounts safe for direct PM reach-outs. Whether a PM can contact this account directly without looping in the account team first. Set and maintained by AISE based on account health, deal stage, and open escalations – not auto-computed from `csmScore`/`h`/Deal/Issue data, since the hard-stop judgment call needs a human. `Free to Contact` = go ahead (PM should still check recent activity first if `arr` is under $30K). `Ask First` = PM messages the account owner in the account's Slack channel before reaching out, regardless of ARR. `Do Not Contact` = hard stop – active negotiation, red health, or an open escalation. Pair with `custom.PM Reach-Out Note` and check `custom.PM Reach-Out Reviewed` for staleness before trusting the value. |
+| `custom.PM Reach-Out Note` | string (Rich text) | — | Why the account has its current `custom.PM Reach-Out Status` – required whenever status is `Ask First` or `Do Not Contact`. Short and dated: what's going on, what would need to change for the status to move. **Rich text — format per § Rich Text Field Formatting, never plain/`\n`-separated prose.** |
+| `custom.PM Reach-Out Reviewed` | string (date) | — | Date AISE last set or confirmed the current `custom.PM Reach-Out Status`. A Planhat workflow automation stamps today's date whenever the Status field changes; can also be set manually during a periodic review that reconfirms the value without changing it. Used to flag a stale status rather than trusting it blindly. |
+
+> **Salesforce/Productboard mirror.** `custom.PM Reach-Out Status/Note/Reviewed` are mirrored one-way (Planhat → Salesforce → Productboard) onto `PM_Reachout_Status__c` / `PM_Reachout_Note__c` / `PM_Reachout_Reviewed__c`, the same proxy pattern as the existing `ASE_Name__c` mirror — Salesforce holds these fields only so Productboard's integration (which reads Salesforce, not Planhat) can surface the value to PMs. Planhat is the source of truth; never write these SF fields directly or build SF-side logic against them.
 
 #### `phase` vs `custom.AISE Journey Status`
 
@@ -453,9 +458,48 @@ Run in order. Stop at the first hit.
 3. **Fallback match on company + date + title** — only reached when both ID lookups miss on both candidate forms (GCal sync disabled for the account, event created outside the synced calendar, or an AISE-authored record predating the sync). `search_records(QUERY: "<event title>")`, filtered to `companyId` and to a `startTime`/`endTime`/`date` day match. Treat a hit here as the session's record, and **note in the run report that it was matched by title rather than event ID** so the ID drift is visible.
 4. **Create — last resort, and say so.** Only when steps 1–3 all miss. Create the record the ladder was looking for (a Task for a future session, a Conversation for a delivered one), set `sourceId` / `externalId` to the calendar event ID so the next run resolves at step 1 or 2, and report `"created — no GCal-synced record found for event <id>"`. **A create with no `sourceId` / `externalId` is a bug**: it has no dedup key, can never be matched again, and Planhat rejects later API updates to a Conversation that has no `externalId`.
 
+#### The Task and its Conversation share an `_id`, but not their fields
+
+When Planhat converts a completed event Task, the Conversation it creates carries the **same `_id`** as the Task (and `taskId` == `_id`). They remain two records with independent custom-field stores: writing `Conversation.custom.Prep Notes` does not touch `Task.custom.Prep Notes`. Two consequences:
+
+- **The Task's copy goes stale on purpose.** Once the ladder resolves to a Conversation, the Task is historical and nobody writes to it again — so a session prepped before its conversion keeps that older brief on the Task view indefinitely. Expected, not a bug.
+- **It makes the timestamp fix cheap.** `get_model_record(MODEL: "Task", OBJECT_ID: "<conversation._id>")` returns the coupled Task — and its `startTime`, the real session start — in one call, with no `sourceId` lookup. That is why the ladder in § Session timestamp starts there.
+
 #### Do not write to two records for the same session
 
 If step 1 hits, the Task (if one still exists) is historical — leave it alone. If step 2 hits, the Conversation does not exist yet and must not be created ahead of the Task's completion; Planhat will create it. Writing the same prep notes to both is how the same session ends up looking like two.
+
+### Session timestamp — always correct `Conversation.date` from a real source
+
+**`Conversation.date` is wrong by default on every session record Planhat creates from a calendar event.** When a `mainType: "event"` Task is marked done, Planhat stamps the new Conversation's `date` with **the moment of conversion** — when the task was ticked off — not the session's start time. The drift is however long you took to mark it done. Verified 2026-08-29 on two untouched records:
+
+| Record | Task `startTime` (truth) | Conversation `date` as created | Drift |
+|---|---|---|---|
+| IBS Software `6a8c5defe1739d6cb5c88886` | 2026-08-25T10:00:00Z | 2026-08-25T11:13:47.043Z | +74 min |
+| Validity `6a75d97d97ccd97bc0fcd795` | 2026-08-25T20:30:00Z | 2026-08-27T16:00:27.712Z | +2 days, wrong day |
+
+Millisecond precision on `date` is the tell — a real session start is a round minute, a write timestamp is not.
+
+**This is a Planhat behavior we cannot switch off, so every agent that touches a session Conversation corrects it.** The correction is cheap: the true start time is preserved on the coupled Task and never overwritten.
+
+#### The timestamp ladder — run in order, stop at the first hit
+
+1. **Coupled Planhat Task `startTime`** — the record resolved by § Session record resolution. Cheapest and authoritative: the GCal sync wrote it and nothing overwrites it. Note the Task and its Conversation share an `_id`, so `get_model_record(MODEL: "Task", OBJECT_ID: "<conversation._id>")` fetches it in one call with no extra lookup.
+2. **Google Calendar event start** — `event.start.dateTime` for the event the run already has in hand.
+3. **Gong call date** — the `date` on the `👾 Gong Call` Conversation for the same call, or the call's start time from a Gong lookup the run already performed.
+4. **No source available** → leave `date` untouched and report it. Never invent a time, and never fall back to midnight.
+
+**Write the full UTC timestamp:** `date: "2026-08-27T08:30:00.000Z"`. Never `T00:00:00.000Z` — a midnight stamp is a silent data-loss bug, not a neutral default. It breaks date-proximity matching (`ph-reconcile-gong-gcal` scores a midnight target ~511 minutes off its own call and misses it inside the default ±4h window), it misorders same-day sessions on the account timeline, and it makes duration and same-day dedup checks meaningless.
+
+`startDate` / `endDate` are typed `date` (day granularity), not `date time` — set the session day there, and keep the time in `date`.
+
+**Correct on every touch, not only on create.** If a run resolves an existing session Conversation whose `date` disagrees with the ladder's source by more than a minute, include the corrected `date` in the same `update_model_record` call it was already making, and say so in the run report:
+
+```
+Corrected date: 2026-08-27T00:00:00.000Z → 2026-08-27T08:30:00.000Z (source: coupled Task startTime)
+```
+
+**Applies to session-type Conversations only** — the counted session types plus `📆 Onsite Workshop`, `📺 Webinar`, `🎙️ Demo` and `Internal Alignment`. Do **not** apply it to `💬 Slack Chat` (dated on the thread's last message by its own documented rule), to `email` / `chat` / `ticket` records (the source system's timestamp is correct), or to `👾 Gong Call` records (Gong's own call time is already right).
 
 ### Rich Text Field Formatting
 

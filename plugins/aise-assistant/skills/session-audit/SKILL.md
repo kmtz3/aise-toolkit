@@ -1,7 +1,7 @@
 ---
 name: session-audit
-description: Reconcile logged session history against what actually happened. Rebuilds the real session list for an AISE, a customer, or a date range from Google Calendar + Gong, compares it to Planhat Conversations, and reports every gap, wrong type, duplicate, and attribution error. Read-only by default; --fix applies corrections with read-back verification on every write.
-argument-hint: "[--aise <name>|me] [--customer <name>] [--from YYYY-MM-DD] [--to YYYY-MM-DD] [--fix] [--attribution] [--duplicates] [--invariant]"
+description: Reconcile logged session history against what actually happened. Rebuilds the real session list for an AISE, a customer, or a date range from Google Calendar + Gong, compares it to Planhat Conversations, and reports every gap, wrong type, duplicate, misdated session time, and attribution error. Read-only by default; --fix applies corrections with read-back verification on every write.
+argument-hint: "[--aise <name>|me] [--customer <name>] [--from YYYY-MM-DD] [--to YYYY-MM-DD] [--fix] [--attribution] [--duplicates] [--dates] [--invariant]"
 ---
 
 Audit logged session history for $ARGUMENTS.
@@ -20,6 +20,7 @@ Canonical syntax uses flags; also recognize natural language equivalents.
 | `--fix` | "and fix them", "apply the corrections" | Applies corrections. **Default is read-only.** |
 | `--attribution` | "am I on my own sessions", "check the team members field" | Runs the attribution check only (§ Step 7) and skips gap detection. |
 | `--duplicates` | "find duplicate sessions", "dedupe the log" | Runs duplicate detection only (§ Step 6c). |
+| `--dates` | "are my session times right", "fix the session times", "check for midnight timestamps" | Runs the session-time check only (§ Step 6f) — compares every matched record's `date` against the calendar event start and reports time-only vs day drift. Read-only without `--fix`. |
 | `--invariant` | "check for duplicate sessions on the same day", "is anything double-counted", "tenant-wide duplicate check" | Runs the one-counted-session-per-customer-per-date invariant (§ Step 6d) across **all** companies via eight per-type queries, not just the scoped AISE's book. Read-only. |
 | `--dry-run` | "show me what you'd change" | With `--fix`, prints the write plan and stops. |
 
@@ -30,10 +31,11 @@ Canonical syntax uses flags; also recognize natural language equivalents.
 3. Pulls Google Calendar for the window and reduces it to genuine external customer sessions.
 4. Corroborates with Gong where the calendar is the only evidence, and for attendance — including an occurrence check on every candidate create, because an accepted RSVP does not mean the meeting was held.
 5. Reconciles calendar against Planhat with a scored, one-to-one matcher.
-6. Runs the duplicate invariant — one counted session per customer per calendar date — and classifies every row: correct · missing · wrong type · typed as `note` · duplicate · not-a-session artifact · blocked (no Planhat Company) · another AISE's — and separates records that **count** as delivery from those that don't.
-7. Checks the AISE is in the `users` (team members) field on their own sessions.
-8. Reports — a published artifact plus a CSV keyed on Planhat record ID, with session counts stated on the counted-type subset and a before/after per affected account.
-9. With `--fix`: creates, retypes, redates, merges-and-archives, and repairs attribution. Candidate creates are checked against existing `externalId`s first — a hit becomes a repair, not a create — and re-checked for cancellation signals. Every `_id` is validated against its own row before it is written to, and every write is read back.
+6. Runs the duplicate invariant — one counted session per customer per calendar date — and classifies every row: correct · missing · wrong type · typed as `note` · duplicate · **misdated** · not-a-session artifact · blocked (no Planhat Company) · another AISE's — and separates records that **count** as delivery from those that don't.
+7. Checks every matched record's `date` against the calendar event start (§ Step 6f). Planhat stamps a converted calendar-event Conversation with the moment its Task was marked done rather than the session start, so session times are wrong by default — this is the pass that finds and repairs them. Time-only drift is safe to correct in bulk; day drift is reported for a human, never auto-written.
+8. Checks the AISE is in the `users` (team members) field on their own sessions.
+9. Reports — a published artifact plus a CSV keyed on Planhat record ID, with session counts stated on the counted-type subset and a before/after per affected account.
+10. With `--fix`: creates, retypes, redates (including the misdated pass above), merges-and-archives, and repairs attribution. Candidate creates are checked against existing `externalId`s first — a hit becomes a repair, not a create — and re-checked for cancellation signals. Every `_id` is validated against its own row before it is written to, and every write is read back.
 
 ## Non-negotiables
 
