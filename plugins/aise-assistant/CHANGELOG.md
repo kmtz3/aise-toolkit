@@ -5,6 +5,20 @@ Format: `## [version] — YYYY-MM-DD` followed by bullet points grouped by type.
 
 ---
 
+## [2.59.0] — 2026-09-01
+
+### Added
+- **`agents/ph-reconcile-gong-gcal.md` — recording-URL identity gate, checked before weighted scoring.** The Gong call id (prefix of the source's `externalId`) is matched against the `?id=` in a candidate's existing `custom.Call Recording`. An exact, unique match settles the pair as high confidence on its own — this is the only ID-based signal in the procedure and rescues pairs the weighted score alone would leave ambiguous or reject (verified live 2026-08-31: ServicePower's real target scored a bare 0.43 on attendee/subject signals but carried an exact recording-id match). Two-plus candidates sharing the same id are reported as ambiguous — a duplicate target, not a match.
+- **`agents/ph-reconcile-gong-gcal.md` § 4 — double-append guard on the `description` merge.** Before appending the Gong call summary, checks the target's existing `description` for `Gong Call Summary` or this call's Gong id; if present, skips the append and records `description_already_merged` instead of stacking another copy onto an append-only field. 6 of 13 pairs on the 2026-08-31 run already carried a prior merge.
+- **`agents/ph-reconcile-gong-gcal.md` § 3c — type sanity floor extended to non-session custom types** (`💬 Slack Chat`, `Task`, `Product Feedback`, `Sales Handover`), and excluded candidates are now named with their type in the report. On two accounts in the 2026-08-31 run a Slack thread was the only candidate and would have won by default without this gate.
+
+### Fixed
+- **`context/planhat-schema.md` — documented two silent Planhat query failures, verified live 2026-08-31 against `Conversation`.** (1) Date filters silently return a wrong subset when passed a full ISO timestamp instead of plain `YYYY-MM-DD` — `"date[more than]": "2026-08-24T00:00:00.000Z"` returned 3 records against 39 for the day-only form of the same filter. (2) Selecting `transcript`/`description` in a multi-record query silently truncates the *record count*, not the field, to fit the MCP response's payload ceiling — the same 39-record query returned 2 records with those fields selected. Neither failure errors or warns. Applies to every model and every skill that filters on a date field or selects a large text field.
+- **`agents/ph-reconcile-gong-gcal.md` — reworked around both failures.** All date filters (§2, §3a/b, §3d Task fallback) now query plain day bounds widened by a day on each side, never an hour-based window; `--window-hours` now scopes **scoring** only, since a midnight-stamped target can sit up to ~24h from its own call on the *same* UTC day (4 of 13 matched pairs on the 2026-08-31 run fell beyond the old 12h scoring window). `transcript`/`description` are dropped from every multi-record `SELECT` and fetched per-record only for pairs that reach the merge step.
+- **`agents/ph-reconcile-gong-gcal.md`, `context/planhat-schema.md` — read fallback documented for the recording URL.** Source reads `custom.Call Recording` first, `custom.Gong URL` as a legacy fallback; the write target is always the target record's `custom.Call Recording`, never `custom.Gong URL` on either record.
+
+---
+
 ## [2.58.0] — 2026-08-29
 
 ### Fixed

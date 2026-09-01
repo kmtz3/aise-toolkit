@@ -20,7 +20,7 @@ Gong's native sync into Planhat writes every call as its own standalone `👾 Go
 | `--since YYYY-MM-DD` | "since last week", "from Aug 1" | Only consider Gong Call Conversations dated on/after this date. **Recommended on a first run** to bound scope. |
 | `--apply` | "actually do it", "run it live", "apply the merges" | Write merges and delete Gong Call records. Still asks for one confirmation on the plan before executing. |
 | *(no `--apply`)* | "preview", "dry run", "show me what would happen" | **Default.** Shows the full match plan — no writes, no deletes. |
-| `--window-hours N` | "widen the match window to 6 hours" | Half-width of the date-proximity window used to find a Gong call's target session. Default `12` — target `date` values are unreliable (Planhat stamps a converted calendar-event Conversation with the moment its Task was marked done, and older debriefs overwrote that with midnight), so a midnight-stamped target sits up to ~12h from its own call and a ±4h window cannot reach it. |
+| `--window-hours N` | "tighten the match window to 6 hours" | Half-width used to **score** date proximity when the day-level default is too coarse. It does not narrow the candidate query, which is always day-level: target `date` values are unreliable (Planhat stamps a converted calendar-event Conversation with the moment its Task was marked done, and older debriefs overwrote that with midnight), so a target on the *same UTC day* as its call can sit almost 24h from it and any hour-based query window drops correct pairs. |
 
 ## Matching is not ID-based
 
@@ -30,16 +30,18 @@ Gong Call `externalId` is `{gongCallId}-{salesforceAccountId}` — it does not c
 |---|---|---|
 | Attendee overlap | 0.40 | `endusers`/`users` — Gong's native sync already resolves participants to Planhat `EndUser`/`User` IDs, so this is exact-ID overlap, not fuzzy text matching. |
 | Subject similarity | 0.35 | Normalized word-overlap after stripping punctuation/emoji and common session-title stopwords. |
-| Date proximity | 0.25 | How close the two call times are within the match window (default ±4h). |
+| Date proximity | 0.25 | Day granularity — same UTC day / adjacent day / neither — because target timestamps are unreliable. The raw Δ in hours is always reported next to the sub-score. |
+
+There is **one** ID-based signal, and it is checked before scoring: the Gong call id (the prefix of the source's `externalId`) against the `?id=` in a candidate's existing `custom.Call Recording`. An exact match is proof of the pairing and settles it as high confidence on its own — that is what rescues a correct pair whose title and attendees look weak.
 
 Every match is reported with its full score breakdown, not just a confidence label — see § What it does per matched pair.
 
 ## What it does per matched pair
 
-1. Finds the target session Conversation (GCal-synced, same company) by weighted-scoring every candidate in the date window on attendee overlap, subject similarity, and date proximity, then taking the top scorer if it clears the confidence threshold and isn't within 0.05 of a runner-up.
+1. Finds the target session Conversation (GCal-synced, same company) — first by exact recording-id match, otherwise by weighted-scoring every candidate in the date window on attendee overlap, subject similarity, and date proximity, then taking the top scorer if it clears the confidence threshold and isn't within 0.05 of a runner-up. Non-session records (Slack threads, tasks, feedback logs, generic inbox types) are gated out of the candidate list entirely and reported as excluded.
 2. Writes the Gong URL onto the target's **`custom.Call Recording`** field (not `custom.Gong URL` — that field is retired for this purpose, see below) and `transcript` **only if those fields are currently empty** — a populated field is treated as a conflict and reported, never overwritten. A target already holding the *identical* recording URL is not a conflict; the field is simply skipped.
 3. **Corrects the target's session `date`.** Planhat stamps a converted calendar-event Conversation with the moment its Task was marked done rather than the session start, so the target's time is wrong by default. The coupled Task's `startTime` — or the Gong call time as fallback — is written back, with the before/after and the source shown in the report.
-4. Appends the Gong call summary (reformatted into Planhat's rich-text vocabulary) to the target's `description`, after a divider — additive, never replaces existing content.
+4. Appends the Gong call summary (reformatted into Planhat's rich-text vocabulary) to the target's `description`, after a divider — additive, never replaces existing content, and skipped outright when the target already carries that summary from an earlier run.
 5. Reads the target back to confirm the write landed, then deletes the Gong Call Conversation.
 
 ## What it never does

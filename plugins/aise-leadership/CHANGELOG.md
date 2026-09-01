@@ -1,5 +1,12 @@
 # Changelog — aise-leadership
 
+## [1.12.13] — 2026-09-01
+
+### Fixed
+- `context/planhat-schema.md` — synced from aise-assistant: documented two silent Planhat query failures (ISO-timestamp date filters return a wrong subset instead of erroring; selecting `transcript`/`description` in a multi-record query silently truncates the record count). Related to aise-assistant's `ph-reconcile-gong-gcal` rework, which is aise-assistant-only and not ported here.
+
+---
+
 ## [1.12.12] — 2026-08-28
 
 ### Fixed

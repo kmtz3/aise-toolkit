@@ -14,6 +14,30 @@
 | Key tools | `list_model_records`, `get_model_record`, `update_model_record`, `search_records`, `get_model_action_parameters` |
 | Available models | `Company`, `EndUser`, `Task`, `Conversation`, `Deal`, `Nps`, `Issue`, `Workflow`, `Churn`, `Document`, `User`, `Product`, `LineItem`, `EmailTemplate`, `Comment`, `Attachment` |
 
+### Two silent query failures — apply to every model, every skill
+
+Both were verified live on 2026-08-31 against `Conversation`. Neither raises an error, neither warns, and both return a plausible-looking short result set. Any skill that reasons over "everything in this window" is wrong by default until it accounts for them.
+
+**1. Date filters take plain `YYYY-MM-DD`, not ISO timestamps.**
+
+| Filter passed | Records returned |
+|---|---|
+| `"date[more than]": "2026-08-24T00:00:00.000Z"` | **3** |
+| `"date[more than]": "2026-08-24"` | **39** |
+
+Same query otherwise. The timestamped form silently returns a wrong subset. Pass day bounds, widen by a day on each side, and apply any hour-level window locally in code after the query returns. Applies to `date`, `startTime`, `endTime` and every other date field, on filters and on `Task` lookups alike.
+
+**2. Selecting a large text field truncates the record *count*, not the field.**
+
+The MCP response has a payload ceiling and drops whole records to fit it:
+
+| `SELECT` on a 39-record query | Records returned |
+|---|---|
+| with `transcript` + `description` | **2** (72 KB) |
+| without them | **39** |
+
+Gong transcripts run 10–55 KB each, so two records fill the budget. Two records reads as a small clean result, which is what makes this dangerous — and it is a *different* failure from the ~36-row cap on `Conversation` (which pages correctly with `OFFSET`). **Never put `transcript` or `description` in a multi-record `SELECT`.** Pull metadata in the list query, then fetch bodies one record at a time with `get_model_record(..., SELECT: ["transcript", "description"])` for the handful of records that actually need them — and report lengths, never the bodies themselves.
+
 ---
 
 ## Planhat Record URLs
