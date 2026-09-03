@@ -42,7 +42,15 @@ Gong transcripts run 10–55 KB each, so two records fill the budget. Two record
 
 ## Planhat Record URLs
 
-Planhat record links follow the workspace data-explorer route. Build them from the record's `_id` — do not invent `app.planhat.com/...` paths, and never cite a Planhat record without a link when one can be built.
+Planhat record links follow the workspace data-explorer route. Build them from the record's `_id` — never cite a Planhat record without a link when one can be built.
+
+**Wrong shapes that look plausible and 404.** Do not emit any of these, and do not reach for them as a fallback when you are unsure of a slug:
+
+- `https://productboard.planhat.com/profile/<_id>` — wrong host *and* wrong route. This is the most common miss, because the tenant-as-subdomain form reads like other SaaS tools. The tenant is a **path segment** on `ws.planhat.com`, never a subdomain.
+- `https://app.planhat.com/...` — wrong host.
+- Any bare `https://productboard.planhat.com` root link.
+
+If you cannot build the real URL, name the record and its model plainly. A link that 404s is worse than no link.
 
 **Template**
 
@@ -67,7 +75,7 @@ https://ws.planhat.com/productboard/home/data-explorer/conversation?preview=Conv
 |---|---|---|
 | `Conversation` | `conversation` | ✅ Verified 2026-08-19 |
 | `Company` | `company` | ⚠️ Inferred from the pattern — confirm before first use |
-| `Task` | `task` | ⚠️ Inferred |
+| `Task` | `task` | ✅ Verified 2026-09-03 |
 | `EndUser` | `enduser` | ⚠️ Inferred |
 | `User` | `user` | ⚠️ Inferred |
 | `Deal` | `deal` | ⚠️ Inferred |

@@ -5,6 +5,14 @@ Format: `## [version] — YYYY-MM-DD` followed by bullet points grouped by type.
 
 ---
 
+## [2.59.1] — 2026-09-03
+
+### Fixed
+- **`context/planhat-schema.md` § Planhat Record URLs — Task slug confirmed verified**, no longer Inferred. Also documents the wrong-shape URLs (subdomain-as-tenant, `app.planhat.com`) that look plausible but 404, so a name-only fallback is used instead of guessing when a slug isn't confirmed.
+- **`agents/daily-brief.md` — Task record link note updated** to match the now-verified `task` path slug.
+
+---
+
 ## [2.59.0] — 2026-09-01
 
 ### Added

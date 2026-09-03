@@ -164,7 +164,7 @@ list_model_records(
 ```
 `mainType: "task"` excludes calendar-event Tasks (`mainType: "event"`) from this list — those are meetings, not action items. Exclude `status: "done"` and `status: "ignored"` in post-processing (not reliably filterable server-side per the Task model's known filter quirks — see `context/planhat-schema.md` § API Quirks). If the result count hits the 200 cap, note this in step 9 rather than silently truncating — Task `list_model_records` has known reliability limits at scale (see the same section); consider paging with `OFFSET` if the count looks suspiciously round.
 
-For each task collect: title (`action`), Company name (`companyName`, or resolve `companyId` if absent), Due date (`endTime`), Priority (`custom.Priority`, if present), `status`, Planhat Task `_id` (for building a direct link — use the template in `context/planhat-schema.md` § Planhat Record URLs: `https://ws.planhat.com/productboard/home/data-explorer/task?preview=Task.<_id>`. The `task` path slug is still marked Inferred there, so confirm it against the address bar before shipping the first brief and update the table).
+For each task collect: title (`action`), Company name (`companyName`, or resolve `companyId` if absent), Due date (`endTime`), Priority (`custom.Priority`, if present), `status`, Planhat Task `_id` (for building a direct link — use the template in `context/planhat-schema.md` § Planhat Record URLs: `https://ws.planhat.com/productboard/home/data-explorer/task?preview=Task.<_id>`. The `task` path slug is confirmed verified (2026-09-03)).
 
 **Tier each task:**
 - **Today** — Due date (`endTime`) ≤ target date (includes overdue), OR no due date with `status = "in-progress"`.
