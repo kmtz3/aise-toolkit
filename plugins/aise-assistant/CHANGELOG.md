@@ -5,6 +5,14 @@ Format: `## [version] — YYYY-MM-DD` followed by bullet points grouped by type.
 
 ---
 
+## [2.59.2] — 2026-09-07
+
+### Changed
+- **`agents/session-prepper.md` — full Planhat migration.** Removed all Notion tools and writes. Program context now comes from `custom.Engagement Plan` and `custom.Architecture Details` on the Planhat Company record. Step 5 is now the Planhat-only write (what was Step 5b); Notion session page creation/update is gone entirely. KDD doc now publishes to Drive and links back into `custom.Prep Notes` on the Planhat Task. Dedup is via `sourceId` (GCal event ID) + `custom.Prep Notes` non-empty check.
+- **`agents/bulk-prep-week.md` — full Planhat migration.** Removed all Notion tools and references. Step 3 now resolves Planhat Company records (name search → SF `sourceId` → domain match). Step 4 deduplicates via Planhat Task `sourceId` (GCal event ID) + `custom.Prep Notes` non-empty — no Notion Session page lookup. Guardrail updated: "Never overwrite `custom.Prep Notes` when already set" replaces the old Notion prep-toggle rule.
+
+---
+
 ## [2.59.1] — 2026-09-03
 
 ### Fixed
