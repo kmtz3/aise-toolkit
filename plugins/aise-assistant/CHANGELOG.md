@@ -5,6 +5,27 @@ Format: `## [version] — YYYY-MM-DD` followed by bullet points grouped by type.
 
 ---
 
+## [2.61.0] — 2026-09-08
+
+### Removed
+- Notion fully retired as a data source. Deleted `agents/notion-writer.md`, `agents/notion-ask.md`, `agents/notion-integrity-check.md`, `agents/notion-completion-fix.md`, `agents/ph-migrate-notion-data.md` and their skills (`notion-write`, `notion-ask`, `notion-check`, `notion-fix`, `notion-sync`, `ph-migrate-notion-data`), plus `context/notion-schema.md`, `context/notion-writer-playbook.md`, and `context/notion-planhat-field-mapping.md` — every real caller had migrated to Planhat.
+- `/notion-write`, `/notion-ask`, `/notion-check`, `/notion-fix`, `/notion-sync` (`--owner`/`--renewals`) commands are gone. `/notion-check`'s ownership/data-drift checks had no Planhat equivalent (Active Package concepts don't exist there); the parts of `/notion-fix` that still mattered are folded into `/session-audit`.
+
+### Changed
+- **`session-log-auditor` absorbed the retired drift-check agents.** New `--tasks` mode audits open Planhat Tasks for completion drift (past-due/due-this-week, evidence-searched via Gmail/Glean, 🟢/🟡/🔴 classification, per-item `--fix`) — ported from `notion-completion-fix`'s task-side logic. The session-side logic was already superseded by the existing occurrence-check in `--fix`.
+- Rewrote every remaining Notion-primary agent to Planhat-native: `engagement-planner` (writes to new Company `custom.Engagement Plan` field, no placeholder Session records), `customer-plan-next`, `session-backfill` (direct Planhat Conversation creation, no Active Package bootstrap), `bulk-account-setup` (queues off missing AISE research-note Conversations instead of Notion Active Packages), `bulk-debrief` (dedup via the GCal-event-id resolution ladder instead of retired Notion Session properties), `session-summarizer` (now extraction-only, no writes), `whats-new`, `email-drafter`, `diagram-builder` (attaches to the Planhat Conversation as an Attachment record).
+- `session-prepper.md` and its `session-prep` skill: fixed several leftover Notion references (calendar lookup, priority-table framing, diagram-builder fallback) that contradicted the agent's already-Planhat-only write path.
+- **New Company fields wired in:** `custom.Engagement Plan` (program plans) and `custom.Architecture Details` (workspace/taxonomy reference, kept current by `kdd-builder` after architecting sessions).
+- **Account Working Notes now live as dated Company Comments** instead of a Notion toggle — `context-keeper`'s customer-fact routing updated accordingly. Pilot-verified: Planhat Comments render the full `ph-editor` HTML vocabulary (bold labels, bullets), not just plain paragraphs as previously documented.
+- Added a `Line Item` reference section to `context/planhat-schema.md` (contracted Architecting+Training session pool via `custom.AISE Working Sessions`, summed across active lines) and a new "Task priority & description defaults" section (ported from the retired Notion playbook).
+- `phase` is now documented as directly AISE-set rather than derived from a Notion Active Package.
+- Updated `README.md`, `CLAUDE.md`, `.claude-plugin/plugin.json`, and `.claude/DEVELOPMENT.md` to drop all Notion framing and fix drift that had accumulated independently of this migration (8 skills/agents were missing from `CLAUDE.md`'s command/agent tables; a `DEVELOPMENT.md` test-package snippet referenced the now-deleted `notion-writer.md`).
+
+### Known limitation
+- Planhat Comment authorship can't be set via the MCP connection in use — it posts as the connection's service identity, not the individual AISE. Formatting is unaffected; this only shows up as "(Deleted User)" as the visible author. Not fixable from agent code — needs a connection-level (per-user OAuth) change if it matters.
+
+---
+
 ## [2.60.0] — 2026-09-08
 
 ### Added

@@ -33,7 +33,7 @@ Look for two categories of signal in the skill run.
 | Agent skipped a required step | Missing step in procedure, wrong conditional logic |
 | User had to correct the agent mid-run | Agent made a wrong assumption — needs an explicit rule |
 | Tool call failed silently and agent didn't recover | Missing fallback in the procedure |
-| Agent wrote to the wrong Notion field / DB | Schema misread — points at `context/notion-schema.md` or the agent file |
+| Agent wrote to the wrong Planhat field / model | Schema misread — points at `context/planhat-schema.md` or the agent file |
 
 ### 2b — Preference signals (nuances about *how* the flow should go)
 
@@ -66,7 +66,7 @@ For each signal (failure or preference), identify the file(s) most likely respon
 Plugin root: plugins/aise-leadership/
 ├── skills/<command-name>/SKILL.md       ← entry point / high-level steps
 ├── agents/<agent-name>.md               ← procedure detail, tool strategy, output spec
-├── context/notion-schema.md             ← DB schema, field formats, ownership rules
+├── context/planhat-schema.md             ← model schemas, field formats, write rules
 ├── context/project-instructions.md      ← ground rules, search strategy, ground truth
 ├── context/pb-aise-reference-guide.md   ← session types, program structure
 └── context/communication-style-guide.md ← tone / format rules
@@ -75,7 +75,7 @@ Plugin root: plugins/aise-leadership/
 Match each signal to the right layer:
 - **Wrong step sequence / missing step / sequencing or scope preference** → `skills/<name>/SKILL.md`
 - **Wrong tool strategy, wrong search, wrong output format / tool-routing or output-shape preference** → `agents/<name>.md`
-- **Wrong field, wrong DB, wrong ownership rule** → `context/notion-schema.md`
+- **Wrong field, wrong model, wrong write rule** → `context/planhat-schema.md`
 - **Wrong assumption about the workflow or session type** → `context/project-instructions.md` or `context/pb-aise-reference-guide.md`
 - **Tone / format regression or voice preference** → `context/communication-style-guide.md` (or `custom.AISE Profile preferences` on the user's Planhat User record if it's personal voice)
 - **Interaction-style preference (confirmation gates, default verbosity)** → typically the agent file, sometimes `CLAUDE.md` if it's cross-skill

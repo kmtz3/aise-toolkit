@@ -48,7 +48,7 @@ It will find the transcript/notes via the **Transcript lookup order** in `contex
 
 **Do not treat a single miss (e.g. `meeting_lookup` returning empty) as proof the transcript is unavailable.** Per `project-instructions.md §3`, every applicable step in the lookup order must be exhausted before falling to the placeholder-debrief branch (2b) — this is the documented cause of debriefs incorrectly going to placeholder when the recording was actually indexed and reachable via a later step.
 
-**Use `session-summarizer` for extraction only.** Ignore any of its own write instructions (it was written against Notion) — every write in this run happens in the steps below, against Planhat.
+**Use `session-summarizer` for extraction only.** It has no writes of its own (extraction-only agent) — every write in this run happens in the steps below, against Planhat.
 
 Capture its full structured output. This is the raw material for every subsequent step.
 
@@ -101,7 +101,7 @@ If the **Transcript lookup order** is exhausted and no transcript or notes were 
    Source: Calendar event + Slack/Gmail signals (no transcript)
    ```
 
-3. **Create a re-debrief Task** (Planhat Task, per step 4's payload shape): `action: "Re-debrief [Customer] [session date] — Gong transcript"`, `description: "Original call: [date]. Re-run /session-debrief once Gong has the transcript indexed."`, `companyId`, `ownerId: <user>`, `status: "To Do"`, `endTime`: session date + 5 business days, and `"custom.Priority"` per the **Priority by task kind** table in step 4.
+3. **Create a re-debrief Task** (Planhat Task, per step 4's payload shape): `type: "Task"`, `action: "Re-debrief [Customer] [session date] — Gong transcript"`, `description: "Original call: [date]. Re-run /session-debrief once Gong has the transcript indexed."`, `companyId`, `ownerId: <user>`, `status: "To Do"`, `endTime`: session date + 5 business days, and `"custom.Priority"` per the **Priority by task kind** table in step 4.
 
 3a. **Still run step 10 (`custom.Next Step` refresh)** — compose it from the calendar/Slack/Gmail signals gathered above instead of transcript content, and lead with the pending-transcript state so it's visible without opening the Conversation: e.g. `<p><strong>27 Aug:</strong> [Session] delivered — transcript pending Gong indexing, re-debrief queued.</p>`. Don't skip this step just because the transcript is missing.
 
@@ -187,13 +187,14 @@ If the stub's `externalId` doesn't match the `<numeric>-<sf-id>` format, or its 
 
 From the extracted PB-side action items (step 2), for each item assigned to the user:
 
-Build `description` as single-line HTML per § Planhat rich-text fields (universal write format) in `CLAUDE.md` — never markdown, never literal newlines. Scaffold content per `context/notion-writer-playbook.md` Operation 2's task-type scaffolding logic, rendered as a bold `<p><strong>` label followed by a `ph-editor__bullet-list`.
+Build `description` as single-line HTML per § Planhat rich-text fields (universal write format) in `CLAUDE.md` — never markdown, never literal newlines. Scaffold content per `context/planhat-schema.md` § Task priority & description defaults, rendered as a bold `<p><strong>` label followed by a `ph-editor__bullet-list`.
 
 ```
 create_model_record(MODEL: "Task", PARAMETERS: {
   mainType: "task",
+  type: "Task",
   action: "<active-voice, specific, outcome-oriented title>",
-  description: "<best-shot scaffold, per context/notion-writer-playbook.md Operation 2's task-type scaffolding logic, as single-line HTML>",
+  description: "<best-shot scaffold, per context/planhat-schema.md § Task priority & description defaults, as single-line HTML>",
   companyId: "<planhat-company-id>",
   ownerId: "<user's planhat id>",
   status: "To Do",
@@ -204,7 +205,7 @@ create_model_record(MODEL: "Task", PARAMETERS: {
 
 **`custom.Priority` is mandatory on every Task this procedure creates.** Never omit it and never leave it null. That covers all four Task creates in this agent: PB-side commitments (this step), the re-debrief task (step 2b), the Slack debrief task (step 6), and each product feedback task (step 8). `/daily-brief` reads `custom.Priority` when it assembles the open-task list, so an unprioritized task is a task the user will not see.
 
-**The Slack debrief Task (step 6) must always carry `type: "Internal Alignment"`.** Never leave it untyped — an untyped Task falls back to no type filter and won't match `Internal Alignment` reporting/filtering downstream.
+**`type` is mandatory on every Task this procedure creates — never leave it unset.** A generic PB-side commitment (this step) or the re-debrief task (step 2b) gets `type: "Task"`. The Slack debrief Task (step 6) always carries `type: "Internal Alignment"`. Each product feedback task (step 8) always carries `type: "Product Feedback"`. An untyped Task falls back to no type filter and won't match downstream reporting/filtering.
 
 #### Priority by task kind
 
@@ -217,18 +218,7 @@ create_model_record(MODEL: "Task", PARAMETERS: {
 
 #### Account priority table — PB-side commitments
 
-`context/notion-writer-playbook.md` Operation 2 states this logic in Notion terms (Active Package `Status` + `ARR`). Read it from Planhat instead — Company `phase` and `arr`, both already resolved in step 1:
-
-| Condition | Priority |
-|---|---|
-| `phase` = `1. Activation` or `2. Adoption` AND `arr` ≥ $50k · or urgent/blocker language · or the item gates a dated commitment made to the customer | `P1` |
-| `phase` = `3. Renewal` AND the item affects the renewal conversation | `P1` |
-| `phase` = `1. Activation` or `2. Adoption` with `arr` < $50k · or `phase` = `0. Preparation` with `arr` ≥ $50k · or `arr` unknown | `P2` |
-| `phase` = `0. Preparation` with `arr` < $50k · or `3. Renewal` with no renewal impact · or low-urgency | `P3` |
-
-Renewal proximity outranks the table: when Company `renewalDate` is inside 45 days, nothing touching the renewal conversation goes below `P1`.
-
-State the assigned priority with a one-line reason for every task in the chat report, e.g. `P1 (Renewal phase, gates the 26 Sept conversation)`, alongside the inferred due date. The user can override before the write lands. Create directly — no approval step.
+Use `context/planhat-schema.md` § Task priority & description defaults → Account priority table, with `phase` and `arr` already resolved in step 1. State the assigned priority with a one-line reason for every task in the chat report, e.g. `P1 (Renewal phase, gates the 26 Sept conversation)`, alongside the inferred due date. The user can override before the write lands. Create directly — no approval step.
 
 **Customer-side action items do NOT get Tasks.** They live in the Conversation `description` (step 3) and the follow-up email (step 5) only.
 
@@ -240,11 +230,13 @@ State the assigned priority with a one-line reason for every task in the chat re
 
 The draft should follow `context/communication-style-guide.md`. The agent will determine the recipient from Planhat `EndUser` records for the company (primary/first contact).
 
-If there is a known external Slack channel with this customer, note in chat that a Slack version may be useful — but do not auto-draft it.
+If there is a known external Slack channel with this customer, note in chat that a Slack version may be useful — but do not auto-draft it. (This is a customer-facing Slack channel note, unrelated to the mandatory internal Slack debrief Task in step 6 below — don't read this line as license to skip or thin out step 6.)
 
 **Draft replacement caveat.** Gmail MCP has no `update_draft`/`delete_draft` tool. If a draft needs correction, create a new draft and surface both IDs — the user must trash the stale draft manually in Gmail.
 
 ### 6. Draft an internal Slack debrief message and log it as a Task
+
+**Never optional — runs on every completed session, full or placeholder.** This is the same non-skippable status as step 10's `custom.Next Step` refresh: even when the transcript is thin or missing, write the Task with whatever is available and flag the gaps in its `description` rather than leaving the Task uncreated or its `description` empty. An empty-description Slack debrief Task is exactly as invisible to `/daily-brief` as a missing one — never create the Task and leave `description` blank "to fill in later."
 
 Draft the debrief in chat using this shape (markdown, for chat readability only):
 ```
@@ -449,4 +441,5 @@ After all steps complete, produce a single consolidated report:
 - **Never `Read` a transcript file >50K chars directly in this agent's context.** Delegate to a `general-purpose` sub-agent with the structured extraction template (step 2a).
 - **Never `Grep` Glean-output temp files** — they are single-line JSON arrays and return `[Omitted long matching line]`. Use sub-agent + chunked `Read` instead.
 - **Invoke the context-keeper procedure inline** if anything in the session output suggests a changed rule, new session type, or new standing instruction.
+- **The Slack debrief Task (step 6) is never optional and never left with an empty `description`.** Runs on every completed session, full or placeholder-debrief (step 2b) — write whatever is available and flag gaps in the description itself rather than skipping the Task or leaving it blank. A Slack debrief Task with no content is the historical failure mode this guardrail closes.
 - **`custom.Next Step` is refreshed on every completed run — step 10, never optional.** Rewrite, don't append; pull the "waiting on" line from the same Tasks/actions the rest of the run just wrote so the field and the Tasks never disagree; carry forward anything still-live from the old value that this session didn't touch. Applies to the placeholder-debrief branch too (step 2b), and to every session `bulk-debrief` runs through this procedure.

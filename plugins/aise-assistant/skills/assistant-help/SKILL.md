@@ -176,8 +176,8 @@ To change them: run `/assistant-setup` for a guided re-onboarding, or edit the f
 
 | Where | What |
 |---|---|
-| **Notion** | Source of truth for active engagements, per-customer state, sessions, tasks, working notes |
-| **`context/notion-schema.md`** | DB schema, field formats, query patterns |
+| **Planhat** | Source of truth for active engagements, per-customer state, sessions, tasks, working notes (Company Comments) |
+| **`context/planhat-schema.md`** | Model schemas, field formats, query patterns |
 | **`context/score-cards.md`** | Per-session scorecards (Discovery, Foundations, Insights, Prioritization, Roadmaps, Spark, Success Planning, QBR) |
 | **`context/pb-aise-reference-guide.md`** | Session methodology — "what good looks like" per session type |
 | **`context/communication-style-guide.md`** | Universal AISE comms patterns; `custom.AISE Profile preferences` on your Planhat User record overrides |

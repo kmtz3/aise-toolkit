@@ -1,8 +1,8 @@
 # Planhat Schema & Notion↔Planhat Traversal Guide
 
-> **Status:** In-transition, moving toward Planhat as the primary AISE working record. Session debrief (`post-session-debrief`), product feedback discovery (`/log-feedback`), and account health/revenue/Spark tracking are Planhat-only as of 2026-08-19. Notion remains the working record only for agents/skills not yet migrated (session-prep, account-plan, engagement-planner, and historical data via `/session-backfill`) — treat it as a legacy system being phased out, not a co-equal source of truth. During the transition, Spark fields must still be kept in sync both ways until the remaining Notion-based agents migrate.
+> **Status:** In-transition, moving toward Planhat as the primary AISE working record. Session debrief (`post-session-debrief`), product feedback discovery (`/log-feedback`), account health/revenue/Spark tracking, and historical session backfill (`/session-backfill`) are Planhat-only as of 2026-09-08. Notion remains the working record only for agents/skills not yet migrated (session-prep, account-plan, engagement-planner) — treat it as a legacy system being phased out, not a co-equal source of truth. During the transition, Spark fields must still be kept in sync both ways until the remaining Notion-based agents migrate.
 >
-> **Last updated:** 2026-08-28 (added the three new `custom.PM Reach-Out Status/Note/Reviewed` Company fields and their Salesforce/PB mirror, verified live against `get_model_action_parameters`; also added the authoritative live-pulled Planhat Conversation/Task `type` option list, the SAP Signavio Insight-to-Impact Circle customer-specific type override, and the transcript-lookup exhaustion rule cross-reference)
+> **Last updated:** 2026-09-08 (rewrote `/session-backfill` Planhat-native — dropped Notion meeting-notes discovery and the Active Package/Consumed Package concepts entirely, added its GCal-event-id / `gong_`-prefixed `externalId` convention to § Conversation)
 
 ---
 
@@ -282,7 +282,7 @@ Planhat only — Notion does not track these in real time.
 | `name` | string | Display name. **Required.** |
 | `owner` | objectId → User | CSM / Account Manager. Do not overwrite from AISE logic. |
 | `coOwner` | objectId → User | Secondary owner. |
-| `phase` | string | Services lifecycle stage. **Configured options:** `0. Preparation` · `1. Activation` · `2. Adoption` · `3. Renewal` · `4. Churned`. See AISE-writable table for mapping from Active Package status. |
+| `phase` | string | Services lifecycle stage. **Configured options:** `0. Preparation` · `1. Activation` · `2. Adoption` · `3. Renewal` · `4. Churned`. Directly set by the AISE as the program moves stage. |
 | `tags` | array | Freeform labels for segmentation. |
 | `country` | string | Country. |
 | `domains` | array | Email/web domains for conversation matching. |
@@ -329,7 +329,7 @@ Planhat only — Notion does not track these in real time.
 > **Last verified against live `get_model_action_parameters` output: 2026-08-25.** Field sets drift. When a
 > write silently no-ops or a field is missing from a read, re-pull the metadata before assuming the doc is right.
 
-> Fields marked **[SF-SYNCED]** are populated by the Salesforce → Planhat sync. **Never write these via MCP.** The exact SF mapping is WIP; treat any unmarked field as writable only if it appears as writable in `notion-planhat-field-mapping.md`.
+> Fields marked **[SF-SYNCED]** are populated by the Salesforce → Planhat sync. **Never write these via MCP.** The exact SF mapping is WIP; treat any unmarked field as writable only if it appears as writable in the AISE-writable table below.
 
 #### SF-synced — do not write
 
@@ -409,7 +409,7 @@ writes Productboard's internal discussion of a customer onto that customer's own
 | `custom.AI Ready` | string | `Ignitable`, `Sparked`, `Preparing`, `Not Ready` | ← Notion `AI Ready` (unchanged) |
 | `custom.⚡️ Igniting?` | boolean | `true` / `false` | ← Notion `Igniting?`. **Renamed 2026-08-07** (was `custom.Igniting?`). |
 | `custom.AISE Journey Status` | string | `Presales`, `Active (no Services)`, `Active (Services)`, `Contracted to Scale`, `Churned` | ← Notion `Account Status`. **AISE-managed accounts only (30k+ ARR).** Do not write for AIPA accounts. **`Not started` is not a valid option — omit.** Note: field ID is `custom.AISE Journey Status`, not `custom.Journey Status`. |
-| `phase` | string | **Configured options (not free-text):** `0. Preparation` · `1. Activation` · `2. Adoption` · `3. Renewal` · `4. Churned` | Universal field — applies to **all** Planhat companies (AISE and AIPA). Derived from the customer's current Active Package `Status` — see full mapping table in `notion-planhat-field-mapping.md`. `4. Churned` is set manually and aligns with `custom.AISE Journey Status = Churned`. |
+| `phase` | string | **Configured options (not free-text):** `0. Preparation` · `1. Activation` · `2. Adoption` · `3. Renewal` · `4. Churned` | Universal field — applies to **all** Planhat companies (AISE and AIPA). **Directly set** by the AISE as the program moves stage — there is no Notion Active Package to derive it from anymore. `4. Churned` is set manually and aligns with `custom.AISE Journey Status = Churned`. |
 | `custom.SH_Current State` | string (Rich text) | — | **Sales Handoff** (SH_ = "Sales Handoff"): current state from pre-sales. Auto-populated on deal close for AISE-segment accounts — not manually written by AISE. Read for discovery context. |
 | `custom.SH_Future State` | string (Rich text) | — | Sales Handoff: desired future state from pre-sales. Auto-populated on deal close. |
 | `custom.SH_Negative Impacts` | string (Rich text) | — | Sales Handoff: pain points from pre-sales. Auto-populated on deal close. |
@@ -431,6 +431,8 @@ writes Productboard's internal discussion of a customer onto that customer's own
 | `custom.PM Reach-Out Status` | string (list) | `Free to Contact`, `Ask First`, `Do Not Contact` | **Added 2026-08-28** — built out of the Aug 2026 Anthony Amenta (Product Ops) thread on flagging accounts safe for direct PM reach-outs. Whether a PM can contact this account directly without looping in the account team first. Set and maintained by AISE based on account health, deal stage, and open escalations – not auto-computed from `csmScore`/`h`/Deal/Issue data, since the hard-stop judgment call needs a human. `Free to Contact` = go ahead (PM should still check recent activity first if `arr` is under $30K). `Ask First` = PM messages the account owner in the account's Slack channel before reaching out, regardless of ARR. `Do Not Contact` = hard stop – active negotiation, red health, or an open escalation. Pair with `custom.PM Reach-Out Note` and check `custom.PM Reach-Out Reviewed` for staleness before trusting the value. |
 | `custom.PM Reach-Out Note` | string (Rich text) | — | Why the account has its current `custom.PM Reach-Out Status` – required whenever status is `Ask First` or `Do Not Contact`. Short and dated: what's going on, what would need to change for the status to move. **Rich text — format per § Rich Text Field Formatting, never plain/`\n`-separated prose.** |
 | `custom.PM Reach-Out Reviewed` | string (date) | — | Date AISE last set or confirmed the current `custom.PM Reach-Out Status`. A Planhat workflow automation stamps today's date whenever the Status field changes; can also be set manually during a periodic review that reconfirms the value without changing it. Used to flag a stale status rather than trusting it blindly. |
+| `custom.Engagement Plan` | string (Rich text) | — | **Added 2026-09.** The full program plan — goals, milestones, phases, session sequence — for the account, written by `engagement-planner` (`/customer-plan --full`) on user approval. Replace wholesale on each revision; not an append/log field. **Rich text — format per § Rich Text Field Formatting, never plain/`\n`-separated prose. No `<h1>`–`<h6>` — use bold `<p><strong>` section labels.** |
+| `custom.Architecture Details` | string (Rich text) | — | **Added 2026-09.** The customer's Productboard workspace setup for reference during architecting sessions — taxonomy structure, internal teams using the workspace, toolstack integrations, how the customer organizes their environment. Kept current by architecting-session agents (`kdd-builder`, `session-prepper`, `account-setup`) as a running reference, not a session-by-session log. **Rich text — format per § Rich Text Field Formatting.** |
 
 > **Salesforce/Productboard mirror.** `custom.PM Reach-Out Status/Note/Reviewed` are mirrored one-way (Planhat → Salesforce → Productboard) onto `PM_Reachout_Status__c` / `PM_Reachout_Note__c` / `PM_Reachout_Reviewed__c`, the same proxy pattern as the existing `ASE_Name__c` mirror — Salesforce holds these fields only so Productboard's integration (which reads Salesforce, not Planhat) can surface the value to PMs. Planhat is the source of truth; never write these SF fields directly or build SF-side logic against them.
 
@@ -441,7 +443,7 @@ writes Productboard's internal discussion of a customer onto that customer's own
 | **Scope** | All Planhat companies | AISE-managed accounts only |
 | **What it tracks** | Universal services lifecycle stage (Preparation → Activation → Adoption → Renewal → Churned) | AISE program-specific status (Presales / Active / Contracted to Scale / Churned) |
 | **Segment rule** | AISE accounts (30k+ ARR) ✅ · AIPA accounts (under 30k ARR) ✅ | AISE accounts (30k+ ARR) ✅ · AIPA accounts (under 30k ARR) ❌ |
-| **Source of value** | Active Package `Status` via Notion sync | Notion `Account Status` |
+| **Source of value** | Directly set by the AISE | Directly set by the AISE |
 
 > `phase` is the shared, segment-agnostic signal for where any customer sits in the services lifecycle. `custom.AISE Journey Status` is an AISE overlay that only applies to the 30k+ ARR accounts the AISE team manages. AIPA uses `phase` to track lifecycle stage — their accounts will not have an AISE Journey Status populated.
 
@@ -628,22 +630,17 @@ Used when setting `ownerId`, `users`, or `followers` on Planhat records.
 
 > **Design note:** Planhat Conversations are the canonical home for AISE session history. AISE writes all delivered sessions (external and internal) as Conversations with `source: "AISE"`, using `externalId` as the dedup key back to Notion. Existing Conversations in Planhat are mostly Zendesk tickets (`source: "zendesk"`) and calendar events synced as Tasks (`mainType: event`). AISE-originated sessions are a distinct type and won't collide with those sources.
 
-### `externalId` convention — two live sources, no collision risk
+### `externalId` convention — live sources, no collision risk
 
-Two different tools write Conversations from session data, each with its own `externalId` format:
-
-| Path | `externalId` source | Notes |
-|---|---|---|
-| `/session-backfill` | Notion Session page ID (32-char hex) | Historical migration — one-time backfill of past sessions still tracked in Notion. |
-| `/session-debrief` (`post-session-debrief`) | Google Calendar event ID | Live, per-session debrief path — Notion is not consulted. |
-
-`externalId` is scoped per-company, and the two ID formats never collide (different length/character set), so both conventions coexist safely. Don't assume a Conversation's `externalId` is a Notion page ID just because older records use that format — check the format before parsing it.
-
-A third writer was added in v2.45.0:
+Multiple tools write Conversations from session data, each with its own `externalId` format:
 
 | Path | `externalId` source | Notes |
 |---|---|---|
-| `/log-slack-threads` | `slack_{channelId}_{parentTsDigits}` | Shared-channel Slack threads logged as `💬 Slack Chat` touchpoints. Prefixed, so it never collides with the two ID formats above and is trivially identifiable. |
+| `/session-debrief` (`post-session-debrief`) | Google Calendar event ID | Live, per-session debrief path. |
+| `/session-backfill` | Google Calendar event ID (bare or instance-stamped) for calendar-sourced candidates; `gong_{gongCallId}` for a Gong-only candidate with no matching calendar event | **Rewritten 2026-09 — Notion is fully retired.** `/session-backfill` no longer sources sessions from Notion, so its old convention (Notion Session page ID, 32-char hex) no longer applies; historical records created under that convention still exist and are recognizable by their format. Reusing the GCal event ID for calendar-sourced backfills means a backfilled record and a later `/session-debrief` write for the same event resolve to the same Conversation via the session-record resolution ladder, rather than creating a second record. The `gong_` prefix on the Gong-only fallback keeps it distinct from both the GCal event ID shape and Gong's own native-sync `externalId` (`{gongCallId}-{sfAccountId}`, on a separate `👾 Gong Call` record). |
+| `/log-slack-threads` | `slack_{channelId}_{parentTsDigits}` | Shared-channel Slack threads logged as `💬 Slack Chat` touchpoints. Prefixed, so it never collides with the ID formats above and is trivially identifiable. |
+
+`externalId` is scoped per-company, and none of these formats collide with each other (different length/character set, or a distinguishing prefix), so all conventions coexist safely. Don't assume a Conversation's `externalId` is a Notion page ID just because an older record uses that format — check the format before parsing it.
 
 ---
 
@@ -786,9 +783,9 @@ If either query returns a result, update it rather than creating a duplicate —
 | `🫥 Internal` | `Internal Alignment` | No emoji in Planhat |
 | _(Done Notion Task — auto-created Conversation)_ | `Task` | No emoji. Planhat auto-creates this Conversation when Task `status` is set to `"done"`. Set via `noteId` post-write. Canceled (`"ignored"`) tasks do not generate a Conversation. |
 
-> **`notion-planhat-field-mapping.md` is the authoritative source for type mappings.** If this table and that file ever disagree, that file wins.
+> **This table is the authoritative source for type mappings.** The former companion doc (`notion-planhat-field-mapping.md`) has been retired now that nothing writes from Notion.
 
-> **Planhat types with no Notion equivalent:** `📺 Webinar`, `👾 Gong Call` — logged directly in Planhat, not from Notion. `🎙️ Demo` is also available and applied automatically to `Other` sessions with "Demo" in the title.
+> **Planhat types with no Notion equivalent:** `📺 Webinar`, `👾 Gong Call` — logged directly in Planhat. `🎙️ Demo` is also available and applied automatically to `Other` sessions with "Demo" in the title.
 > **Generic Planhat types** (avoid for AISE writes): `note`, `email`, `chat`, `call`, `ticket`, `other` — these are Planhat system defaults for inbox/helpdesk syncs. AISE should only use the custom configured values above.
 
 > **`👾 Gong Call` records are a duplicate of the real session, not the session itself — and their `externalId` cannot be used to find their target.** Gong's native Planhat sync writes every call as its own standalone Conversation, separate from the GCal-synced session Conversation for the same meeting. Verified live (2026-08-27): a Gong Call Conversation's `externalId` is `{gongCallId}-{salesforceAccountId}` (e.g. `7668611138330097753-001f400001GC38TAAT`) — it does **not** carry the Google Calendar event ID the way a GCal-synced Conversation's `externalId` does (e.g. `ip5dj5rdolaa07e56is5m19lo4`). The `Conversation` model also has **no `sourceId` field at all** (`sourceId` exists on `Task` and `Company` only) — so there is no shared key between a Gong Call record and its target. Neither the Gong MCP tools (`ask_account`/`ask_deal`/`generate_brief` are synthesis-only, no raw metadata) nor Glean's indexed Gong document (checked directly — full facet set is `app`/`call_duration_range`/`opportunity`/`external_participants`/`department`/`type`/`account`/`documentcategory`, no calendar reference) expose one either. Matching the two instead uses a weighted score within a `companyId` + time window: attendee overlap via `endusers`/`users` (0.40 — Gong's sync already resolves participants to Planhat `EndUser`/`User` IDs, so this is exact-ID overlap, not text fuzzing), subject similarity (0.35), and date proximity (0.25). See `agents/ph-reconcile-gong-gcal.md` for the full scoring procedure and the merge-then-delete cleanup that reconciles a pair — a manual stopgap while the Planhat↔Gong integration is reworked to do this automatically.
@@ -908,6 +905,53 @@ previous snapshot – note it shares the 🔁 emoji with `🔁 Sync`, so match o
 
 `custom.AISE Conversation` is a system-derived boolean marking the record as AISE-originated. It is read-only – do not
 attempt to set it to force a record into AISE reporting.
+
+---
+
+## Task priority & description defaults
+
+Canonical logic for any agent creating a PB-side Planhat Task without an explicit priority, due date, or body content stated by the user. Originally a Notion-era pattern (Active Package `Status` + `ARR`); restated below entirely in Planhat terms. `post-session-debrief.md` is the reference implementation — other Task-creating agents (`customer-plan-next`, `session-backfill`, etc.) should read from here rather than duplicating their own copy.
+
+### Account priority table — PB-side commitments
+
+| Condition | Priority |
+|---|---|
+| `phase` = `1. Activation` or `2. Adoption` AND `arr` ≥ $50k · or urgent/blocker language · or the item gates a dated commitment made to the customer | `P1` |
+| `phase` = `3. Renewal` AND the item affects the renewal conversation | `P1` |
+| `phase` = `1. Activation` or `2. Adoption` with `arr` < $50k · or `phase` = `0. Preparation` with `arr` ≥ $50k · or `arr` unknown | `P2` |
+| `phase` = `0. Preparation` with `arr` < $50k · or `3. Renewal` with no renewal impact · or low-urgency | `P3` |
+
+**Renewal proximity outranks the table:** when Company `renewalDate` is inside 45 days, nothing touching the renewal conversation goes below `P1`.
+
+Always state the assigned priority with a one-line reason in the draft/report (e.g. `P1 (Renewal phase, gates the 26 Sept conversation)`), alongside the inferred due date, so the user can override before the write lands.
+
+### Auto-due-date logic
+
+Apply when a due date isn't explicitly stated. Base = today (system date). Skip weekends when computing business days.
+
+| Task type (match by title pattern) | Default |
+|---|---|
+| "Reply to / Send [email/Slack/message]" | Today + 1 business day |
+| "Schedule / Book / Invite" | Today + 2 business days |
+| "Draft [document/artifact/email/follow-up]" | Today + 3 business days |
+| "File product request / log feedback" | Today + 3 business days |
+| "Review / Investigate / Explore / Analyze" | Today + 5 business days |
+| Anything else | Today + 3 business days (safe default) |
+
+Always state the assigned date and the matching pattern (e.g. `Due: Apr 30 (send email, +1 bd)`) — the user can override before confirming the write.
+
+### Task description scaffold (required for every PB-side task)
+
+Every Task's `description` should include a "best shot" scaffold so the user can act immediately rather than face a blank page, written as single-line HTML per § Rich Text Field Formatting above — bold `<p><strong>` label, then the scaffold content.
+
+| Task type | Scaffold |
+|---|---|
+| "File product request" | Three parts: **Problem** (what the customer is experiencing), **Current workaround or process** (how they're managing today), **Desired outcome** (what they want PB to do). Seed from session notes/transcript. |
+| "Reply to [person]" / "Send [email/Slack]" | **Draft reply** — a full message draft in the user's voice (per `custom.AISE Profile preferences` on the user's Planhat User record) following `communication-style-guide.md`. |
+| "Draft [document/artifact]" | **Starter outline** with key sections or a first draft. |
+| All other tasks | **Suggested approach** with 2–4 bullet steps toward completing the task. |
+
+Label the scaffold with a bold heading, e.g. `<p><strong>Best shot — draft artifact</strong></p>`, so the user knows it's a starting point. Seed from real context only — never fabricate details.
 
 ---
 
@@ -1336,6 +1380,35 @@ list_model_records(
 
 ---
 
+## Line Item (Planhat) — read-only, per-customer session allocation
+
+> Line-level rows on a Deal — the actual purchased instance of a Product/SKU for one customer. SF SSOT. **Never write from AISE workflows.** Verified live against `get_model_action_parameters` 2026-09.
+
+### How to read a customer's contracted session pool
+
+```
+list_model_records(
+  MODEL: "Line Item",
+  FILTER: {"companyId[equal to]": "<planhat-company-id>", "status[equal to]": "ongoing"},
+  SELECT: ["productName", "custom.AISE Working Sessions", "custom.Product Type – SF", "fromDate", "toDate"]
+)
+```
+
+Sum `custom.AISE Working Sessions` across all `status: "ongoing"` lines to get the customer's total contracted Architecting + Training session pool. **It's one shared pool, not two separate caps** — the field description states this explicitly: "Both session types discount from this shared pool for simplicity." A customer with multiple active lines (e.g. a renewal alongside an add-on) sums across all of them; zero or no `ongoing` lines means no confirmed allocation — flag rather than assume unlimited.
+
+### Key fields (read context)
+
+| Field ID | Type | Notes |
+|---|---|---|
+| `companyId` | objectId | Parent Company. |
+| `dealId` | objectId | Parent Deal. |
+| `status` | string | `ongoing` · `renewed` · `lost`. Filter to `ongoing` for current allocation. |
+| `productName` | string | Read-only, denormalized from the linked Product. |
+| `custom.AISE Working Sessions` | number | This line's contribution to the customer's Architecting+Training pool. |
+| `fromDate` / `toDate` | date | Line's active period. |
+
+---
+
 ## Comment (Planhat)
 
 > Used by `post-session-debrief` to post next-session planning + account-notable updates on the Company after every debrief (replaces the old Notion "Customer page update" + "next-session planning notes" writes).
@@ -1398,7 +1471,6 @@ An entry belongs here only when the erroneous record was **hard-deleted**. Archi
 
 The following models exist in Planhat but have no current AISE migration use case. Use `get_model_action_parameters(MODEL: "<model>")` if needed.
 
-| Model | Notion equivalent | Notes |
-|---|---|---|
-| `Line Item` | Individual credit/session lines on Active Packages | SF SSOT. Read only. Contains `custom.AISE Working Sessions` (session quota per SKU). |
-| `Email Template` | N/A | Planhat-native marketing/CS email templates. |
+| Model | Notes |
+|---|---|
+| `Email Template` | Planhat-native marketing/CS email templates. No current AISE use case. |

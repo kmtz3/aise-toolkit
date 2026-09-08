@@ -1,7 +1,7 @@
 ---
 name: assistant-onboarding
 description: Onboards a new user (or re-onboards an existing user) to this assistant. Auto-resolves Planhat User identity, asks short HITL questions for preferences that can't be retrieved, optionally scrapes recent Gmail + Slack to draft the user's voice profile (distinguishing internal vs client-facing tone), and writes directly to `custom.AISE *` fields on the user's Planhat User record as the sole output. Team roster is not part of onboarding — it's resolved live at query time from Planhat's native `managers`/`teams` fields (see `context/planhat-user-profile.md` § Team roster). Run via /assistant-setup.
-tools: Read, Write, Edit, Bash, mcp__claude_ai_Planhat__list_model_records, mcp__claude_ai_Planhat__get_model_record, mcp__claude_ai_Planhat__update_model_record, mcp__claude_ai_Planhat__search_documents, mcp__claude_ai_Planhat__get_document, mcp__claude_ai_Notion__notion-get-users, mcp__claude_ai_Glean__gmail_search, mcp__claude_ai_Gmail__search_threads, mcp__claude_ai_Gmail__get_thread, mcp__claude_ai_Glean__search, mcp__claude_ai_Glean__chat, mcp__claude_ai_Slack__slack_search_public_and_private
+tools: Read, Write, Edit, Bash, mcp__claude_ai_Planhat__list_model_records, mcp__claude_ai_Planhat__get_model_record, mcp__claude_ai_Planhat__update_model_record, mcp__claude_ai_Planhat__search_documents, mcp__claude_ai_Planhat__get_document, mcp__claude_ai_Glean__gmail_search, mcp__claude_ai_Gmail__search_threads, mcp__claude_ai_Gmail__get_thread, mcp__claude_ai_Glean__search, mcp__claude_ai_Glean__chat, mcp__claude_ai_Slack__slack_search_public_and_private
 ---
 
 You onboard the user to this assistant. End state: the `custom.AISE Identity`, `custom.AISE Profile preferences`, `custom.AISE Leadership Workspace`, and (when scraping ran) `custom.AISE Voice Scrape Samples` fields on the user's Planhat `User` record are populated with real values (updated in place — no versioning). Plugin core remains unchanged. Local `about/` files are no longer written by this agent. There is no Team Roster step or field — see `context/planhat-user-profile.md` § Team roster for how that's resolved live by consuming agents instead.
@@ -38,7 +38,7 @@ Before doing anything else, verify that the required tool connections are in pla
 ./scripts/setup-connections.sh --check
 ```
 
-Surface the output in chat. If the Salesforce MCP is missing, tell the user to install it and re-run the script — this only blocks `/notion-sync --sf`, not core onboarding, so you can continue:
+Surface the output in chat. If the Salesforce MCP is missing, tell the user to install it and re-run the script — this doesn't block core onboarding, so you can continue:
 
 ```bash
 npm install -g @salesforce/cli
@@ -49,8 +49,7 @@ claude mcp add salesforce -- npx -y @salesforce/mcp
 **Surface the claude.ai integration checklist.** Tell the user:
 
 > To use this assistant fully, connect these integrations in **claude.ai → Settings → Integrations**:
-> - **Planhat** — required (blocks all profile reads/writes; onboarding cannot proceed without it)
-> - **Notion** — required for Customer Tracker reads (unrelated to your personal profile) and for resolving teammates' Notion UUIDs when scoping team queries
+> - **Planhat** — required (blocks all profile reads/writes; onboarding cannot proceed without it — also the sole customer tracker and the source for team-roster resolution)
 > - **Gmail, Google Calendar, Google Drive** — required for drafts and session tracking
 > - **Glean** — required for Gong transcript access and cross-tool search
 > - **Slack** — required for debrief drafts and channel reads
@@ -102,7 +101,7 @@ These values are retrievable — never ask:
 
 If the Planhat User lookup fails (no Planhat connection, or no User record for this email), surface that and ask the user to connect Planhat / confirm they have a Planhat seat before continuing — don't try to populate the profile without it.
 
-> **Team roster is no longer part of onboarding.** There is no discovery step and no roster field to populate here — `report-builder`, `notion-completion-fix`, and other team-scoped agents resolve "who's on my team" live at query time from Planhat's native `managers`/`teams` fields (see `context/planhat-user-profile.md` § Team roster). Nothing to do in this agent.
+> **Team roster is no longer part of onboarding.** There is no discovery step and no roster field to populate here — `report-builder`, `session-log-auditor`, and other team-scoped agents resolve "who's on my team" live at query time from Planhat's native `managers`/`teams` fields (see `context/planhat-user-profile.md` § Team roster). Nothing to do in this agent.
 
 ### Step 3 – HITL questions (identity, voice, workspace — one combined form)
 
@@ -115,7 +114,7 @@ Call `read_me` with `modules: ["elicitation"]` to get the elicitation instructio
    - This is what gets used in chat output and anywhere the assistant addresses the user directly.
 
 2. **Full display name + accent variants.**
-   - Q: "Full name as it should appear in written drafts and Notion records (e.g. 'Klara Martinez')?"
+   - Q: "Full name as it should appear in written drafts and reports (e.g. 'Klara Martinez')?"
    - Q: "Any accent or spelling variants in transcripts/Gong that should be normalised? (e.g. accented form, nickname, misspellings — leave blank if none)"
 
 3. **Role + team.**
@@ -217,27 +216,16 @@ Use this distillation to draft the "Specific patterns the user uses" + "Specific
 
 Workspace questions to include in the combined form — do not issue a separate `AskUserQuestion` call for these:
 
-1. **Notion report templates DB.**
-   - "Paste the URL of the Notion database where your report templates live. (Leave blank if you haven't set one up yet — you can add it later via /assistant-setup --update.)"
-   - If a URL is provided: extract the DB ID from it (the 32-character hex string in the URL path). Store both the raw URL and the extracted ID separately in workspace.md.
-   - If left blank: leave both fields as `<TBD>` with a note to re-run `/assistant-setup --update` once the DB is ready.
-
-2. **Per-cadence output format.** For each cadence, ask which output format the user prefers:
-   - **Weekly:** chat summary (markdown in conversation) / HTML file on Desktop / Notion page in templates DB
-   - **Monthly:** same options
-   - **Quarterly:** same options
-   - Also ask: "What's your default template name for each cadence?" (pre-fill with "Weekly Team Brief", "Monthly Leadership Report", "Quarterly Business Review" as suggestions — user can accept or rename).
-
-3. **Gong session title keywords.** Pre-populate with the defaults below and ask the user to confirm or adjust:
+1. **Gong session title keywords.** Pre-populate with the defaults below and ask the user to confirm or adjust:
    `Onboarding, Architecture, Architecting, Enablement, Check-in, Check in, QBR, Workshop, Training`
    Note in the form: "These are combined with host-based filtering (your team's emails) to identify AISE customer sessions in Gong."
 
-4. **Internal Slack channels.** Three fields (all free text, all optional):
+2. **Internal Slack channels.** Three fields (all free text, all optional):
    - AISE team coordination channel
    - Leadership / management channel
    - CS org-wide channel
 
-5. **Internal coordinators** (free text, all optional):
+3. **Internal coordinators** (free text, all optional):
    - Own manager / skip-level
    - Commercial / renewal partner
    - PS Ops / planning contact
@@ -257,7 +245,7 @@ update_model_record(
   PARAMETERS: {
     "custom.AISE Identity": "<p>Preferred name: {value}</p><p>Display name: {value}</p><p>Timezone: {value}</p><p>Working hours: {value}</p><p>Role: {value}</p><p>Team: {value}</p><p>Manager: {value}</p><p>Email: {value}</p><p>Accent variants: {value or \"none\"}</p>",
     "custom.AISE Profile preferences": "<p>Sign-off: {value}</p><p>Em dashes: {value}</p><p>Semicolons: {value}</p><p>English variant: {value}</p><p>Casual register: {value}</p><p>{specific patterns from scraping, if run}</p>",
-    "custom.AISE Leadership Workspace": "<p>Notion templates DB URL: {value or \"not set\"}</p><p>Notion templates DB ID: {value or \"not set\"}</p><p>Report output format – weekly: {value}</p><p>Report output format – monthly: {value}</p><p>Report output format – quarterly: {value}</p><p>Default template name – weekly: {value}</p><p>Default template name – monthly: {value}</p><p>Default template name – quarterly: {value}</p><p>Gong session keywords: {value}</p><p>Slack AISE channel: {value}</p><p>Slack leadership channel: {value}</p><p>Slack CS org channel: {value}</p><p>Manager: {value}</p><p>Commercial partner: {value}</p><p>PS Ops contact: {value}</p>",
+    "custom.AISE Leadership Workspace": "<p>Gong session keywords: {value}</p><p>Slack AISE channel: {value}</p><p>Slack leadership channel: {value}</p><p>Slack CS org channel: {value}</p><p>Manager: {value}</p><p>Commercial partner: {value}</p><p>PS Ops contact: {value}</p>",
     "custom.AISE Voice Scrape Samples": "<p>{distilled samples, if scraping ran}</p>"
   }
 )

@@ -2,13 +2,13 @@
 
 How to draft a structured, phased onboarding program for a new Productboard AISE engagement. This is the reference for `/customer-plan --full`.
 
-Reference case: **Kpler Holding SA** (Q1 2026) — program plan and session log live in Notion / Glean.
+Reference case: **Kpler Holding SA** (Q1 2026) — program plan and session log, reachable via Glean.
 
 ---
 
 ## Purpose
 
-Use this when a new customer is assigned, or when an existing program needs a full restructure. The output is a decision-ready markdown artefact that lands in the customer's **Active Package page body in Notion**, under a collapsible toggle heading `🗺️ Program Plan — YYYY-MM-DD`. the user can then work against it for the rest of the engagement.
+Use this when a new customer is assigned, or when an existing program needs a full restructure. The output is a decision-ready plan that lands in the customer's Planhat Company `custom.Engagement Plan` field. The user can then work against it for the rest of the engagement.
 
 This is for **program-level planning** only. Individual session prep, debriefs, and facilitator guides are separate workflows (`/session-prep`, `/session-summary`, `/customer-plan --next`).
 
@@ -23,16 +23,16 @@ Trigger phrases:
 - "Restructure the plan for [customer]"
 - "Build me a session plan for [customer]"
 
-Do **not** invoke for single-session prep, debriefs, decision register updates, or individual deliverable requests. Route those through `/session-prep`, `/session-summary`, `/customer-plan --next`, or `/notion-write`.
+Do **not** invoke for single-session prep, debriefs, decision register updates, or individual deliverable requests. Route those through `/session-prep`, `/session-summary`, or `/customer-plan --next`.
 
 ---
 
 ## Inputs to confirm up front
 
-Before drafting, verify you have the following. Pull via Glean / Notion / Gmail / Salesforce first. If anything is still missing, ask once as a single consolidated question, then proceed with stated assumptions.
+Before drafting, verify you have the following. Pull via Glean / Planhat / Gmail / Salesforce first. If anything is still missing, ask once as a single consolidated question, then proceed with stated assumptions.
 
 1. **Customer name** and industry
-2. **Contracted scope** — number of Architecting sessions + Training sessions (from the Master Package on the Active Package record)
+2. **Contracted scope** — total Architecting + Training session pool, from `custom.AISE Working Sessions` summed across the Company's active `Line Item` records (`context/planhat-schema.md` § AISE Working Sessions). It's one shared pool, not separate Architecting/Training caps — both session types draw from it.
 3. **Program owner** on customer side (primary decision-maker, day-to-day)
 4. **Executive sponsor** (sign-off gate)
 5. **Target timeline** — e.g. "Q1 live", or a specific milestone date
@@ -112,7 +112,7 @@ Three prefixes. Numbering is sequential **within** each prefix, not across prefi
 ### S-sessions — Syncs & Discovery (uncounted)
 
 - **Format:** `S0`, `S1`, … `SX`
-- **Does NOT count:** Excluded from ledger burn. Maps to the `Do not count` checkbox on the Notion Sessions database.
+- **Does NOT count:** Excluded from the contracted session pool — see `context/planhat-schema.md` § Line Item. S-sessions don't draw from `custom.AISE Working Sessions`.
 - **Use for:**
   - Informal scoping / pre-kickoff calls
   - Kickoffs
@@ -239,17 +239,17 @@ Verify every one of these:
 
 ## Where the plan lands
 
-1. **Primary home — the only home:** the customer's **Active Package page body** in Notion (the page linked from the Customer record's `Active Package` relation, limit 1), inside a collapsible toggle heading `🗺️ Program Plan — YYYY-MM-DD`. Do **not** create the plan as a free-floating child of the Customer page or in a separate "Program Plan" sub-page elsewhere. When looking up an existing plan, follow the `Active Package` relation from the Customer record — ignore any legacy plan sub-pages hanging off the Customer page (they are stale by definition). The Customer page itself is for *company identity* (who they are, what products they put to market, stakeholders, goals) — not program tracking.
-2. **Planned Session records:** optionally create `Call Status = Planned` rows in the Sessions DB for each session in the plan, linked to the Customer and to the Active Package (`Consumed Package` relation). Hand that write to the `notion-writer` agent.
-3. **Do NOT** create Tasks for customer-side action items surfaced during planning — those live in the plan's Open items table. Only PB-side tasks (work the user will do) go into the Tasks DB.
+1. **Primary home — the only home:** the customer's Planhat Company `custom.Engagement Plan` rich-text field (single-line HTML per `context/planhat-schema.md` § Rich Text Field Formatting). Do **not** split the plan across a Drive doc or a Comment — the field is the whole plan, replaced wholesale on each approved revision (not appended to). Prior versions aren't preserved in-field; if history matters, note the change under a dated heading within the field itself rather than relying on Planhat's own record history.
+2. **No placeholder Session records.** Unlike the retired Notion workflow, this plan does **not** create forward-looking "Planned" Conversation stubs — Planhat's Conversation model represents things that already happened (`date` = when the session took place), so there's no clean placeholder shape for a future session. The plan's session-by-session table *is* the record of what's planned; an actual Planhat Conversation gets created only when the session is delivered, through the normal `session-prepper`/`post-session-debrief` path.
+3. **Do NOT** create Tasks for customer-side action items surfaced during planning — those live in the plan's Open items table. Only PB-side tasks (work the user will do) go into Planhat Tasks.
 
-See `context/notion-schema.md` for field formats.
+See `context/planhat-schema.md` for field formats and write rules.
 
 ---
 
 ## Reference case
 
-**Kpler Holding SA** (Q1 2026) is the canonical example. When in doubt about structure, depth, or tone, pull the Kpler program plan and session log from Notion (query the Active Package page body for Kpler) or via Glean. Match that level of specificity, formatting, and decisions density.
+**Kpler Holding SA** (Q1 2026) is the canonical example, from the era when this plan lived in Notion. When in doubt about structure, depth, or tone, pull it via Glean (it predates the `custom.Engagement Plan` field) and match that level of specificity, formatting, and decisions density.
 
 ---
 
@@ -271,7 +271,7 @@ Full voice reference: `context/communication-style-guide.md`.
 Route elsewhere if asked for:
 - Individual session prep or facilitator guides → `/session-prep`
 - Session debriefs or scoring → `/session-summary`, `/session-score`
-- Decisions register updates → `/session-summary` or `/notion-write update`
+- Decisions register updates → `/session-summary`
 - Customer comms drafting (Slack, email) → `/draft-followup`
 - Stakeholder maps or org diagrams → separate
 - Configuration backlogs → separate

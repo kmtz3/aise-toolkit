@@ -49,8 +49,7 @@ claude mcp add salesforce -- npx -y @salesforce/mcp
 **Surface the claude.ai integration checklist.** Tell the user:
 
 > To use this assistant fully, connect these integrations in **claude.ai → Settings → Integrations**:
-> - **Planhat** — required (blocks all profile reads/writes; onboarding cannot proceed without it)
-> - **Notion** — required for customer tracker reads/writes (sessions, tasks, program plans — unrelated to your personal profile)
+> - **Planhat** — required (blocks all profile reads/writes; onboarding cannot proceed without it — also the sole customer tracker: sessions, tasks, program plans)
 > - **Gmail, Google Calendar, Google Drive** — required for drafts and session tracking
 > - **Glean** — required for Gong transcript access and cross-tool search
 > - **Slack** — required for debrief drafts and channel reads
@@ -234,7 +233,7 @@ Workspace questions to include in the combined form — do not issue a separate 
 
 ### Step 7 – Write `custom.AISE *` fields on the Planhat User record ⚠️ ALWAYS RUN (all modes, including already-onboarded)
 
-> **Note:** Local `about/` files (`identity.md`, `voice.md`, `workspace.md`) are no longer written by this agent. The User record's `custom.AISE *` fields are the only output. `tracker-memory.md` is still managed by the `context-keeper` agent separately (as a Notion sub-page, for now) and is unaffected by this step.
+> **Note:** Local `about/` files (`identity.md`, `voice.md`, `workspace.md`) are no longer written by this agent. The User record's `custom.AISE *` fields are the only output. Cross-customer tracker memory is managed by the `context-keeper` agent separately, on `custom.AISE Tracker Memory` (same Planhat User record), and is unaffected by this step.
 
 **Why:** These fields are the authoritative store for preferences, readable by any Planhat-connected context, and editable in place — no versioning to manage.
 

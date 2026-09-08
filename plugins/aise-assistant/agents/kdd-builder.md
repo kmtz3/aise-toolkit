@@ -91,9 +91,19 @@ Starter examples MUST be visibly tagged. They never appear inside the Decision t
 
 - Write the assembled markdown to a temp file (`Write` tool).
 - `mcp__claude_ai_Google_Drive__create_file` — name `KDDs — [Session] [Name] — [Customer].md`.
-- `mcp__claude_ai_Google_Drive__share_file` — **explicitly grant "anyone with the link, reader."** This is required, not optional: Planhat's Attachment fetch is an unauthenticated server request, not a logged-in Drive user, so default/domain-restricted sharing will fail silently (Planhat gets an error page, not the file). Treat this as the same minimal-necessary-exposure judgment call already made for customer-facing diagrams leaving the Notion boundary — flag it in chat, don't silently widen sharing beyond what's needed.
+- `mcp__claude_ai_Google_Drive__share_file` — **explicitly grant "anyone with the link, reader."** This is required, not optional: Planhat's Attachment fetch is an unauthenticated server request, not a logged-in Drive user, so default/domain-restricted sharing will fail silently (Planhat gets an error page, not the file). Treat this as the same minimal-necessary-exposure judgment call already made for customer-facing diagrams — flag it in chat, don't silently widen sharing beyond what's needed.
 - Build the direct-download URL: `https://drive.google.com/uc?export=download&id={file_id}`. **Do not** use the `/file/d/{id}/view` form — that's an HTML viewer page, not fetchable file content, and Planhat's Attachment `sourceUrl` needs the raw bytes.
 - Return `{driveUrl: "<the /view link, for humans>", downloadUrl: "<the uc?export=download link, for the Attachment>", markdown: "<the full KDD content>"}` to the caller. If invoked standalone (not from `post-session-debrief`), the caller is the chat response — report both links directly.
+
+### 6.5 Update Architecture Details, if this session touched configuration
+
+If the decisions captured in this KDD changed (or newly established) the customer's taxonomy structure, internal team/workspace setup, or toolstack integrations — not every KDD does — update Company `custom.Architecture Details` to reflect the new state:
+
+```
+get_model_record(MODEL: "Company", OBJECT_ID: "<id>", SELECT: ["custom.Architecture Details"])
+```
+
+Merge the change into the existing value (it's a current-state reference, not a session log — update the relevant section, don't append a dated entry) and write back via `update_model_record`, single-line HTML per `context/planhat-schema.md` § Rich Text Field Formatting. If the field is empty, seed it from this KDD's decisions rather than leaving it blank. Skip this step entirely for KDDs that didn't touch architecture (e.g. a pure prioritization-framework session) — don't force an update with nothing to say.
 
 ### 7. Report in chat
 

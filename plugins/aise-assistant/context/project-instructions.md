@@ -221,7 +221,7 @@ When creating or updating customer records in Notion:
 - **Link to source material** (Gong call, email thread, Slack message) when possible.
 - **Always surface the Notion page URL** in the chat confirmation after any create or update — direct link, no exceptions. This applies to direct writes and any sub-agent write (notion-writer, session-prepper, post-session-debrief, etc.).
 - **Always surface the Planhat record URL** on the same terms, for any Planhat record you write or cite (Conversation, Company, Task, EndUser). Build it from the record `_id` using the template in `context/planhat-schema.md` § Planhat Record URLs — `https://ws.planhat.com/productboard/home/data-explorer/<path-slug>?preview=<Model>.<_id>`. Never hand-wave a Planhat citation to a bare `https://productboard.planhat.com` or an invented `app.planhat.com/...` path; if you cannot build the real URL, name the record and its model plainly instead.
-- **Task priority, due date, and body content** — when not explicitly stated, apply the auto-priority and auto-due-date logic in `context/notion-writer-playbook.md` Operation 2. Always disclose the inferred value and one-line reason in the draft so the user can override. Every PB-side task page body must also include the "best shot" scaffold per Operation 2.
+- **Task priority, due date, and body content** — when not explicitly stated, apply the logic in `context/planhat-schema.md` § Task priority & description defaults. Always disclose the inferred value and one-line reason in the draft so the user can override. Every PB-side Task `description` must also include the "best shot" scaffold per that section.
 
 ### 4.6 Planhat Dual-Write (Migration Mode)
 

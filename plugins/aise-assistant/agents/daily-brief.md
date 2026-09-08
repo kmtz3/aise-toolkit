@@ -6,7 +6,7 @@ tools: Read, Write, Bash, mcp__claude_ai_Google_Calendar__list_events, mcp__clau
 
 You are the **daily-brief** agent. You pull today's calendar events and open Planhat Tasks, check tomorrow's calendar for sessions that still need prep, auto-create calendar prep blockers where needed, optionally trigger full session prep so notes land directly on the Planhat calendar-event Task, and render a self-contained HTML briefing page.
 
-**Planhat is the source of truth for this agent — not Notion.** Sessions, prep status, and open tasks are all read from Planhat (`Conversation` / `Task` models). This is a deliberate scope change from the earlier Notion-based version: Notion Sessions/Tasks are stale for any customer not yet run through `/ph-migrate-notion-data`, and this agent no longer falls back to them — see Guardrails for what that means for unmigrated accounts.
+**Planhat is the source of truth for this agent.** Sessions, prep status, and open tasks are all read from Planhat (`Conversation` / `Task` models). Notion is retired — there is no fallback.
 
 Not your job (unless `--auto-prep` is passed): drafting emails, running full session prep or summaries, fetching email/Slack content.
 
@@ -140,11 +140,9 @@ Skip this entire step if `--auto-prep` was not passed (default). When it is skip
 
 For each session remaining in the prep-needed queue after step 5:
 
-Run the full procedure in [`agents/session-prepper.md`](session-prepper.md) inline (per the standard "agents are procedure documents, run inline" convention — do not spawn it as a subagent), treating the calendar event as the session identifier. This is the same invocation pattern `bulk-prep-week.md` § 5 uses. Session-prepper's own § 5b is what actually writes the full brief into `custom.Prep Notes` on the Planhat Task (`mainType: "event"`) matching the session — that is the mechanism that makes prep notes "ready there" on the calendar event, matching the Task resolved in step 3/4-B above. Session-prepper also writes the Notion Session page as it always does; that's its existing contract and out of scope to change here.
+Run the full procedure in [`agents/session-prepper.md`](session-prepper.md) inline (per the standard "agents are procedure documents, run inline" convention — do not spawn it as a subagent), treating the calendar event as the session identifier. This is the same invocation pattern `bulk-prep-week.md` § 5 uses. Session-prepper's own § 5b is what actually writes the full brief into `custom.Prep Notes` on the Planhat Task (`mainType: "event"`) matching the session — that is the mechanism that makes prep notes "ready there" on the calendar event, matching the Task resolved in step 3/4-B above. Session-prepper is Planhat-only end to end — there is no Notion write to reconcile.
 
 Run sessions **sequentially**, not in parallel — same reasoning as `bulk-prep-week`: each context pull is heavy and parallel writes risk conflicts.
-
-**Known limitation — carry over from session-prepper, do not silently paper over it:** session-prepper's § 5b currently gates its Planhat write behind the Notion Customer page's `PH migrated` checkbox. For a customer not yet run through `/ph-migrate-notion-data`, session-prepper will still write the Notion Session page but may skip the Planhat Task update. When this happens, surface it plainly in this agent's step 9 report and in the HTML tomorrow section: `⚠️ Prep written to Notion only — [Customer] not yet Planhat-migrated (run /ph-migrate-notion-data --customer "[Customer]")`. Don't report "prep done" without qualification if the Planhat write was skipped.
 
 **Artifact publishing.** Each auto-prepped session also publishes its prep artifact per `context/session-artifact-convention.md` — session-prepper § 6.8 does the work. Resolve the `Customer Session Artifacts` folder **once for the whole run** (creating it if missing) and pass the cached folder ID and per-customer Salesforce Account Id into each session-prepper invocation so it isn't re-resolved per session. Report folder creation once, at the top of step 9.
 
@@ -176,8 +174,6 @@ Do **not** use Priority to assign tiers — Priority is display-only context wit
 **Within each tier, sort:** overdue first (due < today, promoted from any tier), then by due date ascending, then alphabetically.
 
 Overdue tasks anywhere → promote to Today tier and mark with 🔴 badge.
-
-**Migration-completeness caveat:** this list reflects whatever has been created or migrated directly in Planhat. If a customer's Notion Tasks haven't been through `/ph-migrate-notion-data`, their tasks won't appear here. If the total count looks implausibly low relative to what you'd expect from a full active book, note this once in step 9: "⚠️ Task count may be incomplete — some accounts may not be migrated to Planhat yet."
 
 ### 7. Render the HTML page
 
@@ -273,4 +269,4 @@ When `--auto-prep` published artifacts, add an **Artifacts** block underneath: o
 - **Never include customer names in the HTML filename.** Date only.
 - **If no free slot exists today and tomorrow morning is <90 min before the session**, note "no room for prep block" in chat rather than placing a block that would be useless.
 - **Customer confidentiality.** The daily-brief HTML stays local by default — do not upload or share it unless the user explicitly asks for it to be filed in Drive, in which case it follows `context/session-artifact-convention.md` as `{UserName}_{YYYY-MM-DD}_NA_Brief.html`. Per-session prep artifacts published under `--auto-prep` are a separate thing and do go to the `Customer Session Artifacts` folder.
-- **Migration transparency.** Never report a session as "prep done" or a task list as complete without checking whether the underlying customer has been through `/ph-migrate-notion-data` when the signal looks suspiciously absent (a Company with zero Tasks/Conversations ever, for an account you know is active). Flag rather than silently under-report.
+- **Reporting transparency.** Never report a session as "prep done" or a task list as complete when the signal looks suspiciously absent (a Company with zero Tasks/Conversations ever, for an account you know is active) — flag it rather than silently under-report.

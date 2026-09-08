@@ -1,7 +1,7 @@
 {
   "name": "aise-assistant",
-  "version": "2.60.0",
-  "description": "End-to-end customer onboarding co-pilot for Productboard AI Success Engineers (AISEs) — prep, deliver, summarize, follow up, plan, and keep Notion in sync. Ships universal agents, slash commands grouped by family (customer-*, session-*, draft-*, notion-*, assistant-*), schemas, and KDD templates plus an /assistant-setup onboarding flow that personalizes each install.",
+  "version": "2.61.0",
+  "description": "End-to-end customer onboarding co-pilot for Productboard AI Success Engineers (AISEs) — prep, deliver, summarize, follow up, plan, and keep Planhat up to date. Ships universal agents, slash commands grouped by family (customer-*, session-*, draft-*, log-*, ph-*, planhat-*, assistant-*), schemas, and KDD templates plus an /assistant-setup onboarding flow that personalizes each install.",
   "author": {
     "name": "Klara Martinez"
   },
@@ -12,7 +12,7 @@
     "aise",
     "customer-success",
     "onboarding",
-    "notion",
+    "planhat",
     "meetings"
   ]
 }

@@ -53,10 +53,9 @@ Here is the full command reference for the **aise-leadership** plugin.
 
 | Command | What it does |
 |---|---|
-| `/notion-ask <question>` | Answer questions about the 6 Customer Tracker databases — structure, relationships, writable vs auto-calculated fields, credit burn logic. |
-| `/notion-check [--customer <name>] [--fix]` | Walk Notion looking for ownership and data drift — null Owners, missing/duplicate Active Packages, propagation drift, orphan packages, planned-but-past sessions. Read-only by default; `--fix` applies low-risk corrections. |
-| `/notion-sync --sf [--customer <name>] [--owner <name>] [--apply]` | Sync Salesforce ARR and contract end dates into Active Packages. Fills null ARRs, corrects stale end dates, flags churn/skip cases for review. Preview without `--apply`. |
-| `/notion-sync --renewals [--mine\|--global] [--days N] [--dry-run]` | Flag active packages ending within N days (default 90) that aren't already marked as Renewal. `--dry-run` previews without writing. |
+| `/session-audit [--owner <aise-name>] [--customer <name>] [--from YYYY-MM-DD] [--to YYYY-MM-DD] [--fix] [--tasks] [--dry-run]` | Reconciles logged Planhat session history against Calendar + Gong — gaps, wrong types, duplicates, misdated session times, attribution errors. Default scope: whole workspace, grouped by AISE; narrow with `--owner <aise-name>` or `--customer <name>`. `--tasks` instead audits open Planhat Tasks for completion drift, evidenced via Gmail/Glean. Read-only by default; `--fix` applies corrections with per-write read-back verification. |
+
+> `/notion-ask` and `/notion-sync` (all modes) have been retired — Notion is no longer the working record. SF ARR/renewal data flows natively into Planhat; `/notion-check`/`/notion-fix`'s still-relevant scope is now `/session-audit` above.
 
 ---
 
@@ -64,7 +63,7 @@ Here is the full command reference for the **aise-leadership** plugin.
 
 | Command | What it does |
 |---|---|
-| `/assistant-setup` | Onboard or re-onboard to this assistant — resolves your Notion identity, sets voice preferences, workspace details. Run on first install. |
+| `/assistant-setup` | Onboard or re-onboard to this assistant — resolves your Planhat identity, sets voice preferences, workspace details. Run on first install. |
 | `/assistant-remember <correction>` | Capture a correction, new rule, or changed fact into context files and memory. |
 | `/assistant-improvement` | After a skill run with issues, analyze what went wrong and output a copyable coding-agent prompt naming the exact plugin, files, and fixes needed. No writes — output only. |
 | `/aise-context` | Load the assistant's operating context (role, ground rules, command registry). Run at the start of any session if context seems stale. |
@@ -78,8 +77,7 @@ Here is the full command reference for the **aise-leadership** plugin.
 2. Drill into flagged accounts with `/report --customer <name>`
 
 **To audit tracker health:**
-1. `/notion-check` — surface ownership drift, missing packages, stale data
-2. `/notion-check --fix` — apply safe corrections
-3. `/notion-sync --sf --apply` — sync ARR and end dates from Salesforce
+1. `/session-audit` — reconcile session history and task completion drift across the whole workspace
+2. `/session-audit --fix` — apply safe corrections, per-write read-back verified
 
 **context/ is shared with aise-assistant.** Run `bash scripts/sync-context.sh` (dev only) to pull schema and reference guide updates from the upstream plugin.

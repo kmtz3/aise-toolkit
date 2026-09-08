@@ -1,5 +1,21 @@
 # Changelog — aise-leadership
 
+## [1.13.0] — 2026-09-08
+
+### Removed
+- Notion fully retired as a data source. Deleted `agents/notion-writer.md`, `agents/notion-ask.md`, `agents/notion-integrity-check.md`, `agents/notion-completion-fix.md`, `agents/sf-backfill.md` (redundant with native SF→Planhat sync) and their skills, plus the mirrored `context/notion-schema.md`, `context/notion-writer-playbook.md`, `context/notion-planhat-field-mapping.md`.
+- `/notion-ask`, `/notion-sync` (`--sf`/`--owner`/`--renewals`), `/notion-check`, `/notion-fix` commands are gone.
+
+### Added
+- **New `agents/session-log-auditor.md` + `/session-audit` skill** — portfolio-scoped session-reconciliation and task-completion-drift agent, replacing `notion-integrity-check`/`notion-completion-fix`. Defaults to the whole workspace; `--owner <aise-name>` narrows to one AISE. Carries all 20 hard-won production rules from the aise-assistant original, plus a new per-AISE fan-out and portfolio-scoped checkpoint for whole-workspace runs.
+
+### Changed
+- **`report-builder.md` rewritten Planhat-native.** Both `--customer` and `--aise` modes now read Company/Conversation/Task/Line Item data instead of Notion SQL; credit burn is computed from `custom.AISE Working Sessions` (Line Item) vs. delivered-count of the eight counted session types. `--aise` mode's book-of-accounts resolution reconciles Company `owner` (the CSM field, not necessarily the AISE) against empirical Conversation/Task activity rather than trusting either signal blindly.
+- **Report output moved from a Notion page write to a published in-Claude Artifact** (`--no-notion` renamed to `--chat-only`). The Notion-template-discovery system is retired — a single built-in layout is used for both modes now.
+- Updated `README.md`, `CLAUDE.md`, `skills/assistant-help/SKILL.md`, and `context/planhat-user-profile.md`'s `custom.AISE Leadership Workspace` field description (dropped the Notion-templates-DB sub-fields) to match.
+
+---
+
 ## [1.12.13] — 2026-09-01
 
 ### Fixed
