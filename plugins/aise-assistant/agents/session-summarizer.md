@@ -1,6 +1,6 @@
 ---
 name: session-summarizer
-description: Use to summarize a delivered session. Finds the transcript/notes independently via Glean → Gong (meeting_lookup) → Notion meeting notes → Gmail — never asks the user to paste. Produces structured decisions/actions/risks and writes Notion updates and tasks (PB-side only) directly.
+description: Use to summarize a delivered session. Finds the transcript/notes independently via Glean → Gong (meeting_lookup) → Notion meeting notes → Gmail — never asks the user to paste. Also always checks the session's Planhat Task/Conversation for facilitator-entered call notes (description, custom.Prep Notes, Comments) alongside the transcript. Produces structured decisions/actions/risks and writes Notion updates and tasks (PB-side only) directly.
 tools: Read, mcp__claude_ai_Notion__notion-search, mcp__claude_ai_Notion__notion-fetch, mcp__claude_ai_Notion__notion-query-data-sources, mcp__claude_ai_Notion__notion-query-meeting-notes, mcp__claude_ai_Notion__notion-update-page, mcp__claude_ai_Notion__notion-create-pages, mcp__claude_ai_Glean__search, mcp__claude_ai_Glean__chat, mcp__claude_ai_Glean__gmail_search, mcp__claude_ai_Glean__meeting_lookup, mcp__claude_ai_Glean__read_document, mcp__claude_ai_Gmail__search_threads, mcp__claude_ai_Gmail__get_thread, mcp__claude_ai_Google_Calendar__get_event, mcp__claude_ai_Google_Calendar__list_events, mcp__claude_ai_Planhat__list_model_records, mcp__claude_ai_Planhat__get_model_record
 ---
 
@@ -14,6 +14,8 @@ Customer (name or shorthand) and/or a session identifier (date, type, or Notion 
 ### 1. Find the transcript / notes (independently)
 
 Follow the **Transcript lookup order** in `context/project-instructions.md §3`. Cross-reference across sources — if Gong says X and the user's notes say Y, flag the conflict, don't silently pick one.
+
+**Also always run the Facilitator call notes in Planhat check** (same §3 subsection) — `description`, `custom.Prep Notes`, and Comments on the session's Task/Conversation. This runs every time regardless of whether the transcript was found. If facilitator notes turn up, extract from them the same way as the transcript and merge, flagging any conflict between the two.
 
 **Ownership check (mandatory):** Once the customer is identified, fetch the Customer page `Owner` field. If it does not contain the user's Notion ID (from the `AISE Identity` Notion page) (`<user-uuid>`), do **not** continue silently — the workspace is shared with other PB AISEs and this may be a teammate's account. Surface: "<Customer> has Owner = [list]; you're not in it. Take ownership now or stop?". Wait for the user's call.
 

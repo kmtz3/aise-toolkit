@@ -95,6 +95,9 @@ Use the Active Package `Start Date` as the lookback start (or `--since` if provi
 **Existing Sessions DB (dedup baseline):**
 - Query Sessions DB where `Customer` = customer page URL. Capture all existing session dates and inferred types.
 
+**Planhat facilitator notes (when a Task/Conversation already exists for a candidate date):**
+- Run the **Facilitator call notes in Planhat** check (`context/project-instructions.md §3`) — `description`, `custom.Prep Notes`, and Comments — on any existing Task/Conversation matched in the dedup step above. If found, treat as a supplementary source alongside the Gong transcript for that session, same as `post-session-debrief`. Skip for sessions with no existing Planhat record — there's nothing to check yet.
+
 ---
 
 ### 3. Merge and cross-reference

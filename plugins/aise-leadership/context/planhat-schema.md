@@ -1353,6 +1353,12 @@ list_model_records(
 - **Content is plain-paragraph HTML only.** Don't reuse the `<strong>`/`<ul>` patterns used for Conversation/Task rich-text fields — Comment doesn't render them.
 - No dedup key — comments are additive. Don't post an empty or redundant comment; skip the write if there's nothing to say.
 
+### Read rules
+
+> Used by the **Facilitator call notes in Planhat** check (`project-instructions.md` § Transcript lookup order) to pick up notes a facilitator left directly on the session's Task/Conversation instead of, or alongside, the Gong transcript.
+
+`list_model_records(MODEL: "Comment", FILTER: {"commentableId[equal to]": "<task_or_conversation_id>", "commentableType[equal to]": "Task"}, SELECT: ["text", "createdAt", "userId"])` — swap `"Task"` for `"Conversation"` to check the linked Conversation. Run both when the session has both a Task and a Conversation record, since either could carry a comment. Empty results are normal — most sessions have none.
+
 ---
 
 ## Attachment (Planhat)

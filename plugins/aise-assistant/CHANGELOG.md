@@ -5,6 +5,14 @@ Format: `## [version] — YYYY-MM-DD` followed by bullet points grouped by type.
 
 ---
 
+## [2.60.0] — 2026-09-08
+
+### Added
+- **Facilitator call notes in Planhat — new mandatory check on every debrief/post-call-gathering run.** Alongside the Gong transcript lookup order, agents now always also check the session's Planhat Task/Conversation for facilitator-entered notes: `description`, `custom.Prep Notes`, and Comments. Documented as a new subsection in `context/project-instructions.md` § Transcript lookup order, with a matching read pattern (`list_model_records` by `commentableId`/`commentableType`) added to `context/planhat-schema.md` § Comment (previously write-only).
+- `agents/post-session-debrief.md`, `agents/session-summarizer.md`, and `agents/session-backfill.md` updated to run the new check and merge facilitator notes alongside the transcript, flagging conflicts rather than silently preferring one source.
+
+---
+
 ## [2.59.2] — 2026-09-07
 
 ### Changed

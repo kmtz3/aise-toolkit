@@ -95,6 +95,20 @@ When finding notes or a transcript for a specific session, try these sources in 
 
 Cross-reference across sources. If Gong says X and user notes say Y, flag the conflict — don't silently pick one.
 
+### Facilitator call notes in Planhat — always check, alongside the transcript
+
+**This runs every time, in addition to the Gong transcript ladder above — never as a substitute for it, and never skipped.** The facilitator sometimes types notes directly onto the session's Planhat record during or after the call (task/call details, a comment, or a custom field) — Gong indexing lag or a missed recording shouldn't mean those notes get lost.
+
+Once the session's Planhat Task and/or Conversation `_id` is resolved (§ Session record resolution in `planhat-schema.md`), check all three of these before finalizing the debrief:
+
+1. **Task/Conversation `description` field** — `get_model_record(MODEL: "Task", OBJECT_ID: "<id>", SELECT: ["description"])` (and the linked Conversation, if one exists). Facilitators sometimes drop raw call notes here mid-session.
+2. **`custom.Prep Notes`** — `get_model_record(MODEL: "Task", OBJECT_ID: "<id>", SELECT: ["custom.Prep Notes"])`. Documented primarily as a pre-session field, but facilitators sometimes append post-call notes to the same field rather than opening a new one — read it even when a prep brief already used it.
+3. **Comments on the record** — `list_model_records(MODEL: "Comment", FILTER: {"commentableId[equal to]": "<task_or_conversation_id>", "commentableType[equal to]": "Task"})` (repeat with `"commentableType[equal to]": "Conversation"` for the linked Conversation, if different). See `planhat-schema.md` § Comment → Read rules.
+
+**If any of the three return facilitator-authored notes, treat them as a second source alongside the Gong transcript** — extract decisions/actions/risks from them the same way, and merge into the debrief. Cross-reference against the transcript per the rule above: if the transcript says X and the facilitator's notes say Y, flag the conflict rather than silently picking one. Facilitator notes taken live on the call are not automatically more or less authoritative than the transcript — surface both.
+
+**If all three come back empty, that's expected, not an error** — proceed on the transcript alone.
+
 ### Attendee / participant lookup
 
 When resolving who actually attended a session (for Planhat `endusers`, Notion "Attended" fields, debrief audience context, etc.), always check **both Gong and Google Calendar**. Gong is the authoritative source — it shows who joined the call. GCal RSVPs are unreliable, especially for Teams-organized events where attendees respond via Teams and show as `needsAction` in GCal.

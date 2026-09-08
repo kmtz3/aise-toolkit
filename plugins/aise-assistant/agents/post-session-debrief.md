@@ -44,6 +44,8 @@ Pass the Voice section verbatim into the inline executions of `session-summarize
 
 It will find the transcript/notes via the **Transcript lookup order** in `context/project-instructions.md §3` (`ask_account` → `meeting_lookup` → Gong-scoped Glean search, both attempts → Gmail → Glean chat → ask once — the Notion meeting-notes/session-page hops in that lookup order don't apply here, skip them) and extract: decisions (KDDs), open items, PB-side action items, customer-side action items, risks surfaced, stakeholder changes, source link.
 
+**Also run the Facilitator call notes in Planhat check** (`project-instructions.md` § Transcript lookup order, same subsection) on the Task/Conversation resolved in step 1 — `description`, `custom.Prep Notes`, and Comments. This is mandatory every run, not conditional on the transcript being found or missing. If facilitator notes turn up, merge them into the extracted output alongside the transcript and flag any conflict between the two rather than silently preferring one.
+
 **Do not treat a single miss (e.g. `meeting_lookup` returning empty) as proof the transcript is unavailable.** Per `project-instructions.md §3`, every applicable step in the lookup order must be exhausted before falling to the placeholder-debrief branch (2b) — this is the documented cause of debriefs incorrectly going to placeholder when the recording was actually indexed and reachable via a later step.
 
 **Use `session-summarizer` for extraction only.** Ignore any of its own write instructions (it was written against Notion) — every write in this run happens in the steps below, against Planhat.
