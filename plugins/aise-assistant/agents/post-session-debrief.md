@@ -252,12 +252,12 @@ If there is a known external Slack channel with this customer, note in chat that
 
 **Never optional — runs on every completed session, full or placeholder.** This is the same non-skippable status as step 10's `custom.Next Step` refresh: even when the transcript is thin or missing, write the Task with whatever is available and flag the gaps in its `description` rather than leaving the Task uncreated or its `description` empty. An empty-description Slack debrief Task is exactly as invisible to `/daily-brief` as a missing one — never create the Task and leave `description` blank "to fill in later."
 
-Draft the debrief in chat using this shape (markdown, for chat readability only):
+Draft the debrief using this shape (markdown, for building the HTML below only — not returned in chat):
 ```
 **[Customer] — [Session Name] ([date])**
 
-✅ [decision / outcome]
-✅ [decision / outcome]
+- [decision / outcome]
+- [decision / outcome]
 
 **Risks:** 🔴 [critical item] / 🟡 [watch item] (or "None.")
 
@@ -265,11 +265,11 @@ Draft the debrief in chat using this shape (markdown, for chat readability only)
 **Next — Customer:** [owner] — [what] by [timing]
 ```
 
-Apply `context/communication-style-guide.md`. No em dashes. Return inline in chat.
+Apply `context/communication-style-guide.md` and the user's `custom.AISE Profile preferences` (sign-offs, em-dash rule, semicolons, English variant, casual register, forbidden filler words) — resolve via `get_model_record` per `context/planhat-user-profile.md` if not already in context this run. No em dashes.
 
 Then rebuild the same content as **single-line HTML** for the Task `description` — per § Planhat rich-text fields (universal write format) in `CLAUDE.md`. Never write the markdown draft or literal newlines directly into `description`. Shape:
 ```
-<p><strong>[Customer] – [Session Name] ([date])</strong></p><ul class="ph-editor__bullet-list"><li class="ph-editor__list-item"><p>✅ [decision / outcome]</p></li><li class="ph-editor__list-item"><p>✅ [decision / outcome]</p></li></ul><p></p><p><strong>Risks:</strong></p><ul class="ph-editor__bullet-list"><li class="ph-editor__list-item"><p>🔴 [critical item]</p></li><li class="ph-editor__list-item"><p>🟡 [watch item]</p></li></ul><p></p><p><strong>Next – PB:</strong> [owner] – [what] by [timing]</p><p></p><p><strong>Next – Customer:</strong> [owner] – [what] by [timing]</p>
+<p><strong>[Customer] – [Session Name] ([date])</strong></p><ul class="ph-editor__bullet-list"><li class="ph-editor__list-item"><p>[decision / outcome]</p></li><li class="ph-editor__list-item"><p>[decision / outcome]</p></li></ul><p></p><p><strong>Risks:</strong></p><ul class="ph-editor__bullet-list"><li class="ph-editor__list-item"><p>🔴 [critical item]</p></li><li class="ph-editor__list-item"><p>🟡 [watch item]</p></li></ul><p></p><p><strong>Next – PB:</strong> [owner] – [what] by [timing]</p><p></p><p><strong>Next – Customer:</strong> [owner] – [what] by [timing]</p>
 ```
 If there are no risks, drop the `<ul>` and write `<p>None.</p>` instead. Reference render: Task `6a9094627ccf4504614e798a` (Unit4 program sync, 27 Aug 2026).
 
@@ -432,9 +432,6 @@ After all steps complete, produce a single consolidated report:
 **Gmail draft:**
 - Draft ID: [id] — to: [recipient], subject: [subject]
 - [Full email body]
-
-**Internal Slack debrief (copy-paste):**
-[Slack draft inline]
 
 **Product feedback log:**
 [Formatted items, or "None surfaced"]

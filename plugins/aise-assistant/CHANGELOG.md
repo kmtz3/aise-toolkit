@@ -5,6 +5,15 @@ Format: `## [version] — YYYY-MM-DD` followed by bullet points grouped by type.
 
 ---
 
+## [2.62.2] — 2026-09-12
+
+### Changed
+- `post-session-debrief` step 6 (internal Slack debrief): dropped the ✅ emoji from decision/outcome bullets in both the chat draft and the Task-description HTML — plain bullets only, risk 🔴/🟡 markers unchanged.
+- Step 6 now explicitly applies the user's `custom.AISE Profile preferences` (sign-offs, em-dash rule, English variant, casual register, forbidden filler) alongside `context/communication-style-guide.md` when drafting the debrief.
+- The debrief draft is built solely to construct the Task `description` HTML — no longer echoed inline in chat, and dropped from the final consolidated report ("Internal Slack debrief (copy-paste)" block removed).
+
+---
+
 ## [2.62.1] — 2026-09-11
 
 ### Fixed
