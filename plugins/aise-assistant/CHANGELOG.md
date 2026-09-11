@@ -5,6 +5,17 @@ Format: `## [version] — YYYY-MM-DD` followed by bullet points grouped by type.
 
 ---
 
+## [2.62.0] — 2026-09-11
+
+### Changed
+- `post-session-debrief` step 3C: extended Gong cleanup to handle `👾 Gong Call`-type records inline (merges transcript, description, and recording URL before deleting), not just empty `note`-type stubs. Fully-conflicting records are surfaced for manual review via `/ph-reconcile-gong-gcal`.
+- `post-session-debrief` step 2b: sets `custom.Debrief Status: "partial - transcript pending"` on the Conversation write for placeholder runs.
+- `post-session-debrief` step 11 (new): sets `custom.Debrief Status: "complete"` on the Conversation after all steps confirm, making it the primary debrief signal for bulk runs.
+- `bulk-debrief` step 4C: `custom.Debrief Status` is now the primary check for whether a session was already debriefed — `complete` = skip, `partial - transcript pending` = skip by default, blank = fall through to the existing description-content + Slack Task heuristic (backwards-compatible for older records).
+- `bulk-debrief` queue display: "Likely already debriefed" table now shows `custom.Debrief Status` value as the signal when set, with the heuristic-based signals labelled as pre-field fallback.
+
+---
+
 ## [2.61.0] — 2026-09-08
 
 ### Removed

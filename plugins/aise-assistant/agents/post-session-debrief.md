@@ -101,6 +101,8 @@ If the **Transcript lookup order** is exhausted and no transcript or notes were 
    Source: Calendar event + Slack/Gmail signals (no transcript)
    ```
 
+   Include `"custom.Debrief Status": "partial - transcript pending"` in this Conversation write. Do not wait for step 11 — for placeholder runs this is the terminal status and there is no subsequent `complete` write.
+
 3. **Create a re-debrief Task** (Planhat Task, per step 4's payload shape): `type: "Task"`, `action: "Re-debrief [Customer] [session date] — Gong transcript"`, `description: "Original call: [date]. Re-run /session-debrief once Gong has the transcript indexed."`, `companyId`, `ownerId: <user>`, `status: "To Do"`, `endTime`: session date + 5 business days, and `"custom.Priority"` per the **Priority by task kind** table in step 4.
 
 3a. **Still run step 10 (`custom.Next Step` refresh)** — compose it from the calendar/Slack/Gmail signals gathered above instead of transcript content, and lead with the pending-transcript state so it's visible without opening the Conversation: e.g. `<p><strong>27 Aug:</strong> [Session] delivered — transcript pending Gong indexing, re-debrief queued.</p>`. Don't skip this step just because the transcript is missing.
@@ -150,16 +152,28 @@ list_model_records(MODEL: "Conversation", FILTER: {"externalId[equal to]": "<gca
 - **Found** → update if `type`, `description`, `endusers`, or **`date`** drifted. A found record was almost certainly created by Planhat's own Task→Conversation conversion, which stamps `date` with the conversion moment rather than the session start — so assume `date` is wrong until checked against the timestamp ladder, and correct it here.
 - **Not found** → create.
 
-**C. Gong soft-integration stub — backfill and clean up (always run after the Conversation is identified).** Planhat's Gong soft integration auto-creates a separate `note`-type Conversation when it detects a Gong call for an account. Its `externalId` is formatted as `<gong-call-id>-<sf-account-id>` — not the GCal event ID — so Step B's dedup check never finds it. This stub carries the Gong call ID but its `description` is always empty.
+**C. Gong records — backfill and clean up (always run after the Conversation is identified).** Two types of Gong-sourced records can exist alongside the real session Conversation and must be merged into it:
+
+- **`note`-type empty stubs** — created by the Gong soft integration; `externalId` format `<gong-call-id>-<sf-account-id>`, `description` always empty.
+- **`👾 Gong Call`-type records** — created by the native Gong sync; same `externalId` format, may carry `description` (Gong summary) and `transcript`.
+
+Neither uses the GCal event ID as `externalId`, so Step B's dedup check never finds them.
 
 After the main Conversation is written or confirmed:
 
-1. List Conversations for this company+date and find any with `type: "note"` and empty `description` whose `_id` doesn't match the main Conversation.
-2. For each such stub: parse the Gong call ID from its `externalId` (the segment before the first `-` that is a pure numeric string, e.g. `"917839733835032505-001f400001PN7shAAD"` → call ID `917839733835032505`).
-3. If the main Conversation's `custom.Call Recording` is not yet set, write it: `update_model_record(MODEL:"Conversation", OBJECT_ID:"<main _id>", PARAMETERS:{"custom.Call Recording":"https://us-71146.app.gong.io/call?id=<gong-call-id>"})`. Corrected 2026-08-27 — was `custom.Gong URL`.
-4. Delete the stub: `delete_model_record(MODEL:"Conversation", OBJECT_ID:"<stub _id>")`.
+1. List Conversations for this company+date: `list_model_records(MODEL: "Conversation", FILTER: {"companyId[equal to]": "<id>", "date[more than]": "<session-date-minus-1-day>", "date[less than]": "<session-date-plus-1-day>"})` (plain `YYYY-MM-DD` bounds — never timestamps; see `agents/ph-reconcile-gong-gcal.md` §2 for why). Filter locally to records whose `externalId` matches the `<numeric>-<sf-id>` pattern and whose `_id` differs from the main Conversation. **Do not select `description` or `transcript` in this list call** — fetch bodies one at a time with `get_model_record` only for records that reach step 4 below.
 
-If the stub's `externalId` doesn't match the `<numeric>-<sf-id>` format, or its description has content, do not delete — log it in the final report for manual review.
+2. For each such record: parse the Gong call ID from its `externalId` (the segment before the first `-` that is a pure numeric string, e.g. `"917839733835032505-001f400001PN7shAAD"` → call ID `917839733835032505`).
+
+3. Determine the recording URL: `gong_record.custom['Call Recording'] ?? gong_record.custom['Gong URL'] ?? "https://us-71146.app.gong.io/call?id=<gong-call-id>"`. If the main Conversation's `custom.Call Recording` is not yet set, write it. If the main Conversation already holds a *different* non-empty URL, log a conflict and skip the field — do not overwrite.
+
+4. **For `👾 Gong Call`-type records only** — fetch the record body via `get_model_record` and merge additional fields into the main Conversation (combine with the recording-URL write when possible):
+   - `transcript`: write to the main Conversation only if the main's `transcript` is currently empty. Non-empty and different → conflict, log and skip this field.
+   - `description`: always additive. Reformat headings per the Planhat rich-text spec (`<h2>Label</h2>` → `<p><strong>Label</strong></p>`, apply `ph-editor__*` classes to lists), then append to the main Conversation's `description` with a divider: `<hr><p><strong>Gong Call Summary</strong></p>`. **Guard against double-append:** check the existing `description` for the string `Gong Call Summary` or the Gong call ID before appending — if either is present, the summary was already merged on a prior run, skip the append and let the rest of the merge proceed normally.
+
+5. **Read back the main Conversation** to confirm merged fields landed before proceeding. Then delete the Gong record: `delete_model_record(MODEL:"Conversation", OBJECT_ID:"<gong _id>")`.
+
+If a record's `externalId` doesn't match the `<numeric>-<sf-id>` format, do not delete — log it in the final report for manual review. A fully-conflicting record (both `custom.Call Recording` and `transcript` already populated with different values) is also not deleted — log it for manual review via `/ph-reconcile-gong-gcal`.
 
 **Conversation payload:**
 
@@ -383,6 +397,18 @@ This is the last write of every run. `custom.Next Step` is the field the rest of
    ```
 5. **Write and verify.** `update_model_record(MODEL:"Company", OBJECT_ID:"<company _id>", PARAMETERS:{"custom.Next Step":"<html>"})`. Confirm the write per `agents/inbox-triage.md` step 5.4 — `SELECT` can lag on this field; fall back to `list_model_records(FILTER:{"custom.Next Step[contains]":"<distinctive phrase>"})` before reporting it as done.
 
+### 11. Set `custom.Debrief Status` on the Conversation
+
+This is the final write of every completed full-debrief run. Once steps 3–10 have all executed without aborting:
+
+```
+update_model_record(MODEL: "Conversation", OBJECT_ID: "<conversation _id from step 3>", PARAMETERS: {"custom.Debrief Status": "complete"})
+```
+
+**For the placeholder-debrief branch (step 2b):** `custom.Debrief Status` was already written as `"partial - transcript pending"` during the step 2b Conversation write — do not overwrite it here.
+
+**Do not set this field if the run aborted mid-procedure** — e.g., the Company couldn't be resolved, or no transcript and no Slack/Gmail signals existed. A blank field means "not yet debriefed" and the bulk-debrief runner will pick it up on the next pass.
+
 ---
 
 ## Output order (what the user sees in chat)
@@ -401,6 +427,7 @@ After all steps complete, produce a single consolidated report:
 - Product feedback Tasks: [N tasks — list titles] (or "none — no feedback surfaced")
 - KDD Attachment: [Drive URL] (A-sessions only, or "N/A")
 - Next Step: [refreshed — one-line summary of the new value, or "unchanged — no prior value and nothing new to state"]
+- Debrief Status: [`complete` written to Conversation _id, or `partial - transcript pending` (written in step 2b), or "not set — run aborted before step 11"]
 
 **Gmail draft:**
 - Draft ID: [id] — to: [recipient], subject: [subject]
@@ -442,4 +469,5 @@ After all steps complete, produce a single consolidated report:
 - **Never `Grep` Glean-output temp files** — they are single-line JSON arrays and return `[Omitted long matching line]`. Use sub-agent + chunked `Read` instead.
 - **Invoke the context-keeper procedure inline** if anything in the session output suggests a changed rule, new session type, or new standing instruction.
 - **The Slack debrief Task (step 6) is never optional and never left with an empty `description`.** Runs on every completed session, full or placeholder-debrief (step 2b) — write whatever is available and flag gaps in the description itself rather than skipping the Task or leaving it blank. A Slack debrief Task with no content is the historical failure mode this guardrail closes.
+- **`custom.Debrief Status` is set on every run — step 11 for full runs, step 2b for placeholder runs.** `complete` = all steps landed. `partial - transcript pending` = placeholder branch ran. Blank = aborted before completion. Never write this field before step 10 confirms — an incomplete run that sets `complete` will cause `bulk-debrief` to permanently skip the session.
 - **`custom.Next Step` is refreshed on every completed run — step 10, never optional.** Rewrite, don't append; pull the "waiting on" line from the same Tasks/actions the rest of the run just wrote so the field and the Tasks never disagree; carry forward anything still-live from the old value that this session didn't touch. Applies to the placeholder-debrief branch too (step 2b), and to every session `bulk-debrief` runs through this procedure.

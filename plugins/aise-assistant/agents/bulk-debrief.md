@@ -1,6 +1,6 @@
 ---
 name: bulk-debrief
-description: "Discover external customer meetings across a target date range (default: previous calendar day), resolve each one to its Planhat Task/Conversation via the Google Calendar event ID resolution ladder, check for evidence of a completed debrief (a done Task with a linked Conversation carrying real content — not just an existing stub) to avoid duplicate writes, and execute the complete post-session-debrief procedure for each unprocessed session in sequence."
+description: "Discover external customer meetings across a target date range (default: previous calendar day), resolve each one to its Planhat Task/Conversation via the Google Calendar event ID resolution ladder, check custom.Debrief Status (and fall back to the description-content heuristic for older records) to avoid duplicate writes, and execute the complete post-session-debrief procedure for each unprocessed session in sequence."
 tools: Read, Grep, Glob, Task, Bash, mcp__claude_ai_Glean__search, mcp__claude_ai_Glean__chat, mcp__claude_ai_Glean__gmail_search, mcp__claude_ai_Glean__meeting_lookup, mcp__claude_ai_Glean__read_document, mcp__claude_ai_Gmail__search_threads, mcp__claude_ai_Gmail__get_thread, mcp__claude_ai_Gmail__list_drafts, mcp__claude_ai_Gmail__create_draft, mcp__claude_ai_Google_Calendar__list_events, mcp__claude_ai_Google_Calendar__get_event, mcp__claude_ai_Planhat__list_model_records, mcp__claude_ai_Planhat__get_model_record, mcp__claude_ai_Planhat__search_records, mcp__claude_ai_Planhat__update_model_record, mcp__claude_ai_Planhat__create_model_record, mcp__claude_ai_Planhat__get_model_action_parameters
 ---
 
@@ -105,10 +105,18 @@ Collect only external-confirmed events for the debrief queue.
 4. **Fallback — company + date + title.** Only when both ID lookups miss on both candidate forms: `search_records(QUERY: "<event title>")`, filtered to `companyId` and a same-day `startTime`/`endTime`/`date` match. A hit is evaluated at **C**; note in the run report that it was "matched by title, not event ID" so the ID drift is visible.
 5. Nothing found anywhere → **fresh** — queue for debrief; `post-session-debrief` resolves and creates the record itself via its own Step 1/3 ladder.
 
-**C. Evaluate whether a resolved Conversation is a completed debrief — not just an existing stub.** A Conversation existing is not evidence of a completed debrief: Planhat's Task→Conversation auto-conversion creates an empty-`description` stub the instant a Task is marked done, and a `session-prepper`-touched Task carries only prep content until a debrief actually runs. Check the real write:
+**C. Evaluate whether a resolved Conversation is a completed debrief — not just an existing stub.**
+
+**Primary check — `custom.Debrief Status` field.** `post-session-debrief` sets this field at the end of every successful run. Read it first:
+
+- `"complete"` → **confirmed debriefed.** Skip unless `--rerun <customer>`.
+- `"partial - transcript pending"` → **partial from prior run.** Skip by default — the placeholder-debrief branch already queued its own re-debrief Task; `--rerun <customer>` to force a fresh attempt now that Gong may have caught up.
+- blank / unset → the field predates this run or the debrief never completed. Fall through to the heuristic below.
+
+**Heuristic fallback (for records without `custom.Debrief Status` set).** A Conversation existing is not evidence of a completed debrief: Planhat's Task→Conversation auto-conversion creates an empty-`description` stub the instant a Task is marked done, and a `session-prepper`-touched Task carries only prep content until a debrief actually runs.
 
 - `description` empty, or reading as a bare auto-conversion/prep-only stub with no debrief findings → **not yet debriefed** — queue normally. (`post-session-debrief` will resolve this same record via its own ladder and fill it in — it will not create a duplicate.)
-- `description` starts with `⚠️ Transcript not yet available` (the `post-session-debrief` § Step 2b placeholder banner) → **partial — transcript was pending as of the last run.** Skip by default — the placeholder-debrief branch already queued its own re-debrief Task; `--rerun <customer>` to force a fresh attempt now that Gong may have caught up.
+- `description` starts with `⚠️ Transcript not yet available` (the `post-session-debrief` § Step 2b placeholder banner) → **partial — transcript was pending as of the last run.** Skip by default; `--rerun <customer>` to force a fresh attempt.
 - `description` carries real findings (decisions, action items, risks — the shape `post-session-debrief` § Step 3 writes) → **provisionally debriefed — verify the Slack debrief Task before trusting it.** A Conversation with real content is proof step 3 of `post-session-debrief` completed, but steps 4–10 (PB-side Tasks, the Slack debrief Task, KDD Attachment, product feedback, `custom.Next Step`) are independent writes on the same run and any one of them can have failed, errored mid-run, or been skipped even though the Conversation landed fine. Before marking this session "confirmed debriefed" and skipping it, check for its Slack debrief Task: `list_model_records(MODEL: "Task", FILTER: {"companyId[equal to]": "<company-id>", "type[equal to]": "Internal Alignment"}, SELECT: ["action", "description", "createdAt"])`, then locally match one whose `action` names this customer + session date and whose `description` is non-empty.
   - **Found, non-empty** → **confirmed debriefed.** Skip unless `--rerun <customer>`.
   - **Missing, or found with an empty `description`** → **not fully debriefed** — queue normally, flagged `⚠️ Conversation has findings but no Slack debrief Task — re-running to complete the write` (this is what silently produced empty/missing Slack debrief Tasks in the past: a Conversation was seen as sufficient proof and the session was never revisited). Don't ask `post-session-debrief` to redo the whole session from scratch — it will find the existing Conversation via its own ladder (step 3) and only backfill the missing steps.
@@ -130,8 +138,10 @@ Before executing any debriefs, surface (group queue rows by date when the range 
 (Add --rerun <customer> in your reply to force-include)
 | Date | Customer | Planhat record | Signal |
 |---|---|---|---|
-| YYYY-MM-DD | [name] | [Conversation _id] | Confirmed debriefed — real findings in description + Slack debrief Task verified |
-| YYYY-MM-DD | [name] | [Conversation _id] | Partial — transcript was pending as of last run |
+| YYYY-MM-DD | [name] | [Conversation _id] | `custom.Debrief Status: complete` |
+| YYYY-MM-DD | [name] | [Conversation _id] | `custom.Debrief Status: partial - transcript pending` |
+| YYYY-MM-DD | [name] | [Conversation _id] | Confirmed debriefed — real findings in description + Slack debrief Task verified (pre-field heuristic) |
+| YYYY-MM-DD | [name] | [Conversation _id] | Partial — transcript was pending as of last run (pre-field heuristic) |
 
 **Ambiguous (need your input before queuing):**
 - "[Event title]" — matches [Customer A] or [Customer B]?
@@ -217,7 +227,7 @@ Run sessions in chronological order (earliest meeting first).
 
 - **One confirmation gate (with one expansion round)** — step 5. After the final approval, run all debriefs without pausing between sessions.
 - **Never title-search as the primary match.** The GCal event ID ladder (step 4B) is mandatory before falling to the company+date+title fallback — matches by title alone are exactly what historically produced duplicate session records. Report every title-matched fallback explicitly.
-- **A resolved Conversation is not automatically "already debriefed."** Evaluate its actual `description` content (step 4C) — an empty or stub Conversation queues normally. **Nor is a Conversation with real content, on its own, proof the whole run completed** — verify the Slack debrief Task exists with non-empty content before skipping (step 4C); a Conversation write succeeding doesn't mean every later step in `post-session-debrief` did.
+- **`custom.Debrief Status` is the primary debrief signal** — `complete` means skip, `partial - transcript pending` means skip by default, blank means fall through to the heuristic. A resolved Conversation alone — even with real `description` content — is not sufficient without either the field or a verified Slack debrief Task (step 4C heuristic). Never short-circuit step 4C by assuming the field is set on older records.
 - **Every session `post-session-debrief` completes in a bulk run refreshes `custom.Next Step` on that Company** — that agent's step 10, not optional, and it applies whether the session ran inline or in a sub-agent. When running in sub-agent mode, the output contract above must report the refreshed value so it lands in the master summary — an untracked Next Step write in a bulk run is easy to lose.
 - **Every Task created anywhere in a bulk run carries `custom.Priority`.** `post-session-debrief` step 4 owns the priority tables; this agent must not relax them. When the debrief runs in a sub-agent, the sub-agent prompt must repeat this rule and the output contract must report the priority per task — an unprioritized task created in bulk is the easiest kind to lose, because nobody reviews it one at a time.
 - **Dedup is non-destructive.** "Skip" means the existing record is left exactly as-is. Never overwrite an existing Conversation `description`, Task, or Gmail draft silently.
