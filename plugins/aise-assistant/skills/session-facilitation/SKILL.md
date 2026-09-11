@@ -25,7 +25,7 @@ and offered (not auto-run) for `🔎 Discovery` and `👟 Kick off` sessions.
 
 ## Inputs
 
-- `customer` (required) — customer name used for Notion lookup and file naming.
+- `customer` (required) — customer name used for Planhat lookup and file naming.
 - `session-id` (optional) — e.g. `A5`. If omitted, use the next upcoming session for this customer.
 - `--output <path>` (optional) — directory for the **local working copy** only. Default: `~/Desktop/aise-assistant/facilitation/` in CLI context, the Cowork outputs folder in Cowork context. Does not affect the Drive publish, which is mandatory in every context.
 - `--no-drive` (optional) — skip the Drive publish and Planhat link-back. Use only when Drive is unreachable; the run report must say the artifact was left unpublished.
@@ -36,24 +36,24 @@ and offered (not auto-run) for `🔎 Discovery` and `👟 Kick off` sessions.
 
 Pull all context needed before generating HTML. Run in parallel where possible.
 
-**a) Session identity** — from Notion Sessions DB or Calendar:
-- Session ID (e.g. `A5`), Name, Type, Date, Duration (h), Call Status.
+**a) Session identity** — from the Planhat Company/Task/Conversation lookup or Calendar:
+- Session ID (e.g. `A5`), Name, Type, Date, Duration (h), Call Status. Resolve the session's Planhat Task/Conversation via the GCal event ID ladder in `context/planhat-schema.md` § Session record resolution.
 - For A-sessions: the KDD template match (from `templates/session-kdds/00-index.md`).
 
-**b) Open items** — from the prior session page (last delivered session for this customer):
-- Extract the action items table from the Notion session body (`## Action items` block or equivalent).
+**b) Open items** — from the prior session (last delivered session for this customer):
+- Query `list_model_records(MODEL: "Conversation", FILTER: {"companyId[equal to]": "<id>"}, SORT: "date", LIMIT: 3, SELECT: ["title", "date", "description", "type"])` and extract the action items from the most recent session's `description`.
 - Include: Item text, Owner, current status if captured.
 
-**c) Attendees** — from the Calendar event for this session or Notion session page.
+**c) Attendees** — from the Calendar event for this session, or `endusers`/`users` on the session's Planhat Conversation.
 - Include: Name, Role, any facilitation notes (e.g. "decisive — will push fast", "absent from last session").
 
-**d) Session outcomes** — from the prep brief (`📋 Prep` toggle on the Session page) or session KDD template:
+**d) Session outcomes** — from the prep brief (`custom.Prep Notes` on the session's Planhat Task/Conversation) or session KDD template:
 - The 3–5 "by the end of this session we will have" outcome bullets.
 
 **e) Watch-fors + scorecard criteria** — from:
 - `context/score-cards.md` — the rows matching this session type.
 - `context/pb-aise-reference-guide.md` — "watch-fors" section for this session flavor.
-- The `📋 Prep` toggle on the Session page (Risks/watch-outs section).
+- `custom.Prep Notes` on the session's Planhat Task/Conversation (Risks/watch-outs section).
 
 **f) KDD decisions list (A-sessions only)** — read the matching KDD template from
 `templates/session-kdds/{template}.md`. Extract:
@@ -69,7 +69,7 @@ Pull all context needed before generating HTML. Run in parallel where possible.
 **h) Pre-read documents** — check for any documents the user or customer has shared that should be
 referenced live during the session:
 - User-uploaded files in the current conversation (governance docs, agenda proposals, survey results, org charts).
-- Links inside the `📋 Prep` toggle on the Session page (look for "📎" markers or explicit pre-read callouts).
+- Links inside `custom.Prep Notes` on the session's Planhat Task/Conversation (look for "📎" markers or explicit pre-read callouts).
 - Gmail/Drive search for customer-sent attachments in the 7 days before the session.
 
 For each pre-read document found: read its contents, extract key principles/rules/agenda items,
@@ -256,7 +256,7 @@ Accessible anytime from sidebar. Contains:
    Format: `<div class="watchfor-item"><span class="watchfor-icon">⚡</span><span>...</span></div>`.
    Pull real, session-specific watch-fors — not generic bullets.
 2. **Scorecard card** — outcome checkboxes from session scorecard (Step 1e). Include a "bonus" item (gray, 60% opacity) for optional stretch objectives.
-3. **Post-session actions card** — fixed bullets (mark Delivered in Notion, draft follow-up email, fill KDD sub-page, confirm next session date).
+3. **Post-session actions card** — fixed bullets (mark the session done in Planhat, draft follow-up email, fill the KDD doc, confirm next session date).
 
 #### Action items panel (sidebar link — last)
 
@@ -432,11 +432,11 @@ Report explicitly, when it applies:
 
 ## Edge cases
 
-- **Session not found in Notion:** generate from KDD template + Calendar context only. Flag missing data in the file (gray placeholder text in affected cells).
+- **Session not found in Planhat:** generate from KDD template + Calendar context only. Flag missing data in the file (gray placeholder text in affected cells).
 - **No prior session action items:** show empty Open Items panel with 3 placeholder rows and a note: "No action items found from prior session — add manually."
 - **Non-A-session invoked directly:** generate a simplified facilitation guide with agenda topic panels instead of decision panels. Still include framing, open items, synthesis, watch-fors, action items.
 - **KDD template mismatch:** flag in chat, fall back to a generic decision panel structure (D# / Question / Options / Capture). Don't block file generation.
-- **`warningMinutes` unknown (session duration not set in Notion):** default to 85 minutes.
+- **`warningMinutes` unknown (session duration not set in Planhat or Calendar):** default to 85 minutes.
 - **Salesforce Account Id unresolvable** (Planhat `sourceId` empty, or SOQL returns several accounts and none matches it): stop and ask the user which account is live — do not improvise a filename without the ID, and do not fall back to the old slug format.
 - **Drive upload fails:** retry once. If it fails again, keep the local copy, report the failure loudly, and still attempt the Planhat link-back with the local filename and no Drive URL so the session record shows the artifact exists.
 - **No calendar-event Task and no Conversation for the session in Planhat:** create nothing — report that the link-back had no target and name the file and Drive link in chat so the user can attach it manually.

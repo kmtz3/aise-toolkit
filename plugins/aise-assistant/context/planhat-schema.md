@@ -1,6 +1,6 @@
 # Planhat Schema & Notion↔Planhat Traversal Guide
 
-> **Status:** In-transition, moving toward Planhat as the primary AISE working record. Session debrief (`post-session-debrief`), product feedback discovery (`/log-feedback`), account health/revenue/Spark tracking, and historical session backfill (`/session-backfill`) are Planhat-only as of 2026-09-08. Notion remains the working record only for agents/skills not yet migrated (session-prep, account-plan, engagement-planner) — treat it as a legacy system being phased out, not a co-equal source of truth. During the transition, Spark fields must still be kept in sync both ways until the remaining Notion-based agents migrate.
+> **Status:** Migration complete. Planhat is the sole AISE working record — Notion has been fully retired across every agent and skill, including session-prep (`session-prepper`), account-plan (`customer-plan-next`), and engagement-planner (`engagement-planner`). The "System Mapping: Notion ↔ Planhat" tables below are kept as historical/reference documentation only, not a description of current dual-write behavior.
 >
 > **Last updated:** 2026-09-08 (rewrote `/session-backfill` Planhat-native — dropped Notion meeting-notes discovery and the Active Package/Consumed Package concepts entirely, added its GCal-event-id / `gong_`-prefixed `externalId` convention to § Conversation)
 

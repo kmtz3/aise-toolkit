@@ -1,6 +1,6 @@
 # Identity
 
-> The user the assistant is operating on behalf of. Read at the start of any agent run that needs personal values (Notion filters, ownership writes, name in drafts, etc.).
+> The user the assistant is operating on behalf of. Read at the start of any agent run that needs personal values (Planhat filters, ownership writes, name in drafts, etc.).
 
 ## Name
 
@@ -13,11 +13,10 @@
 
 - **Primary:** `<TBD — your work email>`
 
-## Notion
+## Planhat
 
-- **User ID:** `<TBD — auto-resolved by /assistant-setup>`
-- **Used in queries as:** `Owner LIKE '%<your-uuid>%'` (or the appropriate field — `Current Account Owner`, `Delivered By`, etc. per the schema in [`context/notion-schema.md`](../context/notion-schema.md))
-- **Stored on read with prefix:** `["user://<your-uuid>"]`. Filter with `LIKE '%<bare-uuid>%'` to match either form.
+- **User ID:** `<TBD — auto-resolved by /assistant-setup, resolved via list_model_records(MODEL: "User", FILTER: {"email[equal to]": "<your email>"})>`
+- **Used in queries as:** `ownerId` (Tasks) / `users` (Conversations), scoped to your Planhat user `_id` — see `context/planhat-schema.md` § Planhat User IDs.
 
 ## Role
 
@@ -34,4 +33,4 @@
 
 ## Connectors / tools the assistant uses on the user's behalf
 
-- `<TBD — list connected tools: Gmail, Calendar, Notion, Slack, Glean, Salesforce, etc.>`
+- `<TBD — list connected tools: Gmail, Calendar, Planhat, Slack, Glean, Salesforce, etc.>`

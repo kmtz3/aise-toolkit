@@ -1,6 +1,6 @@
 # Cross-Customer Observations
 
-> **Scope**: Cross-customer patterns and learnings only. Per-customer state and the active-engagements list are queried live from Notion (filtered by `Customer.Owner`); do not cache customer-specific state here.
+> **Scope**: Cross-customer patterns and learnings only. Per-customer state and the active-engagements list are queried live from Planhat (filtered by Company `owner`); do not cache customer-specific state here.
 >
 > Add entries when you observe a pattern that spans ≥2 customers and would help any future session with similar accounts — risks that recur, success moves that generalise, architecture decisions that come up repeatedly, etc.
 >

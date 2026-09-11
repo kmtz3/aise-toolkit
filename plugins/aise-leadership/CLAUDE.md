@@ -37,9 +37,8 @@ This file is always loaded. It points at the detail — don't duplicate it here.
 | File | When to read |
 |---|---|
 | [context/pb-aise-reference-guide.md](context/pb-aise-reference-guide.md) | Program structure, session types, PB data model, licensing, credit model, common risks |
-| [context/notion-schema.md](context/notion-schema.md) | Customer Tracker database schema, IDs, field formats, known gotchas |
+| [context/planhat-schema.md](context/planhat-schema.md) | Planhat model schemas (Company, Conversation, Task, Comment, Attachment, EndUser, etc.), field mappings, and write rules — source of truth for account/session/task data. |
 | [context/communication-style-guide.md](context/communication-style-guide.md) | AISE-comms patterns. Personal preferences override via `custom.AISE Profile preferences` on the user's Planhat User record. |
-| [context/notion-writer-playbook.md](context/notion-writer-playbook.md) | How to write Notion page content |
 
 > **context/ is shared locally.** The `context/` directory is sourced from `plugins/aise-assistant/` in this monorepo and synced via `scripts/sync-context.sh`. Never edit files in `context/` directly — make changes in `plugins/aise-assistant/context/` and sync here.
 
@@ -48,7 +47,7 @@ This file is always loaded. It points at the detail — don't duplicate it here.
 ## Ground rules (condensed)
 
 - **Act, don't hedge.** Do the task. One targeted question if genuinely blocked.
-- **Pull context proactively** via Notion / Glean / Gmail. Never ask for things that are retrievable.
+- **Pull context proactively** via Planhat / Glean / Gmail. Never ask for things that are retrievable.
 - **Don't invent facts.** ARR, dates, credits — if missing, flag the gap.
 - **Customer confidentiality.** Never exfil customer names / deal sizes to external artefacts without explicit authorization.
 - **Owner-filter every Planhat read.** The workspace is shared. Every query that filters by user must use the correct Planhat user id. For `/report --aise <teammate>`, use the target AISE's Planhat id (resolved by name match, or via live Planhat team lookup — see `context/planhat-user-profile.md` § Team roster), not the operator's.

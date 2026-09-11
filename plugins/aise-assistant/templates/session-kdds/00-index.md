@@ -72,9 +72,9 @@ The consistency is deliberate — an agent can reliably extract any section prog
 
 ## Customer-facing KDD doc (copy-paste output)
 
-For every **A-session** (architecting), the user runs the call off a **customer-facing KDD doc** — a cleaned-up derivative of the internal template above. The internal template stays internal. The customer-facing doc is what gets shared / copy-pasted into the customer's space (Notion, Confluence, shared doc) to anchor the session and capture decisions live.
+For every **A-session** (architecting), the user runs the call off a **customer-facing KDD doc** — a cleaned-up derivative of the internal template above. The internal template stays internal. The customer-facing doc is what gets shared / copy-pasted into the customer's space (Confluence, shared doc) to anchor the session and capture decisions live.
 
-**Storage in the user's tracker:** the doc lives as a **sub-page of the Notion Session page** (child page, parent = Session page). Title: `KDDs — [Session ID] [Session Name]`. Created automatically by `session-prepper` during `/session-prep` for A-sessions, or on demand via `/session-kdds` → `kdd-builder`.
+**Storage:** the doc is published as a Google Drive file (shared, direct-download link) and attached to the session's Planhat Conversation as an Attachment record. Title: `KDDs — [Session ID] [Session Name]`. Created automatically by `session-prepper` during `/session-prep` for A-sessions, or on demand via `/session-kdds` → `kdd-builder`.
 
 ### Required structure
 
@@ -122,7 +122,7 @@ By the end of this session, we will have:
 
 | Internal section | Maps to | Notes |
 |---|---|---|
-| Session metadata header | Title block + subtitle | Pull Session ID, Name, Customer, Date, Duration from the Notion Session record |
+| Session metadata header | Title block + subtitle | Pull Session ID, Name, Customer, Date, Duration from the session's Planhat Task/Conversation |
 | Purpose + Outcomes to drive | **Outcome** section | Rewrite in customer voice: "we will have decided/aligned/documented…" |
 | KDDs → Questions to ask | **Agenda** (numbered) + per-KDD Question line | Agenda collapses each KDD to one agenda item |
 | KDDs → Key considerations | **Starter example** rows (1–2, visibly labeled) | Never framed as pre-decided; always "here's a starting point to react to" |
@@ -145,8 +145,8 @@ Starter examples must be visibly tagged and never mixed into the live Decision t
 ### What the customer-facing doc is NOT
 
 - Not a facilitator script. No opening lines, no time checks, no rebuttal language.
-- Not a slide deck. Flat markdown, rendered as a Notion page.
-- Not a prep brief. The internal prep (agenda framing, scorecard hits, risks, questions to ask) stays in the `📋 Prep` toggle on the Session page body.
+- Not a slide deck. Flat markdown, published as a Google Drive file.
+- Not a prep brief. The internal prep (agenda framing, scorecard hits, risks, questions to ask) stays in `custom.Prep Notes` on the session's Planhat Task/Conversation.
 - Not a follow-up. Post-session recaps are handled by `/session-summary`.
 
 ---

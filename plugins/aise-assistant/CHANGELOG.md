@@ -5,6 +5,13 @@ Format: `## [version] — YYYY-MM-DD` followed by bullet points grouped by type.
 
 ---
 
+## [2.62.1] — 2026-09-11
+
+### Fixed
+- Follow-up cleanup pass on the Notion retirement (2.61.0/1.13.0): several docs, templates, and skills still described Notion as live or pointed at files deleted in that migration. Fixed `README.md`, `CLAUDE.md` (broken `context/notion-schema.md` reference, stale ownership/dedup/prep-lookup rules, `session-prepper` description), `skills/assistant-help/SKILL.md` (dead `/notion-*` commands), `context/project-instructions.md` and `context/planhat-schema.md` (canonical, synced to aise-leadership), `skills/session-facilitation/SKILL.md` and `skills/create-deck/SKILL.md` (live Notion read paths replaced with Planhat equivalents), `templates/session-kdds/00-index.md` + `README.md`, and `about/templates/*.template` (Notion UUID/DB fields → Planhat equivalents).
+
+---
+
 ## [2.62.0] — 2026-09-11
 
 ### Changed

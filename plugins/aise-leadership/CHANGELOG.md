@@ -1,5 +1,10 @@
 # Changelog — aise-leadership
 
+## [1.13.1] — 2026-09-11
+
+### Fixed
+- Follow-up cleanup pass on the Notion retirement (1.13.0/2.61.0): `CLAUDE.md` pointed at `context/notion-schema.md` and `context/notion-writer-playbook.md`, both deleted in that migration — replaced with the current `context/planhat-schema.md` reference and fixed a stale "pull context via Notion" ground rule. `about/README.md` onboarding description updated to Planhat identity resolution. `about/templates/*.template` (identity, team-roster, tracker-memory, workspace) updated from Notion UUID/DB fields to their Planhat equivalents. `context/project-instructions.md` and `context/planhat-schema.md` (canonical, synced from aise-assistant) and `context/planhat-user-profile.md` cleaned of stale Notion fallback references.
+
 ## [1.13.0] — 2026-09-08
 
 ### Removed

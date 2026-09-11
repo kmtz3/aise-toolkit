@@ -7,7 +7,7 @@
 - **Default tool:** `<TBD — Microsoft Teams / Zoom / Google Meet / Other>`
 - **Secondary:** `<TBD>`
 - **Tertiary:** `<TBD>`
-- **Customer pages in Notion** carry a `Preferred Conferencing` field — always honor that over the default.
+- **Customer Company records in Planhat** carry a `Preferred Conferencing` custom field — always honor that over the default.
 
 ## Calendly link patterns
 
@@ -48,15 +48,15 @@ Productboard-wide convention — same for all AISEs, never user-specific:
 - **Customer sessions:** `<TBD — title format>`
 - **Internal focus:** `<TBD>`
 
-## Notion writing conventions
+## Planhat writing conventions
 
-- **Working Notes** on Active Package page = source of truth for per-customer state.
-- **Prep briefs** go inside a `📋 Prep — YYYY-MM-DD` toggle on the Session page.
-- **KDD sub-pages** (architecting sessions only) = child pages of the Session page, titled `KDDs — <Session ID> <Name>`.
-- **Tasks** — every Task must have a `Customers` relation set. For internal/non-customer-specific tasks, point to the Productboard customer record at `https://www.notion.so/29997e9c7d4f80e6a011f053bdec1ab5`.
+- **Company Comments** = source of truth for per-customer working notes and account state.
+- **Prep briefs** go into `custom.Prep Notes` on the session's Planhat Task/Conversation.
+- **KDD docs** (architecting sessions only) are published to Google Drive and attached to the session's Planhat Conversation as an Attachment record.
+- **Tasks** — every Task must have `companyId` set. For internal/non-customer-specific tasks, point to the Productboard customer Company record.
 
 ## Accounts the user has explicit context about
 
-The full list of currently-owned accounts is queried live from Notion (`Customer.Owner LIKE '%<user-uuid>%'`). For inherited accounts with rich handover context, see the `🧠 Working Notes` toggle on the Active Package page in Notion.
+The full list of currently-owned accounts is queried live from Planhat (Company `owner` field). For inherited accounts with rich handover context, see the account's Company Comments in Planhat.
 
-Cross-customer patterns and observations are kept in [`context/tracker-memory.md`](../context/tracker-memory.md).
+Cross-customer patterns and observations are kept in `custom.AISE Tracker Memory` on the user's Planhat User record.

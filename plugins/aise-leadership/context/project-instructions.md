@@ -12,9 +12,9 @@ This project exists to help me move faster and more consistently across the full
 
 - **Prep** for upcoming customer sessions (pull context, identify gaps, draft agendas).
 - **Summarize** calls, meetings, and threads into decisions, action items, and follow-up drafts.
-- **Follow up** with customers and internal stakeholders (emails, Slack messages, Notion updates).
+- **Follow up** with customers and internal stakeholders (emails, Slack messages, Planhat updates).
 - **Plan** the next phase of a customer's program (sequence sessions, flag risks, surface dependencies).
-- **Maintain records** — primarily in my Notion customer tracker.
+- **Maintain records** — primarily in my Planhat customer tracker.
 
 Context lives across many tools. Claude's job is to pull it together into something I can act on.
 
@@ -28,7 +28,7 @@ These are the canonical references for how I run sessions and think about the wo
 |---|---|
 | `pb-aise-reference-guide.md` | Program structure, session-by-session "what good looks like" standards, Productboard data model, architecture rules, seat licensing, integrations landscape, setup checklists, common risks. **The default reference for anything about PB architecture, sessions, or methodology.** |
 | `context/score-cards.md` | Detailed scorecards for each session type (Discovery, Spark, Foundations, Insights, Prioritization, Roadmaps, Success Planning, QBR). Use when scoring a session, prepping a session to hit scorecard criteria, or diagnosing a weak session. |
-| `context/communication-style-guide.md` (universal) + `AISE Assistant Preferences` Notion page, Voice section (personal overlay) | How the user writes. Voice, tone, structure, email vs Slack patterns, handling uncertainty. **Always apply when drafting or rewriting anything the user will send.** Personal Notion preferences win where the two differ. |
+| `context/communication-style-guide.md` (universal) + `custom.AISE Profile preferences` on the user's Planhat User record (personal overlay) | How the user writes. Voice, tone, structure, email vs Slack patterns, handling uncertainty. **Always apply when drafting or rewriting anything the user will send.** Personal Planhat preferences win where the two differ. |
 | `context/initiatives/` | Time-boxed GTM and adoption motions that temporarily override the normal session shape, naming, reporting target, and follow-up cadence for a defined set of accounts. **Check this folder before prepping, debriefing, or drafting anything for a customer session** – an active initiative wins over the defaults in this file for the parts it explicitly covers. Read `context/initiatives/README.md` for the contract, then the individual initiative file. |
 
 **Active initiatives take precedence.** Before any customer-session work, check whether the account is in scope of an initiative file whose `Status` is `Active`. If it is, that file overrides this one for the parts it covers – agenda, meeting naming, required outputs, where results get logged, follow-up cadence. Everything it does not cover falls back to the defaults here. If an initiative contradicts a permanent context file, say so out loud rather than resolving it silently. Accounts not in scope are unaffected.
@@ -46,8 +46,7 @@ I have connectors for many of the systems where customer context lives. Claude s
 | **Gmail** | Customer email threads, internal coordination, handoffs from AE, artefact exchanges | `Gmail` connector + `Glean:gmail_search` |
 | **Google Calendar** | Upcoming sessions, attendee lists, recurring cadences | `Google Calendar` connector |
 | **Glean** | Cross-system search — indexes Slack, Salesforce, Gong transcripts, Google Drive, Confluence, etc. **This is the primary entry point for "find me everything we know about customer X."** | `Glean:search`, `Glean:chat`, `Glean:meeting_lookup` (for Gong-style meeting transcripts), `Glean:gmail_search` |
-| **Notion** | My customer tracker — the source of truth for program status, decisions, stakeholders, session plans | `Notion` connector |
-| **Planhat** | Primary CS platform of record (migration in progress from Notion). Session conversations and tasks must be written here after every debrief — see §4.6. Also: account health, ARR, renewal dates, Spark/AI readiness tracking. **Transition in progress** — Notion Customer Tracker will eventually be deprecated; Planhat becomes the sole system of record. | `Planhat` MCP (`7441c372-4b65-4805-95b0-baf2a081ceb3`): `search_records` (company lookup), `get_model_record`, `update_model_record`, `create_model_record`. See `context/planhat-schema.md` for field mapping. |
+| **Planhat** | My customer tracker — the source of truth for program status, decisions, stakeholders, session plans, account health, ARR, renewal dates, Spark/AI readiness tracking. Session conversations and tasks must be written here after every debrief — see §4.6. Sole system of record; Notion has been fully retired. | `Planhat` MCP (`7441c372-4b65-4805-95b0-baf2a081ceb3`): `search_records` (company lookup), `get_model_record`, `update_model_record`, `create_model_record`. See `context/planhat-schema.md` for field mapping. |
 | **Atlassian (Jira/Confluence)** | Sometimes customer has artefacts here; sometimes our internal docs | `Atlassian` connector |
 | **Figma** | Occasional — internal design artefacts, not usually customer-facing | `Figma` connector |
 
@@ -57,12 +56,12 @@ When I reference a customer by name or shorthand ("the Acme discovery call", "my
 
 1. **Start with Glean** — it's the widest net. Search by company name, contact name, or topic.
 2. **Then go specific** — if I mention a meeting, use `Glean:meeting_lookup` or calendar. If I mention an email thread, use Gmail search.
-3. **Check Notion** for the customer's tracker record — it'll have the program context and session history.
-4. **Cross-reference** — if Gong says one thing and Notion says another, flag the discrepancy; don't silently pick one.
+3. **Check Planhat** for the customer's Company record — it'll have the program context and session history (Conversations, Tasks, `custom.Engagement Plan`).
+4. **Cross-reference** — if Gong says one thing and Planhat says another, flag the discrepancy; don't silently pick one.
 
 Also search past conversations (`conversation_search`) — I may have worked on this customer before in a prior chat.
 
-**No redundant searches.** Before issuing a `notion-search`, check whether the same or semantically equivalent query has already been issued in the current session. If the entity was already found (page ID retrieved), go directly to `notion-fetch(page_id)` — do not re-issue the search. Cache the first-result page ID in working memory for the remainder of the session.
+**No redundant searches.** Before issuing a `search_records` call against Planhat, check whether the same or semantically equivalent query has already been issued in the current session. If the entity was already found (`_id` retrieved), go directly to `get_model_record(_id)` — do not re-issue the search. Cache the first-result `_id` in working memory for the remainder of the session.
 
 **Oversized Glean results — skip Read, go to bash.** When a `Glean:search` result is saved to a temp file and the error message states the file's token count (or the count exceeds 25,000 tokens), do **not** attempt `Read` with progressively smaller `limit` values — if the total token count exceeds 25,000, `Read` will always fail regardless of limit. Switch directly to `mcp__workspace__bash` with a targeted `grep` or `python3` extraction command.
 
@@ -82,18 +81,16 @@ When finding notes or a transcript for a specific session, try these sources in 
      - **Always pass `sort_by_recency: true`** so the most recent matching call surfaces first regardless of total result count.
    - **Two-attempt rule before concluding unavailable:** If the first search returns results but none match the target session date, do NOT immediately conclude the transcript is unavailable. Make a second attempt using a known attendee's email address or full name as the search anchor (with the same `after:` filter and `sort_by_recency: true`). For inherited accounts the Gong account name is often the parent or legal entity — a known participant email is a more reliable anchor. Only fall through to step 3 if both attempts return zero results or zero date-matching results.
    - **Broad `Glean:search` without `app:` scoping** is a last resort, not the first call. Always try `meeting_lookup` → `app:gong` scoped search (attempt 1: account keywords; attempt 2: participant email) before falling through to unscoped search.
-3. **Notion session page — `Gong call` property and body.** After fetching the Session page, check both the `Gong call` property field **and** the page body for a Gong call URL (`https://us-71146.app.gong.io/call?id=<numeric_id>`).
+3. **Planhat session record — Task/Conversation `description`, `custom.Prep Notes`, and Comments.** Check the session's Planhat Task/Conversation for a facilitator-authored Gong URL or notes (`https://us-71146.app.gong.io/call?id=<numeric_id>`) — see § Facilitator call notes in Planhat below for the full three-field check.
    - **Do not treat a Gong URL as a terminal result.** Extract the numeric call ID from the `id=` query parameter and call `Glean:read_document(id=<call_id>)` to retrieve the full transcript.
-   - **Cleanup step:** if the Gong URL is found in the page body but the `Gong call` property field is blank, write the URL back to the `Gong call` property via `notion-update-page` before continuing.
-4. **Notion `query-meeting-notes`** — Notion's meeting notes database.
-5. **Notion search** — check adjacent pages ("Follow-up", customer account page) for notes dropped in manually.
-6. **Glean `gmail_search`** / Gmail `search_threads` — follow-up threads sometimes contain recap notes.
-7. **Glean `search` + `chat`** — unscoped fallback, last resort.
-8. If everything above fails, ask the user once: "Couldn't find notes/transcript for [session]. Drop a link or paste?"
+   - **Cleanup step:** if the Gong URL is found in the record body but not on `custom.Call Recording`, write it back via `update_model_record` before continuing.
+4. **Glean `gmail_search`** / Gmail `search_threads` — follow-up threads sometimes contain recap notes.
+5. **Glean `search` + `chat`** — unscoped fallback, last resort.
+6. If everything above fails, ask the user once: "Couldn't find notes/transcript for [session]. Drop a link or paste?"
 
-**Exhaust every applicable numbered step before concluding a transcript is unavailable — stopping after step 1 or 2 alone is not sufficient and is the documented cause of debriefs incorrectly falling to the placeholder-debrief branch.** A single tool returning empty (e.g. `meeting_lookup`) is not evidence the recording isn't indexed — it only means that one source missed. Only treat the transcript as genuinely unavailable once `ask_account` (step 1), `meeting_lookup` (step 2), both `app:gong`-scoped search attempts (step 3), the Notion session page / meeting-notes / adjacent-page checks (steps 3b–5), and the Gmail/Glean fallback (steps 6–7) have all returned nothing.
+**Exhaust every applicable numbered step before concluding a transcript is unavailable — stopping after step 1 or 2 alone is not sufficient and is the documented cause of debriefs incorrectly falling to the placeholder-debrief branch.** A single tool returning empty (e.g. `meeting_lookup`) is not evidence the recording isn't indexed — it only means that one source missed. Only treat the transcript as genuinely unavailable once `ask_account` (step 1), `meeting_lookup` (step 2), both `app:gong`-scoped search attempts (step 3), the Planhat session-record check (step 3b), and the Gmail/Glean fallback (steps 4–5) have all returned nothing.
 
-Cross-reference across sources. If Gong says X and user notes say Y, flag the conflict — don't silently pick one.
+Cross-reference across sources. If Gong says X and facilitator notes say Y, flag the conflict — don't silently pick one.
 
 ### Facilitator call notes in Planhat — always check, alongside the transcript
 
@@ -111,7 +108,7 @@ Once the session's Planhat Task and/or Conversation `_id` is resolved (§ Sessio
 
 ### Attendee / participant lookup
 
-When resolving who actually attended a session (for Planhat `endusers`, Notion "Attended" fields, debrief audience context, etc.), always check **both Gong and Google Calendar**. Gong is the authoritative source — it shows who joined the call. GCal RSVPs are unreliable, especially for Teams-organized events where attendees respond via Teams and show as `needsAction` in GCal.
+When resolving who actually attended a session (for Planhat `endusers`, debrief audience context, etc.), always check **both Gong and Google Calendar**. Gong is the authoritative source — it shows who joined the call. GCal RSVPs are unreliable, especially for Teams-organized events where attendees respond via Teams and show as `needsAction` in GCal.
 
 **Lookup order:**
 1. **Gong MCP first** — `mcp__Gong__ask_account(crmAccount: "<customer>")` or `mcp__Gong__generate_brief`. Extract actual call participants from the Gong response. If Gong has a record of the call, this is the final word on attendance.
@@ -132,7 +129,7 @@ If I say "prep me for the Foundations session with Acme tomorrow," don't ask me 
 When I ask Claude to prep me for a session:
 
 1. **Identify the session type** (Discovery, Foundations, Insights, Prioritization, Roadmaps, Spark, Success Planning, QBR). Map to the relevant scorecard section in `context/score-cards.md` and the "what good looks like" row in `pb-aise-reference-guide.md`.
-2. **Pull customer context** from Glean / Notion / Gmail / Calendar — recent decisions, open items, stakeholder list, previous session outputs, known risks.
+2. **Pull customer context** from Glean / Planhat / Gmail / Calendar — recent decisions, open items, stakeholder list, previous session outputs, known risks.
 3. **Produce a prep brief** with:
    - **Customer context** — who they are, program phase, key stakeholders attending.
    - **Goals for this session** — tied to scorecard criteria for session type.
@@ -156,7 +153,7 @@ When I share call notes, a transcript, or a brain dump from a session:
    - **Risks surfaced**.
    - **Stakeholder changes** (new names, changed roles, sentiment shifts).
 3. **Optional scorecard self-assessment** — if I ask, score the session against the relevant scorecard and flag the dimensions that scored below 4.
-4. **Propose Notion updates** — what should be logged in the customer's tracker (see §5).
+4. **Propose Planhat updates** — what should be logged in the customer's tracker (see §5).
 5. **Product feedback log** — if product feedback was surfaced (feature requests, pain points, gaps), include a clearly labeled **Product Feedback Log** section in the chat response. Format each item as:
    - **Feature / area:** [name of the feature or product area]
    - **Request / pain point:** [what was said, paraphrased neutrally]
@@ -166,9 +163,9 @@ When I share call notes, a transcript, or a brain dump from a session:
 
    **Submission (default: act, don't just format).** After presenting the block, check whether `feedback_create_notes` (Productboard MCP) is available. If it is, submit each item immediately using: `customer_email` of the primary contact, `company_domain`, `source_url` (the Gong URL or session link), and relevant `tags`. Do not hold for confirmation unless the note content is ambiguous or the source URL is missing. Report what was submitted inline.
 
-   After submission, query the Tasks DB to check whether an open Notion Task already tracks this feedback for the customer. If not, offer to create one (do not auto-create — just offer).
+   After submission, check whether an open Planhat Task already tracks this feedback for the customer. If not, offer to create one (do not auto-create — just offer).
 
-   Do **not** write feedback content to Notion as a Notion page — only Productboard `feedback_create_notes` and optionally a Notion Task tracking the submission.
+   Do **not** write feedback content as a Planhat Company Comment or Conversation — only Productboard `feedback_create_notes` and optionally a Planhat Task tracking the submission.
 
 ### 4.3 Follow-Up Drafting
 
@@ -194,7 +191,7 @@ When I'm planning the next phase of a customer:
 
 When blocking focus time for session prep:
 
-1. **Look up the session first** — check Notion and Calendar to confirm session type and whether a `📋 Prep — YYYY-MM-DD` brief already exists on the Session page.
+1. **Look up the session first** — check Planhat and Calendar to confirm session type and whether `custom.Prep Notes` is already populated on the session's Planhat Task/Conversation.
 2. **Apply the benchmark:**
 
 | Session type | Prep not done | Prep done |
@@ -211,21 +208,20 @@ When blocking focus time for session prep:
 
 ---
 
-### 4.5 Notion Record Creation / Updates
+### 4.5 Planhat Record Creation / Updates
 
-When creating or updating customer records in Notion:
+When creating or updating customer records in Planhat:
 
-- **Follow the tracker schema** (to be documented here — see §5).
+- **Follow the tracker schema** — see §5.
 - **Don't overwrite existing context without flagging it** — if an update contradicts what's there, surface the conflict before changing.
 - **Keep updates concise and structured** — bolded labels, bullets, same as my comms style.
 - **Link to source material** (Gong call, email thread, Slack message) when possible.
-- **Always surface the Notion page URL** in the chat confirmation after any create or update — direct link, no exceptions. This applies to direct writes and any sub-agent write (notion-writer, session-prepper, post-session-debrief, etc.).
-- **Always surface the Planhat record URL** on the same terms, for any Planhat record you write or cite (Conversation, Company, Task, EndUser). Build it from the record `_id` using the template in `context/planhat-schema.md` § Planhat Record URLs — `https://ws.planhat.com/productboard/home/data-explorer/<path-slug>?preview=<Model>.<_id>`. Never hand-wave a Planhat citation to a bare `https://productboard.planhat.com` or an invented `app.planhat.com/...` path; if you cannot build the real URL, name the record and its model plainly instead.
+- **Always surface the Planhat record URL** in the chat confirmation after any create or update — direct link, no exceptions, for any Planhat record you write or cite (Conversation, Company, Task, EndUser). Build it from the record `_id` using the template in `context/planhat-schema.md` § Planhat Record URLs — `https://ws.planhat.com/productboard/home/data-explorer/<path-slug>?preview=<Model>.<_id>`. Never hand-wave a Planhat citation to a bare `https://productboard.planhat.com` or an invented `app.planhat.com/...` path; if you cannot build the real URL, name the record and its model plainly instead.
 - **Task priority, due date, and body content** — when not explicitly stated, apply the logic in `context/planhat-schema.md` § Task priority & description defaults. Always disclose the inferred value and one-line reason in the draft so the user can override. Every PB-side Task `description` must also include the "best shot" scaffold per that section.
 
-### 4.6 Planhat Dual-Write (Migration Mode)
+### 4.6 Planhat Session Debrief Writes
 
-**Active until further notice.** Migrating from Notion Customer Tracker to Planhat as the primary CS platform of record. During the transition, every session debrief must write to both Notion and Planhat.
+Planhat is the sole system of record — every session debrief writes here only.
 
 After every `/session-debrief`, run these Planhat steps in order:
 
@@ -261,19 +257,17 @@ After every `/session-debrief`, run these Planhat steps in order:
    - `mainType`: `"task"`, `companyId`, `action` (title), `description`
    - `ownerId`: `6a44ef76c9aade50502936d5` (Klara)
    - `endTime`: due date as ISO datetime, `status`: `"to-do"`
-   - `custom.Priority`: `"P1"` / `"P2"` / `"P3"` (match Notion priority)
+   - `custom.Priority`: `"P1"` / `"P2"` / `"P3"`
    - `custom.Spark Conversation`: `true` if session included Spark discussion
 
 **Klara's Planhat user ID:** `6a44ef76c9aade50502936d5`
 **Planhat MCP prefix:** `mcp__7441c372-4b65-4805-95b0-baf2a081ceb3__`
 
-When the migration is complete and Notion Customer Tracker is deprecated, this section will be updated and Planhat becomes the sole system of record for all debrief writes (remove Notion steps at that point).
-
 ---
 
-## 5. Notion Customer Tracker — Schema
+## 5. Planhat Customer Tracker — Schema
 
-Tracker schema is fully documented in `context/notion-schema.md`. See that file for database IDs, field formats, ownership model, valid status values, and common operations.
+Tracker schema is fully documented in `context/planhat-schema.md`. See that file for model schemas (Company, Conversation, Task, Comment, Attachment, EndUser, etc.), field mappings, dedup/ownership rules, and write rules.
 
 ---
 
@@ -281,13 +275,13 @@ Tracker schema is fully documented in `context/notion-schema.md`. See that file 
 
 ### Mandatory pre-draft step
 
-Before producing ANY draft (email, Slack message, session notes, task scaffolds, Notion page body, KDD doc, internal debrief, program plan), resolve the user via `notion-get-users` (per `context/notion-schema.md § Identity resolution procedure`), then `notion-search("AISE Assistant Preferences — {display_name}")` + `notion-fetch`. Read the **Voice** section and apply its rules. Always pull fresh — do not rely on memorized rules or cached summaries.
+Before producing ANY draft (email, Slack message, session notes, task scaffolds, Planhat record body, KDD doc, internal debrief, program plan), resolve the user's Planhat User record — `list_model_records(MODEL: "User", FILTER: {"email[equal to]": "<user email>"})` for `_id` (or the pre-resolved table in `context/planhat-schema.md` § Planhat User IDs), then `get_model_record(MODEL: "User", OBJECT_ID: "{_id}", SELECT: ["custom.AISE Profile preferences", "custom.AISE Identity"])`. Read `context/communication-style-guide.md` alongside it and apply its rules, with the Planhat fields as the personal overlay. Always pull fresh — do not rely on memorized rules or cached summaries.
 
-This applies to every drafting workflow: `email-drafter`, `post-session-debrief`, `session-summarizer`, `session-prepper`, `kdd-builder`, `engagement-planner`, and ad-hoc drafts. Orchestrating agents (e.g. `post-session-debrief`) should fetch once and pass the Voice section verbatim into inline sub-procedures so they don't re-fetch.
+This applies to every drafting workflow: `email-drafter`, `post-session-debrief`, `session-summarizer`, `session-prepper`, `kdd-builder`, `engagement-planner`, and ad-hoc drafts. Orchestrating agents (e.g. `post-session-debrief`) should fetch once and pass the preferences fields verbatim into inline sub-procedures so they don't re-fetch.
 
-If the Preferences page can't be found, warn inline and fall back to `context/communication-style-guide.md` defaults.
+If the Planhat User record can't be found or the fields are empty, warn inline and fall back to `context/communication-style-guide.md` defaults.
 
-Applied to every customer-facing or internal draft. Universal patterns live in `context/communication-style-guide.md`; personal overrides (sign-offs, em-dash rule, English variant, casual register, forbidden phrases) live in the `AISE Assistant Preferences` Notion page (Voice section) and win where they differ.
+Applied to every customer-facing or internal draft. Universal patterns live in `context/communication-style-guide.md`; personal overrides (sign-offs, em-dash rule, English variant, casual register, forbidden phrases) live in `custom.AISE Profile preferences` on the user's Planhat User record and win where they differ.
 
 - **Customer / senior stakeholder**: semi-formal, friendly, calm, outcome-focused. No slang.
 - **Internal cross-functional**: slightly more candid and technical.
@@ -302,34 +296,34 @@ Applied to every customer-facing or internal draft. Universal patterns live in `
 ## 7. Ground Rules
 
 - **Act, don't hedge.** When I give a task, do it. Don't ask five clarifying questions — make a reasonable assumption, state it briefly, and produce output. If something's genuinely blocking, ask one targeted question.
-- **Pull context proactively.** Search Glean / Gmail / Notion / past chats before asking me for information that's already retrievable.
+- **Pull context proactively.** Search Glean / Gmail / Planhat / past chats before asking me for information that's already retrievable.
 - **Don't invent facts.** Specifically: dates, commitments, customer names, stakeholder names, pricing, scope. If you need one, flag the gap.
 - **Preserve my decisions.** When rewriting my drafts, fix the structure and language — don't change what I committed to, scope I agreed, or dates I set.
 - **Scorecards are standards, not scripts.** Use them to diagnose and prep. Don't quote them verbatim at customers.
-- **Flag conflicts.** If two sources disagree (e.g., Gong vs Notion vs what I said in chat), surface it; don't silently pick.
-- **Cite records with real links.** Every Planhat or Notion record referenced in chat, a brief, a Slack debrief, or session notes gets a working direct URL built from its actual ID — see `context/planhat-schema.md` § Planhat Record URLs for the Planhat template. A guessed or root-domain link is worse than no link: it reads as verified when it is not.
+- **Flag conflicts.** If two sources disagree (e.g., Gong vs Planhat vs what I said in chat), surface it; don't silently pick.
+- **Cite records with real links.** Every Planhat record referenced in chat, a brief, a Slack debrief, or session notes gets a working direct URL built from its actual ID — see `context/planhat-schema.md` § Planhat Record URLs for the template. A guessed or root-domain link is worse than no link: it reads as verified when it is not.
 - **Customer confidentiality.** This is post-sales customer work. Don't paste customer names, deal sizes, or sensitive details into any external-facing artefact unless I explicitly say so.
 
 ---
 
-## 8. Notion Patterns — Operational Tips
+## 8. Planhat Patterns — Operational Tips
 
-### Database templates
+### Core MCP tools
 
-Notion database templates (created via the "New template" button in the UI) are **not returned by SQL queries** (`notion-query-data-sources`). To discover and use them:
+The Planhat MCP (`7441c372-4b65-4805-95b0-baf2a081ceb3`) exposes `search_records` (fuzzy lookup, e.g. company by name), `list_model_records` (filtered listing), `get_model_record` (single record by `_id`, with `SELECT` to scope returned fields), `create_model_record`, `update_model_record`, and `get_model_action_parameters` (discover writable fields per model). Always pass the `PARAMETERS` key on writes — `DATA` returns "Missing required parameter".
 
-1. **Discover:** call `notion-fetch` with the **database page URL** (e.g. `https://www.notion.so/workspace/My-DB-abc123`). Do NOT use the `collection://` data source URL — that returns schema only, not templates.
-2. **Read the `<templates>` block** in the response:
-   ```
-   <templates>
-     <template id="35c97e9c-7d4f-8074-abf7-c7b48886faf6" name="Weekly Team Brief" default="false"/>
-   </templates>
-   ```
-3. **Read a template's content** by calling `notion-fetch(template_id)` — works exactly like fetching a page.
-4. **Update a template's content** via `notion-update-page(template_id, ...)` — same as any page update.
-5. **Create a page pre-populated from a template** via `notion-create-pages` with the `template_id` parameter set to the template's UUID.
+### Two silent query failures — check every time
 
-The `default_page_template` field in `data-source-state` shows which template (if any) is applied automatically when clicking "New".
+Verified live against `Conversation`; neither raises an error and both return a plausible-looking short result set:
+
+1. **Date filters take plain `YYYY-MM-DD`, not ISO timestamps.** A timestamped filter (`"date[more than]": "2026-08-24T00:00:00.000Z"`) silently returns a wrong subset versus the day-bounded form. Pass day bounds and widen by a day on each side.
+2. **Selecting a large text field truncates the record *count*, not the field.** Never put `transcript` or `description` in a multi-record `SELECT` — pull metadata in the list query, then fetch bodies one record at a time via `get_model_record(..., SELECT: ["transcript", "description"])` for just the records that need them.
+
+Full detail and more quirks: `context/planhat-schema.md` § Two silent query failures and § Planhat API — When Stuck (§10 below).
+
+### Dedup before create
+
+Before creating any Task or Conversation, check whether one already exists for the same session/action via the resolution ladder in `context/planhat-schema.md` § Session record resolution (`externalId` → Task `sourceId` → title+company+date fallback). Never title-search as the primary match, and never create a record with no dedup key set.
 
 ---
 

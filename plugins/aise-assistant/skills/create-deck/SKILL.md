@@ -2,7 +2,7 @@
 name: create-deck
 description: >
   Generate a customer-facing HTML presentation deck for any meeting type. Pulls context
-  from Notion, Glean, and Gmail, plans slide structure by meeting type, and produces a
+  from Planhat, Glean, and Gmail, plans slide structure by meeting type, and produces a
   styled single-file deck using the Productboard brand template. Invoke with
   /create-deck [customer] [meeting type].
 ---
@@ -37,15 +37,15 @@ meeting_lookup:  "{customer}"
 Extract: program stage, use case interests, open asks, hot context (mergers, migrations, renewals),
 key contacts (name + title), pain points and goals.
 
-### 1b. Notion — customer tracker
+### 1b. Planhat — customer tracker
 
-**Resolve the user's Notion UUID first:** call `notion-get-users(user_id: "self")` — this is a
-Notion-specific credential, not part of the Planhat profile, so resolve it live rather than from
-a cached value. Use the returned UUID for owner-filtered queries.
+**Resolve the Company first:** `search_records(QUERY: "{customer}")` (or the lookup ladder in
+`context/planhat-schema.md` § Company lookup procedure) → capture `companyId`.
 
 Then:
-1. `notion-search("{customer}")` → `notion-fetch` the Customer page and its linked Active Package.
-2. `notion-search("{customer} session")` → fetch the 3 most recent Session pages.
+1. `get_model_record(MODEL: "Company", OBJECT_ID: "{companyId}", SELECT: ["name", "custom.Engagement Plan", "custom.Architecture Details", "custom.Next Step", "owner"])` — program stage and plan.
+2. `list_model_records(MODEL: "Conversation", FILTER: {"companyId[equal to]": "{companyId}"}, SORT: "date", LIMIT: 3, SELECT: ["title", "date", "description", "type"])` — the 3 most recent sessions.
+3. `list_model_records(MODEL: "Task", FILTER: {"companyId[equal to]": "{companyId}", "status[not equal to]": "done"})` — open tasks.
 
 Extract: current program stage, session themes, open tasks, outstanding commitments, known gaps.
 
@@ -66,7 +66,7 @@ Open asks:       - {ask 1}
 Hot context:     {urgent flags, or "none"}
 ```
 
-If no Notion or Glean data is found: flag it inline, continue with whatever is available,
+If no Planhat or Glean data is found: flag it inline, continue with whatever is available,
 and mark those slides as "needs review" in the confirmation message.
 
 ---
@@ -275,7 +275,7 @@ Never omit it — decks are shared as PDFs and must print correctly.
 
 ## Edge cases
 
-- **Customer not found in Notion:** flag it, continue with Glean + Gmail context only.
+- **Customer not found in Planhat:** flag it, continue with Glean + Gmail context only.
 - **No Glean results:** note it in the confirmation summary, fall back to meeting-type defaults for slide copy.
 - **Ambiguous meeting type:** ask the user once before proceeding.
 - **Date not available:** use today's date for the file name; set the title-slide date to "TBD — confirm before presenting".

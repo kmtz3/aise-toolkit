@@ -34,9 +34,9 @@ When a future `/plan-session` (or `/session-prep`) flow runs for an A-session:
 
 1. **Resolve the template** — match the session sub-type (Foundations, Insights, etc.) to the filename in this folder.
 2. **Read the template** — do not modify the source file.
-3. **Adapt to the customer** — fill in stakeholders, pilot team, prior decisions, open items from the customer's Active Package page and prior session logs.
-4. **Post the adapted copy** to the Notion Session page body (not here). It becomes the anchor doc for the call and the container for live KDD capture.
-5. **After the session**, the captured decisions are extracted by `session-summarizer` into the Active Package decisions register.
+3. **Adapt to the customer** — fill in stakeholders, pilot team, prior decisions, open items from the customer's Planhat Company record (`custom.Engagement Plan`, `custom.Architecture Details`) and prior session Conversations.
+4. **Publish the adapted copy** to Google Drive and attach it to the session's Planhat Conversation (not here). It becomes the anchor doc for the call and the container for live KDD capture.
+5. **After the session**, the captured decisions are extracted by `session-summarizer` and written to the session's Planhat Conversation.
 
 If a template is missing for a given session type, flag it to the user — do not invent one.
 

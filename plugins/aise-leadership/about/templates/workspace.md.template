@@ -2,20 +2,17 @@
 
 > Leadership-specific config: report templates, team output preferences, Gong call scoping, and internal coordination. Read by agents when generating reports, querying across the AISE team, or filtering Gong calls.
 
-## Report Templates
+## Report Output
 
-- **Notion templates DB ID:** `<TBD — Notion database ID; set via /assistant-setup>`
-- **Templates DB URL:** `<TBD — full Notion URL for reference>`
+`/report` uses a single built-in Artifact layout, consistent across `--customer` and `--aise` modes — there is no external template to configure. It renders inline in chat and, by default, also publishes a designed HTML Artifact via the `Artifact` tool; pass `--chat-only` to suppress the Artifact.
 
 ### Per-cadence format preferences
 
-| Cadence | Output format | Default template name |
-|---|---|---|
-| Weekly | `<TBD — chat summary / HTML on Desktop / Notion page>` | `<TBD — e.g. "Weekly Team Brief">` |
-| Monthly | `<TBD — chat summary / HTML on Desktop / Notion page>` | `<TBD — e.g. "Monthly Leadership Report">` |
-| Quarterly | `<TBD — chat summary / HTML on Desktop / Notion page>` | `<TBD — e.g. "Quarterly Business Review">` |
-
-> **How templates work:** At report time, the assistant queries the templates DB, finds the matching page by name, reads its H2/H3 headings as a structure skeleton, and fills in data under each section. Headings should be descriptive (e.g. `## Team Velocity`, `## At-Risk Accounts`) so the assistant knows what data to populate. If no template is specified, the assistant lists available templates from the DB and asks which to use.
+| Cadence | Output format |
+|---|---|
+| Weekly | `<TBD — chat summary / HTML Artifact>` |
+| Monthly | `<TBD — chat summary / HTML Artifact>` |
+| Quarterly | `<TBD — chat summary / HTML Artifact>` |
 
 ## Gong call scoping
 

@@ -6,8 +6,8 @@ Personal Claude Code marketplace bundling the Productboard AISE plugin suite.
 
 | Plugin | Description |
 |---|---|
-| [aise-assistant](plugins/aise-assistant/) | End-to-end customer onboarding co-pilot — prep, summarize, follow up, plan, Notion sync |
-| [aise-leadership](plugins/aise-leadership/) | Portfolio visibility and account health — reports, notion-check, notion-sync, sf-backfill |
+| [aise-assistant](plugins/aise-assistant/) | End-to-end customer onboarding co-pilot — prep, summarize, follow up, plan, Planhat sync |
+| [aise-leadership](plugins/aise-leadership/) | Portfolio visibility and account health — reports, session-audit, Planhat sync |
 
 ## Installation
 

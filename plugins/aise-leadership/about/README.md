@@ -14,7 +14,7 @@ Run `/assistant-setup` to populate it. The directory is created automatically on
 
 | File | Holds |
 |---|---|
-| `identity.md` | Name (incl. accent variants to strip), email, Notion user ID, role, team, time zone |
+| `identity.md` | Name (incl. accent variants to strip), email, Planhat user ID, role, team, time zone |
 | `voice.md` | Personal communication style: sign-offs, formatting quirks, language rules, casual register |
 | `workspace.md` | Workspace specifics: Slack channels, internal coordinators, conferencing prefs, AE/AISE relationships |
 | `tracker-memory.md` | Cross-customer observations: patterns spanning ≥2 customers, recurring risks, success moves. Written by `context-keeper`; seeded empty by `/assistant-setup`. |
@@ -23,21 +23,21 @@ Universal communication methodology (PB-AISE comms patterns, customer-vs-interna
 
 ## How agents use these files
 
-Every agent that needs a personal value (e.g. your Notion user ID for filtering queries) reads `${CLAUDE_PLUGIN_DATA}/about/identity.md` at the start of its run. Don't hardcode personal values in agent specs — always reference these files.
+Every agent that needs a personal value (e.g. your Planhat user ID for filtering queries) reads `${CLAUDE_PLUGIN_DATA}/about/identity.md` at the start of its run. Don't hardcode personal values in agent specs — always reference these files.
 
 For voice/style decisions, agents read `${CLAUDE_PLUGIN_DATA}/about/voice.md` alongside `context/communication-style-guide.md` and treat `voice.md` as the override.
 
 ## Populating this folder
 
 **First time?** Run `/assistant-setup`. It'll:
-1. Auto-resolve your Notion user ID via the connector.
+1. Auto-resolve your Planhat User identity via the Planhat MCP.
 2. Ask you a short series of questions about identity, voice preferences, and workspace.
 3. Optionally scrape recent Gmail and Slack to draft your `voice.md` from how you actually write (distinguishing internal vs client-facing tone).
 4. Write all three files to `${CLAUDE_PLUGIN_DATA}/about/` with your real values — no manual file copy needed.
 
 **Modes:**
 - **Default** (no flag) — fill gaps only. Preserves existing values, only asks about fields still set to `<TBD>`.
-- **`--update`** — drift check. Re-resolves Notion identity (catches user ID changes, role changes), surfaces any fields that look stale, asks you to confirm or update each one.
+- **`--update`** — drift check. Re-resolves Planhat User identity (catches user ID changes, role changes), surfaces any fields that look stale, asks you to confirm or update each one.
 - **`--reset`** — wipe everything. Deletes `identity.md`, `voice.md`, `workspace.md` from `${CLAUDE_PLUGIN_DATA}/about/` and re-runs the full onboarding flow from scratch. Use when handing off the assistant to a teammate, or starting clean after a major role/preference shift.
 - **`--scrape-voice`** — skip the opt-in question and go straight to Gmail+Slack scraping for the voice draft.
 

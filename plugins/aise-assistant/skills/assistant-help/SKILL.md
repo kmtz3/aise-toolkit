@@ -29,7 +29,7 @@ description: Quick reference of all available commands grouped by workflow stage
 
 **Otherwise (default — no flag, or help-intent phrasing):**
 
-Output the help reference below verbatim, formatted as inline markdown in chat. Address the user by their `Display name` from the `AISE Identity` Notion page if available; otherwise use a generic greeting.
+Output the help reference below verbatim, formatted as inline markdown in chat. Address the user by their `Display name` from `custom.AISE Identity` on their Planhat User record if available; otherwise use a generic greeting.
 
 ---
 
@@ -52,19 +52,16 @@ Commands are grouped by family. Type `/<family>` (or `/<family>-`) in autocomple
 | **Build a full program plan** | `/customer-plan --full <customer>` |
 | **Set up a brand-new or inherited account** | `/customer-setup <customer>` |
 | **Score a delivered session against the rubric** | `/session-score <session-type>` |
-| **Check Notion for data drift** | `/notion-check [--customer <name>] [--fix]` |
-| **Ask how the Tracker databases work** | `/notion-ask <question>` — what to fill, what's auto-calculated, how DBs connect |
+| **Audit logged sessions / tasks for drift** | `/session-audit [--fix] [--tasks]` — reconciles Planhat session history against Calendar + Gong, or audits task completion drift |
 | **Answer a customer question with PB docs** | `/support-hub <query>` |
-| **Repair ownership drift in Notion** | `/notion-sync --owner [--global]` |
-| **Flag renewals coming up** | `/notion-sync --renewals [--days N] [--dry-run]` |
 | **Build a customer-facing diagram** | `/draft-diagram <customer> <type> [description]` |
 | **Log a shared Slack channel into Planhat** | `/log-slack-threads --channel <url> [--customer <name>] [--dry-run]` – one Conversation per thread, plus a reply-backfill over the last 365 days |
 
 ## Suggested order around a customer session
 
 1. **Day before:** `/customer-whats-new <customer>` — surface what's changed since the last touch.
-2. **Day before / morning of:** `/session-prep <customer>` — pulls context, drafts brief, lands in Notion under a `📋 Prep` toggle. For A/Discovery/Kickoff sessions, also creates a KDD sub-page + interactive facilitation HTML guide, published to the `Customer Session Artifacts` Drive folder and linked back onto the session's Planhat record.
-3. **Same day after the call:** `/session-debrief <customer>` — runs summary + Notion updates + Tasks + Gmail follow-up draft + Slack debrief draft + scorecard eval, all in one go.
+2. **Day before / morning of:** `/session-prep <customer>` — pulls context, drafts brief, writes it to `custom.Prep Notes` on the session's Planhat Task/Conversation. For A/Discovery/Kickoff sessions, also creates a customer-facing KDD doc + interactive facilitation HTML guide, published to the `Customer Session Artifacts` Drive folder and linked back onto the session's Planhat record.
+3. **Same day after the call:** `/session-debrief <customer>` — runs summary + Planhat Conversation write + Tasks + Gmail follow-up draft + Slack debrief draft + scorecard eval, all in one go.
 4. **Optional:** `/session-score <session-type>` if you want a focused scorecard review.
 
 ## Command families at a glance
@@ -75,28 +72,13 @@ Commands are grouped by family. Type `/<family>` (or `/<family>-`) in autocomple
 - **`bulk`** — run a session workflow across multiple meetings at once (`--debrief`, `--prep`)
 - **`bulk-account-setup`** — admin/reorg task: set up all accounts owned by a user
 - **`draft-*`** — message / artifact drafts (`-email`, `-followup`, `-diagram`)
-- **`notion-*`** — direct Notion operations (`-write`, `-check`, `-ask`)
-- **`notion-sync`** — push external data into Notion (`--owner`, `--renewals`)
+- **`log-*`** — log customer touchpoints into Planhat (`log-feedback`, `log-slack-threads`, `log-slack-threads-internal`)
+- **`ph-*`** — Planhat/Gong integration stopgaps (`ph-reconcile-gong-gcal`)
+- **`planhat-*`** — build/debug Planhat's own automation layer (`planhat-automations`, `planhat-formula-builder`)
 - **`assistant-*`** — meta / configure the assistant (`-setup`, `-help`, `-remember`, `-automate`)
-- **Standalone** — `/support-hub`, `/daily-brief`, `/log-slack-threads`
+- **Standalone** — `/support-hub`, `/daily-brief`, `/log-slack-threads`, `/session-audit`
 
 ## Flag reference — multi-mode commands
-
-### `/notion-sync` — two modes, one command
-
-| Mode | What it does | Key flags |
-|---|---|---|
-| `--owner` | Push Customer.Owner → Sessions, Tasks, Active Packages | `--mine` (default), `--global`, `--no-confirm` |
-| `--renewals` | Set Status = Renewal on packages ending soon | `--mine` (default), `--global`, `--days N` (default 90), `--dry-run`, `--no-confirm` |
-
-**Examples:**
-```
-/notion-sync --owner                       # repair drift on my accounts
-/notion-sync --owner --global              # repair drift workspace-wide (asks for confirmation)
-/notion-sync --renewals                    # flag packages ending in ≤90 days
-/notion-sync --renewals --days 60          # tighter window
-/notion-sync --renewals --dry-run          # preview only, no writes
-```
 
 ### `/bulk` — two modes, one command
 
@@ -120,7 +102,7 @@ Commands are grouped by family. Type `/<family>` (or `/<family>-`) in autocomple
 | Mode | What it does |
 |---|---|
 | `--next <customer>` | Map current state → propose next 2–4 sessions (with gaps, risks, asks) |
-| `--full <customer>` | Build goals → milestones → phases → sessions plan; writes to Active Package in Notion on approval |
+| `--full <customer>` | Build goals → milestones → phases → sessions plan; writes to the Company `custom.Engagement Plan` field in Planhat on approval |
 
 **Examples:**
 ```
@@ -128,12 +110,13 @@ Commands are grouped by family. Type `/<family>` (or `/<family>-`) in autocomple
 /customer-plan --full Acme                 # full engagement program plan
 ```
 
-### `/notion-check` flags
+### `/session-audit` flags
 
 | Flag | Effect |
 |---|---|
 | `--customer <name>` | Scope audit to a single customer |
-| `--fix` | Apply low-risk corrections automatically (null Owners, propagation drift) |
+| `--tasks` | Audit open Planhat Tasks for completion drift instead of session history |
+| `--fix` | Apply corrections with per-write read-back verification |
 
 ### `/customer-setup` modes
 
@@ -142,14 +125,6 @@ Commands are grouped by family. Type `/<family>` (or `/<family>-`) in autocomple
 | (no flag) | Baseline — creates Customer page, Active Package, backfills sessions |
 | `--research` | Baseline + deep company research (web, SF, Gong) |
 | `--refresh` | Re-runs research on an existing Customer page |
-
-## Notion
-
-| Want to... | Run |
-|---|---|
-| **Create or update a Notion record** | `/notion-write <create\|update> ...` |
-| **Generate a customer-facing KDD doc** for an architecting session (standalone) | `/session-kdds <customer> [session-id]` |
-| **Ask how the databases work** (fill guide, formulas, interconnections, troubleshooting) | `/notion-ask <question>` |
 
 ## Maintenance
 
@@ -182,12 +157,12 @@ To change them: run `/assistant-setup` for a guided re-onboarding, or edit the f
 | **`context/pb-aise-reference-guide.md`** | Session methodology — "what good looks like" per session type |
 | **`context/communication-style-guide.md`** | Universal AISE comms patterns; `custom.AISE Profile preferences` on your Planhat User record overrides |
 | **`templates/session-kdds/`** | Customer-facing KDD anchor templates per A-session type |
-| **`custom.AISE Tracker Memory`** (Planhat User field) | Cross-customer observations only — per-user, written by `context-keeper` (Notion is SSOT for everything else) |
+| **`custom.AISE Tracker Memory`** (Planhat User field) | Cross-customer observations only — per-user, written by `context-keeper` (Planhat is SSOT for everything else) |
 
 ## Tips
 
-- **Don't paste context** the assistant can retrieve. Just name the customer or session — agents pull from Glean, Gmail, Calendar, Notion, Slack automatically.
-- **Confirm before destructive writes.** Notion updates ask before applying unless explicitly told otherwise.
+- **Don't paste context** the assistant can retrieve. Just name the customer or session — agents pull from Glean, Gmail, Calendar, Planhat, Slack automatically.
+- **Confirm before destructive writes.** Planhat updates ask before applying unless explicitly told otherwise.
 - **Customer-side actions don't go in the Tasks DB.** Only PB-side actions assigned to you. Customer commitments live in summaries / follow-ups.
 - **Internal tasks** (no specific customer) point at the **Productboard** customer record automatically.
 
