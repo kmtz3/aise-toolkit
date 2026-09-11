@@ -5,6 +5,16 @@ Format: `## [version] — YYYY-MM-DD` followed by bullet points grouped by type.
 
 ---
 
+## [2.62.3] — 2026-09-12
+
+### Added
+- `post-session-debrief` step 6 (internal Slack debrief): header now includes a `Gong call: [url]` line right under the customer/session/date title, sourced from the session-summarizer's `Source` field. Omitted when the source isn't a Gong call or in the placeholder-debrief branch.
+
+### Changed
+- Header format reshaped to `**[Customer]** – _[Session Name]_ | [date]` (customer bold, session name italic, pipe-separated date) in both the chat-facing draft and the Task-description HTML.
+
+---
+
 ## [2.62.2] — 2026-09-12
 
 ### Changed

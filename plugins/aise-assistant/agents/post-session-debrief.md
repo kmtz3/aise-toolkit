@@ -254,7 +254,8 @@ If there is a known external Slack channel with this customer, note in chat that
 
 Draft the debrief using this shape (markdown, for building the HTML below only — not returned in chat):
 ```
-**[Customer] — [Session Name] ([date])**
+**[Customer]** – _[Session Name]_ | [date]
+Gong call: [url]
 
 - [decision / outcome]
 - [decision / outcome]
@@ -265,13 +266,15 @@ Draft the debrief using this shape (markdown, for building the HTML below only �
 **Next — Customer:** [owner] — [what] by [timing]
 ```
 
+The Gong call line uses the `Source` link from the session-summarizer's structured output (step 2) when it's a Gong URL. Omit the line entirely if the source isn't a Gong call (Gmail/notes-only debrief) or in the placeholder-debrief branch (2b) where no transcript exists yet.
+
 Apply `context/communication-style-guide.md` and the user's `custom.AISE Profile preferences` (sign-offs, em-dash rule, semicolons, English variant, casual register, forbidden filler words) — resolve via `get_model_record` per `context/planhat-user-profile.md` if not already in context this run. No em dashes.
 
 Then rebuild the same content as **single-line HTML** for the Task `description` — per § Planhat rich-text fields (universal write format) in `CLAUDE.md`. Never write the markdown draft or literal newlines directly into `description`. Shape:
 ```
-<p><strong>[Customer] – [Session Name] ([date])</strong></p><ul class="ph-editor__bullet-list"><li class="ph-editor__list-item"><p>[decision / outcome]</p></li><li class="ph-editor__list-item"><p>[decision / outcome]</p></li></ul><p></p><p><strong>Risks:</strong></p><ul class="ph-editor__bullet-list"><li class="ph-editor__list-item"><p>🔴 [critical item]</p></li><li class="ph-editor__list-item"><p>🟡 [watch item]</p></li></ul><p></p><p><strong>Next – PB:</strong> [owner] – [what] by [timing]</p><p></p><p><strong>Next – Customer:</strong> [owner] – [what] by [timing]</p>
+<p><strong>[Customer]</strong> – <em>[Session Name]</em> | [date]</p><p>Gong call: <a href="[url]">[url]</a></p><p></p><ul class="ph-editor__bullet-list"><li class="ph-editor__list-item"><p>[decision / outcome]</p></li><li class="ph-editor__list-item"><p>[decision / outcome]</p></li></ul><p></p><p><strong>Risks:</strong></p><ul class="ph-editor__bullet-list"><li class="ph-editor__list-item"><p>🔴 [critical item]</p></li><li class="ph-editor__list-item"><p>🟡 [watch item]</p></li></ul><p></p><p><strong>Next – PB:</strong> [owner] – [what] by [timing]</p><p></p><p><strong>Next – Customer:</strong> [owner] – [what] by [timing]</p>
 ```
-If there are no risks, drop the `<ul>` and write `<p>None.</p>` instead. Reference render: Task `6a9094627ccf4504614e798a` (Unit4 program sync, 27 Aug 2026).
+Drop the `Gong call` `<p>` entirely under the same conditions as the markdown draft above. If there are no risks, drop the `<ul>` and write `<p>None.</p>` instead. Reference render: Task `6a9094627ccf4504614e798a` (Unit4 program sync, 27 Aug 2026).
 
 Then:
 ```
