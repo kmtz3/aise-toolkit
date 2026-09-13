@@ -38,7 +38,7 @@ means two live approaches to one person – flag it rather than silently adding 
 Per thread that will get a draft:
 
 - **Planhat Company** – `list_model_records(MODEL:"Company", FILTER:{"name[contains]":"<name>"})`, then read `phase`,
-  `custom.⚡️ Spark Stage`, `custom.⚡️ Spark Enabled`, `custom.[SIP] Tier`, `custom.Next Step`, `custom.⚡️ AI Consent`.
+  `custom.⚡️ Spark Stage`, `custom.Spark Enabled – SNF`, `custom.[SIP] Tier`, `custom.Next Step`, `custom.⚡️ AI Consent`.
   The existing Next Step tells you what was already promised.
 - **Initiatives** – read `context/initiatives/README.md`, then any file with `Status: Active`. **An active initiative
   overrides the default shape of what you propose.** Under `spark-in-practice.md`, an in-scope account must never be

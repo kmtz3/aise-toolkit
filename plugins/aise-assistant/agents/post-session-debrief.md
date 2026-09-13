@@ -221,6 +221,32 @@ create_model_record(MODEL: "Task", PARAMETERS: {
 
 **`type` is mandatory on every Task this procedure creates — never leave it unset.** A generic PB-side commitment (this step) or the re-debrief task (step 2b) gets `type: "Task"`. The Slack debrief Task (step 6) always carries `type: "Internal Alignment"`. Each product feedback task (step 8) always carries `type: "Product Feedback"`. An untyped Task falls back to no type filter and won't match downstream reporting/filtering.
 
+**`action` and `ownerId` are mandatory on every Task this procedure creates — and they are the two that have actually gone missing.** `action` is the Task's title. `ownerId` is the assignee. A Task written without them still returns `200` and still shows up in a `list_model_records` count, but renders as a blank unassigned row in Planhat and is invisible in every practical view.
+
+**Use these exact field IDs. Nothing else lands.** Unknown keys are discarded server-side with no error — see `context/planhat-schema.md` § MCP Access → silent failure 3. The Planhat MCP's own `create_model_record` tool description ships a Task example using `name`, `dueDate` and `assignee`; **all three are wrong and all three vanish.** Follow this table, never the tool's inline example:
+
+| Never write | Always write |
+|---|---|
+| `name`, `title`, `subject` | `action` |
+| `assignee`, `owner` | `ownerId` |
+| `dueDate`, `due`, `deadline` | `endTime` |
+| `priority` | `custom.Priority` |
+
+`status` is stored unvalidated, so a typo persists instead of erroring: the only valid open value is **`"To Do"`** — exact casing, one space. `"todo"`, `"to-do"` and `"To-Do"` all save cleanly and all drop the Task out of status-filtered views.
+
+Root cause of the 2026-08-25 and 2026-09-08 nameless-Task incidents (15 Tasks on Verisk, 20 across the workspace), reproduced and confirmed 2026-09-11.
+
+#### Read back every Task create — not optional
+
+Immediately after each `create_model_record(MODEL: "Task", ...)` in this procedure (this step, step 2b, step 6, step 8):
+
+```
+get_model_record(MODEL: "Task", OBJECT_ID: "<_id from the create response>",
+                 SELECT: ["action", "ownerId", "type", "status", "endTime", "custom.Priority"])
+```
+
+Assert all six are present, and that `status` is exactly `"To Do"`. If any is missing or miscased, re-write it with `update_model_record` once and re-assert. A create response that echoes only `_id`, `companyId` and `description` means the payload used alias field names — fix the payload, don't retry it unchanged. Report any Task that failed the assert twice in the step-12 summary rather than reporting it as created.
+
 #### Priority by task kind
 
 | Task kind | Default | Escalate when |
@@ -424,7 +450,7 @@ After all steps complete, produce a single consolidated report:
 **Planhat writes applied:**
 - Conversation: [_id, "created" or "updated via Task noteId" or "direct create"]
 - Session time: [`corrected 2026-08-27T00:00:00.000Z → 2026-08-27T08:30:00.000Z (source: coupled Task startTime)`, or "already correct", or "not resolved — no timestamp source available"]
-- Tasks created: [N tasks — list each as `title — [priority] — due [date] — (reason for the priority)`] (or "none — no PB-side actions identified")
+- Tasks created: [N tasks — list each as `title — [priority] — due [date] — (reason for the priority)`] (or "none — no PB-side actions identified"). Every one read back and asserted per step 4; flag any that failed the assert.
 - Slack debrief Task, product feedback Tasks and any re-debrief Task each show their priority in the same form
 - Slack debrief Task: [Task _id]
 - Product feedback Tasks: [N tasks — list titles] (or "none — no feedback surfaced")
@@ -461,6 +487,7 @@ After all steps complete, produce a single consolidated report:
 - **Never write a session `date` of `T00:00:00.000Z`.** Planhat's own event→Conversation conversion already stamps `date` with the conversion moment rather than the session start, so the field is wrong by default and a midnight overwrite only replaces one wrong value with another. Resolve the real start via `context/planhat-schema.md` § Session timestamp and correct it on every touch, create or update.
 - **Never overwrite `owner` or any SF-synced Company field.** See `context/planhat-schema.md` § Write Rules for the full SF-synced list.
 - **Auto-Conversation only fires on a `status` transition to `"done"` via `update_model_record`** — never bake `status: "done"` into a Task create.
+- **Every Task create uses the exact field IDs in step 4's table and is read back before it counts as written.** `name`/`assignee`/`dueDate` are silently discarded, and `status` is stored unvalidated — `"To Do"` is the only valid open value. This is what produced the nameless Tasks on Verisk (2026-08-25, 2026-09-08).
 - **Conversation type must be one of the configured option values** in `context/planhat-schema.md` § Type value mapping, emoji included — a value without the emoji won't match filters, and a value outside the authoritative list (including raw Notion labels like `📦 Other`/`🗣️ Sync`) silently falls back to `note`. Check the customer-specific overrides table first.
 - **Attachment `sourceUrl` must be a public, directly-fetchable URL** — the Drive "view" link (`/file/d/{id}/view`) does not work; use the `uc?export=download` form, and only after explicitly sharing the file anyone-with-link.
 - **Conflicts between sources** (Gong vs. Slack/Gmail signals vs. the user's chat): flag, don't silently pick.

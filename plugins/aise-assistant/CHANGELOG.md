@@ -5,6 +5,30 @@ Format: `## [version] — YYYY-MM-DD` followed by bullet points grouped by type.
 
 ---
 
+## [2.63.0] — 2026-09-12
+
+### Fixed
+- **Planhat Task creates were landing nameless, unassigned and untyped — root cause found and closed.** Twenty Tasks across the workspace (15 on Verisk from the 2026-08-25 and 2026-09-08 debrief runs, plus Hilti ×3, International Baccalaureate, Dr.Max) were written with a full `description` and nothing else: no `action`, no `ownerId`, and on the older batch no `type`, `status`, `endTime` or `custom.Priority`. They render as blank unassigned rows in Planhat and are invisible to `/daily-brief`.
+
+  The agent specs were correct. The cause is outside them: **Planhat's MCP discards unknown `PARAMETERS` keys server-side with no error and still returns `200`**, and the Planhat MCP's own `create_model_record` tool description ships a Task example using `name`, `dueDate` and `assignee` — none of which are Task fields (`action`, `endTime`, `ownerId` are). An agent that follows the tool's inline example over the schema produces exactly this record shape. Reproduced side-by-side on 2026-09-11 (both test records deleted): the spec payload landed complete, the tool-example payload landed as `description` + `companyId` only.
+
+  Second finding from the same investigation: **`status` is stored unvalidated.** `"todo"`, `"to-do"` and `"To-Do"` all save cleanly and none matches the only valid open value, `"To Do"`, so the Task silently drops out of every status-filtered view. The 2026-09-08 batch had `status: "todo"`. `type` behaves the same way — `"Internal Action"` is an orphan value already sitting in the workspace.
+
+- `context/project-instructions.md` § 4 step 4 specified `status: "to-do"` — an invalid value, and a direct source of the drift above. Corrected to `"To Do"` with the casing rule spelled out.
+
+### Added
+- `context/planhat-schema.md` § MCP Access — **third documented silent MCP failure** (was "Two silent query failures", now "Three silent MCP failures"): unknown keys dropped on write, with the reproduction table and a Task alias table naming every wrong field name an agent reaches for by reflex (`name`/`title`/`subject` → `action`, `assignee`/`owner` → `ownerId`, `dueDate`/`due`/`deadline` → `endTime`, `notes`/`body` → `description`, `priority` → `custom.Priority`), plus the unvalidated-`status`/`type` note.
+- `context/planhat-schema.md` § Write Rules — two new rules: exact field IDs only, and read back after every create.
+- `context/planhat-schema.md` § MCP Access — **documented that an unset `type` is not neutral: Planhat renders it as `note`**, the model default and the fallback for unrecognized values. A Task written without `type` therefore displays as a note, drops out of type-filtered reporting, and reads as a stray record. Over MCP the field just comes back absent, so "no type on read" and "shows as note in the UI" are the same defect from two sides. Repaired 2026-09-11: 19 of Klara's debrief-created Tasks were untyped or wrongly typed (LumApps, North American Bancard, IBO, CFC, S&P, Emplifi, SAP, Quantexa, SymphonyAI, Hilti, Verisk) — including 4 Slack-debrief Tasks that should have been `Internal Alignment`, one `"Internal Action"` orphan value, and one blank `status`.
+- `agents/post-session-debrief.md` § 4 — **`action` and `ownerId` are now mandatory alongside the existing `type` and `custom.Priority` guardrails**, with the alias table inline and an explicit "do not follow the MCP tool's inline example" warning. New sub-step: **read back every Task create** (`get_model_record` asserting `action`, `ownerId`, `type`, `status`, `endTime`, `custom.Priority`) across all four Task creates in the agent — this step, 2b, 6 and 8. A create response echoing only `_id`, `companyId` and `description` is now named as the signature of a failed write, not a success. Added as a critical rule and surfaced in the step-12 report.
+- `agents/customer-plan-next.md` — same field-ID and read-back requirement on its Task creates.
+- `CLAUDE.md` ground rules — universal bullet: never assemble `PARAMETERS` from remembered field names, pull `get_model_action_parameters` for unchecked models, read back after every create.
+
+### Changed
+- `context/planhat-schema.md` and `context/project-instructions.md` re-synced to `aise-leadership` (canonical copies).
+
+---
+
 ## [2.62.3] — 2026-09-12
 
 ### Added

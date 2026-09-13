@@ -14,9 +14,9 @@
 | Key tools | `list_model_records`, `get_model_record`, `update_model_record`, `search_records`, `get_model_action_parameters` |
 | Available models | `Company`, `EndUser`, `Task`, `Conversation`, `Deal`, `Nps`, `Issue`, `Workflow`, `Churn`, `Document`, `User`, `Product`, `LineItem`, `EmailTemplate`, `Comment`, `Attachment` |
 
-### Two silent query failures — apply to every model, every skill
+### Three silent MCP failures — apply to every model, every skill
 
-Both were verified live on 2026-08-31 against `Conversation`. Neither raises an error, neither warns, and both return a plausible-looking short result set. Any skill that reasons over "everything in this window" is wrong by default until it accounts for them.
+The first two were verified live on 2026-08-31 against `Conversation`, the third on 2026-09-11 against `Task`. None raises an error, none warns, and each returns a plausible-looking success. Any skill that reasons over "everything in this window", or that trusts a `200` on a write, is wrong by default until it accounts for them.
 
 **1. Date filters take plain `YYYY-MM-DD`, not ISO timestamps.**
 
@@ -37,6 +37,168 @@ The MCP response has a payload ceiling and drops whole records to fit it:
 | without them | **39** |
 
 Gong transcripts run 10–55 KB each, so two records fill the budget. Two records reads as a small clean result, which is what makes this dangerous — and it is a *different* failure from the ~36-row cap on `Conversation` (which pages correctly with `OFFSET`). **Never put `transcript` or `description` in a multi-record `SELECT`.** Pull metadata in the list query, then fetch bodies one record at a time with `get_model_record(..., SELECT: ["transcript", "description"])` for the handful of records that actually need them — and report lengths, never the bodies themselves.
+
+**3. Unknown field keys are silently dropped on write. The create still returns `200`.**
+
+`create_model_record` and `update_model_record` accept any `PARAMETERS` object. Keys that are not real field IDs for that model are discarded server-side — no error, no warning, and the response simply omits them. A create built from guessed or aliased field names lands as a near-empty record with only the keys that happened to be correct.
+
+Verified live on 2026-09-11 (Verisk, both test records deleted):
+
+| `PARAMETERS` passed to `create_model_record(MODEL: "Task")` | What landed |
+|---|---|
+| `action`, `ownerId`, `status`, `type`, `endTime`, `custom.Priority`, `description`, `companyId` | all of it |
+| `name`, `assignee`, `dueDate`, `description`, `companyId` | `description` + `companyId` only — a nameless, ownerless, dateless Task |
+
+**The Task aliases that silently vanish.** These are the wrong names an agent reaches for by reflex — and the Planhat MCP's own `create_model_record` tool description ships a Task example using all three, so following the tool's inline example instead of this schema is the documented way to produce the failure:
+
+| Wrong (dropped, no error) | Correct field ID |
+|---|---|
+| `name`, `title`, `subject`, `summary` | **`action`** |
+| `assignee`, `owner`, `assignedTo` | **`ownerId`** |
+| `dueDate`, `due`, `deadline` | **`endTime`** |
+| `notes`, `body` | **`description`** |
+| `priority` | **`custom.Priority`** |
+
+`status` is worse than dropped — it is stored **unvalidated**. `"todo"`, `"to-do"` and `"To-Do"` all persist verbatim and none of them match the only valid option, `"To Do"`, so the Task disappears from every status-filtered view while looking fine on the record. Same for `type`: pass an option that is not in the live enum and it sticks as a dead value (`"Internal Action"` is one such orphan already in the workspace).
+
+**An unset `type` is not neutral — Planhat renders it as `note`.** `note` is the model default and the fallback for an unrecognized value, so a Task created without `type` shows up in the UI as a note rather than a task, drops out of type-filtered reporting, and reads as a stray record to anyone reviewing the account. Over MCP the field simply comes back absent, so a read that omits `type` and a record displaying as `note` are the same defect seen from two sides — this is why `type` is mandatory on every Task write, not merely recommended. Repaired workspace-wide 2026-09-11: 19 of Klara's debrief-created Tasks were untyped or wrongly typed, plus roughly 40 more on other AISEs' accounts from the same agent runs.
+
+**Consequence — the rule.** Never hand-assemble a `PARAMETERS` object from memory for a model you have not checked this session. Pull `get_model_action_parameters(MODEL: "<model>")` first, and **read the record back after every create** (`SELECT` the fields you just wrote) and assert they are present and correctly cased. A create response echoing only `_id`, `companyId` and `description` is the signature of this failure, not a successful write.
+
+---
+
+## Adding a new Planhat field
+
+A field the assistant should read or write has to clear four gates. Skipping any one produces a failure that looks like success.
+
+**1. Create it in Planhat with a description that says how to use it.** `get_model_action_parameters` returns each field's description verbatim, so the description is the only channel that tells an agent what a field means without a doc edit. Write it as an instruction, not a label — what it holds, who sets it, what each option means, and what blank means. `custom.Debrief Status` and `custom.PM Reach-Out Status` are the models to copy. A field with an empty description is effectively invisible to reasoning: the agent sees a name and guesses from it.
+
+**2. Number the options if it is a list you will group or sort by.** Planhat orders picklists alphabetically otherwise. Numbering makes `1. Key contact` sort above `2. Engaged`, and renaming an option remaps every record already holding it, so numbering can be added after the fact with no migration. The cost: **every write must then pass the full numbered string verbatim.**
+
+**3. Reconnect the Planhat connector.** New fields do not reach MCP metadata until the connector re-reads the schema. Until then the field sits in the partial state below.
+
+**4. Document it in this file.** A field that exists but is not here will be missed by every agent that does not stumble onto it.
+
+### The partial state — writable before filterable
+
+Between creating a field and the connector picking it up:
+
+| Operation | Works? |
+|---|---|
+| `update_model_record` writing the field | ✅ the write lands |
+| `get_model_record` with the field in `SELECT` | ✅ reads back |
+| `list_model_records` with the field in `SELECT` | ✅ reads back |
+| `list_model_records` filtering **on** the field | ❌ `Invalid filter format: Invalid field` |
+| `get_model_action_parameters` listing the field | ❌ absent |
+
+**Verify a new-field write with `get_model_record` plus an explicit `SELECT`, never by filtering.** An agent that concludes "the field is read-only, my write was silently dropped" has almost certainly verified the wrong way — that false negative occurred across several debrief runs on 2026-09-12 and produced incorrect reports of lost writes.
+
+The practical limit while in this state: the field cannot back a cross-account query or a Planhat view built through MCP. Building the view in the Planhat UI works, because the UI does not use the connector's field registry.
+
+### Telling a missing field from a lagging one
+
+`Invalid filter format: Invalid field: <name>` means the connector's registry does not know the field. That has two very different causes, and the fix is opposite in each:
+
+| Situation | What it means | Do |
+|---|---|---|
+| Field was created recently | Registry lag — the field exists and writes land | Verify with `get_model_record` + explicit `SELECT`; reconnect the connector |
+| Field predates the last connector sync | The field has genuinely been removed from the model | Stop referencing it; find the successor and update this file |
+
+**A filter probe on an established field is therefore a reliable existence test**, and it is how `custom.AISE Conversation` and `custom.⚡️ Spark Enabled` were confirmed removed on 2026-09-12. It is *not* a valid test for anything created in the last few days.
+
+**Separately, `readonly: true` in the metadata is not always enforced.** `custom.Debrief Status` is declared read-only and accepts writes. Trust a read-back over the metadata flag.
+
+---
+
+## REST API write quirks — `api.planhat.com`, not the MCP
+
+Verified live 2026-09-12 against `Task` in the Productboard tenant with a
+service-account token. These apply to the **REST API** — the path Zapier, n8n and any
+`curl` take. The MCP normalizes some of them, so MCP experience does not transfer, and
+the two paths disagree in at least one place where both look like they work.
+
+### `status: "Done"` is capitalized on REST
+
+| Path | Value that works |
+|---|---|
+| `update_model_record` (MCP) | `"done"` |
+| `PUT https://api.planhat.com/tasks/{_id}` | `"Done"` |
+
+Lowercase `"done"` over REST fails with `The app returned "Failed to execute task status
+update"` — a message that names neither the field nor the value, and reads like an
+auth or payload problem. The model's own option list is mixed-case
+(`done|ignored|blocked|in-progress|To Do`), so it is not a reliable guide. Test the
+value on the path you are actually using.
+
+### `custom` merges on PUT, and takes either shape
+
+Both of these set one field and leave every other custom field intact:
+
+```json
+{"status":"Done","custom":{"Slack message URL":"https://..."}}
+{"status":"Done","custom.Slack message URL":"https://..."}
+```
+
+Omitting `custom` entirely leaves all custom fields untouched. **Prefer the nested
+form** — it matches the read shape and the `create_model_record` convention.
+
+Clearing with `""` sets an empty string; it does not remove the key, so a later
+`has no value` filter may not match it.
+
+Two keys differing only in case cannot go in the same request — the JSON layer rejects
+them as duplicates, case-insensitively, even though storage is case-sensitive and both
+can coexist on a record. Repairing a mis-cased key therefore takes two calls.
+
+### Unknown custom keys are silently accepted
+
+This is the expensive one. A custom-field key that matches no defined field is
+**stored anyway**: 200 response, value persisted in the `custom` object, value visible
+in API reads — and bound to no field definition, so it is invisible everywhere in the
+Planhat UI.
+
+Casing counts. Writing `"Slack Message URL"` when the defined field is
+`"Slack message URL"` produces exactly that: a successful write, a populated API
+response, and an empty field in the product.
+
+This is the same class of failure as the unvalidated `status` and `type` values above,
+and it has the same remedy — **confirm the exact key against
+`get_model_action_parameters(MODEL: "<model>")` before writing, character for
+character including case and any emoji, then read the record back.** If a value writes
+"successfully" but does not appear in the UI, suspect the key before anything else.
+
+### `Task.ownerName` is a stale denormalization
+
+`ownerName` appears in automation event payloads and in API reads, but it is **not in
+the Task schema**. It is written on create and is *not* refreshed when the task is
+reassigned. Verified 2026-09-12: a task whose `ownerId` pointed at one user still
+carried the original creator's name in `ownerName`.
+
+Read `ownerId` and resolve the User record. Never group, filter, report or display on
+`ownerName` — after any handover it is confidently wrong, and wrong in a way that
+produces a plausible name rather than a blank.
+
+### Automation replacement codes validate against the schema, not the payload
+
+Planhat's automation reference validator checks the **declared model schema**. Two
+consequences, both of which reject at save time with `is not a valid reference`:
+
+- Runtime-only fields — `<<object.ownerName>>` — are refused even though the value is
+  genuinely in the event payload.
+- Field names containing a space — `<<get-object-xxx.custom.Slack message URL>>` — are
+  refused.
+
+In both cases take the whole object into a Function step and read the property in
+JavaScript:
+
+```javascript
+const tk = <<object>>;
+const co = <<get-object-xxx>>;
+const url = (tk.custom && tk.custom["Slack message URL"]) || "";
+```
+
+The validator also parses `<<...>>` anywhere in a Function's code text, **including
+comments and regex literals**, and a step cannot reference itself. A commented-out
+example of the step's own output is a save-blocking error.
 
 ---
 
@@ -178,7 +340,7 @@ These three fields are actively synced Notion → Planhat by the AISE assistant.
 | `Igniting?` | `custom.⚡️ Igniting?` | boolean | `__YES__` → `true` · `__NO__` → `false` |
 | `Days in Current Ignite Phase` (formula) | `custom.⚡️ Days in Current Ignite Stage` | string (read-only) | Both are computed. Do not write either. |
 | `Ignite Journey Last Edited` (date) | _(no equivalent)_ | — | Notion-only automation field. |
-| _(no Notion equivalent)_ | `custom.⚡️ Spark Enabled` / `custom.⚡️ Spark Enabled Date` / `custom.⚡️ Spark Active For Since` / `custom.⚡️ Spark Engaged` / `custom.⚡️ Spark Engaged Date` / `custom.⚡️ AI Consent` / `custom.Spark Stage` | boolean / date / date / boolean / date / text / list | **Added 2026-08-07.** Written by `temp-ph-ignite-conversion-data-sync` skill from weekly CSV upload. CSV is the source of truth for these fields. |
+| _(no Notion equivalent)_ | `custom.Spark Enabled – SNF` / `custom.⚡️ Spark Enabled Date` / `custom.⚡️ Spark Active For Since` / `custom.Spark Engaged – SNF` / `custom.⚡️ Spark Engaged Date` / `custom.⚡️ AI Consent` / `custom.Spark Stage` | boolean / date / date / boolean / date / text / list | **Added 2026-08-07.** Written by `temp-ph-ignite-conversion-data-sync` skill from weekly CSV upload. CSV is the source of truth for these fields. |
 
 **Write direction:** Notion → Planhat. Notion is the source of truth for Spark fields during the current transition. When updating Spark status, write to Notion first (via `notion-update-page`), then sync to Planhat (via `update_model_record`).
 
@@ -190,7 +352,7 @@ These three fields are actively synced Notion → Planhat by the AISE assistant.
 | _(no equivalent)_ | `arr` | Annual Recurring Revenue — Planhat only |
 | _(no equivalent)_ | `renewalDate` | Contract renewal date — Planhat only |
 | _(no equivalent)_ | `renewalDaysFromNow` | Days until next renewal — Planhat only, read-only |
-| _(no equivalent)_ | `custom.ARR – Salesforce` | ARR from Salesforce — Planhat only |
+| _(no equivalent)_ | `custom.ARR – SF` | ARR from Salesforce — Planhat only. **Field ID is `ARR – SF`.** |
 | _(no equivalent)_ | `custom.Customer Status – SF` | Salesforce lifecycle status — Planhat only |
 | _(no equivalent)_ | `custom.Region` | Geographic region — Planhat only |
 | _(no equivalent)_ | `custom.Segment` | Customer segment — Planhat only |
@@ -283,7 +445,7 @@ Planhat only — Notion does not track these in real time.
 | `owner` | objectId → User | CSM / Account Manager. Do not overwrite from AISE logic. |
 | `coOwner` | objectId → User | Secondary owner. |
 | `phase` | string | Services lifecycle stage. **Configured options:** `0. Preparation` · `1. Activation` · `2. Adoption` · `3. Renewal` · `4. Churned`. Directly set by the AISE as the program moves stage. |
-| `tags` | array | Freeform labels for segmentation. |
+| `tags` | array | Freeform labels for segmentation. One option is configured workspace-wide: **`no-recording`** — the customer does not permit call recording. **Check this before running any transcript search.** On a `no-recording` account Gong will never hold a transcript, so the retrieval ladder in `agents/post-session-debrief.md` § 2 is guaranteed to come up empty and the debrief must fall to the facilitator-notes branch. S&P Global is the known case; a full ladder was run against it on 2026-09-12 before anyone checked the flag. |
 | `country` | string | Country. |
 | `domains` | array | Email/web domains for conversation matching. |
 | `city` | string | City. |
@@ -351,9 +513,9 @@ Planhat only — Notion does not track these in real time.
 | `custom.Customer Since – SF` | string | — | First customer date |
 | `custom.Subscription Start Date (Earliest)` | string | — | Earliest subscription start |
 | `custom.Plan Names` | string | — | All plan names on the account |
-| `custom.Plan Name + Version (Highest ARR)` | string | — | Dominant plan by ARR |
-| `custom.Plan Version (Highest ARR)` | string | — | Version of the dominant plan |
-| `custom.Services Plan` | string | — | Services SKU roll-up |
+| ~~`custom.Plan Name + Version (Highest ARR)`~~ | — | — | **Removed from the Company model — verified absent 2026-09-12.** The per-contract equivalent is `custom.Plan Name + Version` on Line Item / Product / Asset. |
+| ~~`custom.Plan Version (Highest ARR)`~~ | — | — | **Removed from the Company model — verified absent 2026-09-12.** See `custom.Plan Version – SF` on Line Item / Product. |
+| ~~`custom.Services Plan`~~ | — | — | **Removed — verified absent 2026-09-12.** Superseded by `custom.Services Package`, `custom.Services Package (Category)` and `custom.Services Band` on Company. |
 | `custom.Recent Opportunity Notes` | string | — | Latest SF opportunity notes. Useful discovery context before a first call. |
 | `custom.Last AISE Touch` | string | — | Most recent AISE interaction |
 | `custom.Last AISE Session` | string | — | Date of the most recent **counted** session. Driven by the eight-type formula in the Conversation section below. |
@@ -418,13 +580,13 @@ writes Productboard's internal discussion of a customer onto that customer's own
 | `custom.Next Step` | string (Rich text) | — | **The account's current next action.** Written after an outbound touchpoint actually lands (a sent reply, a completed debrief), not when a draft is created. Keep it a short dated sequence with owners: what was just done, what is being waited on, what happens when it clears. Overwrite rather than append – this is a current-state field, not a log. Session history belongs in Conversations. **Rich text — format per § Rich Text Field Formatting below, never plain/`\n`-separated prose.** Refreshed by `post-session-debrief` (step 10, every run) and by `inbox-triage` (after a sent reply). |
 | `custom.[SIP] Tier` | string | `T1 - Priority outreach: enabled + visible, not yet ignited` · `T2 - Second wave: ignited, not yet adopted` · `T3 - Adopted/transitioned (sustain)` · `T4 - Open visibility first: enabled, admins-only` · `T5 - Enablement motion: Spark not enabled` · `T6 - No outreach: churned / planning to churn` | Spark in Practice tiering. Pass the **full option string**, not just `T1`. See `context/initiatives/spark-in-practice.md` for what each tier changes about the motion. |
 | `custom.[SIP] Rank in Tier` | number | — | Priority rank within the tier. Lower is higher priority. |
-| `custom.⚡️ Spark Enabled` | boolean | `true` / `false` | Whether Spark is switched on for the account at all. The gate for Spark in Practice scope. |
+| `custom.Spark Enabled – SNF` | boolean | `true` / `false` | Whether Spark is switched on for the account at all. The gate for Spark in Practice scope. **Corrected 2026-09-12 — the field is `custom.Spark Enabled – SNF`. The previously documented `custom.⚡️ Spark Enabled` does not exist and will error in a filter.** Note the `– SNF` dates and the `⚡️` booleans did not move together: `custom.⚡️ Spark Enabled Date` and `custom.⚡️ Spark Engaged Date` are still live under their emoji names. On a multi-workspace account prefer the per-workspace Asset fields — see § Asset / Workspace. |
 | `custom.⚡️ Spark Enabled Date` | string | — | When Spark was enabled. |
 | `custom.⚡️ Spark Active For Since` | string | — | When the current `⚡️ Spark Stage` visibility setting took effect. |
-| `custom.⚡️ Spark Engaged` | boolean | `true` / `false` | Someone in the account reached L2 – ran a skill or submitted a Spark prompt. **Live value, not the weekly snapshot.** |
+| `custom.Spark Engaged – SNF` | boolean | `true` / `false` | Someone in the account reached L2 – ran a skill or submitted a Spark prompt. **Live value, not the weekly snapshot.** **Corrected 2026-09-12 — the field is `custom.Spark Engaged – SNF`; `custom.⚡️ Spark Engaged` does not exist.** |
 | `custom.⚡️ Spark Engaged Date` | string | — | When engagement was first detected. |
 | `custom.⚡️ AI Consent` | string | — | Where the account stands on AI terms. Set this when a terms review, extension request, or acceptance moves – it is the field that tells the rest of the team the account is mid-flight rather than untouched. |
-| `custom.AIPA Journey Status` | string | `Spark Activation`, `Re-Engagement` | AIPA-segment equivalent of `custom.AISE Journey Status`. Do not write for AISE-managed accounts. |
+| `custom.AIPA Active Motion` | string | `Post-trial Activation`, `Spark Activation`, `Spark Habit`, `Re-Engagement` | AIPA-segment equivalent of `custom.AISE Journey Status`. Do not write for AISE-managed accounts. **Renamed — corrected 2026-09-12**, was documented as `custom.AIPA Journey Status` with only two of the four options. See also `custom.AIPA Next Best Action` and `custom.Spark Journey - AIPA`. |
 | `custom.Gong Summary` | string | — | Rolling Gong-derived account summary. |
 | `custom.CAB Customer` | boolean | `true` / `false` | Customer Advisory Board member. |
 | `custom.External_Slack_Channel_ID` | string | — | **The customer ↔ shared external Slack channel pairing, cached.** Channel **ID** only, upper-case (`C0AKKLJCB5E`) – never a `#name` (channels get renamed), never a URL (the value feeds `slack_read_channel` and the `/log-slack-threads` `externalId` builder directly). Written by `/log-slack-threads` the first time it resolves a channel for the account; read on every later run, which is what lets that skill take a channel *or* a customer name as input. Write only when empty or when the user has just corrected it – a resolved channel that disagrees with a populated value is a conflict to surface, not a value to overwrite (an account can have two shared channels; the field holds one). **New field: Planhat custom fields lag in MCP metadata, so it may be absent from `get_model_action_parameters` and reject writes for a while. A failed write is reported, not fatal.** Strictly the **external** channel – see the Slack-fields callout above; `custom.Slack ID` / `custom.Slack URL` are the internal channel and are never a substitute. |
@@ -449,6 +611,19 @@ writes Productboard's internal discussion of a customer onto that customer's own
 
 ---
 
+### Field-suffix conventions — `– SF` and `– SNF` are never writable
+
+Two suffixes mark a field as **live-sourced from an upstream system**. Both use an en dash, not a hyphen.
+
+| Suffix | Source | Rule |
+|---|---|---|
+| `– SF` | Salesforce, live | **Never write.** Planhat is downstream; a write is overwritten on the next sync and creates a silent disagreement in between. |
+| `– SNF` | Snowflake, live | **Never write.** Same reasoning. These carry product-usage and Spark telemetry. |
+
+This holds even when the model metadata reports `readonly: false` — several `– SNF` fields accept writes and should still never receive one. **Treat the suffix as authoritative over the `readonly` flag.**
+
+When a field you need to write appears to be `– SF` or `– SNF`, the answer is not to write it anyway. Either the value belongs somewhere else, or the upstream pipeline needs to carry it — raise it rather than working around it.
+
 ## Write Rules
 
 - **Never write SF-synced fields.** See the SF-synced table above. This includes account fields (Region, Segment, ARR, Makers, Slack, Account Executive, etc.), Deal records, and Line Item records. Do not write these even if the field appears blank — the sync owns them. Exact mapping is WIP; when uncertain, treat a field as SF-synced unless it appears in the AISE-writable table.
@@ -458,6 +633,8 @@ writes Productboard's internal discussion of a customer onto that customer's own
 - **Option values:** exact casing required (e.g. `"Not Ready"` not `"Not ready"`).
 - **Do not overwrite `owner`** — managed by RevOps/CS leadership.
 - **Company records are SF-synced** — do not create new Company records via MCP. Creation is handled by RevOps via Salesforce sync.
+- **Unknown keys are dropped silently on create and update.** See § MCP Access → silent failure 3 for the verified evidence and the Task alias table (`name`/`assignee`/`dueDate` are the three that bite). Use exact field IDs from `get_model_action_parameters`, never a guessed or remembered alias.
+- **Read back after every create.** `SELECT` the fields you just wrote and assert they landed with the right casing. A `200` proves nothing about which keys survived.
 
 ### Session record resolution — never create a duplicate
 
@@ -894,6 +1071,8 @@ previous snapshot – note it shares the 🔁 emoji with `🔁 Sync`, so match o
 | `custom.Call Recording` | string | — | **Call recording link — Gong or otherwise.** Use this instead of appending to `description`. Write the raw URL. **Corrected 2026-08-27** — `custom.Gong URL` is no longer written by any agent; `custom.Call Recording` is the single field for every recording link regardless of source (was previously Gong-only reserved for `custom.Gong URL`, non-Gong-only reserved for this field — that split is retired). A one-time migration (2026-08-27) copied every populated `custom.Gong URL` value into this field workspace-wide so the legacy field could be safely deleted — see the removal note below. |
 | ~~`custom.Gong URL`~~ | string | — | **Deprecated 2026-08-27, pending deletion — do not reintroduce.** Superseded by `custom.Call Recording` above. Kept out of this reference table as a live field on purpose; it is documented only where an agent still has to read it. **Before deleting it in Planhat:** confirm the one-time migration above completed with zero unresolved conflicts, and check the Gong↔Planhat integration config — Gong's *own* native sync writes its call link to this exact field name when it creates a `👾 Gong Call` Conversation, which is outside any agent's control. Deleting the field may either break that write path or cause Planhat to silently recreate the field the next time Gong writes to it, depending on how Gong's integration is configured. `agents/ph-reconcile-gong-gcal.md` still reads from it as the *source* field on new Gong Call records for exactly this reason — update that agent if the Gong integration is reconfigured to target a different field. |
 | `custom.Handover Status` | string | — | `Not started` · `In progress` · `Validated – Ready`. Tracks the sales-to-AISE handover on a Sales Handover conversation. |
+| `custom.Debrief Status` | string | — | **Set by `post-session-debrief` at the end of a run — never by hand.** `complete` = the full debrief ran. `partial - transcript pending` = debrief ran but no transcript was available; placeholder notes written and a re-debrief task created. `skipped` = deliberately excluded from a bulk run. **Blank = not yet debriefed**, which is what `bulk-debrief` keys on to pick a session up. Declared `readonly: true` in MCP metadata but **writes do land** — verify with `get_model_record` + explicit `SELECT`, or a filter on the field's value, not with the metadata flag. |
+| `custom.Motion Category` | array | — | Which time-boxed GTM motion this session belongs to. Currently one option: `Spark in Practice`. Set by `post-session-debrief` for sessions in an active initiative's scope — see `context/initiatives/`. This is the field that makes a motion reportable without adding a permanent Conversation type for a three-month experiment. **Planhat is the counting source for Spark in Practice** — an automation tags the record and the AISE corrects it by hand where needed. The calendar-title convention in the initiative doc feeds Boge's forecast report, not this count; do not conflate the two. |
 | `custom.SH_Current State` | string (rich text) | — | Sales Handoff context captured at conversation level. Mirrors the Company-level `SH_` fields. Read for discovery context; not written by this assistant. |
 | `custom.SH_Future State` | string (rich text) | — | As above. |
 | `custom.SH_Negative Consequences` | string (rich text) | — | As above. **Note the Conversation field is `SH_Negative Consequences`; the Company field is `SH_Negative Impacts`.** Different names, same idea – do not copy one field ID to the other model. |
@@ -901,10 +1080,12 @@ previous snapshot – note it shares the 🔁 emoji with `🔁 Sync`, so match o
 
 #### Read-only fields
 
-`snippet`, `numberOfParts`, `parentId`, `parentType`, `createDate`, `companyName`, `isClassified`, `isSignalAnalyzed`, `shortSummary`, `isSeen`, `isOpen`, `isBounced`, `archived`, `scheduled`, `createdAt`, `updatedAt`, `custom.AISE Conversation`
+`snippet`, `numberOfParts`, `parentId`, `parentType`, `createDate`, `companyName`, `isClassified`, `isSignalAnalyzed`, `shortSummary`, `isSeen`, `isOpen`, `isBounced`, `archived`, `scheduled`, `createdAt`, `updatedAt`
 
-`custom.AISE Conversation` is a system-derived boolean marking the record as AISE-originated. It is read-only – do not
-attempt to set it to force a record into AISE reporting.
+> **`custom.AISE Conversation` was removed — verified absent from the Conversation model 2026-09-12.** It was a
+> system-derived boolean marking a record as AISE-originated. Do not read or write it. The live equivalents are the
+> Company-level formulas `custom.Last AISE Touch`, `custom.Last AISE Session` and `custom.Total AISE Sessions`, which
+> are driven by the counted-session type list rather than a per-record flag.
 
 ---
 
@@ -1006,7 +1187,7 @@ Alternatively, use `search_records(QUERY: "<task title>")` and scan results for 
 | `Due Date` | `endTime` | datetime | Write | ISO 8601. Set time to `T00:00:00.000Z` for date-only values. |
 | `Customers` (relation) | `companyId` | string | Write | Planhat Company `_id`. Resolve via company lookup. **Skip if Customers = Productboard internal** — internal tasks don't belong in Planhat. |
 | `Owner` (person) | `ownerId` | objectId | Write | Resolve Notion user UUID → Planhat user ID using the User ID table above. |
-| `Priority` | `custom.Priority` | string | Write | `"1"` → `"P1"`, `"2"` → `"P2"`, `"3"` → `"P3"`. Stored in `custom.Priority` — **not** the `type` field. |
+| `Priority` | `custom.Priority` | string | Write | `"1"` → `"P1"`, `"2"` → `"P2"`, `"3"` → `"P3"`. Stored in `custom.Priority` — **not** the `type` field. Full live option set is `P0`–`P4`. |
 | `Do not count` | _(skip)_ | — | — | Notion billing flag. Not relevant to Planhat. |
 | `Consumed Package` | _(skip)_ | — | — | No Planhat equivalent. |
 | `Source Call` | _(skip)_ | — | — | No native foreign key in Planhat linking a Task back to its source Conversation. Skip — the relationship lives in Notion. |
@@ -1051,8 +1232,11 @@ All Notion Task statuses write to the Planhat Task model. Only a `status` *trans
 | `companyId` | objectId | ✅ | Planhat Company `_id`. |
 | `ownerId` | objectId | — | Planhat User `_id` of the person responsible. |
 | `sourceId` | string | — | Notion Task page ID. **Dedup key.** |
-| `custom.Priority` | string | — | `"P1"`, `"P2"`, `"P3"` mapped from Notion `Priority` field. |
+| `custom.Priority` | string | — | `P0` · `P1` · `P2` · `P3` · `P4`. **Corrected 2026-09-12** — this file previously listed only P1–P3; `P0` and `P4` are valid live options. See § Account priority table for which to use. |
 | `custom.Prep Notes` | string | — | Prep brief written by session-prepper. Format: single-line HTML in the `ph-editor` vocabulary — see § Rich Text Field Formatting for the tag table and the canonical prep-brief example. Section labels are `<p><strong>…</strong></p>` (no `<h>` tags); lists **must** carry `ph-editor__bullet-list` / `ph-editor__ordered-list` + `<li class="ph-editor__list-item"><p>…</p></li>`; use `<p></p>` for a blank line and `<hr>` to separate the header block from the body. **Apply the user's `custom.AISE Profile preferences` voice rules to the sentence content** (dash style, etc.) — see `agents/session-prepper.md` § 1b/5b. Read and carried to the linked Conversation during post-session debrief. |
+| `custom.Facilitation Playbook URL` | string | — | Google Drive link to the interactive HTML facilitation guide generated by `/session-facilitation`. Written onto the session's Task so the link survives outside `custom.Prep Notes`, where URLs render as plain text. |
+| `custom.Slack message URL` | string | — | Slack permalink for a message this Task already produced, so a re-run updates the existing message instead of posting a duplicate. WIP. |
+| `custom.Spark Conversation` | boolean | — | Marks the session as Spark-related. Replaces the `activityTags: ["Spark"]` route, which is not writable via MCP. |
 | ~~`activityTags`~~ | array | — | ~~Freeform tags for filtering.~~ **Not writable via MCP — silently rejected. Apply manually in Planhat UI.** |
 | `endusers` | array | — | Customer contacts involved: `[{"id": "<enduser-id>"}]`. |
 
@@ -1064,7 +1248,18 @@ All Notion Task statuses write to the Planhat Task model. Only a `status` *trans
 
 ## EndUser (Planhat) ↔ Contact (Notion)
 
-> **Status:** Schema documented. Not yet actively written by AISE. Read-only for now — used during session prep to identify attendees and during debrief to link `endusers` on Conversations.
+> **Status:** Actively written by AISE as of 2026-09-12. The `custom.AISE *` fields below are the AISE's own read on a contact, maintained during session prep and debrief. Everything else on this model is Salesforce- or Snowflake-synced, or owned by another team — read it, do not overwrite it.
+
+### The working set — who we actually deal with
+
+A Company can carry 50+ EndUser records, most of them product users nobody has ever spoken to. Autorola has 52; nine have any interaction history at all. Two ways to narrow:
+
+| Need | Use |
+|---|---|
+| Anyone we have exchanged a message with | `lastTouch[has value]` — derived from conversation matching, free, always current |
+| The people we deliberately work with | `custom.AISE Relationship` — set by hand, survives junk records |
+
+**Prefer `custom.AISE Relationship` for anything that matters.** `lastTouch` counts a CC the same as a champion, and it inherits every junk record on the account — Autorola alone holds six contacts named `Not provided` or `[[unknown]]`, a literal `khj-fake-bu-test@autorola.com`, and the same person duplicated across two domains.
 
 ### How to look up a Planhat EndUser
 
@@ -1072,7 +1267,8 @@ All Notion Task statuses write to the Planhat Task model. Only a `status` *trans
 list_model_records(
   MODEL: "EndUser",
   FILTER: {"companyId[equal to]": "<planhat-company-id>"},
-  SELECT: ["name", "email", "position", "primary", "companyId"]
+  SELECT: ["name", "email", "position", "primary", "companyId",
+           "custom.AISE Relationship", "custom.AISE Read", "custom.Engagement Role"]
 )
 ```
 
@@ -1085,6 +1281,34 @@ list_model_records(
 )
 ```
 
+### AISE-writable fields
+
+| Field ID | Type | Description |
+|---|---|---|
+| `custom.AISE Relationship` | string (list) | **The working-set filter.** How close this person sits to the program. Options are numbered so group-by sorts in order — **pass the full numbered string verbatim**: `1. Key contact` · `2. Engaged` · `3. Known` · `4. Not engaged`. Passing `Key contact` stores an off-list value that looks like a successful write. Blank means never assessed, which is not the same as `4. Not engaged`. |
+| `custom.AISE Read` | string (rich text) | The AISE's read on the person — what they care about, what blocks them, how they behave in a room, whether anything depends on them alone. Not a job description; `position` and `custom.Job Title – SNF` already hold that. Two to four sentences of plain prose. Record uncertainty rather than smoothing it: a contested name or an unconfirmed inference belongs in the text. |
+| `custom.AISE Read Reviewed` | date | When the read was last set or reconfirmed. Stores as `YYYY-MM-DDT00:00:00.000Z`; write plain `YYYY-MM-DD`. A read more than about two quarters old should not be trusted without a re-check. |
+| `custom.Engagement Role` | array (list) | **The AISE team's own field, and distinct from AISE Relationship.** The person's *function*: `Champion` · `Power User` · `Main Contact` · `Executive Sponsor` · `Technical Contact`. Relationship says how close they are, Engagement Role says what they do. Leave blank rather than guessing — an unevidenced Champion is worse than none. Note the field also carries bulk-derived values on non-AISE accounts (Sysdig, Drata, Bridgestone), so absence of a value is not evidence either way. |
+| `primary` | boolean | Main point of contact for the company. |
+| `position` | string | Job title. Sparsely populated — 9 of 52 on Autorola. `custom.Job Title – SNF` is often healthier. |
+
+`tags` (`Champion` · `Program Owner`) is the pre-2026-09 way of marking a champion and is superseded by the two fields above. Three records still carry it, all on North American Bancard. Migrate them and stop writing it — two places to say "champion" is one too many.
+
+### Read-only context worth reading before a session
+
+Snowflake-synced (`– SNF` suffix), refreshed on the usage pipeline's cadence:
+
+- **Product role:** `custom.Is Maker – SNF`, `custom.Role – SNF`, `custom.Job Title – SNF`, `custom.Department – SNF`
+- **Engagement:** `custom.Engagement Level – SNF` (`L1` / `L2`), `custom.Last Seen Date – SNF`, `custom.Last Response Date – SNF`
+- **Spark:** `custom.Spark Activated – SNF`, `custom.Spark Activated Date – SNF`, `custom.Last Spark Activity Date – SNF`, `custom.Spark Active Days – SNF`, `custom.Spark AI Days – SNF`, `custom.Spark Messages – SNF`, `custom.Spark Threads Started – SNF`, `custom.Spark Skills Invoked – SNF`, `custom.Spark Credits Used – SNF`, `custom.Spark Events – SNF`, `custom.Spark Events 7d – SNF`, `custom.Spark Docs Created via AI – SNF`
+- **Skills and habit:** `custom.Skills Created – SNF`, `custom.Skills Updated – SNF`, `custom.Skills Used – SNF`, `custom.Custom Skill Used – SNF`, `custom.Scheduled Tasks Set – SNF`, `custom.Skill Workspace Promoted – SNF`
+- **Workspace activity:** `custom.Entities Created – SNF`, `custom.Feedback Created – SNF`, `custom.Feedback Processed – SNF`, `custom.Comments Created – SNF`, `custom.Integrations Used Max Day – SNF`
+- **Identity:** `custom.PB_ID` — the Productboard user ID. **Corrected 2026-09-12:** this file previously documented it as `custom.User PB ID` (number). That field ID has never existed; the real one is `custom.PB_ID`, a read-only string.
+
+Planhat-derived, read-only: `lastTouch`, `lastActive`, `convsTotal`, `convs14`, `relevance`, `beats`, `beatTrend`, `beatsTotal`, `experience`, `sentimentScore`.
+
+Writable, but owned by other teams — read, do not set: `custom.Top Project Role` (**corrected 2026-09-12** — previously documented as `custom.Project Role`, which does not exist), `custom.# of Projects`, `custom.Active Projects`, `custom.Engaged with Spark`, `custom.Comms opt out`, `custom.Last Activity – SF`.
+
 ### Field-level mapping: Notion Contact → Planhat EndUser
 
 | Notion field | Planhat field | Type | Notes |
@@ -1095,15 +1319,11 @@ list_model_records(
 | `Customers` relation | `companyId` | string | Planhat Company `_id`. Required. |
 | Main Contact flag | `primary` | boolean | `true` if this contact is the Notion `Main Contact` for the customer. |
 
-### Custom fields (Productboard EndUser)
+### Writing a person record — rules
 
-| Field ID | Type | Description |
-|---|---|---|
-| `custom.Project Role` | string | Role within the Productboard project/engagement. |
-| `custom.# of Projects` | number | Number of PB projects the contact is involved in. |
-| `custom.Engaged with Spark` | boolean | Whether the contact has engaged with Spark AI features. |
-| `custom.User PB ID` | number | The contact's Productboard user ID (for cross-referencing PB product usage). |
-| `custom.Last Activity – SF` | string | Last Salesforce activity date — read-only, synced from SF. |
+- **Never invent an Engagement Role to fill the field.** Silence in a session is data; record it in `custom.AISE Read` and leave the role blank.
+- **Bad `OBJECT_ID`s fail loudly on this model** — a mistyped id returns `No such document` rather than writing to the wrong person. A person-write to the wrong record is not a silent risk here.
+- **Set `custom.AISE Read Reviewed` on every read edit.** An unstamped read is indistinguishable from a stale one.
 
 ---
 
@@ -1204,7 +1424,158 @@ No direct Notion DB equivalent. Not part of the AISE migration.
 | `externalId` | string | ✅ | Your own external ID — use Notion Customer page ID if mapping a sub-account. |
 | `sourceId` | string | ✅ | SF sync key if applicable. |
 | `custom.Staging Space` | boolean | ✅ | Whether this is a staging/sandbox workspace. |
-| `custom.AI Consent Granted` | boolean | ❌ Read-only | Whether AI consent is granted for this workspace. System-managed. |
+| `custom.AI Consent Granted – SF` | boolean | ❌ Read-only | Whether AI consent is granted for this workspace. System-managed, Salesforce-synced. **Corrected 2026-09-12** — previously documented as `custom.AI Consent Granted` without the suffix, which does not exist. |
+| `custom.Admin Console` | string | ❌ Read-only | Link to the workspace's admin console. |
+| `custom.Space Type – SF` | string | ❌ Read-only | Workspace classification from Salesforce. |
+| `custom.Current Plan – SF` / `custom.Current Plan Version – SF` / `custom.Plan Name + Version` | string | ❌ Read-only | Plan on this specific workspace. Differs per workspace on multi-space accounts — the Company-level `custom.Plan Names` flattens them. |
+| `custom.ARR – SF` | number | ❌ Read-only | ARR attributed to this workspace. |
+| `custom.Has Services – SF` | boolean | ❌ Read-only | Whether this workspace has a services entitlement. |
+
+#### Per-workspace Spark state — **read this before trusting the Company-level Spark fields**
+
+The Company model carries one `custom.⚡️ Spark Stage` value for the whole account. On a multi-workspace customer that is a flattening, and it will be wrong for at least some of their spaces. Asset carries the real per-workspace state:
+
+| Field ID | Type | Notes |
+|---|---|---|
+| `custom.Spark Enabled – SNF` | boolean | Spark on for this workspace. |
+| `custom.Spark Activated Visibility – SNF` | boolean | Visibility has been activated at all. |
+| `custom.Spark Visibility Everyone – SNF` | boolean | Open to all makers in this workspace. |
+| `custom.Spark Visibility Admins – SNF` | boolean | Admin-only in this workspace. |
+| `custom.Spark Activation Stage – SNF` | string | Furthest activation stage reached on this workspace. |
+| `custom.Spark State – SNF` / `custom.Spark Engaged State – SNF` | string | Derived state labels. |
+| `custom.Spark Engaged – SNF` | boolean | Someone reached L2 in this workspace. |
+| `custom.Spark Engaged Change Date – SNF` | string | When engagement state last moved. |
+| `custom.First Spark Activity – SNF` / `custom.Last Spark Activity – SNF` | string | First and most recent Spark activity. |
+| `custom.Spark Active Days – SNF` | number | Distinct active days. |
+| `custom.Days Since Last AI Activity – SNF` | number | Staleness signal. |
+| `custom.Last Seen – SNF` | string | Last seen in this workspace. |
+| `custom.Motion – SNF` | string | `Ignite` · `Strike`. |
+| `custom.Plan Era – SNF` | string | Plan generation this workspace sits on. |
+
+#### Spark visibility — what the flags mean and how to derive a single value
+
+**Visibility is a two-step admin action, and that is the whole point of this section.** An admin must first actively enable Spark on the workspace, and then switch visibility on or off separately. The two steps are independent, which is why a workspace can sit enabled with nobody able to see it.
+
+Snowflake exposes no single visibility column. It exposes booleans, and the state has to be derived. Verified against live data 2026-09-12:
+
+| `Spark Enabled – SNF` | `Spark Visibility Everyone – SNF` | `Spark Visibility Admins – SNF` | Value | What it means |
+|---|---|---|---|---|
+| empty | — | — | *(blank)* | Workspace is not in the Snowflake feed. Not the same as off. |
+| `false` | — | — | `Spark not enabled` | Spark was never switched on here. |
+| `true` | `true` | `false` | `Everyone` | Open to all makers. |
+| `true` | `false` | `true` | `Admins only` | Restricted to admins. |
+| `true` | `false` | `false` | `Spark off` | **Enabled, then visibility deliberately turned off.** |
+
+**`Spark off` is a decision, not an oversight.** Because enabling and granting visibility are separate deliberate acts, a workspace in this state had Spark switched on and visibility switched off afterwards. Treat it as a signal — a governance, trust or internal-policy call worth understanding — not as a forgotten toggle or a data gap. This is the opposite of `Spark not enabled`, which is simply a customer who never turned it on.
+
+The two map onto the Spark in Practice tiers: `Spark not enabled` is T5 (enablement motion — do not book an Ignition Meeting), `Admins only` is T4 (open visibility to makers first), and `Spark off` is its own case that needs a conversation before any adoption push.
+
+**Why `custom.Spark Activated Visibility – SNF` is not in the logic.** It is a precondition flag, and two live checks make it redundant: no record has `Activated Visibility = false` with either audience flag `true` (zero of either combination), and a workspace with `Activated Visibility = true` but neither audience flag set is `Spark off` like any other. Checking the two audience booleans alone is therefore provably equivalent. If Snowflake ever emits an audience flag with `Activated Visibility = false`, that equivalence breaks — re-verify with a pair of filter queries before assuming it still holds.
+
+**Never write any of these fields.** All `– SNF`, all Snowflake-sourced.
+
+---
+
+#### Formula fields built on this (2026-09-12)
+
+These were built and verified against Autorola, Brandwatch and SAP SE. **Before editing any of them, read `skills/planhat-formula-builder/SKILL.md` gotchas 16, 17 and 18** — all three were discovered building exactly these fields, and each one produces a field that looks built and silently returns the wrong answer.
+
+**Workspace (Asset) · `Spark Visibility` · Text**
+
+```
+IF(
+  IS_EMPTY(<<custom.Spark State – SNF>>),
+  ,
+  IF(
+    <<custom.Spark Visibility Everyone – SNF>> == true,
+    Everyone,
+    IF(
+      <<custom.Spark Visibility Admins – SNF>> == true,
+      Admins only,
+      IF(
+        <<custom.Spark Enabled – SNF>> == true,
+        Spark off,
+        Spark not enabled
+      )
+    )
+  )
+)
+```
+
+`custom.Spark State – SNF` is the presence sentinel rather than the boolean, because `IS_EMPTY()` returns true for *any* boolean regardless of value (gotcha #17). The two fields are exactly co-populated — zero records carry one without the other — which is what makes the substitution safe. Literals are unquoted and the empty return is an empty position (gotcha #16).
+
+**Company · four Number count fields**
+
+Each counts Workspace (Asset) records, gated on `ARR – SF > 0` so free, trial, staging and abandoned spaces stay out. Those dominate the Asset table and would otherwise swamp every count.
+
+| Field | Filters beyond `ARR – SF > 0` |
+|---|---|
+| `Spark WS Paying` | none — this is the denominator |
+| `Spark WS Everyone` | `custom.Spark Visibility Everyone – SNF` = `true` |
+| `Spark WS Admins Only` | `custom.Spark Visibility Admins – SNF` = `true` |
+| `Spark WS Enabled` | `custom.Spark Enabled – SNF` = `true` |
+
+```
+COUNT(Asset & {
+  "filters": [
+    {"op": "equal to", "field": {"id": "custom.Spark Visibility Everyone – SNF"}, "value": true},
+    {"op": "more than", "field": {"id": "custom.ARR – SF"}, "value": 0}
+  ]
+})
+```
+
+Values inside the options object keep their JSON quoting — the unquoting rule in gotcha #16 applies only to the formula body, never here.
+
+**Company · `Spark Visibility (Account)` · Text**
+
+```
+IF(
+  <<custom.Spark WS Paying>> == 0,
+  No revenue-bearing workspace,
+  IF(
+    <<custom.Spark WS Everyone>> == <<custom.Spark WS Paying>>,
+    Everyone,
+    IF(
+      <<custom.Spark WS Admins Only>> == <<custom.Spark WS Paying>>,
+      Admins only,
+      IF(
+        <<custom.Spark WS Everyone>> > 0 || <<custom.Spark WS Admins Only>> > 0,
+        Mixed,
+        IF(
+          <<custom.Spark WS Enabled>> > 0,
+          Spark off,
+          Spark not enabled
+        )
+      )
+    )
+  )
+)
+```
+
+`Everyone` and `Admins only` require **every** paying workspace to agree. Anything else with at least one visible workspace is `Mixed`. The `||` is load-bearing: written as `<<A>> + <<B>> > 0` the branch silently never fires (gotcha #18), which produced a wrong `Spark off` on SAP SE until it was caught.
+
+**Verified results:**
+
+| Account | Paying | Everyone | Admins | Result |
+|---|---|---|---|---|
+| Autorola Group | 1 | 1 | 0 | `Everyone` |
+| Brandwatch | 1 | 0 | 1 | `Admins only` |
+| SAP SE | 2 | 1 | 0 | `Mixed` |
+
+> **Read these instead of `Company.custom.⚡️ Spark Stage` for any scope or reporting decision.** Spark Stage holds one value for the whole account and is a flattening. Autorola reads `Everyone` there while its eight workspaces are one paying space open to everyone, two free spaces with Spark off, and five not in the feed at all. SAP SE reads `Everyone` off a $29.7k workspace while `signavio` at $614k sits deliberately dark.
+
+#### Credits — per workspace, not per account
+
+| Field ID | Type | Notes |
+|---|---|---|
+| `custom.Credit Allowance – SNF` | number | Credit allowance for this workspace. |
+| `custom.Credits Used Current Period – SNF` | number | Consumed this period. |
+| `custom.Credits Used Lifetime – SNF` | number | Consumed all time. |
+| `custom.Credits Unlimited – SNF` | boolean | Whether the workspace is currently uncapped. |
+| `custom.Trial End Date – SNF` | string | When a trial allowance ends. |
+
+> **Use this whenever a customer asks about credits.** It is the only place the real per-workspace allowance and consumption live — there is no Company-level equivalent, and answering from memory or from the Company record will be wrong on any multi-workspace account.
+
 
 ### Write rules
 
@@ -1374,9 +1745,9 @@ list_model_records(
 | `type` | string | `subscription` · `fee` |
 | `mrr` / `arr` | number | Default pricing |
 | `custom.SKU` | string | SKU identifier |
-| `custom.Service SKU` | boolean | Whether this is a services SKU (vs software license) |
+| `custom.Service SKU – SF` | boolean | Whether this is a services SKU (vs software license). **Corrected 2026-09-12** — needs the `– SF` suffix. |
 | `custom.AISE Working Sessions` | number | Session quota for this SKU — both Architecting and Training (Enablement) sessions deduct from this shared pool |
-| `custom.License Type` | string | License classification |
+| `custom.License Type – SF` | string | License classification. **Corrected 2026-09-12** — needs the `– SF` suffix, and it is read-only. |
 
 ---
 

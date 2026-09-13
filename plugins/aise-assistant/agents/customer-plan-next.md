@@ -143,6 +143,8 @@ create_model_record(MODEL: "Task", PARAMETERS: {
 
 Priority, due-date inference, and description-scaffold logic all follow `context/planhat-schema.md` § Task priority & description defaults — don't reinvent it here. State the assigned priority and due date with a one-line reason in the report, same as `post-session-debrief` does.
 
+**Use those exact field IDs, then read the Task back.** `name`, `assignee` and `dueDate` are not Task fields — they are discarded silently and the create still returns `200`, leaving a nameless unassigned row. See `context/planhat-schema.md` § MCP Access → silent failure 3 and `agents/post-session-debrief.md` § 4 for the alias table and the read-back assert; the same rules apply to every Task this agent creates. `status` is stored unvalidated — `"To Do"` is the only valid open value.
+
 **Customer-side actions go in the brief's "What we need from the customer" section — never a Planhat Task.**
 
 **`custom.Engagement Plan` update — only if it genuinely helps.** This is a lighter-weight workflow than `engagement-planner`; don't force a plan-field write every time. Update it when the proposed sequence changes what the plan currently says is next (new sessions not yet reflected, a reordering, a session dropped) — skip it when the existing plan already covers this and nothing material changed. If updating:

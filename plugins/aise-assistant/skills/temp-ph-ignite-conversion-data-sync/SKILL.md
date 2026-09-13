@@ -75,12 +75,14 @@ Map CSV values to Planhat field IDs:
 | CSV column | Planhat field ID | Type | Conversion |
 |---|---|---|---|
 | `AI consent` | `custom.⚡️ AI Consent` | text | pass through verbatim |
-| `Enabled` | `custom.⚡️ Spark Enabled` | boolean | `Yes` → `true`, `No` → `false` |
+| `Enabled` | — | — | **SKIP — do not write.** The former target `custom.⚡️ Spark Enabled` was removed from the Company model; its successor `custom.Spark Enabled – SNF` is Snowflake-sourced and must never be written. |
 | `Enabled date` | `custom.⚡️ Spark Enabled Date` | date | ISO string or omit if blank |
 | `Activated visibility` | `custom.⚡️ Spark Stage` | list | see mapping below; omit if blank |
 | `Activated visibility date` | `custom.⚡️ Spark Active For Since` | date | ISO string or omit if blank |
-| `Engaged` | `custom.⚡️ Spark Engaged` | boolean | `Yes` → `true`, `No`/blank → `false` |
+| `Engaged` | — | — | **SKIP — do not write.** The former target `custom.⚡️ Spark Engaged` was removed; its successor `custom.Spark Engaged – SNF` is Snowflake-sourced and must never be written. |
 | `Engaged date` | `custom.⚡️ Spark Engaged Date` | date | ISO string or omit if blank |
+
+> **Why two columns are skipped (2026-09-12).** Spark enabled/engaged state now arrives live from Snowflake. This skill stays on because the rest of the CSV has no live source yet, but it must not write the two columns Snowflake owns — a weekly CSV value fighting a live pipeline produces a field that is wrong between syncs and right afterwards, which is worse than blank. Fill the other five, skip these two, and revisit when the remaining columns are plugged into Snowflake.
 
 **Spark Stage value mapping (CSV → Planhat):**
 

@@ -256,9 +256,10 @@ After every `/session-debrief`, run these Planhat steps in order:
 4. **Create Tasks** — one `create_model_record(MODEL: "Task")` per PB-side action item:
    - `mainType`: `"task"`, `companyId`, `action` (title), `description`
    - `ownerId`: `6a44ef76c9aade50502936d5` (Klara)
-   - `endTime`: due date as ISO datetime, `status`: `"to-do"`
+   - `endTime`: due date as ISO datetime, `status`: `"To Do"` (exact casing — the only valid open value; `"todo"` / `"to-do"` save without error and drop the Task out of every status-filtered view)
    - `custom.Priority`: `"P1"` / `"P2"` / `"P3"`
    - `custom.Spark Conversation`: `true` if session included Spark discussion
+   - **Exact field IDs only.** `name`, `assignee` and `dueDate` are not Task fields; they are discarded server-side with no error while the create still returns `200`. Read the Task back after every create and assert `action`, `ownerId`, `type` and `status` landed. See `context/planhat-schema.md` § MCP Access → silent failure 3.
 
 **Klara's Planhat user ID:** `6a44ef76c9aade50502936d5`
 **Planhat MCP prefix:** `mcp__7441c372-4b65-4805-95b0-baf2a081ceb3__`

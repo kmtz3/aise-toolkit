@@ -52,6 +52,7 @@ This file is always loaded. It points at the detail — don't duplicate it here.
 - **Customer confidentiality.** Never exfil customer names / deal sizes to external artefacts without explicit authorization.
 - **Owner-filter every Planhat read.** The workspace is shared. Every query that filters by user must use the correct Planhat user id. For `/report --aise <teammate>`, use the target AISE's Planhat id (resolved by name match, or via live Planhat team lookup — see `context/planhat-user-profile.md` § Team roster), not the operator's.
 - **This plugin is read-oriented.** `/report` makes no Planhat writes — it renders inline in chat and publishes a designed HTML Artifact. `/session-audit --fix` applies corrections (session reconciliation or task completion) with per-write read-back verification.
+- **Planhat drops unknown field keys silently, and a write still returns `200`.** Applies to every `--fix` write. Never assemble a `PARAMETERS` object from remembered field names — pull `get_model_action_parameters(MODEL: …)` for any model not checked this session, and read the record back asserting the fields you wrote are present. On `Task`: the title is `action` (not `name`/`title`), the assignee is `ownerId` (not `assignee`), the due date is `endTime` (not `dueDate`), the priority is `custom.Priority`; `status` is stored unvalidated, so `"To Do"` is the only valid open value. Evidence and full alias table: `context/planhat-schema.md` § MCP Access → silent failure 3.
 
 ---
 

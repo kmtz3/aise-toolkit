@@ -179,6 +179,48 @@ IF(
 
 Returns whichever side is populated when the other is empty, and the true max only when both have values. Same-model `IS_EMPTY()` works on custom fields exactly as it does on `FIND()` results (see gotcha #4).
 
+**16. String literals in the formula body are UNQUOTED. Quotes render literally — confirmed in production 2026-09-12.** This contradicts the conventional `IF(cond, "value", "other")` shape and is the single fastest way to ship a field full of visible quote marks.
+
+```
+IF(<<custom.Flag>> == true, Everyone, Admins only)      ✅ renders: Everyone
+IF(<<custom.Flag>> == true, "Everyone", "Admins only")  ❌ renders: "Everyone"
+```
+
+Multi-word literals are fine unquoted (`Spark not enabled` works). **An empty return is an empty position** — write nothing between the commas:
+
+```
+IF(IS_EMPTY(<<custom.Some Text Field>>), , Something)
+```
+
+**The exception, and it matters: values inside a cross-model options object keep their JSON quoting.** That block is parsed as JSON, so the rules there are unchanged — `{"op": "equal to", "field": {"id": "custom.X"}, "value": "ongoing"}` stays exactly as documented, with booleans and numbers bare per gotcha #12. Unquoting applies only to literals in the formula body: `IF` branches, string concatenation operands, and comparison values.
+
+Patterns C above still shows the quoted form; treat it as needing the same correction.
+
+**17. `IS_EMPTY()` returns true for a boolean field regardless of its value — confirmed in production 2026-09-12.** A formula guarded with `IF(IS_EMPTY(<<custom.Some Boolean – SNF>>), ...)` sends **every** record down the true branch, so the whole field renders as the empty case with no error and no clue why. This was diagnosed by putting `<<custom.Some Boolean – SNF>>` alone in a Text field, confirming it rendered `true`, and therefore isolating `IS_EMPTY` rather than the field reference as the fault.
+
+**Do not use `IS_EMPTY()` on a boolean.** Two ways round it:
+
+- **Test the value directly.** `== true` and `== false` both behave correctly. Order the branches so the fall-through is the answer you want for a null.
+- **Use a co-populated string field as the presence sentinel.** `IS_EMPTY()` works correctly on strings. On Asset, `custom.Spark State – SNF` and `custom.Spark Enabled – SNF` are exactly co-populated — zero records carry one without the other — so the string can carry the "is this record in the feed at all" check that the boolean cannot. Verify co-population with a pair of `has value` / `has no value` filter queries before relying on any such sentinel.
+
+**18. Arithmetic on `<<field>>` references inside a comparison does not evaluate — confirmed in production 2026-09-12.** A Mixed-state check written as
+
+```
+IF(<<custom.Count A>> + <<custom.Count B>> > 0, Mixed, ...)
+```
+
+returned **false** on a record where `Count A` was 1 and `Count B` was 0. Both fields rendered their values correctly on their own, so the references resolved — the `+` is the fault. Either it binds as `<<A>> + (<<B>> > 0)`, or it is being treated as the string-concatenation operator (see gotcha #7). The engine gives no error either way; the branch just silently never fires.
+
+**Do not sum field references inside a condition.** Use boolean operators, which are in the documented set and behave correctly:
+
+```
+IF(<<custom.Count A>> > 0 || <<custom.Count B>> > 0, Mixed, ...)     ✅
+```
+
+Same applies to any `<<A>> - <<B>> > n` or `<<A>> * <<B>> == n` shape in a condition. If you genuinely need the arithmetic result, put it in its own Number formula field and compare **that** field — one value per field, per the guidance at the top of this skill.
+
+Plain math on field references in the formula *body* (not inside a condition) is documented as working — e.g. `(<<arr>> - <<custom.Target ARR>>) / <<custom.Target ARR>>`. The failure is specific to arithmetic being compared.
+
 ---
 
 ## Worked patterns
@@ -227,7 +269,7 @@ IF(
 )
 ```
 
-Return `""` rather than a partial label when the name is missing — a bare version string with no plan name reads as corrupt data downstream.
+**Note:** the quoted literals above predate gotcha #16 and are wrong as written — the empty return is an empty position and `" v"` would render its quotes. Return an empty result rather than a partial label when the name is missing — a bare version string with no plan name reads as corrupt data downstream.
 
 ### D. Count within the contract window
 
@@ -278,7 +320,10 @@ Field type: **Date**. `owner` is an ObjectId field on the base model (e.g. Compa
 
 Work this in order — the causes are roughly ordered by how often they're the culprit.
 
-1. **Field data type matches the return value?** Text formula in a Number field renders blank with no error — check `fieldType` in `get_model_action_parameters` against what the formula actually returns (see gotcha #14). This has been the root cause more than once; check it before re-reading the formula text.
+1. **Every record blank, and the field type is right?** Check for `IS_EMPTY()` on a boolean (gotcha #17) — it is true for every record, so the whole field collapses to the empty branch. Isolate by putting the bare `<<field>>` in a Text field: if it renders a value, the reference is fine and `IS_EMPTY` is the fault.
+2. **Values rendering with visible quote marks around them?** String literals in the formula body are unquoted — gotcha #16.
+3. **A condition that should fire never fires, and the fields it reads look correct?** Check for `+` or other arithmetic between `<<field>>` refs inside the condition — gotcha #18. Rewrite with `||` / `&&`.
+4. **Field data type matches the return value?** Text formula in a Number field renders blank with no error — check `fieldType` in `get_model_action_parameters` against what the formula actually returns (see gotcha #14). This has been the root cause more than once; check it before re-reading the formula text.
 2. **Direction legal?** Confirm the formula lives on the parent model, not the child.
 3. **Does the field exist on this model at all?** Check Manage Fields. A non-existent field returns empty with no error — this is the single fastest thing to rule out.
 4. **Prefix is `custom.`?** Not `custom_fields.` (REST API form) and not `customFields.`.

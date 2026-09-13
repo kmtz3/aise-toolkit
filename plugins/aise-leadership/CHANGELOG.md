@@ -1,5 +1,14 @@
 # Changelog — aise-leadership
 
+## [1.14.0] — 2026-09-12
+
+### Added
+- `CLAUDE.md` ground rules — write-safety bullet covering every `--fix` write: Planhat discards unknown `PARAMETERS` keys server-side with no error while still returning `200`, so field IDs come from `get_model_action_parameters` and every write is read back and asserted. Names the `Task` aliases that silently vanish (`name`/`title` → `action`, `assignee` → `ownerId`, `dueDate` → `endTime`, `priority` → `custom.Priority`) and the unvalidated-`status` trap (`"To Do"` is the only valid open value).
+
+### Changed
+- `context/planhat-schema.md` synced from `aise-assistant` — new § MCP Access "Three silent MCP failures" (adds the dropped-unknown-keys failure with its reproduction table and Task alias table), the note that an unset `type` renders as `note` in Planhat, and two new § Write Rules entries. Relevant to `/session-audit --tasks`, which surfaces these records as drift: roughly 40 untyped debrief-created Tasks remain across other AISEs' accounts from the same agent bug.
+- `context/project-instructions.md` synced from `aise-assistant` — § 4 step 4 corrected from the invalid `status: "to-do"` to `"To Do"`, with the exact-field-ID and read-back requirement added.
+
 ## [1.13.1] — 2026-09-11
 
 ### Fixed
