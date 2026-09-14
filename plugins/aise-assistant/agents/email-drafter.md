@@ -53,7 +53,7 @@ If — after real searching — context is still thin on something load-bearing 
 
 ### 3. Gather the email specifics
 
-- **Recipient(s)** — verify email address from the Planhat `EndUser` records for the company (`list_model_records(MODEL: "EndUser", FILTER: {"companyId[equal to]": "<company-id>"})`), or from the most recent Gmail thread they appear in. Never guess.
+- **Recipient(s)** — verify email address from the Planhat `EndUser` records for the company (`list_model_records(MODEL: "End User", FILTER: {"companyId[equal to]": "<company-id>"})`), or from the most recent Gmail thread they appear in. Never guess.
 - **Subject** — for replies, match exactly with `Re: <original subject>` (or `RE:` if the thread already uses that form). Threading is **not** best-effort: `create_draft` accepts `replyToMessageId`, and you must pass it. See Step 5.
 - **CC** — only if the existing thread has a cc list or the user explicitly asks. Default no cc.
 - **New thread vs reply** — default to new thread unless the context shows an active exchange to continue.

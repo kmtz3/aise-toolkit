@@ -24,7 +24,7 @@ Before anything else, pin down:
 
 - **Company** — `search_records(QUERY: "<customer name>")` filtered to `model: "Company"`; fall back to SF `sourceId` lookup. Check the Company Name Aliases table in `context/planhat-schema.md` for known name mismatches. **This record's `custom.Engagement Plan` field is where the plan lands.**
 - **Contracted session pool** — `context/planhat-schema.md` § Line Item: sum `custom.AISE Working Sessions` across the Company's `status: "ongoing"` Line Items. This is a single shared Architecting+Training pool, not two separate caps.
-- **Contacts** — `list_model_records(MODEL: "EndUser", FILTER: {"companyId[equal to]": "<id>"})` for the customer-side stakeholder list.
+- **Contacts** — `list_model_records(MODEL: "End User", FILTER: {"companyId[equal to]": "<id>"})` for the customer-side stakeholder list.
 - **Existing Conversations** — recent session history on this Company, so the plan doesn't duplicate or contradict what's already happened.
 - **Existing plan** — read the current `custom.Engagement Plan` value, if any (this is a restructure, not a fresh build).
 

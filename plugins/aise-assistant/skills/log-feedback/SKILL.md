@@ -81,7 +81,7 @@ For each candidate (a Task in Mode A, or a distilled pain point in Mode B), pull
 Do not begin drafting until all five are resolved (or explicitly marked `-`).
 
 5. Find the primary contact's email address using this lookup chain — stop at the first hit:
-   a. **Planhat EndUser records for the company** — `list_model_records(MODEL: "EndUser", FILTER: {"companyId[equal to]": "<companyId>"}, SELECT: ["name", "email", "position", "primary"])`. Prefer the record with `primary: true`.
+   a. **Planhat EndUser records for the company** — `list_model_records(MODEL: "End User", FILTER: {"companyId[equal to]": "<companyId>"}, SELECT: ["name", "email", "position", "primary"])`. Prefer the record with `primary: true`.
    b. **Glean Gmail search** — `mcp__claude_ai_Glean__search` with `query: "[contact name] [company]"` and `app: gmailnative`. Scan the results for the contact's email address in thread senders, recipients, or signatures.
    c. **Glean Gong search** — `mcp__claude_ai_Glean__search` with `query: "[contact name] [company]"` and `app: gong`. Scan for email in participant metadata.
    d. If all three fail, mark the email as **⚠️ MISSING** and surface it as a required gap in the HITL step — do not guess or fabricate an email address.

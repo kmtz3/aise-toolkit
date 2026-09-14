@@ -190,7 +190,7 @@ Run sessions in chronological order (earliest meeting first).
    - The full text of `agents/post-session-debrief.md` (read it once at the top of step 6 and reuse).
    - The session-specific inputs: customer name, GCal event ID, the Planhat Company/Task/Conversation `_id` already resolved, target date.
    - The bulk-run context flag.
-   - A clear final-output contract: the sub-agent must return ONLY a structured summary block — `Customer | Session | Planhat writes (what changed) | Tasks created (title + priority + due date) | Gmail draft ID + subject | Slack debrief Task URL | KDD Attachment URL (or N/A) | Product feedback Tasks | Next Step refreshed (one-line new value) | Scorecard (one-line overall) | Gaps / flags`. No raw transcript text. No tool-trace narration.
+   - A clear final-output contract: the sub-agent must return ONLY a structured summary block — `Customer | Session | Planhat writes (what changed) | Contacts enriched (name + field changes, per step 3b-G) | Tasks created (title + priority + due date) | Gmail draft ID + subject | Slack debrief Task URL | KDD Attachment URL (or N/A) | Product feedback Tasks | Next Step refreshed (one-line new value) | Scorecard (one-line overall) | Gaps / flags`. No raw transcript text. No tool-trace narration.
 3. Capture the sub-agent's structured summary.
 4. Print: `✓ [Customer] [Planhat record _id] complete.` then move to the next.
 5. Per-session sub-agents run **sequentially**, never in parallel (concurrent Planhat writes can conflict).
@@ -203,9 +203,11 @@ Run sessions in chronological order (earliest meeting first).
 ## Bulk debrief complete — [start_date] → [end_date]
 
 **Debriefed ([N]):**
-| Date | Customer | Planhat record | Gmail draft subject | Tasks created (with priority) | Next Step refreshed | Skipped (dedup) | Flags |
-|---|---|---|---|---|---|---|---|
-| YYYY-MM-DD | [name] | [Conversation _id] | [subject or "no draft — transcript pending"] | [N] | [one-line new value, or "no prior value / nothing new"] | [e.g., "session notes already existed"] | [any, e.g. "⚠️ Partial — transcript pending"] |
+| Date | Customer | Planhat record | Gmail draft subject | Tasks created (with priority) | Contacts enriched | Next Step refreshed | Skipped (dedup) | Flags |
+|---|---|---|---|---|---|---|---|---|
+| YYYY-MM-DD | [name] | [Conversation _id] | [subject or "no draft — transcript pending"] | [N] | [N, or "none"] | [one-line new value, or "no prior value / nothing new"] | [e.g., "session notes already existed"] | [any, e.g. "⚠️ Partial — transcript pending"] |
+
+After the tables, list every contact whose `custom.AISE Relationship` moved to `1. Key contact`, and every person with real signal who had no End User record (step 3b-A) — both are decisions for the user, and both are easy to lose inside a per-session block.
 
 **Already debriefed — skipped ([N]):**
 | Date | Customer | Planhat record | Signal |
@@ -229,6 +231,7 @@ Run sessions in chronological order (earliest meeting first).
 - **Never title-search as the primary match.** The GCal event ID ladder (step 4B) is mandatory before falling to the company+date+title fallback — matches by title alone are exactly what historically produced duplicate session records. Report every title-matched fallback explicitly.
 - **`custom.Debrief Status` is the primary debrief signal** — `complete` means skip, `partial - transcript pending` means skip by default, blank means fall through to the heuristic. A resolved Conversation alone — even with real `description` content — is not sufficient without either the field or a verified Slack debrief Task (step 4C heuristic). Never short-circuit step 4C by assuming the field is set on older records.
 - **Every session `post-session-debrief` completes in a bulk run refreshes `custom.Next Step` on that Company** — that agent's step 10, not optional, and it applies whether the session ran inline or in a sub-agent. When running in sub-agent mode, the output contract above must report the refreshed value so it lands in the master summary — an untracked Next Step write in a bulk run is easy to lose.
+- **Every session enriches its contacts** — `post-session-debrief` step 3b, not optional, inline or sub-agent. A bulk run is where contact enrichment pays off most (a week of sessions is a week of evidence about the same people) and also where it is easiest to lose: the sub-agent output contract must carry the per-contact changes through to the master summary. The same guardrails apply unchanged in bulk — relationship only moves up, no End User is ever created, and every write is read back.
 - **Every Task created anywhere in a bulk run carries `custom.Priority`.** `post-session-debrief` step 4 owns the priority tables; this agent must not relax them. When the debrief runs in a sub-agent, the sub-agent prompt must repeat this rule and the output contract must report the priority per task — an unprioritized task created in bulk is the easiest kind to lose, because nobody reviews it one at a time.
 - **Dedup is non-destructive.** "Skip" means the existing record is left exactly as-is. Never overwrite an existing Conversation `description`, Task, or Gmail draft silently.
 - **Bulk-run context flag is mandatory.** Pass it to `post-session-debrief` (inline or sub-agent) so dedup defaults inside that agent fall to "skip" (not "ask user") — the user gave one confirmation for the whole queue; individual interruptions break the flow.

@@ -5,6 +5,22 @@ Format: `## [version] — YYYY-MM-DD` followed by bullet points grouped by type.
 
 ---
 
+## [2.64.0] — 2026-09-14
+
+### Added
+- **Contact enrichment is now part of every debrief — `agents/post-session-debrief.md` step 3b.** The AISE fields on `End User` (`custom.AISE Relationship`, `custom.Engagement Role`, `custom.AISE Read`, `custom.AISE Read Reviewed`) were documented in 2.63.0 but nothing wrote them; the debrief resolved attendees to `endusers` on the Conversation and stopped there, so a contact stayed at `3. Known` forever no matter how many sessions they attended, and every read had to be re-derived by hand from transcripts. Step 3b closes that: attendees plus anyone discussed with real signal, relationship promoted on evidence, engagement roles unioned, the read rewritten as one current assessment, and `custom.AISE Read Reviewed` stamped with the run date. Writes are auto-applied and reported per contact in the chat summary, one contact at a time, each read back before it counts.
+  - **Relationship movement is one-way.** Promote on evidence; demote only on the explicit evidence `5. Left the company` requires, or a stated role change. Missing a session is not disengagement.
+  - **Engagement Role is additive and evidence-gated** — assigned on function, not attendance. An unevidenced `Champion` is worse than a blank, because the next prep builds an approach around it.
+  - **The read is rewritten, never appended.** It is current-state, like `custom.Next Step` on the Company — judgment that still holds is carried forward, judgment this session overturned is dropped.
+  - **No End User is ever created, renamed or archived** by a debrief. A person with real signal and no record is reported under Gaps. Contact identity stays owned by Salesforce and the customer.
+- `agents/bulk-debrief.md` carries the same step through bulk runs: a `Contacts enriched` column in the master summary, contact changes in the sub-agent output contract, and a call-out list for promotions to `1. Key contact` and for signal-carrying people with no record.
+
+### Fixed
+- **`MODEL: "EndUser"` is rejected by the Planhat MCP and was in the repo eight times.** The valid model name is `"End User"`, with the space — `"EndUser"` returns `{"message":"Invalid or unauthorized model: EndUser"}` outright (verified 2026-09-14). Every contact lookup in `context/planhat-schema.md`, `agents/email-drafter.md`, `agents/customer-plan-next.md`, `agents/engagement-planner.md` and `skills/log-feedback/SKILL.md` was failing on the first call, which means recipient verification in the email drafter and the stakeholder pull in both planners had been silently falling through to their fallback paths. Corrected repo-wide, with the gotcha documented in `context/planhat-schema.md` § EndUser.
+- `context/planhat-schema.md` § EndUser listed four `custom.AISE Relationship` options; the field has six. Added `5. Left the company` and `6. Not filled`, with the note that `6. Not filled` is the explicit "looked, nothing to say" marker and is never written by an agent.
+
+---
+
 ## [2.63.0] — 2026-09-12
 
 ### Fixed

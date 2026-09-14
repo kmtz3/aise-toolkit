@@ -24,7 +24,7 @@ Before anything else, pin down:
 
 - **Company** — `search_records(QUERY: "<customer name>")` filtered to `model: "Company"`; fall back to SF `sourceId` lookup. Check the Company Name Aliases table in `context/planhat-schema.md` for known name mismatches.
 - **Contracted session pool** — `context/planhat-schema.md` § Line Item: sum `custom.AISE Working Sessions` across the Company's `status: "ongoing"` Line Items. This is a single shared Architecting+Training pool, not two separate caps.
-- **Contacts** — `list_model_records(MODEL: "EndUser", FILTER: {"companyId[equal to]": "<id>"})` for the customer-side stakeholder list.
+- **Contacts** — `list_model_records(MODEL: "End User", FILTER: {"companyId[equal to]": "<id>"})` for the customer-side stakeholder list.
 - **Recent Conversations** — session history on this Company: what's been delivered, what topics/KDDs were covered, most recent first. This is the program's delivered-session record — the equivalent of the old Notion `Delivered` Session partition.
 - **Open Tasks** — `list_model_records(MODEL: "Task", FILTER: {"companyId[equal to]": "<id>", "status[not equal to]": "done"})`, scoped to the current user's `ownerId`. Surface any PB-side actions that are overdue or blocking the next session.
 - **Existing plan** — read the current `custom.Engagement Plan` value on the Company, if any. This agent proposes the *next* 2–4 sessions **within** that plan — read it for where the program is headed, what's already sequenced, and what shouldn't be re-proposed.

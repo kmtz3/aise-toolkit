@@ -1,5 +1,10 @@
 # Changelog — aise-leadership
 
+## [1.14.1] — 2026-09-14
+
+### Fixed
+- `context/planhat-schema.md` synced from `aise-assistant` — corrects the `EndUser` model name to `"End User"` (with the space) everywhere it's called, adds the two missing `custom.AISE Relationship` options (`5. Left the company`, `6. Not filled`), and notes the field is now also written automatically by `aise-assistant`'s `post-session-debrief` step 3b (aise-assistant-only; not ported here).
+
 ## [1.14.0] — 2026-09-12
 
 ### Added

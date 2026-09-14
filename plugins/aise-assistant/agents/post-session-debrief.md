@@ -197,6 +197,86 @@ If a record's `externalId` doesn't match the `<numeric>-<sf-id>` format, do not 
 
 **Spark conversation evidence** — scan the transcript/notes for evidence Productboard Spark AI was discussed. This is informational for the scorecard/report only (no writable field for it beyond the manual `activityTags` note above).
 
+### 3b. Enrich the customer contacts on their End User records
+
+A delivered session is evidence about people, not only about the account. This step turns that evidence into the AISE-owned fields on `End User` — `custom.AISE Relationship`, `custom.Engagement Role`, `custom.AISE Read`, `custom.AISE Read Reviewed` — so the next prep opens on a current read of the room instead of re-deriving one from old transcripts. Field definitions and the authoritative option lists live in `context/planhat-schema.md` § EndUser → AISE-writable fields. This step is the write procedure.
+
+Runs on every completed session, **including the placeholder-debrief branch (step 2b)** — attendance and role evidence do not depend on a transcript. Skip only if step 1 never resolved a Company.
+
+**A. Build the candidate set.** Two groups, both scoped to this `companyId`:
+
+1. **Attendees** — the contacts already resolved to End User `_id`s for the Conversation's `endusers` in step 3.
+2. **Discussed, with signal** — anyone the transcript or notes names with something substantive attached: they own a decision, a system, or a blocker; their role is stated; they are joining, leaving, or being handed something. A passing mention ("I'll loop in Marek") is not signal. The unmet person who owns the open security question is exactly who this group is for.
+
+Pull the account's contacts once and match locally on name and email:
+```
+list_model_records(
+  MODEL: "End User",
+  FILTER: {"companyId[equal to]": "<planhat-company-id>"},
+  SELECT: ["name", "email", "position", "custom.AISE Relationship",
+           "custom.Engagement Role", "custom.AISE Read", "custom.AISE Read Reviewed"]
+)
+```
+
+**Never create an End User record.** A person with real signal and no record is reported under Gaps in the chat summary, never auto-created — contact identity is owned by Salesforce and by the customer, not by this procedure. Same rule as `agents/slack-thread-logger.md` § contact identity.
+
+Read current values for every candidate before writing anything. An enrichment that has not read the existing read cannot preserve it.
+
+**B. `custom.AISE Relationship` — string, one of six exact values.**
+
+Pass the numbered string verbatim — `2. Engaged`, never `Engaged`. An off-list value writes successfully, returns `200`, and silently drops the contact out of every working-set filter.
+
+| Value | Set it when |
+|---|---|
+| `1. Key contact` | The account runs through them — they convene the sessions, set direction, or own the relationship. Needs evidence across at least two touchpoints, and the reason belongs in the read. |
+| `2. Engaged` | Direct two-way interaction. Attending this session is enough on its own. |
+| `3. Known` | On the record with some signal, no direct interaction, relevance not yet clear — a name on a thread, a new joiner. |
+| `4. Not engaged` | Relevant to the program and not yet reached: the person an open question routes to, the owner of a system in scope. Deliberately distinct from `3. Known` — this one is a gap worth closing, and a report of `4. Not engaged` contacts is a to-do list. |
+| `5. Left the company` | Explicit evidence only — a bounce, a stated departure, a named replacement. |
+| `6. Not filled` | The default state. **Never written by this step.** |
+
+**Movement is one-way.** Promote on evidence. Demote only on the explicit evidence `5. Left the company` requires, or when the customer states a role change. Missing a session is not evidence of disengagement — a contact silently dropping from `2. Engaged` to `3. Known` because they skipped one call is the failure mode this rule exists to prevent. Promotions to `1. Key contact` are always named in the chat summary.
+
+**C. `custom.Engagement Role` — array, exact option values.**
+
+`Champion` · `Power User` · `Main Contact` · `Executive Sponsor` · `Technical Contact`.
+
+Additive union with what is already there: add what this session evidences, never drop an existing value unless it is contradicted (the champion left, the sponsor handed over). Assign on **function, not attendance** — someone who joins every call is `2. Engaged`, not automatically a `Champion`. Leave the field empty rather than guessing; an unevidenced `Champion` is worse than a blank, because the next prep will build an approach around it.
+
+**D. `custom.AISE Read` — rich text, one current assessment, rewritten in place.**
+
+The field holds what is true about this person now, not a log. Regenerate the paragraph from everything known, carrying forward judgment in the existing text that this session has not overturned and dropping what it has. Two to five sentences.
+
+What earns a place: what they actually decide or own, how they behave in a room (delegates, goes quiet, brings the hard question), what they need next from us, and what breaks if they leave. What does not: their job title (`position` and `custom.Job Title – SNF` already hold it), a retelling of the session (that is the Conversation `description`), scorecard language, and anything about their health, personal life, or performance. Record uncertainty as uncertainty — "name attribution from the 3 Sep transcript is weak" is worth more than a confident wrong name.
+
+Format as single-line HTML per § Planhat rich-text fields (universal write format) in `CLAUDE.md`: `<p>…</p>` per paragraph, no literal newlines, no `style` attributes. Hand-written values on the account vary (some bare text, some `<p style="text-align: left;">`) — normalize to plain `<p>` on any record you rewrite.
+
+**E. `custom.AISE Read Reviewed` — date.**
+
+Write it on every run that writes a `custom.AISE Read`, set to **the date the debrief runs**, not the session date — the field answers "how current is this read", and a session backfilled three months late must not stamp a fresh assessment as three months old. Send plain `YYYY-MM-DD`; Planhat stores `YYYY-MM-DDT00:00:00.000Z`. **Never write it alone** — a reviewed date on an untouched read is a lie about that read's age.
+
+**F. Write and verify, one contact at a time.**
+
+```
+update_model_record(
+  MODEL: "End User",
+  OBJECT_ID: "<enduser _id>",
+  PARAMETERS: {
+    "custom.AISE Relationship": "2. Engaged",
+    "custom.Engagement Role": ["Champion", "Technical Contact"],
+    "custom.AISE Read": "<p>…</p>",
+    "custom.AISE Read Reviewed": "2026-09-14"
+  }
+)
+```
+
+- **`MODEL` is `"End User"`, with the space.** `"EndUser"` is rejected outright with `Invalid or unauthorized model` (verified 2026-09-14).
+- Send only fields that actually change. A contact whose read still holds and whose relationship has not moved gets **no write at all** and is reported as unchanged — a no-op write still moves `updatedAt` and makes the account look busier than it was.
+- **Read every write back** — `get_model_record(MODEL: "End User", OBJECT_ID: "<id>", SELECT: [<the fields just written>])` — and compare. Report a field that did not land; never retry blindly. Same discipline as `endusers` on Conversations and `custom.Priority` on Tasks.
+- Enrich contacts **sequentially**, never in parallel. Concurrent Planhat writes conflict.
+
+**G. Report.** Every change lands in the chat summary (see Output order) as `[name] — [field]: [before] → [after]`. A run that changed nothing says so explicitly.
+
 ### 4. Create Planhat Tasks for PB-side commitments
 
 From the extracted PB-side action items (step 2), for each item assigned to the user:
@@ -450,6 +530,7 @@ After all steps complete, produce a single consolidated report:
 **Planhat writes applied:**
 - Conversation: [_id, "created" or "updated via Task noteId" or "direct create"]
 - Session time: [`corrected 2026-08-27T00:00:00.000Z → 2026-08-27T08:30:00.000Z (source: coupled Task startTime)`, or "already correct", or "not resolved — no timestamp source available"]
+- Contacts enriched: [N — each as `name — Relationship: 3. Known → 2. Engaged; Engagement Role: +Technical Contact; read rewritten`] (or "none — no contact evidence in this session"). Unchanged contacts are counted, not listed. Every write read back per step 3b-F; flag any field that didn't land, and name any promotion to `1. Key contact`.
 - Tasks created: [N tasks — list each as `title — [priority] — due [date] — (reason for the priority)`] (or "none — no PB-side actions identified"). Every one read back and asserted per step 4; flag any that failed the assert.
 - Slack debrief Task, product feedback Tasks and any re-debrief Task each show their priority in the same form
 - Slack debrief Task: [Task _id]
@@ -485,6 +566,10 @@ After all steps complete, produce a single consolidated report:
 - **`companyId` is required on every Planhat create** — never write a Conversation or Task without it.
 - **`externalId` is the Conversation dedup key** — always check before creating.
 - **Never write a session `date` of `T00:00:00.000Z`.** Planhat's own event→Conversation conversion already stamps `date` with the conversion moment rather than the session start, so the field is wrong by default and a midnight overwrite only replaces one wrong value with another. Resolve the real start via `context/planhat-schema.md` § Session timestamp and correct it on every touch, create or update.
+- **Contact enrichment never creates, archives, renames or re-homes an End User.** Step 3b writes exactly four fields — `custom.AISE Relationship`, `custom.Engagement Role`, `custom.AISE Read`, `custom.AISE Read Reviewed`. `name`, `firstName`, `lastName`, `email`, `position`, `companyId`, `primary`, and every `– SNF` / `– SF` synced field are read-only to this procedure. A person with real signal and no record is reported under Gaps, never auto-created.
+- **`custom.AISE Relationship` only ever moves up.** Promote on evidence; demote only on the explicit evidence `5. Left the company` requires, or a stated role change. Skipping a session is not disengagement. `6. Not filled` is never written by an agent, and an off-list value (`Engaged` instead of `2. Engaged`) returns `200` and silently drops the contact from every working-set filter.
+- **`custom.AISE Read Reviewed` is never written without rewriting the read**, and carries the run date, not the session date — otherwise a backfilled session stamps a fresh assessment as months old.
+- **The Planhat model name is `"End User"`, with the space.** `"EndUser"` is rejected outright (`Invalid or unauthorized model`, verified 2026-09-14). This bit every EndUser call in the repo before 2.64.0.
 - **Never overwrite `owner` or any SF-synced Company field.** See `context/planhat-schema.md` § Write Rules for the full SF-synced list.
 - **Auto-Conversation only fires on a `status` transition to `"done"` via `update_model_record`** — never bake `status: "done"` into a Task create.
 - **Every Task create uses the exact field IDs in step 4's table and is read back before it counts as written.** `name`/`assignee`/`dueDate` are silently discarded, and `status` is stored unvalidated — `"To Do"` is the only valid open value. This is what produced the nameless Tasks on Verisk (2026-08-25, 2026-09-08).

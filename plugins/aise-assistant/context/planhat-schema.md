@@ -426,7 +426,7 @@ Planhat only — Notion does not track these in real time.
 ### "Who are the contacts at customer X?"
 
 - **Notion:** query Contacts DB linked via the Customer's `Contacts` relation
-- **Planhat:** `list_model_records(MODEL: "EndUser", FILTER: {"companyId[equal to]": "<planhat_company_id>"})` _(EndUser schema not yet fully documented — run `get_model_action_parameters(MODEL: "EndUser")` first)_
+- **Planhat:** `list_model_records(MODEL: "End User", FILTER: {"companyId[equal to]": "<planhat_company_id>"})` _(EndUser schema not yet fully documented — run `get_model_action_parameters(MODEL: "End User")` first)_
 
 ### "Show me open tasks for customer X"
 
@@ -1248,7 +1248,7 @@ All Notion Task statuses write to the Planhat Task model. Only a `status` *trans
 
 ## EndUser (Planhat) ↔ Contact (Notion)
 
-> **Status:** Actively written by AISE as of 2026-09-12. The `custom.AISE *` fields below are the AISE's own read on a contact, maintained during session prep and debrief. Everything else on this model is Salesforce- or Snowflake-synced, or owned by another team — read it, do not overwrite it.
+> **Status:** Actively written by AISE as of 2026-09-12, and written automatically by `post-session-debrief` step 3b (and every `bulk-debrief` session that runs through it) as of 2026-09-14. The `custom.AISE *` fields below are the AISE's own read on a contact, maintained during session prep and debrief. Everything else on this model is Salesforce- or Snowflake-synced, or owned by another team — read it, do not overwrite it.
 
 ### The working set — who we actually deal with
 
@@ -1263,9 +1263,11 @@ A Company can carry 50+ EndUser records, most of them product users nobody has e
 
 ### How to look up a Planhat EndUser
 
+> **The model name is `End User`, with the space.** `MODEL: "EndUser"` is rejected outright — `{"message":"Invalid or unauthorized model: EndUser"}` — even though the model is referred to as `EndUser` in prose, in the `endusers` field on Conversations, and in the `modelRoute` (`endusers`). Verified 2026-09-14; every call in this repo was corrected in the same pass.
+
 ```
 list_model_records(
-  MODEL: "EndUser",
+  MODEL: "End User",
   FILTER: {"companyId[equal to]": "<planhat-company-id>"},
   SELECT: ["name", "email", "position", "primary", "companyId",
            "custom.AISE Relationship", "custom.AISE Read", "custom.Engagement Role"]
@@ -1275,7 +1277,7 @@ list_model_records(
 Or by email:
 ```
 list_model_records(
-  MODEL: "EndUser",
+  MODEL: "End User",
   FILTER: {"email[equal to]": "<contact-email>"},
   SELECT: ["name", "email", "position", "companyId"]
 )
@@ -1285,7 +1287,7 @@ list_model_records(
 
 | Field ID | Type | Description |
 |---|---|---|
-| `custom.AISE Relationship` | string (list) | **The working-set filter.** How close this person sits to the program. Options are numbered so group-by sorts in order — **pass the full numbered string verbatim**: `1. Key contact` · `2. Engaged` · `3. Known` · `4. Not engaged`. Passing `Key contact` stores an off-list value that looks like a successful write. Blank means never assessed, which is not the same as `4. Not engaged`. |
+| `custom.AISE Relationship` | string (list) | **The working-set filter.** How close this person sits to the program. Options are numbered so group-by sorts in order — **pass the full numbered string verbatim**: `1. Key contact` · `2. Engaged` · `3. Known` · `4. Not engaged` · `5. Left the company` · `6. Not filled`. Passing `Key contact` stores an off-list value that looks like a successful write. Blank means never assessed, which is not the same as `4. Not engaged`; `6. Not filled` is the explicit "looked, nothing to say" marker and is never written by an agent. Per-value criteria and the movement rules live in `agents/post-session-debrief.md` step 3b-B. |
 | `custom.AISE Read` | string (rich text) | The AISE's read on the person — what they care about, what blocks them, how they behave in a room, whether anything depends on them alone. Not a job description; `position` and `custom.Job Title – SNF` already hold that. Two to four sentences of plain prose. Record uncertainty rather than smoothing it: a contested name or an unconfirmed inference belongs in the text. |
 | `custom.AISE Read Reviewed` | date | When the read was last set or reconfirmed. Stores as `YYYY-MM-DDT00:00:00.000Z`; write plain `YYYY-MM-DD`. A read more than about two quarters old should not be trusted without a re-check. |
 | `custom.Engagement Role` | array (list) | **The AISE team's own field, and distinct from AISE Relationship.** The person's *function*: `Champion` · `Power User` · `Main Contact` · `Executive Sponsor` · `Technical Contact`. Relationship says how close they are, Engagement Role says what they do. Leave blank rather than guessing — an unevidenced Champion is worse than none. Note the field also carries bulk-derived values on non-AISE accounts (Sysdig, Drata, Bridgestone), so absence of a value is not evidence either way. |
