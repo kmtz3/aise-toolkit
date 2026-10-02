@@ -218,6 +218,8 @@ list_model_records(
 )
 ```
 
+**Duplicates – one AISE contact per person.** When a candidate has more than one End User record on the account (two email domains, a synced record plus a calendar-created one, a placeholder name), pick the AISE contact per `context/planhat-schema.md` § Duplicate End Users: **`custom.PB_ID` filled wins**, then `position`, then most recent `lastTouch`. This applies to attendees too – if the Conversation's `endusers` links the record without `PB_ID`, enrich the `PB_ID` record instead and report the duplicate. Write AISE fields to the AISE contact only.
+
 **Never create an End User record.** A person with real signal and no record is reported under Gaps in the chat summary, never auto-created — contact identity is owned by Salesforce and by the customer, not by this procedure. Same rule as `agents/slack-thread-logger.md` § contact identity.
 
 Read current values for every candidate before writing anything. An enrichment that has not read the existing read cannot preserve it.

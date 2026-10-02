@@ -5,6 +5,14 @@ Format: `## [version] — YYYY-MM-DD` followed by bullet points grouped by type.
 
 ---
 
+## [2.65.1] — 2026-10-02
+
+### Changed
+- **Duplicate End Users – `custom.PB_ID` decides the AISE contact.** New `context/planhat-schema.md` § Duplicate End Users defines when two records are the same person and which one carries the AISE fields: `custom.PB_ID` filled first, then `position`, then most recent `lastTouch`. It also covers moving AISE fields off a record they were written to by mistake. `post-session-debrief` step 3b and `account-refresh` step 5 now follow it – including for attendees, where the Conversation's `endusers` may link the record without `PB_ID`.
+- Source: a real account refresh, where the run enriched the `@acme.com` record (recent `lastTouch`, linked on the session) instead of the `@acme-group.com` record that holds the Productboard user ID and the title.
+
+---
+
 ## [2.65.0] — 2026-10-02
 
 ### Added

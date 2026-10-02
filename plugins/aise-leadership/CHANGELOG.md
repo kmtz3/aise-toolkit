@@ -1,5 +1,10 @@
 # Changelog — aise-leadership
 
+## [1.14.3] — 2026-10-02
+
+### Changed
+- `context/planhat-schema.md` synced from `aise-assistant` — adds § Duplicate End Users (`custom.PB_ID` decides which record carries the AISE fields).
+
 ## [1.14.2] — 2026-10-02
 
 ### Changed

@@ -1284,6 +1284,24 @@ list_model_records(
 )
 ```
 
+### Duplicate End Users — which record is the AISE contact
+
+The same person often exists as two or more End User records on one account: two email domains (`jdoe@acme.com` and `jdoe@acme-group.com`), a Salesforce-synced record next to one the GCal or Gmail sync created, or a placeholder (`[[unknown]]`, an email as the name). AISE fields go on **one** record per person – the AISE contact – and every other record for that person is left untouched and reported as a duplicate.
+
+**Treat records as the same person** when the email local part matches across the account's domains, or the full name matches and nothing contradicts it (different title, different team). Name-only matches on common names are reported, not acted on.
+
+**Pick the AISE contact in this order – first rule that separates them wins:**
+
+1. **`custom.PB_ID` filled.** The record linked to a real Productboard user is the one that carries Spark and usage telemetry and is the one Salesforce and Productboard reconcile against. Always prefer it, even when the other record has the more recent `lastTouch` or is the one linked on a Conversation's `endusers`.
+2. `position` filled.
+3. Most recent `lastTouch`.
+
+Fetch `custom.PB_ID` with `get_model_record` on each candidate – it comes back blank in large multi-record lists.
+
+**If the AISE fields already sit on the wrong record** (written before this rule, or the user corrects which record is canonical): copy `custom.AISE Relationship`, `custom.Engagement Role`, `custom.AISE Read` and `custom.AISE Read Reviewed` onto the AISE contact, then clear them on the duplicate: `custom.AISE Relationship` back to `6. Not filled`, `custom.Engagement Role` to `[]`, and `custom.AISE Read` / `custom.AISE Read Reviewed` to **`null`**. An empty string `""` clears `custom.AISE Read` but is silently ignored on the date field `custom.AISE Read Reviewed` (verified 2026-10-02) – only `null` clears it. Read both records back. Never archive, rename, merge or re-home the duplicate – identity cleanup belongs to RevOps / Salesforce – and report it under Gaps with both `_id`s and both `sourceId`s.
+
+A user's explicit statement of which record is canonical overrides the order above for that person.
+
 ### AISE-writable fields
 
 | Field ID | Type | Description |
