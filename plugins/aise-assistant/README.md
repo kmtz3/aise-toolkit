@@ -4,8 +4,8 @@ A Cowork / Claude Code plugin that turns any Productboard **AI Success Engineer 
 
 ## What's in the box
 
-- **34 slash commands** grouped by family. Type `/<family>` (or `/<family>-`) in autocomplete to see siblings.
-  - **`customer-*`** (3) — `/customer-setup [--force-new]`, `/bulk-account-setup`, `/customer-whats-new`
+- **35 slash commands** grouped by family. Type `/<family>` (or `/<family>-`) in autocomplete to see siblings.
+  - **`customer-*`** (4) — `/customer-setup [--force-new]`, `/bulk-account-setup`, `/customer-whats-new`, `/customer-refresh`
   - **`customer-plan`** (1, two modes) — `/customer-plan --next`, `/customer-plan --full`
   - **`session-*`** (7) — `/session-prep`, `/session-kdds`, `/session-summary`, `/session-score`, `/session-backfill [--bulk]`, `/session-debrief`, `/session-audit`
   - **`bulk`** (1, two modes) — `/bulk --debrief`, `/bulk --prep`
@@ -15,7 +15,7 @@ A Cowork / Claude Code plugin that turns any Productboard **AI Success Engineer 
   - **`planhat-*`** (2) — `/planhat-automations`, `/planhat-formula-builder`
   - **`assistant-*`** (5) — `/assistant-setup`, `/assistant-help`, `/assistant-remember`, `/assistant-improvement`, `/aise-context`
   - **Standalone** (8) — `/support-hub`, `/daily-brief`, `/spark-demo-prep`, `/create-deck`, `/session-facilitation`, `/spark-onepager`, `/inbox-triage`, `/temp-ph-ignite-conversion-data-sync`
-- **23 specialist agents** that execute each command (session prep, KDD generation, summaries, Planhat writes, session-log auditing, Gong/Gcal reconciliation, etc.).
+- **24 specialist agents** that execute each command (session prep, KDD generation, summaries, Planhat writes, session-log auditing, Gong/Gcal reconciliation, etc.).
 - **Universal context** — workflow rules, the AISE reference guide, scorecards, communication style guide, the full Planhat schema/field reference, engagement planning framework, KDD anchor templates per A-session type.
 - **Personal profile** — stored directly on `custom.AISE *` fields on your Planhat User record via `/assistant-setup`. Persists across installs, updates, and machines; no local files to manage.
 
@@ -65,6 +65,7 @@ Re-run with `--update` to drift-check, `--reset` to start over, or `--scrape-voi
 | Stage | Commands |
 |---|---|
 | **New customer / handoff** | `/customer-setup` → `/customer-plan --full` |
+| **Quiet or stale account** | `/customer-refresh` → send the check-in → `/session-prep` once booked |
 | **Per session** | `/customer-whats-new` → `/session-prep` (or `/session-kdds` for architecting) → deliver → `/session-debrief` |
 | **Ongoing** | `/customer-plan --next`, `/session-score`, `/session-audit`, `/log-feedback` |
 | **Anytime** | `/draft-email`, `/draft-followup`, `/draft-diagram`, `/support-hub`, `/assistant-remember`, `/assistant-improvement`, `/assistant-help` |

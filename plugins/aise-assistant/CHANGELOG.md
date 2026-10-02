@@ -5,6 +5,26 @@ Format: `## [version] — YYYY-MM-DD` followed by bullet points grouped by type.
 
 ---
 
+## [2.65.0] — 2026-10-02
+
+### Added
+- **`/customer-refresh` (agent `account-refresh`) – re-establish a quiet or inherited account in one pass.** Built from a manual run on a real account where no session had happened in five months and every account-level field was empty or stale. The run sweeps the full program history (Planhat Conversations, Gmail threads, Gong `ask_account`, the internal `#account-*` Slack channel, ticket status via Glean), rebuilds the session ledger and workstream status, and then:
+  - refreshes Company `custom.Architecture Details`, `custom.Organization Details`, `custom.Engagement Plan` and `custom.Next Step` behind a write gate – empty fields are written, stale fields are replaced with a named before/after, accurate fields are left alone;
+  - enriches the AISE fields on every customer End User with real signal across the history, reusing `post-session-debrief` step 3b B–G unchanged (one-way relationship movement, additive roles, rewrite-in-place read, run-date `custom.AISE Read Reviewed`, sequential writes, read-back);
+  - drafts a customer check-in email (session options from the remaining balance, Calendly link from the user's Planhat profile) and an internal Slack update in the `custom.Slack ID` channel. Never sends either.
+  - Flags: `--dry-run`, `--no-email`, `--no-slack`, `--since`.
+- `context/planhat-schema.md` § Company → AISE-writable – **documented `custom.Organization Details`**, which existed on the Company model but was referenced nowhere in the repo. Includes the rule that stakeholder titles come from End User `position`, not session notes.
+
+### Changed
+- `context/planhat-schema.md` – `custom.Architecture Details`, `custom.Engagement Plan` and `custom.Next Step` rows now name `account-refresh` as a writer. Next Step notes that a refresh which only drafted the email writes `drafted, send pending`, never a send.
+
+### Notes from the source run (encoded as rules in the agent)
+- Email-type Planhat Conversations synced from Gmail often have an empty `description`. Gmail is the body source.
+- Internal notes had a stakeholder's title wrong (a "CPO" who is Head of Engineering per `position`). Titles are now verified against End User `position` before any write.
+- The account-wide End User list caps at 100 and can return custom fields blank on large accounts. Contacts are looked up by email.
+
+---
+
 ## [2.64.0] — 2026-09-14
 
 ### Added

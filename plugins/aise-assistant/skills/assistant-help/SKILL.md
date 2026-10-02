@@ -51,6 +51,7 @@ Commands are grouped by family. Type `/<family>` (or `/<family>-`) in autocomple
 | **Plan the next 2–4 sessions** | `/customer-plan --next <customer>` |
 | **Build a full program plan** | `/customer-plan --full <customer>` |
 | **Set up a brand-new or inherited account** | `/customer-setup <customer>` |
+| **Re-engage a quiet account and bring Planhat current** | `/customer-refresh <customer> [--dry-run]` (four Company fields + contact reads + check-in email draft + internal Slack draft, never sends) |
 | **Score a delivered session against the rubric** | `/session-score <session-type>` |
 | **Audit logged sessions / tasks for drift** | `/session-audit [--fix] [--tasks]` — reconciles Planhat session history against Calendar + Gong, or audits task completion drift |
 | **Answer a customer question with PB docs** | `/support-hub <query>` |
@@ -66,7 +67,7 @@ Commands are grouped by family. Type `/<family>` (or `/<family>-`) in autocomple
 
 ## Command families at a glance
 
-- **`customer-*`** — account lifecycle (`-setup [--force-new]`, `-whats-new`)
+- **`customer-*`** — account lifecycle (`-setup [--force-new]`, `-whats-new`, `-refresh`)
 - **`customer-plan`** — program planning (`--next` for 2–4 sessions, `--full` for a complete program)
 - **`session-*`** — per-session workflows (`-prep`, `-kdds`, `-facilitation`, `-summary`, `-score`, `-debrief`)
 - **`bulk`** — run a session workflow across multiple meetings at once (`--debrief`, `--prep`)

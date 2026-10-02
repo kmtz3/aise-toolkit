@@ -1,5 +1,10 @@
 # Changelog — aise-leadership
 
+## [1.14.2] — 2026-10-02
+
+### Changed
+- `context/planhat-schema.md` synced from `aise-assistant` — documents `custom.Organization Details` on the Company model and notes that `account-refresh` (aise-assistant-only; not ported here) also maintains `custom.Architecture Details`, `custom.Engagement Plan` and `custom.Next Step`.
+
 ## [1.14.1] — 2026-09-14
 
 ### Fixed
