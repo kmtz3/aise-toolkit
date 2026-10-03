@@ -285,6 +285,8 @@ From the extracted PB-side action items (step 2), for each item assigned to the 
 
 Build `description` as single-line HTML per § Planhat rich-text fields (universal write format) in `CLAUDE.md` — never markdown, never literal newlines. Scaffold content per `context/planhat-schema.md` § Task priority & description defaults, rendered as a bold `<p><strong>` label followed by a `ph-editor__bullet-list`.
 
+**`description` is mandatory and must be substantively populated on every Task — never left empty.** Lead with the session origin: `"Action item from the [date] [Customer] session."`, then state what specifically needs to happen, relevant context (system name, contact, URL, prior conversation), and any known blocker or dependency. An empty `description` renders as a blank row in Planhat and is invisible to `/daily-brief` — treat an empty field as a failed create even if `action`, `ownerId`, and `custom.Priority` all landed. `endTime` on PB-side commitment tasks uses an ISO 8601 date string (e.g. `"2026-10-07T00:00:00.000Z"`), never a Unix timestamp in milliseconds.
+
 ```
 create_model_record(MODEL: "Task", PARAMETERS: {
   mainType: "task",
@@ -327,7 +329,7 @@ get_model_record(MODEL: "Task", OBJECT_ID: "<_id from the create response>",
                  SELECT: ["action", "ownerId", "type", "status", "endTime", "custom.Priority"])
 ```
 
-Assert all six are present, and that `status` is exactly `"To Do"`. If any is missing or miscased, re-write it with `update_model_record` once and re-assert. A create response that echoes only `_id`, `companyId` and `description` means the payload used alias field names — fix the payload, don't retry it unchanged. Report any Task that failed the assert twice in the step-12 summary rather than reporting it as created.
+Assert all six are present, and that `status` is exactly `"To Do"`. If any is missing or miscased, re-write it with `update_model_record` once and re-assert. A create response that echoes only `_id`, `companyId` and `description` means the payload used alias field names — fix the payload, don't retry it unchanged. Report any Task that failed the assert twice in the final report rather than reporting it as created.
 
 #### Priority by task kind
 
@@ -351,6 +353,8 @@ Use `context/planhat-schema.md` § Task priority & description defaults → Acco
 - Instruction: draft a follow-up email, save to Gmail Drafts, return the draft ID and full body in chat.
 
 The draft should follow `context/communication-style-guide.md`. The agent will determine the recipient from Planhat `EndUser` records for the company (primary/first contact).
+
+**Use the actual session date when referring to the session — never relative words like "today", "this morning", or "this session".** Follow-up emails are typically drafted and sent days after delivery; relative language reads as wrong on delayed send. Use the calendar date from step 1: e.g. "Recapping our Sep 30 session", "Great to dig into [topic] on Thursday", "Thanks for making time on Wednesday." The day-of-week form is acceptable only when the session was within the previous 7 days. For older sessions always use the full date.
 
 If there is a known external Slack channel with this customer, note in chat that a Slack version may be useful — but do not auto-draft it. (This is a customer-facing Slack channel note, unrelated to the mandatory internal Slack debrief Task in step 6 below — don't read this line as license to skip or thin out step 6.)
 
@@ -390,10 +394,11 @@ create_model_record(MODEL: "Task", PARAMETERS: {
   mainType: "task",
   type: "Internal Alignment",
   action: "Slack debrief – [Customer] [date]",
-  description: "<full debrief, as single-line HTML>",
+  description: "<the Slack message itself, as single-line HTML — this IS the copy-paste-ready message to post; never an instruction about what to post ('post the debrief to Slack' belongs in action, not here)>",
   companyId: "<planhat-company-id>",
   ownerId: "<user's planhat id>",
   status: "To Do",
+  endTime: "<session date + 7 calendar days, as ISO 8601 date string — e.g. '2026-10-07T00:00:00.000Z'>",
   "custom.Priority": "<P3, or P2 if the debrief contains a 🔴 risk — see step 4>"
 })
 ```
@@ -450,6 +455,7 @@ create_model_record(MODEL: "Task", PARAMETERS: {
   companyId: "<planhat-company-id>",
   ownerId: "<user's planhat id>",
   status: "To Do",
+  endTime: "<session date + 7 calendar days, as ISO 8601 date string>",
   "custom.Priority": "<P3, or P2 per the escalation rule in step 4>"
 })
 ```
@@ -582,6 +588,10 @@ After all steps complete, produce a single consolidated report:
 - **Never `Read` a transcript file >50K chars directly in this agent's context.** Delegate to a `general-purpose` sub-agent with the structured extraction template (step 2a).
 - **Never `Grep` Glean-output temp files** — they are single-line JSON arrays and return `[Omitted long matching line]`. Use sub-agent + chunked `Read` instead.
 - **Invoke the context-keeper procedure inline** if anything in the session output suggests a changed rule, new session type, or new standing instruction.
-- **The Slack debrief Task (step 6) is never optional and never left with an empty `description`.** Runs on every completed session, full or placeholder-debrief (step 2b) — write whatever is available and flag gaps in the description itself rather than skipping the Task or leaving it blank. A Slack debrief Task with no content is the historical failure mode this guardrail closes.
+- **Task `description` is never empty.** Every Task this procedure creates — PB-side commitments (step 4), re-debrief (step 2b), Slack debrief (step 6), product feedback (step 8) — must have a substantive `description`. PB tasks: lead with session origin, then the specific outcome needed and any relevant context. Slack debrief: the full debrief HTML. Product feedback: the full structured log entry. Re-debrief: original call date and what triggered the re-debrief. An empty `description` is a failed create even if all other fields landed.
+- **`endTime` on Tasks is always an ISO 8601 date string** (e.g. `"2026-10-07T00:00:00.000Z"`) — never a Unix timestamp in milliseconds. Milliseconds are accepted by `create_model_record` in some contexts but rejected by `update_model_record` with "Not valid type".
+- **Slack debrief and product feedback Task `endTime` is always session date + 7 calendar days** — computed from the session's real start date resolved in step 1, not the run date and not an arbitrary offset. Use ISO 8601 date string format.
+- **Follow-up emails (step 5) never use "today", "this session", "this morning", or any relative time word.** Always reference the actual session date. Emails are drafted and sent days after delivery; relative language breaks on delayed send. Use "our Sep 30 session", "Thursday's call", or "thanks for making time on Wednesday". Day-of-week alone is acceptable only when the session was within the previous 7 days; otherwise use the full date.
+- **The Slack debrief Task (step 6) is never optional and never left with an empty `description`.** Runs on every completed session, full or placeholder-debrief (step 2b) — write whatever is available and flag gaps in the description itself rather than skipping the Task or leaving it blank. A Slack debrief Task with no content is the historical failure mode this guardrail closes. **The Task `description` IS the Slack message to post — copy-paste ready, formatted as single-line HTML per step 6.** Never write an administrative instruction in `description` ("post the debrief to Slack" belongs in `action`, not `description`); the content of the debrief — bullets, risks, next steps — goes in `description`.
 - **`custom.Debrief Status` is set on every run — step 11 for full runs, step 2b for placeholder runs.** `complete` = all steps landed. `partial - transcript pending` = placeholder branch ran. Blank = aborted before completion. Never write this field before step 10 confirms — an incomplete run that sets `complete` will cause `bulk-debrief` to permanently skip the session.
 - **`custom.Next Step` is refreshed on every completed run — step 10, never optional.** Rewrite, don't append; pull the "waiting on" line from the same Tasks/actions the rest of the run just wrote so the field and the Tasks never disagree; carry forward anything still-live from the old value that this session didn't touch. Applies to the placeholder-debrief branch too (step 2b), and to every session `bulk-debrief` runs through this procedure.

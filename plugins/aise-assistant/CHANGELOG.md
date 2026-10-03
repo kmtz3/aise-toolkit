@@ -5,6 +5,17 @@ Format: `## [version] — YYYY-MM-DD` followed by bullet points grouped by type.
 
 ---
 
+## [2.65.2] — 2026-10-03
+
+### Fixed
+- **`post-session-debrief` Task and email corrections** (from a Claude Desktop review of a failed run).
+  - Every Task description must now be substantively populated, and the Slack debrief Task `description` is the paste-ready Slack message itself, never an instruction about what to post.
+  - `endTime` is always an ISO 8601 date string, never Unix milliseconds (rejected by `update_model_record`). Slack debrief and product feedback Tasks get `endTime` = session date + 7 days, which the read-back assert already required but the payloads never set.
+  - Follow-up emails reference the actual session date, never "today" or "this session".
+  - Read-back step now points to the final report instead of a nonexistent step 12.
+
+---
+
 ## [2.65.1] — 2026-10-02
 
 ### Changed
