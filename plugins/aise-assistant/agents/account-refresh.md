@@ -41,7 +41,7 @@ Resolve per `context/planhat-schema.md` § Company lookup. Then one read:
 
 ```
 get_model_record(MODEL: "Company", OBJECT_ID: "<id>", SELECT: [
-  "phase", "arr", "renewalDate", "custom.AISE Journey Status",
+  "phase", "custom.ARR – SF", "renewalDate", "custom.AISE Journey Status",
   "custom.Next Step", "custom.Next Step Owner", "custom.Engagement Plan",
   "custom.Architecture Details", "custom.Organization Details",
   "custom.Slack ID", "custom.External_Slack_Channel_ID",

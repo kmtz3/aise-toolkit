@@ -47,7 +47,7 @@ If the field is empty, warn the user inline and fall back to `context/communicat
 - **Planhat Company (primary program context):** Resolve the Company using the lookup ladder in `context/planhat-schema.md` § Company lookup procedure — `search_records(QUERY: "<customer name>")` → SF `sourceId` match → `domains` array match. Then:
   ```
   get_model_record(MODEL: "Company", OBJECT_ID: "<id>", SELECT: [
-    "name", "arr", "renewalDate", "owner", "custom.AISE Journey Status",
+    "name", "custom.ARR – SF", "renewalDate", "owner", "custom.AISE Journey Status",
     "custom.Engagement Plan", "custom.Architecture Details",
     "custom.Purchased Makers", "custom.Current Makers",
     "custom.Customer Status – SF", "custom.Next Step", "sourceId", "domains"

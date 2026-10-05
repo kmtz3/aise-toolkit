@@ -63,7 +63,7 @@ On start-up, check for an existing checkpoint for this target user. **Before tru
 list_model_records(
   MODEL: "Company",
   FILTER: {"owner[equal to]": "<target_id>"},
-  SELECT: ["name", "_id", "phase", "arr"],
+  SELECT: ["name", "_id", "phase", "custom.ARR – SF"],
   LIMIT: 200
 )
 ```

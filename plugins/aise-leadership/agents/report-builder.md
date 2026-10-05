@@ -33,7 +33,7 @@ Identity was resolved in the preamble above.
 
 **Resolve the Company:** `search_records(QUERY: "<customer name>")` filtered to `model: "Company"`; fall back to SF `sourceId` lookup (`context/planhat-schema.md` § How to look up a Planhat Company for a given customer). Check the Customer Name Mapping table in `context/planhat-schema.md` for known name mismatches before concluding no record exists.
 
-Capture from the Company record: `_id`, `name`, `owner`, `arr`, `renewalDate`, `phase`, `status`, `custom.AISE Journey Status`, `custom.Last AISE Session`, `custom.Last AISE Touch`.
+Capture from the Company record: `_id`, `name`, `owner`, `custom.ARR – SF`, `renewalDate`, `phase`, `status`, `custom.AISE Journey Status`, `custom.Last AISE Session`, `custom.Last AISE Touch`.
 
 **Ownership note:** Planhat `owner` is the CSM/Account Manager field, which may or may not be the current user for this account (`context/planhat-schema.md` § Field-level mapping — "Notion Owner = AISE. Planhat `owner` = CSM. These may differ."). If `owner` does not resolve to the current user's Planhat id, note it inline as: `⚠️ Account CSM-owned by [name] in Planhat — reporting as read-only.` Continue with the report; do not stop. Don't treat a mismatch here as proof the user isn't the delivering AISE — check whether they appear in recent Conversation `users` before concluding anything.
 
@@ -223,7 +223,7 @@ Note: this mode does NOT apply the current-user ownership guard — it's intenti
 
 **A — Owner-field baseline** (cheap, but a caveat applies):
 ```
-list_model_records(MODEL: "Company", FILTER: {"owner[equal to]": "<target-planhat-id>"}, SELECT: ["name", "arr", "phase", "status", "custom.AISE Journey Status", "renewalDate"])
+list_model_records(MODEL: "Company", FILTER: {"owner[equal to]": "<target-planhat-id>"}, SELECT: ["name", "custom.ARR – SF", "phase", "status", "custom.AISE Journey Status", "renewalDate"])
 ```
 
 **B — Empirical derivation** (the approach `session-log-auditor.md` § Step 2 uses for the same problem — "more reliable than any ownership field"): pull recent Conversations (last 180 days, counted types) and open/recent Tasks where the target AISE appears in `users` / `ownerId`, and collect the distinct `companyId` set:
@@ -305,7 +305,7 @@ Only include a customer in the queue if it has at least one flag. Sort: 🔴 fir
 - **Sessions delivered, last 30 days:** count Conversations (counted-eight types, `archived != true`) across all customers in the book with `date ≥ today - 30`.
 - **Sessions scheduled, next 30 days:** count `mainType: "event"` Tasks with `startTime` between today and today+30.
 - **Accounts with no session in 30+ days:** count of customers where the most recent delivered session was >30 days ago.
-- **ARR total:** sum of Company `arr` across all customers in the book. Note if any are null.
+- **ARR total:** sum of Company `custom.ARR – SF` across all customers in the book. Note if any are null.
 
 ### Step 6 — Render the portfolio report (inline chat)
 

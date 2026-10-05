@@ -69,10 +69,10 @@ For each candidate (a Task in Mode A, or a distilled pain point in Mode B), pull
    - Business context
    - Workaround description
    - Desired outcome language
-4. Pull ARR, renewal date, and Salesforce Account ID directly from the Planhat Company record: `get_model_record(MODEL: "Company", OBJECT_ID: "<companyId>", SELECT: ["arr", "renewalDate", "sourceId"])`. Reconstruct the Salesforce Account URL from `sourceId`: `https://productboard.lightning.force.com/lightning/r/Account/<sourceId>/view`.
+4. Pull ARR, renewal date, and Salesforce Account ID directly from the Planhat Company record: `get_model_record(MODEL: "Company", OBJECT_ID: "<companyId>", SELECT: ["custom.ARR – SF", "renewalDate", "sourceId"])`. Reconstruct the Salesforce Account URL from `sourceId`: `https://productboard.lightning.force.com/lightning/r/Account/<sourceId>/view`.
 
 **Before drafting, confirm you have retrieved all of the following (or explicitly marked each `-`):**
-- [ ] ARR — from Planhat Company `arr`
+- [ ] ARR — from Planhat Company `custom.ARR – SF`
 - [ ] Contract end date (renewal) — from Planhat Company `renewalDate`
 - [ ] Salesforce Account URL — reconstructed from Planhat Company `sourceId`
 - [ ] Gong call URL — from the task's `description` or `custom.Call Recording` on the linked Conversation (use as `sourceUrl` AND in the Gong section)
@@ -153,7 +153,7 @@ automated solution" rather than naming a specific tool.]
 [Concrete outcome in customer terms — what good looks like when this is solved]
 <br><br>
 <b>ARR Impact</b><br>
-[ARR value from Planhat Company `arr`, or -]
+[ARR value from Planhat Company `custom.ARR – SF`, or -]
 <br><br>
 <b>Salesforce Opp or Account URL</b><br>
 [<a href="[URL]">[URL]</a> — or -]

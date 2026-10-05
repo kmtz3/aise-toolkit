@@ -92,7 +92,7 @@ Large tool results (calendar pulls, wide list calls) get written to files automa
    - `--customer` → that one Company (name search, then SF `sourceId` fallback per `context/planhat-schema.md`).
    - Otherwise → the accounts the AISE has touched. Derive empirically: pull Conversations for the window across session types and collect distinct `companyId` values where the AISE appears in `users`. This is more reliable than any ownership field.
    - Add accounts that appear only in the calendar (Step 3) once that runs — an account with zero Planhat records is exactly the kind of gap this audit exists to find.
-3. Build a **domain → Company** map: `list_model_records(MODEL: "Company", FILTER: {"arr[more than]": "25000"}, SELECT: ["name","domains"])` covers the AISE-managed segment without pulling the whole tenant. Write it to disk. Add the shared-domain disambiguation rules from § Hard-won rules #5.
+3. Build a **domain → Company** map: `list_model_records(MODEL: "Company", FILTER: {"custom.ARR – SF[more than]": "25000"}, SELECT: ["name","domains"])` covers the AISE-managed segment without pulling the whole tenant. Write it to disk. Add the shared-domain disambiguation rules from § Hard-won rules #5.
 4. Record which in-scope accounts have **no Planhat Company at all**. These are churned or never-converted accounts; their sessions are unloggable and belong in a separate deliverable, not the gap list.
 
 ### Step 2 — Pull the Planhat session universe

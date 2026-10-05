@@ -30,7 +30,7 @@ Reference fields on the record the formula lives on with `<<>>`:
 Do **not** use aggregate functions (`SUM`, `COUNT`, `MAX`) on same-model fields — those are cross-model only. Use plain math.
 
 ```
-(<<arr>> - <<custom.Target ARR>>) / <<custom.Target ARR>>
+(<<custom.ARR – SF>> - <<custom.Target ARR>>) / <<custom.Target ARR>>
 ```
 
 ### Operators and logic
@@ -159,7 +159,7 @@ If two records tie on your sort field, you're back to arbitrary. Either pick a f
 
 **12. Filter values must match the stored type.** Booleans are `true` / `false` unquoted; picklist and text values are quoted strings and are case-sensitive. `"value": "true"` on a boolean field matches nothing.
 
-**13. `<<field>>` substituted into a filter `value` needs quotes unless it's numeric or boolean.** The `<<>>` token is replaced with raw text *before* the surrounding JSON is parsed. A number (`<<arr>>` → `150000`) or boolean (`<<custom.Is NRR>>` → `true`) is already a valid bare JSON token, so leave those unquoted. A string, date, or ObjectId field (`<<owner>>`, `<<customerFrom>>`, `<<custom.Segment>>`) substitutes as raw unquoted characters — `<<owner>>` becomes `6a44ef76c9aade50502936d5`, and `<<customerFrom>>` becomes something like `2026-01-01T00:00:00.000Z` — neither of which is a valid bare JSON literal. Left unquoted, saving the formula throws `SyntaxError: Unexpected token '<' ... is not valid JSON` (you'll see the literal `<<` in the error snippet, meaning substitution never even ran before the parser choked). Fix: wrap it — `"value": "<<owner>>"`, `"value": "<<customerFrom>>"`. Pattern D below was corrected for this; treat any older copy of that example (or anything hand-written before this note existed) as needing the same fix.
+**13. `<<field>>` substituted into a filter `value` needs quotes unless it's numeric or boolean.** The `<<>>` token is replaced with raw text *before* the surrounding JSON is parsed. A number (`<<custom.ARR – SF>>` → `150000`) or boolean (`<<custom.Is NRR>>` → `true`) is already a valid bare JSON token, so leave those unquoted. A string, date, or ObjectId field (`<<owner>>`, `<<customerFrom>>`, `<<custom.Segment>>`) substitutes as raw unquoted characters — `<<owner>>` becomes `6a44ef76c9aade50502936d5`, and `<<customerFrom>>` becomes something like `2026-01-01T00:00:00.000Z` — neither of which is a valid bare JSON literal. Left unquoted, saving the formula throws `SyntaxError: Unexpected token '<' ... is not valid JSON` (you'll see the literal `<<` in the error snippet, meaning substitution never even ran before the parser choked). Fix: wrap it — `"value": "<<owner>>"`, `"value": "<<customerFrom>>"`. Pattern D below was corrected for this; treat any older copy of that example (or anything hand-written before this note existed) as needing the same fix.
 
 **14. The field's declared data type is separate from the formula text, and mismatches fail 100% silently — confirmed in production.** A field built with a `FIND(Conversation.date & {...})` formula but created as fieldType **Text** instead of **Date** returned blank on every single record, even ones with a confirmed matching Conversation. `get_model_action_parameters` on the model will show the mismatch directly (e.g. `{"id": "custom.Last AISE Email", "fieldType": "text"}` when the formula clearly returns a date) — check this before re-debugging the formula logic itself. Changing the formula text does nothing; the field's type has to be edited in Manage Fields.
 
@@ -219,7 +219,7 @@ IF(<<custom.Count A>> > 0 || <<custom.Count B>> > 0, Mixed, ...)     ✅
 
 Same applies to any `<<A>> - <<B>> > n` or `<<A>> * <<B>> == n` shape in a condition. If you genuinely need the arithmetic result, put it in its own Number formula field and compare **that** field — one value per field, per the guidance at the top of this skill.
 
-Plain math on field references in the formula *body* (not inside a condition) is documented as working — e.g. `(<<arr>> - <<custom.Target ARR>>) / <<custom.Target ARR>>`. The failure is specific to arithmetic being compared.
+Plain math on field references in the formula *body* (not inside a condition) is documented as working — e.g. `(<<custom.ARR – SF>> - <<custom.Target ARR>>) / <<custom.Target ARR>>`. The failure is specific to arithmetic being compared.
 
 ---
 

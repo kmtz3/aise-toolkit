@@ -116,7 +116,7 @@ Large tool results (calendar pulls, wide list calls) get written to files automa
    - **`--customer <name>` supplied, no `--owner`** → resolve the Company (name search, then SF `sourceId` fallback per `context/planhat-schema.md`), then derive the owning AISE(s) empirically from that account's own records — any AISE appearing in `users` on that company's Conversations within the window. If exactly one, `target_aises = [that AISE]`. If more than one (a handoff or shared account), `target_aises` = all of them — scope is that one customer, reported grouped by AISE same as a portfolio run.
    - **Neither flag supplied** → whole workspace: run the roster query above with no name filter → `target_aises = [operator] + every direct report / team member]`. **This is the expensive default.** Before proceeding to Step 2, state the team size and the resolved window, and confirm — unless the user has already signaled urgency (explicit `--fix`, "just run it", or similar) or has otherwise narrowed scope in the same request.
 3. Account-set derivation for each AISE in `target_aises` happens inside their own per-AISE run (Step 2 below) — it is not resolved here.
-4. Build a **domain → Company map once**, shared across every AISE in scope: `list_model_records(MODEL: "Company", FILTER: {"arr[more than]": "25000"}, SELECT: ["name","domains"])`. Write it to disk. Add the shared-domain disambiguation rules from § Hard-won rules #5.
+4. Build a **domain → Company map once**, shared across every AISE in scope: `list_model_records(MODEL: "Company", FILTER: {"custom.ARR – SF[more than]": "25000"}, SELECT: ["name","domains"])`. Write it to disk. Add the shared-domain disambiguation rules from § Hard-won rules #5.
 
 ### Steps 2–7 — per-AISE reconciliation
 

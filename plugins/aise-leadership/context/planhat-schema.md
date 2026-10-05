@@ -321,7 +321,7 @@ list_model_records(MODEL: "Company", FILTER: {"sourceId[equal to]": "<SF_ACCOUNT
 | `Account Status` | `status` (+ `phase`) | string | Planhat `status` is auto-set from licenses (`prospect`, `customer`, `canceled`, etc.). `phase` is the manually-set lifecycle stage. Neither maps 1:1 to Notion `Account Status`. |
 | `Health (Manual)` | `csmScore` (1–5) | number | Notion is a select (`Figuring it out` → `Churning`). Planhat `csmScore` is 1–5. Rough mapping: Healthy=4–5, Figuring it out=3, Concerning=2, Churning=1. |
 | `Priority` | _(no equivalent)_ | — | Notion-only. Not in Planhat. |
-| `ARR` (rollup) | `arr` | number | Planhat `arr` = annualized MRR from active licenses. Notion ARR = rollup from Active Packages. **Planhat `arr` is the financial source of truth** (synced from Salesforce via `custom.ARR – Salesforce`). |
+| `ARR` (rollup) | `arr` | number | Planhat `arr` = annualized MRR from active licenses. Notion ARR = rollup from Active Packages. **Do NOT use native `arr`** — its default logic is incorrect and cannot be changed. Use `custom.ARR – SF` (see § ARR — always use `custom.ARR – SF`). |
 | `Renewal Forecast` | _(no direct equivalent)_ | — | Planhat has `renewalDate` and `renewalArr` but no forecast select. |
 | _(Notion only)_ | `h` (health score 0–10) | number | **[PLANHAT ONLY]** Computed health score. Useful context when prepping sessions. |
 | _(Notion only)_ | `lastActive` | date | **[PLANHAT ONLY]** Last product activity date. |
@@ -349,10 +349,10 @@ These three fields are actively synced Notion → Planhat by the AISE assistant.
 | Notion field | Planhat field ID | Notes |
 |---|---|---|
 | _(no equivalent)_ | `mrr` | Monthly Recurring Revenue — Planhat only |
-| _(no equivalent)_ | `arr` | Annual Recurring Revenue — Planhat only |
+| _(no equivalent)_ | `arr` | ⚠️ Native ARR — **not used**; use `custom.ARR – SF` |
 | _(no equivalent)_ | `renewalDate` | Contract renewal date — Planhat only |
 | _(no equivalent)_ | `renewalDaysFromNow` | Days until next renewal — Planhat only, read-only |
-| _(no equivalent)_ | `custom.ARR – SF` | ARR from Salesforce — Planhat only. **Field ID is `ARR – SF`.** |
+| `ARR` (rollup) | `custom.ARR – SF` | **The ARR field to use everywhere.** ARR from Salesforce — Planhat only. **Field ID is `ARR – SF`.** Native `arr` is not used. |
 | _(no equivalent)_ | `custom.Customer Status – SF` | Salesforce lifecycle status — Planhat only |
 | _(no equivalent)_ | `custom.Region` | Geographic region — Planhat only |
 | _(no equivalent)_ | `custom.Segment` | Customer segment — Planhat only |
@@ -421,7 +421,7 @@ Some accounts are named differently across systems. Always check this table befo
 
 Planhat only — Notion does not track these in real time.
 1. `search_records(QUERY: "<customer name>")` → get `_id`
-2. `get_model_record(MODEL: "Company", OBJECT_ID: "<id>", SELECT: ["h", "arr", "mrr", "renewalDate", "renewalDaysFromNow", "csmScore", "lastActive", "custom.Customer Status – SF", "custom.Region", "custom.Segment"])`
+2. `get_model_record(MODEL: "Company", OBJECT_ID: "<id>", SELECT: ["h", "custom.ARR – SF", "mrr", "renewalDate", "renewalDaysFromNow", "csmScore", "lastActive", "custom.Customer Status – SF", "custom.Region", "custom.Segment"])`
 
 ### "Who are the contacts at customer X?"
 
@@ -436,6 +436,19 @@ Planhat only — Notion does not track these in real time.
 ---
 
 ## Planhat Company — Full Field Reference
+
+### ARR — always use `custom.ARR – SF`, never native `arr`
+
+> **Standing rule — applies to every run, every agent, every skill, in both plugins.**
+
+The native Planhat `arr` field (and its relatives `mrr`, `renewalArr` where used as an ARR proxy) is **not used**. Planhat computes it with default logic that is incorrect for our data and **cannot be changed**. The only ARR we trust is **`custom.ARR – SF`** (Salesforce-synced; field ID is `ARR – SF`, with an en dash, not `ARR – Salesforce`).
+
+- **Reads:** put `custom.ARR – SF` in `SELECT`, never `arr`. Prep briefs, debrief priority logic, reports, customer snapshots, feedback context, and any "Account snapshot" ARR value come from `custom.ARR – SF`.
+- **Filters / sorts:** use `custom.ARR – SF` — e.g. `FILTER: {"custom.ARR – SF[more than]": "25000"}` — not `arr[more than]`. Verify the filter operator against live `get_model_action_parameters` on first use, since custom-field filters are the less-trodden path.
+- **Formulas / automations:** reference `<<custom.ARR – SF>>`, not `<<arr>>`.
+- **Writes:** none — `custom.ARR – SF` is SF-synced (see § Field-suffix conventions). Never write ARR of either kind.
+- **If `custom.ARR – SF` is empty:** treat ARR as unknown (`-`) or fall back per the agent's existing Glean/Salesforce chain with the usual verify tag — do **not** silently substitute native `arr`.
+- **Existing docs that still say `arr`** (older examples, agent SELECT lists) are stale — follow this rule over them.
 
 ### Standard writable fields
 
@@ -471,7 +484,7 @@ Planhat only — Notion does not track these in real time.
 | `h` | Overall health score 0–10 (computed) |
 | `hDiff` | Recent health change |
 | `hDiffDate` | Date health last changed |
-| `arr` | Annual Recurring Revenue (annualized MRR) |
+| `arr` | ⚠️ Native annualized MRR — **not used**; use `custom.ARR – SF` |
 | `mr` | Monthly Revenue (MRR + non-recurring) |
 | `mrr` | Monthly Recurring Revenue from active licenses |
 | `renewalDaysFromNow` | Live countdown to next renewal |
@@ -590,7 +603,7 @@ writes Productboard's internal discussion of a customer onto that customer's own
 | `custom.Gong Summary` | string | — | Rolling Gong-derived account summary. |
 | `custom.CAB Customer` | boolean | `true` / `false` | Customer Advisory Board member. |
 | `custom.External_Slack_Channel_ID` | string | — | **The customer ↔ shared external Slack channel pairing, cached.** Channel **ID** only, upper-case (`C0AKKLJCB5E`) – never a `#name` (channels get renamed), never a URL (the value feeds `slack_read_channel` and the `/log-slack-threads` `externalId` builder directly). Written by `/log-slack-threads` the first time it resolves a channel for the account; read on every later run, which is what lets that skill take a channel *or* a customer name as input. Write only when empty or when the user has just corrected it – a resolved channel that disagrees with a populated value is a conflict to surface, not a value to overwrite (an account can have two shared channels; the field holds one). **New field: Planhat custom fields lag in MCP metadata, so it may be absent from `get_model_action_parameters` and reject writes for a while. A failed write is reported, not fatal.** Strictly the **external** channel – see the Slack-fields callout above; `custom.Slack ID` / `custom.Slack URL` are the internal channel and are never a substitute. |
-| `custom.PM Reach-Out Status` | string (list) | `Free to Contact`, `Ask First`, `Do Not Contact` | **Added 2026-08-28** — built out of the Aug 2026 Anthony Amenta (Product Ops) thread on flagging accounts safe for direct PM reach-outs. Whether a PM can contact this account directly without looping in the account team first. Set and maintained by AISE based on account health, deal stage, and open escalations – not auto-computed from `csmScore`/`h`/Deal/Issue data, since the hard-stop judgment call needs a human. `Free to Contact` = go ahead (PM should still check recent activity first if `arr` is under $30K). `Ask First` = PM messages the account owner in the account's Slack channel before reaching out, regardless of ARR. `Do Not Contact` = hard stop – active negotiation, red health, or an open escalation. Pair with `custom.PM Reach-Out Note` and check `custom.PM Reach-Out Reviewed` for staleness before trusting the value. |
+| `custom.PM Reach-Out Status` | string (list) | `Free to Contact`, `Ask First`, `Do Not Contact` | **Added 2026-08-28** — built out of the Aug 2026 Anthony Amenta (Product Ops) thread on flagging accounts safe for direct PM reach-outs. Whether a PM can contact this account directly without looping in the account team first. Set and maintained by AISE based on account health, deal stage, and open escalations – not auto-computed from `csmScore`/`h`/Deal/Issue data, since the hard-stop judgment call needs a human. `Free to Contact` = go ahead (PM should still check recent activity first if `custom.ARR – SF` is under $30K). `Ask First` = PM messages the account owner in the account's Slack channel before reaching out, regardless of ARR. `Do Not Contact` = hard stop – active negotiation, red health, or an open escalation. Pair with `custom.PM Reach-Out Note` and check `custom.PM Reach-Out Reviewed` for staleness before trusting the value. |
 | `custom.PM Reach-Out Note` | string (Rich text) | — | Why the account has its current `custom.PM Reach-Out Status` – required whenever status is `Ask First` or `Do Not Contact`. Short and dated: what's going on, what would need to change for the status to move. **Rich text — format per § Rich Text Field Formatting, never plain/`\n`-separated prose.** |
 | `custom.PM Reach-Out Reviewed` | string (date) | — | Date AISE last set or confirmed the current `custom.PM Reach-Out Status`. A Planhat workflow automation stamps today's date whenever the Status field changes; can also be set manually during a periodic review that reconfirms the value without changing it. Used to flag a stale status rather than trusting it blindly. |
 | `custom.Engagement Plan` | string (Rich text) | — | **Added 2026-09.** The full program plan — goals, milestones, phases, session sequence — for the account, written by `engagement-planner` (`/customer-plan --full`) on user approval. Replace wholesale on each revision; not an append/log field. `account-refresh` (`/customer-refresh`) refreshes status sections (workstream status, sessions delivered, open items, risks) in place and does not restructure goals or phases. **Rich text — format per § Rich Text Field Formatting, never plain/`\n`-separated prose. No `<h1>`–`<h6>` — use bold `<p><strong>` section labels.** |
@@ -1098,10 +1111,10 @@ Canonical logic for any agent creating a PB-side Planhat Task without an explici
 
 | Condition | Priority |
 |---|---|
-| `phase` = `1. Activation` or `2. Adoption` AND `arr` ≥ $50k · or urgent/blocker language · or the item gates a dated commitment made to the customer | `P1` |
+| `phase` = `1. Activation` or `2. Adoption` AND `custom.ARR – SF` ≥ $50k · or urgent/blocker language · or the item gates a dated commitment made to the customer | `P1` |
 | `phase` = `3. Renewal` AND the item affects the renewal conversation | `P1` |
-| `phase` = `1. Activation` or `2. Adoption` with `arr` < $50k · or `phase` = `0. Preparation` with `arr` ≥ $50k · or `arr` unknown | `P2` |
-| `phase` = `0. Preparation` with `arr` < $50k · or `3. Renewal` with no renewal impact · or low-urgency | `P3` |
+| `phase` = `1. Activation` or `2. Adoption` with `custom.ARR – SF` < $50k · or `phase` = `0. Preparation` with `custom.ARR – SF` ≥ $50k · or `custom.ARR – SF` unknown | `P2` |
+| `phase` = `0. Preparation` with `custom.ARR – SF` < $50k · or `3. Renewal` with no renewal impact · or low-urgency | `P3` |
 
 **Renewal proximity outranks the table:** when Company `renewalDate` is inside 45 days, nothing touching the renewal conversation goes below `P1`.
 

@@ -1,5 +1,10 @@
 # Changelog — aise-leadership
 
+## [1.14.4] — 2026-10-05
+
+### Fixed
+- **ARR now comes from `custom.ARR – SF`, never native `arr`.** `context/planhat-schema.md` synced from `aise-assistant` (new standing ARR rule). `report-builder` (both SELECTs and the ARR total) and `session-log-auditor` (domain-map filter) switched from `arr` to `custom.ARR – SF`.
+
 ## [1.14.3] — 2026-10-02
 
 ### Changed

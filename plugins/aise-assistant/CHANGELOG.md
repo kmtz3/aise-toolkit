@@ -5,6 +5,12 @@ Format: `## [version] — YYYY-MM-DD` followed by bullet points grouped by type.
 
 ---
 
+## [2.65.3] — 2026-10-05
+
+### Fixed
+- **ARR now comes from `custom.ARR – SF`, never native `arr`.** Planhat's native `arr` uses incorrect default logic that can't be changed. `context/planhat-schema.md` gains a standing rule (§ ARR — always use `custom.ARR – SF`) and the old "`arr` is the financial source of truth" line is corrected. The task-priority table and PM Reach-Out threshold use the SF field.
+- `session-prepper`, `account-refresh`, `bulk-account-setup`, `post-session-debrief`, `session-log-auditor`, `log-feedback` and `planhat-formula-builder` switched from `arr` to `custom.ARR – SF` in their SELECTs, filters and formula examples. Verified live: SELECT, filter (`[more than]`), sort and single-record reads all work on the custom field.
+
 ## [2.65.2] — 2026-10-03
 
 ### Fixed

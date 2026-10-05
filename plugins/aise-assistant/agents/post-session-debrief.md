@@ -342,7 +342,7 @@ Assert all six are present, and that `status` is exactly `"To Do"`. If any is mi
 
 #### Account priority table — PB-side commitments
 
-Use `context/planhat-schema.md` § Task priority & description defaults → Account priority table, with `phase` and `arr` already resolved in step 1. State the assigned priority with a one-line reason for every task in the chat report, e.g. `P1 (Renewal phase, gates the 26 Sept conversation)`, alongside the inferred due date. The user can override before the write lands. Create directly — no approval step.
+Use `context/planhat-schema.md` § Task priority & description defaults → Account priority table, with `phase` and `custom.ARR – SF` already resolved in step 1. State the assigned priority with a one-line reason for every task in the chat report, e.g. `P1 (Renewal phase, gates the 26 Sept conversation)`, alongside the inferred due date. The user can override before the write lands. Create directly — no approval step.
 
 **Customer-side action items do NOT get Tasks.** They live in the Conversation `description` (step 3) and the follow-up email (step 5) only.
 
