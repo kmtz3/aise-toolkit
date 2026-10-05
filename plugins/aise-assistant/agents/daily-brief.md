@@ -18,6 +18,7 @@ No required arguments. Optional:
 - `--date YYYY-MM-DD` — generate the brief for a specific date instead of today (tomorrow = date + 1).
 - `--open` — after saving, call `open <path>` to launch the file in the default browser.
 - `--no-blocks` — skip the calendar focus block creation step entirely.
+- `--no-debrief-check` — skip the "not yet debriefed this week" check (step 6b).
 - `--auto-prep` — for tomorrow's sessions found missing prep (step 4), run the full `session-prepper` procedure inline instead of just flagging the gap. This is a materially heavier and slower operation per session (deep context pull, KDD sub-page for Architecting sessions, facilitation HTML) — off by default so the everyday morning brief stays fast. When off, tomorrow's unprepped sessions are still flagged and still get a calendar focus block (step 5) — they just don't get written yet.
 
 ---
@@ -175,6 +176,20 @@ Do **not** use Priority to assign tiers — Priority is display-only context wit
 
 Overdue tasks anywhere → promote to Today tier and mark with 🔴 badge.
 
+### 6b. Check for undebriefed sessions this week (read-only)
+
+Skip if `--no-debrief-check` was passed. This step never writes to Planhat and never runs a debrief, it only surfaces the gap so a missed call is visible every morning.
+
+1. **Window.** Monday of the current ISO week (user's time zone) through now; on a Monday, from the previous Monday. Same window as the `bulk-debrief` weekly sweep (`agents/bulk-debrief.md` step 1b), so the brief and `/bulk --debrief` always agree on what counts as "this week".
+2. **Candidates and status.** Run `agents/bulk-debrief.md` steps 2–4 over that window, read-only: pull calendar events, keep external-confirmed events that have already ended (use `Bash: date -u +%Y-%m-%dT%H:%M:%SZ` for "now"), resolve each to its Planhat Company (owner = current user) and session record via the GCal event ID ladder, then classify via `custom.Debrief Status` (with the step 4C heuristic only for records where it is blank). Reuse any Company / session resolution already done in steps 3 and 4 for the same events.
+3. **Bucket each session:**
+   - `complete` / verified by heuristic → counted, not listed.
+   - **Not debriefed** (no record, stub only, Task done with no Conversation, or Conversation with findings but no Slack debrief Task) → listed.
+   - `partial - transcript pending` → listed separately as "Transcript pending".
+4. **Output.** For the HTML section and chat summary, each listed row carries: date, customer, session title, days since the call, and the reason (e.g. "no Conversation", "stub only", "no Slack debrief Task", "transcript pending"). If nothing is listed, render a one-line "All of this week's delivered sessions are debriefed" with the count checked.
+5. Do not run the debrief from here. The fix is `/bulk --debrief`, which sweeps the same window and queues exactly these sessions.
+6. If Calendar or Planhat is unavailable for this step, say so in the section rather than showing an empty list that looks like "all clear".
+
 ### 7. Render the HTML page
 
 Build a self-contained HTML file (inline CSS, no external dependencies, no CDN links). Structure:
@@ -199,6 +214,10 @@ Build a self-contained HTML file (inline CSS, no external dependencies, no CDN l
   [Badge: ✅ Prep done | 🚨 Prep needed → "📅 Prep block created [time]" | "⚠️ Not in Planhat"]
   [Topic: 2-sentence agreed topic — omit if no topic resolved]
   [Attendees]
+
+<section: Not debriefed this week>    ← omitted entirely under --no-debrief-check
+  [Date]  [Customer]  [Session title]  [N days ago]  [Badge: 🔴 Not debriefed (reason) | 🟡 Transcript pending]
+  Footer line: "Run /bulk --debrief to catch these up." Empty state: "All [N] delivered sessions this week are debriefed."
 
 <section: Open Tasks>
   ### 🔴 Today ([N])
@@ -250,6 +269,8 @@ Tomorrow:
 - [Customer] — [time] — 🚨 Prep needed → 📅 Block created [HH:MM–HH:MM][ · ✅ Full prep written to Planhat (--auto-prep) | ⚠️ Prep written to Notion only — not yet Planhat-migrated]
 - [Customer] — [time] — ✅ Prep already done
 
+Not debriefed this week: [N] of [M] delivered sessions – [Customer date (reason)], ... (run /bulk --debrief) | all [M] debriefed | check skipped (--no-debrief-check)
+
 ⚠️ Flags: [overdue tasks | sessions not in Planhat | blocked prep slots with no room | task count may be incomplete (migration gap)]
 ```
 
@@ -269,4 +290,5 @@ When `--auto-prep` published artifacts, add an **Artifacts** block underneath: o
 - **Never include customer names in the HTML filename.** Date only.
 - **If no free slot exists today and tomorrow morning is <90 min before the session**, note "no room for prep block" in chat rather than placing a block that would be useless.
 - **Customer confidentiality.** The daily-brief HTML stays local by default — do not upload or share it unless the user explicitly asks for it to be filed in Drive, in which case it follows `context/session-artifact-convention.md` as `{UserName}_{YYYY-MM-DD}_NA_Brief.html`. Per-session prep artifacts published under `--auto-prep` are a separate thing and do go to the `Customer Session Artifacts` folder.
+- **The debrief check (step 6b) is read-only.** It never creates Tasks, Conversations or calendar events and never runs a debrief. A failed lookup is reported as a failed check, never rendered as "all debriefed".
 - **Reporting transparency.** Never report a session as "prep done" or a task list as complete when the signal looks suspiciously absent (a Company with zero Tasks/Conversations ever, for an account you know is active) — flag it rather than silently under-report.

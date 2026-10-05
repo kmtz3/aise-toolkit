@@ -1,6 +1,6 @@
 ---
 name: bulk-debrief
-description: "Discover external customer meetings across a target date range (default: previous calendar day), resolve each one to its Planhat Task/Conversation via the Google Calendar event ID resolution ladder, check custom.Debrief Status (and fall back to the description-content heuristic for older records) to avoid duplicate writes, and execute the complete post-session-debrief procedure for each unprocessed session in sequence."
+description: "Discover external customer meetings across a target date range (default: previous calendar day) PLUS a standing weekly sweep of every delivered external session since Monday of the current week that is not yet debriefed, resolve each one to its Planhat Task/Conversation via the Google Calendar event ID resolution ladder, check custom.Debrief Status (and fall back to the description-content heuristic for older records) to avoid duplicate writes, and execute the complete post-session-debrief procedure for each unprocessed session in sequence."
 tools: Read, Grep, Glob, Task, Bash, mcp__claude_ai_Glean__search, mcp__claude_ai_Glean__chat, mcp__claude_ai_Glean__gmail_search, mcp__claude_ai_Glean__meeting_lookup, mcp__claude_ai_Glean__read_document, mcp__claude_ai_Gmail__search_threads, mcp__claude_ai_Gmail__get_thread, mcp__claude_ai_Gmail__list_drafts, mcp__claude_ai_Gmail__create_draft, mcp__claude_ai_Google_Calendar__list_events, mcp__claude_ai_Google_Calendar__get_event, mcp__claude_ai_Planhat__list_model_records, mcp__claude_ai_Planhat__get_model_record, mcp__claude_ai_Planhat__search_records, mcp__claude_ai_Planhat__update_model_record, mcp__claude_ai_Planhat__create_model_record, mcp__claude_ai_Planhat__get_model_action_parameters
 ---
 
@@ -17,13 +17,13 @@ After each session completes step 6, write a checkpoint file to `/tmp/bulk-debri
 ```json
 {
   "date_range": "<start_date>..<end_date>",
-  "flags": {"skip": ["<name>", "..."], "rerun": ["<name>", "..."]},
+  "flags": {"skip": ["<name>", "..."], "rerun": ["<name>", "..."], "no_sweep": false},
   "sessions_completed": [{"eventId": "...", "companyId": "...", "conversationId": "...", "customer": "<name>", "outcome": "summary"}],
   "sessions_pending": ["<eventId or event title>", "..."]
 }
 ```
 
-On start-up, check for an existing checkpoint for this date range. **Before trusting it, verify `flags.skip` and `flags.rerun` match this run's `--skip`/`--rerun` arguments exactly**, and that no mid-run queue expansion (step 5) is in play for a different set of dates. If they match, skip any session already in `sessions_completed` (log as "resumed — already debriefed this run") and re-present the queue (step 5) with only `sessions_pending`. If they don't match, discard the checkpoint and rebuild the queue from scratch. Delete the checkpoint file once the master summary (step 7) shows zero sessions pending.
+On start-up, check for an existing checkpoint for this date range. **Before trusting it, verify `flags.skip`, `flags.rerun` and `flags.no_sweep` match this run's `--skip`/`--rerun`/`--no-sweep` arguments exactly**, and that no mid-run queue expansion (step 5) is in play for a different set of dates. If they match, skip any session already in `sessions_completed` (log as "resumed — already debriefed this run") and re-present the queue (step 5) with only `sessions_pending`. If they don't match, discard the checkpoint and rebuild the queue from scratch. Delete the checkpoint file once the master summary (step 7) shows zero sessions pending.
 
 ---
 
@@ -39,6 +39,7 @@ No required arguments. Optional:
   - `--date YYYY-MM-DD` (legacy form, single day)
 - `--skip <customer>` — exclude a named customer from this run (repeatable).
 - `--rerun <customer>` — force-include a customer even if prior debrief signals are detected (repeatable).
+- `--no-sweep` — turn off the weekly sweep (step 1b) and debrief only the requested range. Natural-language equivalents: "just yesterday", "don't check the rest of the week", "only that day".
 
 ---
 
@@ -60,28 +61,40 @@ Parse the date argument into an inclusive `start_date`–`end_date` pair. Resolv
 
 Do not skip weekends — iterate the literal calendar days. If the parse is ambiguous, ask once: "Couldn't resolve `<arg>` to a date range — did you mean `<best-guess>`?"
 
+### 1b. Weekly sweep – widen the scope to the whole week so nothing slips
+
+**Standing rule, on by default for every run, whatever the date argument** (`yesterday`, `today`, `--date`, a custom range): every delivered external session from **Monday of the current ISO week (user's time zone; the previous Monday if today is Monday) through now** is checked, and any that is not yet debriefed is scooped into the queue alongside the requested range. A daily run on Thursday therefore also catches the Tuesday call that was missed on Wednesday, with no extra argument.
+
+1. `sweep_start` = Monday of the current ISO week; `sweep_end` = now (events that have ended; step 2's future-event filter still applies, so today's unfinished calls are excluded). **On a Monday, `sweep_start` rolls back to the previous Monday** (the whole of last week plus today), because on a Monday the current week has no delivered sessions yet and last Friday's calls are exactly what a Monday run needs to catch. The sweep is always "this week, and last week too if today is Monday".
+2. The **effective range** for steps 2–4 is the union of the requested range and `[sweep_start, sweep_end]`. A requested range that reaches back before this Monday (e.g. `last 10 days`) keeps its full length, the sweep only ever adds days, never trims them.
+3. Run steps 2–4 over the effective range unchanged. Tag each queue row `requested` (date inside the range the user asked for) or `swept` (date only inside the sweep window). Sessions already debriefed are skipped exactly as in step 4C, so the sweep costs nothing on a clean week.
+4. **Partial sessions get one transcript re-check during a sweep.** A session at `custom.Debrief Status: partial - transcript pending` normally skips by default. Inside the sweep window, run one `meeting_lookup` / Gong-scoped Glean attempt for it; if a transcript now resolves, queue it as `swept – transcript now available` (it runs as a rerun and replaces the placeholder). If nothing resolves, leave it skipped and do not create another re-debrief Task, one is already queued.
+5. `--skip <customer>` still excludes a customer from the sweep. `--no-sweep` disables 1b entirely and the effective range is just the requested range.
+6. The sweep is read-only until the step 5 confirmation: swept rows appear in the opening plan under their own label so the user can drop any with `adjust:`.
+
 ### 2. Pull all calendar events for the date range
 
-Call `list_events` once per day in the range (midnight to midnight, user's local timezone), or use a single call spanning the full range if the tool supports it.
+Call `list_events` **once per day** in the effective range (midnight to midnight, user's local timezone). Do not use one call spanning a week: a busy calendar overflows the tool's output limit (a 36-event week returned ~78 KB and had to be read from a saved file). If a per-day result is still saved to a file, read it with `jq` rather than inline.
 
 For each event collect: date, title, start/end time, attendee list with email domains and response statuses, event status (confirmed / tentative / cancelled).
 
 Filter OUT immediately:
 - Cancelled events.
-- Events where the user's response status is `declined`.
-- All-day events (OOO markers / blockers).
+- Events where the user's response status is `declined`. An event whose attendee list does not include the user (the user is only the **organizer**) has no response status and counts as **accepted**.
+- All-day events (OOO markers / blockers; they carry `start.date` with no `dateTime`) and events of type `focusTime` or `outOfOffice`.
+- Events with no attendees other than the user (lunch, prep blocks, solo focus time). Skip these silently, they are not "ambiguous".
 - Events matching any `--skip <customer>` argument (customer name appears in the title or attendee domain).
-- **Future events:** Events whose `end.dateTime` is still in the future at the moment the run executes. Get the current wall-clock time with `Bash: date -u +%Y-%m-%dT%H:%M:%SZ` and compare against each event's end time. An event that has not yet ended cannot have been delivered — skip it regardless of the date argument passed. Log these in the step 5 queue output under "Skipping — not yet delivered: `[title]` ends at `[end_time]`".
+- **Future events:** Events whose `end.dateTime` is still in the future at the moment the run executes. Get the current wall-clock time with `Bash: date -u +%Y-%m-%dT%H:%M:%SZ` and compare against each event's end time, normalising both to UTC first (the Calendar tool returns local-offset times such as `+02:00`). An event that has not yet ended cannot have been delivered — skip it regardless of the date argument passed. Log these in the step 5 queue output under "Skipping — not yet delivered: `[title]` ends at `[end_time]`".
 
 ### 3. Classify each remaining event
 
-**External-confirmed** (queue for debrief): ≥1 attendee with a non-`productboard.com` email domain, event confirmed, user accepted.
+**External-confirmed** (queue for debrief): ≥1 attendee with a non-`productboard.com` email domain, event confirmed, user accepted (organizer-only counts as accepted, see step 2).
 
 **External-tentative** (skip): ≥1 non-PB attendee but event or user's status is tentative — can't confirm it ran.
 
 **Internal-only** (skip): all attendees are `@productboard.com`.
 
-**Ambiguous** (hold for user input): attendee list empty or unavailable, or domain is ambiguous (e.g., a known reseller where external vs. customer status is unclear).
+**Ambiguous** (hold for user input): attendee list unavailable (not merely empty, an event with no other attendees is skipped in step 2), or domain is ambiguous (e.g., a known reseller where external vs. customer status is unclear).
 
 Collect only external-confirmed events for the debrief queue.
 
@@ -89,13 +102,14 @@ Collect only external-confirmed events for the debrief queue.
 
 **A. Identify the Planhat Company:**
 1. Extract company names from non-PB attendee email domains (e.g., `@acme.com` → Acme). Also scan the event title for company names.
-2. Resolve via `context/planhat-schema.md` § "How to look up a Planhat Company for a given customer": `search_records(QUERY: "<company name>")` filtered to `model: "Company"` — check the Customer Name Mapping table first for known mismatches; fall back to SF `sourceId` if a Salesforce Account ID is known.
-3. Single confident match → proceed. Multiple or ambiguous matches → surface candidates in the opening plan and ask the user to resolve before queuing. No match → mark **unmatched**, do not create a Company record.
+2. Resolve via `context/planhat-schema.md` § "How to look up a Planhat Company for a given customer": `search_records(QUERY: "<company name>")` filtered to `model: "Company"` — check the Customer Name Mapping table first for known mismatches; fall back to SF `sourceId` if a Salesforce Account ID is known. `search_records` returns mixed models and can crowd a Company out (a known-name account can come back with only Conversations/Tasks/End Users), so when it yields no Company, fall back to `list_model_records(MODEL: "Company", FILTER: {"domains[contains]": "<domain>"})`. That filter is a **substring** match: keep only Companies whose `domains` list contains the domain as an exact element (a subdomain such as `contractor.north.com` should also be tried as its parent `north.com`), and discard the rest.
+3. **Prefer the Company owned by the current user** when several match a domain (the workspace holds unowned duplicate Companies from separate SF accounts, and one domain can appear on several). Exactly one owned match, or one match that the event title confirms → proceed. Only treat the event as ambiguous when several *owned* Companies still match.
+   Single confident match → proceed. Multiple or ambiguous matches → surface candidates in the opening plan and ask the user to resolve before queuing. No match → mark **unmatched**, do not create a Company record. An unmatched event whose external organizer or attendees are a known vendor or tool (e.g. an onboarding call with a tooling vendor Productboard is buying from) is listed once under "Skipping — vendor / tool, not a customer session" with no warning, mirroring the `daily-brief` vendor rule, so it does not clutter every weekly sweep.
 4. **Ownership check** — verify the Company's `owner` equals the current user's Planhat id (same convention `bulk-prep-week.md` § Step 3 uses for the same reason: the workspace is shared with other AISEs). Mismatch → log as **⚠️ Ownership mismatch** and skip.
 
 **B. Resolve the session's Planhat Task/Conversation — the GCal event ID ladder.** Per `context/planhat-schema.md` § Session record resolution and the `CLAUDE.md` ground rule "Resolve the session's Planhat record by Google Calendar event ID before any write, and never create a second one":
 
-1. Derive both candidate IDs: `event.id` as returned, and the segment before the first `_` (the recurring-instance base ID), when one is present.
+1. Derive both candidate IDs: `event.id` as returned, and the segment before the first `_` (the recurring-instance base ID), when one is present. Neither form is canonical: Planhat stores some recurring sessions under the instance-stamped ID and others under the bare one, so always try both before concluding a miss.
 2. `list_model_records(MODEL: "Conversation", FILTER: {"externalId[equal to]": "<candidate>"})` — try both candidates.
    - **Hit** → this is the session's Conversation, already logged. Go to **C**.
 3. `list_model_records(MODEL: "Task", FILTER: {"sourceId[equal to]": "<candidate>"})` — try both candidates.
@@ -126,13 +140,14 @@ Collect only external-confirmed events for the debrief queue.
 Before executing any debriefs, surface (group queue rows by date when the range spans multiple days):
 
 ```
-## Bulk debrief — [start_date] → [end_date]
+## Bulk debrief — [start_date] → [end_date] (+ week sweep from [Monday])
 
-**Queued for debrief ([N] sessions):**
-| # | Date | Customer | Planhat record | Debrief state |
-|---|---|---|---|---|
-| 1 | YYYY-MM-DD | [name] | [Task/Conversation _id, or "none yet"] | Fresh |
-| 2 | YYYY-MM-DD | [name] | [_id] | ⚠️ Not debriefed — Task done, no Conversation found |
+**Queued for debrief ([N] sessions – [R] requested, [S] swept in from earlier this week):**
+| # | Date | Customer | Planhat record | Debrief state | Scope |
+|---|---|---|---|---|---|
+| 1 | YYYY-MM-DD | [name] | [Task/Conversation _id, or "none yet"] | Fresh | requested |
+| 2 | YYYY-MM-DD | [name] | [_id] | ⚠️ Not debriefed — Task done, no Conversation found | swept |
+| 3 | YYYY-MM-DD | [name] | [Conversation _id] | Partial, transcript now available | swept |
 
 **Likely already debriefed — skipping:**
 (Add --rerun <customer> in your reply to force-include)
@@ -203,9 +218,9 @@ Run sessions in chronological order (earliest meeting first).
 ## Bulk debrief complete — [start_date] → [end_date]
 
 **Debriefed ([N]):**
-| Date | Customer | Planhat record | Gmail draft subject | Tasks created (with priority) | Contacts enriched | Next Step refreshed | Skipped (dedup) | Flags |
-|---|---|---|---|---|---|---|---|---|
-| YYYY-MM-DD | [name] | [Conversation _id] | [subject or "no draft — transcript pending"] | [N] | [N, or "none"] | [one-line new value, or "no prior value / nothing new"] | [e.g., "session notes already existed"] | [any, e.g. "⚠️ Partial — transcript pending"] |
+| Date | Customer | Scope | Planhat record | Gmail draft subject | Tasks created (with priority) | Contacts enriched | Next Step refreshed | Skipped (dedup) | Flags |
+|---|---|---|---|---|---|---|---|---|---|
+| YYYY-MM-DD | [name] | requested / swept | [Conversation _id] | [subject or "no draft — transcript pending"] | [N] | [N, or "none"] | [one-line new value, or "no prior value / nothing new"] | [e.g., "session notes already existed"] | [any, e.g. "⚠️ Partial — transcript pending"] |
 
 After the tables, list every contact whose `custom.AISE Relationship` moved to `1. Key contact`, and every person with real signal who had no End User record (step 3b-A) — both are decisions for the user, and both are easy to lose inside a per-session block.
 
@@ -227,6 +242,7 @@ After the tables, list every contact whose `custom.AISE Relationship` moved to `
 
 ## Guardrails
 
+- **The weekly sweep (step 1b) is on by default and never silent.** Every run checks all delivered external sessions since Monday of the current week (since the previous Monday when today is Monday) and queues the undebriefed ones. Swept rows are always labelled in the opening plan and the master summary, and only `--no-sweep` turns the sweep off. The sweep uses the same ownership check, `--skip`, dedup and `custom.Debrief Status` rules as the requested range: it widens the scope, it never relaxes a check.
 - **One confirmation gate (with one expansion round)** — step 5. After the final approval, run all debriefs without pausing between sessions.
 - **Never title-search as the primary match.** The GCal event ID ladder (step 4B) is mandatory before falling to the company+date+title fallback — matches by title alone are exactly what historically produced duplicate session records. Report every title-matched fallback explicitly.
 - **`custom.Debrief Status` is the primary debrief signal** — `complete` means skip, `partial - transcript pending` means skip by default, blank means fall through to the heuristic. A resolved Conversation alone — even with real `description` content — is not sufficient without either the field or a verified Slack debrief Task (step 4C heuristic). Never short-circuit step 4C by assuming the field is set on older records.

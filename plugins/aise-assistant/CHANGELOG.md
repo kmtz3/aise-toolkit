@@ -5,6 +5,12 @@ Format: `## [version] — YYYY-MM-DD` followed by bullet points grouped by type.
 
 ---
 
+## [2.66.0] — 2026-10-05
+
+### Added
+- **`/bulk --debrief` weekly sweep (on by default).** Every delivered external session from Monday of the current week (previous Monday if today is Monday) through now is checked, and any not yet debriefed is added to the queue, labelled `swept`. The sweep only ever widens the date range. Partial sessions get one transcript re-check. New `--no-sweep` flag turns it off, and it is recorded in the checkpoint flags.
+- **`/daily-brief` undebriefed-sessions check (step 6b).** Read-only section listing this week's delivered sessions with no debrief (with reason and days since the call) and those with a transcript pending, pointing to `/bulk --debrief`. Uses the same window as the sweep. New `--no-debrief-check` flag skips it. A failed lookup is reported as a failed check, never as "all debriefed".
+
 ## [2.65.3] — 2026-10-05
 
 ### Fixed
