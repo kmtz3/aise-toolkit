@@ -1,5 +1,10 @@
 # Changelog — aise-leadership
 
+## [1.14.5] — 2026-10-06
+
+### Changed
+- `context/planhat-schema.md` synced from `aise-assistant` (`custom.Debrief Status` now documents the `ignored` value; task-hygiene and paging notes).
+
 ## [1.14.4] — 2026-10-05
 
 ### Fixed

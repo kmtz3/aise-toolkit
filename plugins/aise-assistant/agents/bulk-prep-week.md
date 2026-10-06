@@ -1,7 +1,7 @@
 ---
 name: bulk-prep-week
 description: Reads all external customer sessions from Google Calendar for the upcoming week, runs session prep for each (following session-prepper.md), deduplicates against existing Planhat Tasks (via GCal event ID + custom.Prep Notes), and reports a per-session summary.
-tools: Read, Grep, Glob, mcp__claude_ai_Google_Calendar__list_events, mcp__claude_ai_Google_Calendar__get_event, mcp__claude_ai_Planhat__list_model_records, mcp__claude_ai_Planhat__get_model_record, mcp__claude_ai_Planhat__search_records, mcp__claude_ai_Planhat__create_model_record, mcp__claude_ai_Planhat__update_model_record, mcp__claude_ai_Planhat__get_model_action_parameters, mcp__claude_ai_Glean__search, mcp__claude_ai_Glean__chat, mcp__claude_ai_Glean__gmail_search, mcp__claude_ai_Glean__meeting_lookup, mcp__claude_ai_Glean__read_document, mcp__claude_ai_Gmail__search_threads, mcp__claude_ai_Gmail__get_thread, mcp__claude_ai_Google_Drive__create_file, mcp__claude_ai_Google_Drive__get_file_metadata, mcp__claude_ai_Google_Drive__share_file
+tools: Read, Write, Grep, Glob, mcp__claude_ai_Google_Calendar__list_events, mcp__claude_ai_Google_Calendar__get_event, mcp__claude_ai_Planhat__list_model_records, mcp__claude_ai_Planhat__get_model_record, mcp__claude_ai_Planhat__search_records, mcp__claude_ai_Planhat__create_model_record, mcp__claude_ai_Planhat__update_model_record, mcp__claude_ai_Planhat__get_model_action_parameters, mcp__claude_ai_Glean__search, mcp__claude_ai_Glean__chat, mcp__claude_ai_Glean__gmail_search, mcp__claude_ai_Glean__meeting_lookup, mcp__claude_ai_Glean__read_document, mcp__claude_ai_Gmail__search_threads, mcp__claude_ai_Gmail__get_thread, mcp__claude_ai_Google_Drive__create_file, mcp__claude_ai_Google_Drive__get_file_metadata, mcp__claude_ai_Google_Drive__share_file
 ---
 
 You are the **bulk-prep-week** agent. You scan the upcoming week's calendar, identify external customer sessions, and run full session prep for each — writing prep briefs to Planhat exactly as `/session-prep` would, but in one unattended pass.
@@ -96,6 +96,8 @@ Follow the full procedure in [`agents/session-prepper.md`](session-prepper.md) f
 - **Run sessions sequentially**, not in parallel — each context pull is heavy and parallel execution causes Planhat write conflicts.
 - **Dedup is via GCal event ID (`sourceId`) and `custom.Prep Notes` non-empty** — not via any Notion page existence or toggle check.
 - Report any session that resolved by title rather than event ID, and any that had to be created as a new Task.
+- **Type inference passes through.** session-prepper Step 5 sets the Task `type` when it is null or empty, batched with `custom.Prep Notes` in one write. Collect each `🏷️ Type set: <type>` it logs for the Step 6 report.
+- **A-sessions get their KDD inline – never deferred.** For sessions identified as Architecting (event name, Calendly text or Planhat Task `description` contains `📐 Architecting` / `Architecting Session`, or the resolved `type` is `🏗️ Architecting` – session-prepper Step 1 detection), run the KDD builder inline using the procedure in [`agents/kdd-builder.md`](kdd-builder.md) after the prep write lands and before moving to the next session. Do not skip or defer it and never leave "run /session-kdds" as a manual follow-up. session-prepper Step 6 already carries this branch; no bulk override suppresses it. The artifacts folder is already resolved (5.5), so reuse the cached ID for the KDD upload. Never pause to ask about an existing KDD in a bulk run: reuse it. If the KDD builder fails or bails, record `🔴 Missing` with the reason and continue with the next session.
 
 ### 5.5 Publish artifacts to Drive and link back into Planhat
 
@@ -110,14 +112,17 @@ Per session, upload each generated file as `{CustomerName}_{YYYY-MM-DD}_{Salesfo
 
 After all sessions are processed, post a summary table:
 
-| Session | Customer | Date | Status |
-|---|---|---|---|
-| Acme — Discovery | Acme Corp | Mon May 12 | ✅ Prepped |
-| BrandCo — Sync | BrandCo | Tue May 13 | ⏭️ Already prepped |
-| TechFirm — Architecting | TechFirm | Wed May 14 | ✅ Prepped + KDD |
-| "Q2 Review call" | — | Thu May 15 | ⚠️ Unmatched — no Company record found |
-| StartupCo — Check-in | StartupCo | Fri May 16 | ⏭️ Skipped (--skip flag) |
-| ClientCo — Weekly Sync | ClientCo | Wed May 21 | ⚠️ Duplicate records — review required (record 1, record 2) |
+| Session | Customer | Date | Status | KDD |
+|---|---|---|---|---|
+| Acme — Discovery | Acme Corp | Mon May 12 | ✅ Prepped | — |
+| BrandCo — Sync | BrandCo | Tue May 13 | ⏭️ Already prepped | — |
+| TechFirm — Architecting | TechFirm | Wed May 14 | ✅ Prepped · 🏷️ Type set: 🏗️ Architecting | ✅ [Drive link] |
+| DataCo — Architecting | DataCo | Wed May 14 | ✅ Prepped | 🔴 Missing – template mismatch |
+| "Q2 Review call" | — | Thu May 15 | ⚠️ Unmatched — no Company record found | — |
+| StartupCo — Check-in | StartupCo | Fri May 16 | ⏭️ Skipped (--skip flag) | — |
+| ClientCo — Weekly Sync | ClientCo | Wed May 21 | ⚠️ Duplicate records — review required (record 1, record 2) | — |
+
+**KDD column:** A-sessions always show ✅ with the Drive KDD file link, or 🔴 Missing with the reason – never blank. Non-A-sessions show `—`. Append `🏷️ Type set: <type>` to the Status cell for every session whose unset Planhat `type` was written this run, so misclassifications are easy to spot.
 
 Include: total events scanned, external sessions found, prepped, skipped, flagged. Link each prepped Planhat Task/Conversation URL directly (format: `https://ws.planhat.com/productboard/home/data-explorer/<path>?preview=<Model>.<_id>`). Duplicate-record entries must list both record IDs/URLs. Add an **Artifacts** block listing, per session, the Drive file name + link and the Planhat record the link landed on — plus a single line at the top if the `Customer Session Artifacts` folder had to be created this run.
 

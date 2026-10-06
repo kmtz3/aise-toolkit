@@ -5,6 +5,21 @@ Format: `## [version] — YYYY-MM-DD` followed by bullet points grouped by type.
 
 ---
 
+## [2.67.0] — 2026-10-06
+
+### Added
+- **`ignored` debrief status.** `custom.Debrief Status: "ignored"` marks a session that was cancelled or did not occur. `bulk-debrief` skips it permanently (never queued, never re-checked, `--rerun` has no effect). Documented in `context/planhat-schema.md` and the `post-session-debrief` guardrails.
+- **`/bulk --debrief --mark-ignored <customer>`** writes `ignored` on that session's Planhat record instead of debriefing it (for no-shows, verbal cancellations, reschedules without a GCal update). **`--force-ignored <customer>`** re-evaluates an ignored session for one run. Both are recorded in the checkpoint flags.
+- **Cancelled-event cleanup.** GCal-cancelled external events now have their orphaned Planhat Task/Conversation marked `ignored` (after the queue confirmation, ownership-checked, never overwriting `complete` / `partial`).
+- **"Ignored — session did not occur" section** in the `bulk-debrief` queue and master summary.
+
+### Fixed
+- **`bulk-debrief` timezone bug.** The UTC window for each day is now computed from the profile time zone and verified with `zoneinfo` before the first `list_events` call; never a default offset. A wrong offset used to silently return zero events.
+
+### Changed
+- `bulk-prep-week` and `session-prepper`: type inference passthrough, inline KDD for A-sessions, KDD column in the report.
+- `daily-brief`: run modes (cloud/scheduled, Cowork, CLI), paged task fetch, template/stale task handling, per-session open tasks, top-risk line and back-to-back flag, user-timezone display.
+
 ## [2.66.0] — 2026-10-05
 
 ### Added

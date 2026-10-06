@@ -17,13 +17,13 @@ After each session completes step 6, write a checkpoint file to `/tmp/bulk-debri
 ```json
 {
   "date_range": "<start_date>..<end_date>",
-  "flags": {"skip": ["<name>", "..."], "rerun": ["<name>", "..."], "no_sweep": false},
+  "flags": {"skip": ["<name>", "..."], "rerun": ["<name>", "..."], "mark_ignored": ["<name>", "..."], "force_ignored": ["<name>", "..."], "no_sweep": false},
   "sessions_completed": [{"eventId": "...", "companyId": "...", "conversationId": "...", "customer": "<name>", "outcome": "summary"}],
   "sessions_pending": ["<eventId or event title>", "..."]
 }
 ```
 
-On start-up, check for an existing checkpoint for this date range. **Before trusting it, verify `flags.skip`, `flags.rerun` and `flags.no_sweep` match this run's `--skip`/`--rerun`/`--no-sweep` arguments exactly**, and that no mid-run queue expansion (step 5) is in play for a different set of dates. If they match, skip any session already in `sessions_completed` (log as "resumed — already debriefed this run") and re-present the queue (step 5) with only `sessions_pending`. If they don't match, discard the checkpoint and rebuild the queue from scratch. Delete the checkpoint file once the master summary (step 7) shows zero sessions pending.
+On start-up, check for an existing checkpoint for this date range. **Before trusting it, verify `flags.skip`, `flags.rerun`, `flags.mark_ignored`, `flags.force_ignored` and `flags.no_sweep` match this run's `--skip`/`--rerun`/`--mark-ignored`/`--force-ignored`/`--no-sweep` arguments exactly**, and that no mid-run queue expansion (step 5) is in play for a different set of dates. If they match, skip any session already in `sessions_completed` (log as "resumed — already debriefed this run") and re-present the queue (step 5) with only `sessions_pending`. If they don't match, discard the checkpoint and rebuild the queue from scratch. Delete the checkpoint file once the master summary (step 7) shows zero sessions pending.
 
 ---
 
@@ -39,6 +39,8 @@ No required arguments. Optional:
   - `--date YYYY-MM-DD` (legacy form, single day)
 - `--skip <customer>` — exclude a named customer from this run (repeatable).
 - `--rerun <customer>` — force-include a customer even if prior debrief signals are detected (repeatable).
+- `--mark-ignored <customer>` — do not debrief this customer's session(s); instead write `custom.Debrief Status: "ignored"` on the session's Planhat record and skip it permanently (repeatable). For sessions that were GCal-confirmed but never ran (no-show, verbal cancellation, rescheduled without a GCal update). Natural-language equivalents: "that call didn't happen", "mark the Acme session as a no-show", "silence that one".
+- `--force-ignored <customer>` — escape hatch: treat a session at `custom.Debrief Status: "ignored"` as blank for this run so it can be re-evaluated and queued (repeatable). `--rerun` does not do this.
 - `--no-sweep` — turn off the weekly sweep (step 1b) and debrief only the requested range. Natural-language equivalents: "just yesterday", "don't check the rest of the week", "only that day".
 
 ---
@@ -47,7 +49,7 @@ No required arguments. Optional:
 
 ### 1. Resolve the target date range
 
-Parse the date argument into an inclusive `start_date`–`end_date` pair. Resolve the user's time zone via `list_model_records(MODEL:"User", FILTER:{"email[equal to]":"<email>"}, SELECT:["firstName","lastName","email"])` → `planhat_user_id` (or the pre-resolved table in `context/planhat-schema.md` § Planhat User IDs), then `get_model_record(MODEL:"User", OBJECT_ID:"{planhat_user_id}", SELECT:["custom.AISE Identity"])` — the field is HTML rich text (`<p>Key: value</p>` per line, not `\n`-separated; strip tags before parsing — see `context/planhat-user-profile.md`) → parse the `Timezone` line.
+Parse the date argument into an inclusive `start_date`–`end_date` pair. Resolve the user's time zone via `list_model_records(MODEL:"User", FILTER:{"email[equal to]":"<email>"}, SELECT:["firstName","lastName","email"])` → `planhat_user_id` (or the pre-resolved table in `context/planhat-schema.md` § Planhat User IDs), then `get_model_record(MODEL:"User", OBJECT_ID:"{planhat_user_id}", SELECT:["custom.AISE Identity"])` — the field is HTML rich text (`<p>Key: value</p>` per line, not `\n`-separated; strip tags before parsing — see `context/planhat-user-profile.md`) → parse the `Timezone` line (an IANA name such as `Europe/Prague`). Keep it for step 2. **Never fall back to a default or guessed UTC offset** — if the line is missing or unparseable, stop and ask the user for their time zone before any `list_events` call.
 
 | Argument                  | Resolves to                                                                 |
 |---------------------------|------------------------------------------------------------------------------|
@@ -74,17 +76,31 @@ Do not skip weekends — iterate the literal calendar days. If the parse is ambi
 
 ### 2. Pull all calendar events for the date range
 
-Call `list_events` **once per day** in the effective range (midnight to midnight, user's local timezone). Do not use one call spanning a week: a busy calendar overflows the tool's output limit (a 36-event week returned ~78 KB and had to be read from a saved file). If a per-day result is still saved to a file, read it with `jq` rather than inline.
+**Compute the UTC window from the parsed time zone before the first `list_events` call.** Convert each day's local midnight-to-midnight window to UTC using the `Timezone` parsed in step 1 (e.g. `Europe/Prague` in summer is CEST, UTC+2, so 4 Oct local midnight = `2026-10-03T22:00:00Z`; in winter it is CET, UTC+1). The offset changes with DST, so verify it per day rather than assuming one for the whole range:
+
+```
+Bash: python3 -c "from zoneinfo import ZoneInfo; from datetime import datetime; tz=ZoneInfo('<timezone>'); print(datetime(<year>, <month>, <day>, tzinfo=tz).utcoffset())"
+```
+
+A wrong offset does not error: it silently returns only all-day blockers or nothing at all (a `-07:00` offset used in place of `+02:00` once produced a zero-event day). If a day comes back with zero timed events or only all-day blockers on a day the user normally has meetings, re-check the offset before trusting the result.
+
+Call `list_events` **once per day** in the effective range (midnight to midnight, user's local timezone, using the verified offset). Do not use one call spanning a week: a busy calendar overflows the tool's output limit (a 36-event week returned ~78 KB and had to be read from a saved file). If a per-day result is still saved to a file, read it with `jq` rather than inline.
 
 For each event collect: date, title, start/end time, attendee list with email domains and response statuses, event status (confirmed / tentative / cancelled).
 
 Filter OUT immediately:
-- Cancelled events.
+- Cancelled events — **but first run the cancelled-event cleanup below**, so their orphaned Planhat records do not linger.
 - Events where the user's response status is `declined`. An event whose attendee list does not include the user (the user is only the **organizer**) has no response status and counts as **accepted**.
 - All-day events (OOO markers / blockers; they carry `start.date` with no `dateTime`) and events of type `focusTime` or `outOfOffice`.
 - Events with no attendees other than the user (lunch, prep blocks, solo focus time). Skip these silently, they are not "ambiguous".
 - Events matching any `--skip <customer>` argument (customer name appears in the title or attendee domain).
 - **Future events:** Events whose `end.dateTime` is still in the future at the moment the run executes. Get the current wall-clock time with `Bash: date -u +%Y-%m-%dT%H:%M:%SZ` and compare against each event's end time, normalising both to UTC first (the Calendar tool returns local-offset times such as `+02:00`). An event that has not yet ended cannot have been delivered — skip it regardless of the date argument passed. Log these in the step 5 queue output under "Skipping — not yet delivered: `[title]` ends at `[end_time]`".
+
+**Cancelled-event cleanup (resolve now, write after the step 5 confirmation).** The GCal→Planhat sync creates a Task for each confirmed event and does not update it when the event is later cancelled, so the Task (and any Conversation it converted to) keeps a blank `custom.Debrief Status` forever. Filtering the cancelled event out of the queue is not enough. For each cancelled event in the effective range, where the user is not `declined` and at least one attendee is non-`@productboard.com`:
+1. Resolve the Company and session record exactly as in step 4A (including the ownership check) and step 4B (the full event ID ladder, both candidate IDs). The Task and Conversation share an `_id` (`context/planhat-schema.md` § "The Task and its Conversation share an `_id`").
+2. Record the target: the Conversation when one exists. If only an open Task exists (never converted), check `get_model_action_parameters(MODEL: "Task")` for `custom.Debrief Status`; write it on the Task if the field exists, otherwise list the Task under "Needs manual follow-up" in step 7 and do not write.
+3. **Never overwrite a real signal.** If the record's `custom.Debrief Status` is already `complete` or `partial - transcript pending`, or its `description` carries real debrief findings, leave it alone and flag `⚠️ Cancelled in GCal but already debriefed: [title]` instead.
+4. Otherwise queue the write `custom.Debrief Status: "ignored"` and list it in the step 5 plan under "Skipping — cancelled in GCal, Planhat record marked ignored". Execute these writes after the user confirms step 5, and read each back. No match found → nothing to clean up; do not create a record.
 
 ### 3. Classify each remaining event
 
@@ -97,6 +113,8 @@ Filter OUT immediately:
 **Ambiguous** (hold for user input): attendee list unavailable (not merely empty, an event with no other attendees is skipped in step 2), or domain is ambiguous (e.g., a known reseller where external vs. customer status is unclear).
 
 Collect only external-confirmed events for the debrief queue.
+
+**Confirmed in GCal but did not run (no-show, verbal cancellation, rescheduled without a GCal update).** GCal cannot tell the agent this. If the user knows a confirmed event did not run, they can write `custom.Debrief Status: "ignored"` directly on the Planhat record, or pass `--mark-ignored <customer>` and let step 5 write it. Either way bulk-debrief then skips the session permanently. `--skip <customer>` is only per-run; `"ignored"` is permanent. Without this, such a session would run a debrief, find no transcript, stall at `partial - transcript pending` and never resolve.
 
 ### 4. Resolve each external-confirmed event to its Planhat Company and session record, and check for a completed debrief
 
@@ -124,6 +142,7 @@ Collect only external-confirmed events for the debrief queue.
 **Primary check — `custom.Debrief Status` field.** `post-session-debrief` sets this field at the end of every successful run. Read it first:
 
 - `"complete"` → **confirmed debriefed.** Skip unless `--rerun <customer>`.
+- `"ignored"` → **session was cancelled or did not occur.** Skip permanently: never queue, never re-check (not even in the weekly sweep), and `--rerun` has no effect. Show it in the "Ignored" section of the step 5 plan. Escape hatch: `--force-ignored <customer>` treats it as blank for this run. (The legacy value `"skipped"`, if seen on an older record, means a deliberate exclusion from a bulk run and is handled the same way.)
 - `"partial - transcript pending"` → **partial from prior run.** Skip by default — the placeholder-debrief branch already queued its own re-debrief Task; `--rerun <customer>` to force a fresh attempt now that Gong may have caught up.
 - blank / unset → the field predates this run or the debrief never completed. Fall through to the heuristic below.
 
@@ -158,6 +177,11 @@ Before executing any debriefs, surface (group queue rows by date when the range 
 | YYYY-MM-DD | [name] | [Conversation _id] | Confirmed debriefed — real findings in description + Slack debrief Task verified (pre-field heuristic) |
 | YYYY-MM-DD | [name] | [Conversation _id] | Partial — transcript was pending as of last run (pre-field heuristic) |
 
+**Ignored — session did not occur ([N]):**
+| Date | Customer | Planhat record | Ignored since |
+|---|---|---|---|
+| YYYY-MM-DD | [name] | [_id] | [date `custom.Debrief Status` was set — the record's `updatedAt` is the best available proxy; "unknown" if it cannot be read] |
+
 **Ambiguous (need your input before queuing):**
 - "[Event title]" — matches [Customer A] or [Customer B]?
 
@@ -167,11 +191,16 @@ Before executing any debriefs, surface (group queue rows by date when the range 
 - "[Event title]" — unmatched customer (no Planhat Company found for @[domain])
 - "[Event title]" — ⚠️ Ownership mismatch (Company owner ≠ current user)
 - "[Event title]" — excluded via --skip
+- "[Event title]" — cancelled in GCal, Planhat record marked ignored (write runs after you confirm)
+- "[Event title]" — ⚠️ cancelled in GCal but already debriefed, left untouched
+- "[Customer] [Date]" — `--mark-ignored`: will write `custom.Debrief Status: "ignored"` instead of debriefing (write runs after you confirm)
 ```
 
 Ask: **"Proceed with this queue, expand it (e.g. add another day or specific session), or adjust? (yes / add: <date or session> / adjust: <what to change>)"**
 
 Wait for the user's go-ahead.
+
+**After the go-ahead and before any debrief:** run the pending ignored-writes: the cancelled-event cleanup from step 2 and any `--mark-ignored <customer>` targets. For `--mark-ignored`, resolve the customer's session record through step 4B; if the customer has several sessions in the effective range, list them in the plan and ask which one(s) before writing. Remove the marked session from the debrief queue, write `custom.Debrief Status: "ignored"` (on the Conversation, or the Task per step 2 rule 2), and read it back. Never overwrite `complete` or `partial - transcript pending` with `ignored` without the user explicitly confirming that exact record.
 
 **Mid-run queue expansion (one round).** If the user's reply asks to add dates or specific sessions ("yes and also today I had 2 calls", "include May 14", "add the Acme sync"):
 1. Re-run discovery (step 2) for the added dates / sessions, applying the same matching + dedup checks (steps 3–4).
@@ -229,10 +258,17 @@ After the tables, list every contact whose `custom.AISE Relationship` moved to `
 |---|---|---|---|
 | YYYY-MM-DD | [name] | [Conversation _id] | Confirmed debriefed — real findings in description |
 
+**Ignored — session did not occur ([N]):**
+| Date | Customer | Planhat record | Ignored since |
+|---|---|---|---|
+| YYYY-MM-DD | [name] | [_id] | [date set, or "this run — cancelled in GCal" / "this run — `--mark-ignored`"] |
+
 **Skipped — other reasons ([N]):**
 | Event | Reason |
 |---|---|
 | [title] | [reason] |
+
+**Open debrief tasks (not part of this run's queue):** existing open Planhat Tasks whose `action` matches `Slack debrief` or `Re-debrief`, grouped by Company with count and oldest due date (read from the Task model, owner = current user, paged per `context/planhat-schema.md` § API Quirks: result caps and paging). `/daily-brief` step 6b shows the same group; list it here so a bulk run does not leave the standing backlog invisible. Read-only, and omit the line when there are none.
 
 **Needs manual follow-up:**
 - [Missing source material, unresolved conflicts, sessions awaiting Gong transcript processing, or questions requiring user input across all runs]
@@ -245,13 +281,15 @@ After the tables, list every contact whose `custom.AISE Relationship` moved to `
 - **The weekly sweep (step 1b) is on by default and never silent.** Every run checks all delivered external sessions since Monday of the current week (since the previous Monday when today is Monday) and queues the undebriefed ones. Swept rows are always labelled in the opening plan and the master summary, and only `--no-sweep` turns the sweep off. The sweep uses the same ownership check, `--skip`, dedup and `custom.Debrief Status` rules as the requested range: it widens the scope, it never relaxes a check.
 - **One confirmation gate (with one expansion round)** — step 5. After the final approval, run all debriefs without pausing between sessions.
 - **Never title-search as the primary match.** The GCal event ID ladder (step 4B) is mandatory before falling to the company+date+title fallback — matches by title alone are exactly what historically produced duplicate session records. Report every title-matched fallback explicitly.
-- **`custom.Debrief Status` is the primary debrief signal** — `complete` means skip, `partial - transcript pending` means skip by default, blank means fall through to the heuristic. A resolved Conversation alone — even with real `description` content — is not sufficient without either the field or a verified Slack debrief Task (step 4C heuristic). Never short-circuit step 4C by assuming the field is set on older records.
+- **`custom.Debrief Status` is the primary debrief signal** — `ignored` means skip permanently (never queued, `--rerun` has no effect, only `--force-ignored` overrides), `complete` means skip, `partial - transcript pending` means skip by default, blank means fall through to the heuristic. A resolved Conversation alone — even with real `description` content — is not sufficient without either the field or a verified Slack debrief Task (step 4C heuristic). Never short-circuit step 4C by assuming the field is set on older records.
 - **Every session `post-session-debrief` completes in a bulk run refreshes `custom.Next Step` on that Company** — that agent's step 10, not optional, and it applies whether the session ran inline or in a sub-agent. When running in sub-agent mode, the output contract above must report the refreshed value so it lands in the master summary — an untracked Next Step write in a bulk run is easy to lose.
 - **Every session enriches its contacts** — `post-session-debrief` step 3b, not optional, inline or sub-agent. A bulk run is where contact enrichment pays off most (a week of sessions is a week of evidence about the same people) and also where it is easiest to lose: the sub-agent output contract must carry the per-contact changes through to the master summary. The same guardrails apply unchanged in bulk — relationship only moves up, no End User is ever created, and every write is read back.
 - **Every Task created anywhere in a bulk run carries `custom.Priority`.** `post-session-debrief` step 4 owns the priority tables; this agent must not relax them. When the debrief runs in a sub-agent, the sub-agent prompt must repeat this rule and the output contract must report the priority per task — an unprioritized task created in bulk is the easiest kind to lose, because nobody reviews it one at a time.
 - **Dedup is non-destructive.** "Skip" means the existing record is left exactly as-is. Never overwrite an existing Conversation `description`, Task, or Gmail draft silently.
 - **Bulk-run context flag is mandatory.** Pass it to `post-session-debrief` (inline or sub-agent) so dedup defaults inside that agent fall to "skip" (not "ask user") — the user gave one confirmation for the whole queue; individual interruptions break the flow.
 - **Queue-size mode is mandatory.** Inline for 1–3 sessions, sub-agent per session for 4+. Do not run 4+ sessions inline — context exhaustion mid-run has been observed and aborts the loop.
+- **Ignored writes are narrow and verified.** The only agent writes in this procedure besides `post-session-debrief` are `custom.Debrief Status: "ignored"` (cancelled-event cleanup and `--mark-ignored`). They happen after the step 5 confirmation, are ownership-checked, never overwrite `complete` / `partial - transcript pending`, and are read back. Never create a record just to mark it ignored.
+- **Time zone comes from the user's profile, never a default.** Verify the UTC offset (step 2) before the first `list_events` call.
 - **Never create Planhat Company records.** Unmatched = flagged, not auto-created.
 - **Ownership check applies to every session.** If a queued customer's Company `owner` doesn't match the current user's Planhat id, skip that session, surface the conflict, and continue the queue.
 - **External filter is strict.** When attendee domain is ambiguous, surface for user input rather than queuing blindly.

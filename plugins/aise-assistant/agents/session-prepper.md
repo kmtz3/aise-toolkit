@@ -26,6 +26,7 @@ This prevents context-window exhaustion before any writes land.
 - **Calendar lookup strategy:** list ALL events for the target day using `list_events` with only a date range — no text/keyword filter. Then scan event titles for the customer name as a substring, with and without spaces (e.g. `Symphony` matches both `Symphony AI` and `SymphonyAI`). Do **not** rely on the calendar API's text-search parameter for customer-name matching — it is unreliable with compound names, `+`/`|` separators, and run-together words.
 - Once identified, use `get_event` to confirm date, attendees, session type.
 - Session types: `🏗️ Architecting`, `🗣️ Sync`, `🎓 Training`, `👟 Kick off`, `🔎 Discovery`, `📦 Other`.
+- **Architecting detection (A-session).** Treat the session as `🏗️ Architecting` when any of these signals is present, not only when the calendar title says so: the event name or Calendly booking text contains `📐 Architecting` or `Architecting Session` (Calendly's `--- Event Name ---` block is copied into the Planhat Task `description` on GCal-synced Tasks, so read that too); the Task/Conversation `type` is already `🏗️ Architecting`; or the engagement plan names this session as an architecting session. `📐 Architecting` is Calendly's label for the same session type – never write it to Planhat; the Planhat `type` string is `🏗️ Architecting` (`context/planhat-schema.md` § Type value mapping).
 - Map to specific program session (Discovery, Foundations, Insights, Prioritization, Roadmaps, Spark, Success Planning, QBR) — this drives which scorecard rows and reference-guide section to pull.
 
 **Calendar agenda signal:** read the event's `description` field. Classify it:
@@ -149,16 +150,16 @@ list_model_records(MODEL: "Conversation", FILTER: {"externalId[equal to]": "<can
 list_model_records(MODEL: "Task",         FILTER: {"sourceId[equal to]": "<candidate>"})     # step 2
 ```
 
-- **Conversation hit** → write the prep notes to `custom.Prep Notes` on **that Conversation** and skip 5-3/5-4 entirely. Do not also write to a Task. **Correct `date` in the same update if it is wrong** — Planhat's conversion stamps it with the moment the Task was ticked off, not the session start, so compare it against the calendar event start and include the corrected full UTC timestamp in this write when they differ by more than a minute (`context/planhat-schema.md` § Session timestamp). Note the correction in the Step 7 report.
+- **Conversation hit** → write the prep notes to `custom.Prep Notes` on **that Conversation** and skip 5-3/5-4 entirely (apply the same unset-`type` rule as 5-3, batched into this write). Do not also write to a Task. **Correct `date` in the same update if it is wrong** — Planhat's conversion stamps it with the moment the Task was ticked off, not the session start, so compare it against the calendar event start and include the corrected full UTC timestamp in this write when they differ by more than a minute (`context/planhat-schema.md` § Session timestamp). Note the correction in the Step 7 report.
 - **Task hit** (`mainType: "event"`, `sourceId` = the event ID) → continue to 5-3 and write onto the Task.
 - **Both miss on both candidate forms** → fall back to `search_records(QUERY: "<calendar event title>")` filtered to `model: "Task"` / `model: "Conversation"`, `companyId = <planhat-company-id>`, and a `startTime`/`endTime`/`date` day match against the session's Call Date. A hit here is the session's record — note in the Step 7 report that it matched on title rather than event ID.
 - **Only if that also misses** → 5-4.
 
 **Dedup check:** Before writing, read the resolved record's `custom.Prep Notes`. If it is already non-empty, this session is already prepped — skip the write unless `--force` was passed. Report as "⏭️ Already prepped" in Step 7.
 
-**5-3. If a matching Task is found — set type and add prep notes:**
+**5-3. If a matching Task is found — add prep notes, and set `type` if it is unset:**
 
-Determine the correct Planhat `type` from the session type using this mapping:
+Determine the correct Planhat `type` from the session type resolved in Step 1 (signals in priority order: customer override table in `context/planhat-schema.md`, Calendly/event name and Task `description`, prior session history, engagement plan) using this mapping. The exact option strings live in `context/planhat-schema.md` § Type value mapping – never write a value outside that list:
 
 | Calendar Session Type (Step 1) | Planhat Task Type |
 |---|---|
@@ -170,7 +171,7 @@ Determine the correct Planhat `type` from the session type using this mapping:
 | `📦 Other` (default) | `🔁 Sync` |
 | `📦 Other` + "Demo" in title | `🎙️ Demo` |
 
-Then update the Task:
+**Read the record's current `type` first.** An unset `type` comes back null, empty or absent over MCP, and Planhat renders it as `note` (`context/planhat-schema.md` § MCP Access). GCal-synced Tasks can arrive this way. If it is null or empty, write the inferred type in the **same** `update_model_record` call as `custom.Prep Notes` (one call, two fields):
 ```
 update_model_record(
   MODEL: "Task",
@@ -181,6 +182,7 @@ update_model_record(
   }
 )
 ```
+If `type` is already set, send only `custom.Prep Notes`. Log every type write in the Step 7 report as `🏷️ Type set: <type>` so a misclassification is easy to spot and correct. Do not log a line when the type was already set.
 
 **If the Task already has `custom.Prep Notes` set** and `--force` was not passed: skip the write and report as "⏭️ Already prepped" in Step 7.
 
@@ -201,7 +203,7 @@ update_model_record(
 
 Keep to roughly 1,200–2,000 chars of visible text – enough for the full skimmable brief without turning into prose. Markup doesn't count against this. `description` is reserved for actual session content written during or after the call.
 
-**If the Task already has `type` set correctly:** only update `custom.Prep Notes`; do not overwrite an intentionally set type.
+**If the Task already has `type` set:** only update `custom.Prep Notes`; do not overwrite an intentionally set type, even if your inference differs. Mention the disagreement in the Step 7 gaps block instead.
 
 **5-4. Create — last resort only, and only after the full ladder has missed:**
 
@@ -230,7 +232,7 @@ Report it explicitly: `"Planhat Task created — no GCal-synced record found for
 
 ### 6. For architecting sessions only — build the customer-facing KDD doc
 
-If (and only if) `Type = 🏗️ Architecting`, also produce the customer-facing KDD doc the user will run the session off.
+If (and only if) the session is an A-session (Step 1 architecting detection – `Type = 🏗️ Architecting`), also produce the customer-facing KDD doc the user will run the session off. **This is not optional and never deferred to the user.** Run it inline via the procedure in [`agents/kdd-builder.md`](kdd-builder.md) in the same pass as the prep brief – do not end the run with "run `/session-kdds` when ready". This holds in bulk runs (`bulk-prep-week`) too: no bulk override drops it.
 
 - Match the session to a template in [`templates/session-kdds/`](../../templates/session-kdds/) per the library in `00-index.md`.
 - Follow the **Customer-facing KDD doc** spec in that same index: required structure, transform rules, starter-example sourcing rules.
@@ -239,7 +241,7 @@ If (and only if) `Type = 🏗️ Architecting`, also produce the customer-facing
 - **Publish to Drive** (not Notion): upload the KDD as `{CustomerName}_{YYYY-MM-DD}_{SalesforceAccountId}_KDD.html` to the `Customer Session Artifacts` Drive folder (resolved per step 6.8). Set `disableConversionToGoogleType: true`. Share with link-reader access.
 - **Link back into Planhat:** prepend the KDD artifact block to `custom.Prep Notes` on the session's Planhat Task/Conversation (the same record written in Step 5). Do not overwrite existing prep content — prepend only.
 
-If anything about steps 1–5 is ambiguous for an A-session (template mismatch, missing D-register, conflicting discovery sources), flag it and skip KDD creation — don't ship a half-seeded doc. The user can run `/session-kdds` standalone once resolved.
+If anything about steps 1–5 is ambiguous for an A-session (template mismatch, missing D-register, conflicting discovery sources), flag it and skip KDD creation — don't ship a half-seeded doc. Report it as `🔴 KDD missing – <reason>` (never silently, never blank); only then does the user run `/session-kdds` standalone once resolved. A KDD file for this session already in the Drive folder is reused (report ✅ with its link), not rebuilt. In an unattended bulk run never stop to ask about an existing KDD Attachment.
 
 ### 6.5 Generate the facilitation HTML guide
 
@@ -290,7 +292,7 @@ Salesforce Account: {SalesforceAccountId}
 
 Post a summary with these sections:
 
-**a) Links** — Planhat Task/Conversation URL (the record `custom.Prep Notes` was written to) + **one line per Drive artifact: file name, Drive link, and which Planhat record received the link**. Include the Planhat workspace URL in the format `https://ws.planhat.com/productboard/home/data-explorer/<path>?preview=<Model>.<_id>`. State explicitly if the `Customer Session Artifacts` folder had to be created, if an existing file was updated in place, or if a Planhat link write failed.
+**a) Links** — Planhat Task/Conversation URL (the record `custom.Prep Notes` was written to) + **one line per Drive artifact: file name, Drive link, and which Planhat record received the link**. Include the Planhat workspace URL in the format `https://ws.planhat.com/productboard/home/data-explorer/<path>?preview=<Model>.<_id>`. State explicitly if the `Customer Session Artifacts` folder had to be created, if an existing file was updated in place, or if a Planhat link write failed. Add `🏷️ Type set: <type>` when Step 5 wrote an unset `type`. For A-sessions, always include a KDD line: ✅ with the Drive link, or 🔴 Missing with the reason.
 
 **b) Pre-call checklist** — concrete actions the user should take before the call. Include any of these that apply:
 - Overdue tasks from prior sessions that affect this one
