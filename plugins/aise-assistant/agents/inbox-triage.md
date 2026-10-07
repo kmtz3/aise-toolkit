@@ -38,8 +38,8 @@ means two live approaches to one person – flag it rather than silently adding 
 Per thread that will get a draft:
 
 - **Planhat Company** – `list_model_records(MODEL:"Company", FILTER:{"name[contains]":"<name>"})`, then read `phase`,
-  `custom.⚡️ Spark Stage`, `custom.Spark Enabled – SNF`, `custom.[SIP] Tier`, `custom.Next Step`, `custom.⚡️ AI Consent`.
-  The existing Next Step tells you what was already promised.
+  `custom.Spark Visibility (Account)`, `custom.Spark Enabled – SNF`, `custom.[SIP] Tier`, `custom.Spark Exemption – SF`, `custom.Spark Exemption Context`, `custom.Next Step`, `custom.⚡️ AI Consent`.
+  The existing Next Step tells you what was already promised. **Spark Exemption Context – read first.** Whenever the work touches Spark (outreach, a draft that mentions Spark, prep, status), also read `custom.Spark Exemption – SF` and `custom.Spark Exemption Context` and treat the newest dated entry as current state. See `context/planhat-schema.md` § Spark fields — Company.
 - **Initiatives** – read `context/initiatives/README.md`, then any file with `Status: Active`. **An active initiative
   overrides the default shape of what you propose.** Under `spark-in-practice.md`, an in-scope account must never be
   offered a Spark demo, overview or features walkthrough – the sequence is scoping call, then working session on
@@ -102,8 +102,8 @@ Trigger this when the user says they have sent, or asks for records to be update
    `list_model_records(MODEL:"Company", FILTER:{"custom.Next Step[contains]":"<distinctive phrase>"})`.
    Only report the update as done once something confirms it.
 5. **Flag adjacent drift.** If the sent message changes the account's real state – AI terms moving, Spark about to be
-   enabled, a tier that no longer fits – say which field looks stale (`custom.⚡️ AI Consent`, `custom.⚡️ Spark Stage`,
-   `custom.AI Ready`, `custom.[SIP] Tier`). Do not change them silently; they feed reporting other people read.
+   enabled, a tier that no longer fits – say which field looks stale (`custom.⚡️ AI Consent`, `custom.AI Ready`,
+   `custom.Spark Exemption Context`). Do not change them silently; they feed reporting other people read.
 6. **Report** as a table: account, sent time, what the Next Step now says. List anything still in drafts separately,
    with no Planhat write against it.
 

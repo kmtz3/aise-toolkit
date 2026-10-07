@@ -13,7 +13,7 @@ Customer (name or shorthand), optional session type and date. If type/date are m
 
 When the user's request bundles multiple deliverables (e.g. prep + KDD + diagram + pre-call checklist), prioritize **writes** over exhaustive context gathering — context-window compaction mid-run loses gathered context and forces restart from a summary.
 
-1. Gather **essential** context first (Planhat Company record + Calendar event). These are the minimum viable inputs.
+1. Gather **essential** context first (Planhat Company record + Calendar event). These are the minimum viable inputs. **Spark Exemption Context – read first.** Whenever the work touches Spark (outreach, a draft that mentions Spark, prep, status), also read `custom.Spark Exemption – SF` and `custom.Spark Exemption Context` and treat the newest dated entry as current state. See `context/planhat-schema.md` § Spark fields — Company.
 2. Start drafting and writing the prep brief as soon as you have enough signal. Do **not** wait for all parallel searches (Glean, Gmail, meeting_lookup) to return before writing.
 3. Enrich the prep brief with supplementary context (Glean, Gmail threads, Gong) by updating `custom.Prep Notes` on the Planhat Task **after** the initial write lands.
 4. For compound requests, write the primary deliverable (Planhat Task `custom.Prep Notes`) first, then create secondary deliverables (KDD, facilitation guide).
@@ -272,7 +272,8 @@ Follow `context/session-artifact-convention.md` in full. Condensed:
 > The `Facilitation` artifact publishes itself as part of `skills/session-facilitation` step 4. Both
 > paths are idempotent on the same filename — check the folder and `custom.Prep Notes` before
 > uploading or prepending, and if the guide is already published and linked, skip it here and say so
-> in the report rather than writing a second copy or a second link block.
+> in the report rather than writing a second copy or a second link block. The skip covers the
+> upload and the Prep Notes block only: step 5 below (Playbook URL field) still runs.
 
 1. **Resolve the folder.** `get_file_metadata` on the known `Customer Session Artifacts` folder ID; if it errors, is trashed, or is not a folder, search by title; if still nothing, **create it** and say so in the report. Never skip an artifact because the folder was missing. Cache the resolved ID for the rest of the run.
 2. **Resolve the Salesforce Account Id.** Read `sourceId` off the Planhat Company (natively SF-synced, so it is by definition the live account), then verify with `SELECT Id, Name, Type, IsDeleted FROM Account WHERE Name LIKE '%<customer>%'`. **Duplicate and churned accounts under the same name are common** — if the Planhat `sourceId` isn't among the SOQL results or maps to a deleted/churned record, stop and ask the user which account is live rather than guessing.
@@ -286,13 +287,16 @@ Folder: Customer Session Artifacts — {folder URL}
 Salesforce Account: {SalesforceAccountId}
 ```
 
+5. **Set `custom.Facilitation Playbook URL`** whenever a `Facilitation` artifact is produced here **or** is already published. Follow `context/session-artifact-convention.md` § 6 (Playbook URL write rules): event Task only, read the field first (same URL: skip; different: overwrite and note it), one `update_model_record` call with `{"custom": {"Facilitation Playbook URL": "<webViewLink>"}}`, select it back to verify. On a Conversation-only session, skip it and report `Playbook URL field not available on Conversations`. Only `Facilitation` goes to this field; `SessionPrep` and `KDD` stay in `custom.Prep Notes`.
+   - **When the guide is already published and linked** (§ 6.8 skips the upload and the Prep Notes block), still look up the file by its exact name in the folder and **backfill the field if it is empty**. Never skip this check just because the artifact block is present.
+
 **If the Planhat write fails with `{"el":"externalId","error":"Not valid type"}`** the target record has no `externalId` and cannot be updated through the API — supplying one in the same call does not clear it. Fall back to the sibling GCal-synced record for the same session, note in the report which record actually received the link and which one is stuck, and don't retry the same PUT more than once.
 
 ### 7. Report in chat
 
 Post a summary with these sections:
 
-**a) Links** — Planhat Task/Conversation URL (the record `custom.Prep Notes` was written to) + **one line per Drive artifact: file name, Drive link, and which Planhat record received the link**. Include the Planhat workspace URL in the format `https://ws.planhat.com/productboard/home/data-explorer/<path>?preview=<Model>.<_id>`. State explicitly if the `Customer Session Artifacts` folder had to be created, if an existing file was updated in place, or if a Planhat link write failed. Add `🏷️ Type set: <type>` when Step 5 wrote an unset `type`. For A-sessions, always include a KDD line: ✅ with the Drive link, or 🔴 Missing with the reason.
+**a) Links** — Planhat Task/Conversation URL (the record `custom.Prep Notes` was written to) + **one line per Drive artifact: file name, Drive link, and which Planhat record received the link**. Include the Planhat workspace URL in the format `https://ws.planhat.com/productboard/home/data-explorer/<path>?preview=<Model>.<_id>`. State explicitly if the `Customer Session Artifacts` folder had to be created, if an existing file was updated in place, or if a Planhat link write failed. For the `Facilitation` artifact add `Playbook URL field: set on Task {_id}` (or `already current`, `changed`, `not available on Conversations`, `write failed`). Add `🏷️ Type set: <type>` when Step 5 wrote an unset `type`. For A-sessions, always include a KDD line: ✅ with the Drive link, or 🔴 Missing with the reason.
 
 **b) Pre-call checklist** — concrete actions the user should take before the call. Include any of these that apply:
 - Overdue tasks from prior sessions that affect this one

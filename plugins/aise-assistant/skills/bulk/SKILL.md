@@ -59,8 +59,8 @@ Read the procedure in `agents/bulk-prep-week.md` and execute it inline as the ma
 3. Map each event to an owned Notion Customer record (by attendee domain / title); log unmatched and ambiguous as ⚠️.
 4. Dedup: skip sessions that already have a `📋 Prep` toggle; update existing session pages that don't; create pages for sessions with no Notion record yet.
 5. Run full session prep (following `session-prepper.md`) sequentially for each session that needs it — including KDD sub-pages for any Architecting sessions.
-6. **Publish artifacts and link them into Planhat** per `context/session-artifact-convention.md`. Resolve the `Customer Session Artifacts` folder **once at the start of the run** (creating it if missing) and reuse the ID for every session — do not re-resolve per session. Resolve each customer's Salesforce Account Id once and reuse it across that customer's artifacts. Upload per the naming convention and prepend the artifact link block to `custom.Prep Notes` on each session's Planhat calendar-event Task (Conversation as fallback).
-7. Report a per-session status table with links to all prepped Notion pages, **the Drive link and Planhat target record per artifact**, and a count of skipped / flagged items. Note once at the top if the Drive folder had to be created.
+6. **Publish artifacts and link them into Planhat** per `context/session-artifact-convention.md`. Resolve the `Customer Session Artifacts` folder **once at the start of the run** (creating it if missing) and reuse the ID for every session — do not re-resolve per session. Resolve each customer's Salesforce Account Id once and reuse it across that customer's artifacts. Upload per the naming convention and prepend the artifact link block to `custom.Prep Notes` on each session's Planhat calendar-event Task (Conversation as fallback). For each `Facilitation` guide (produced or already published) also set `custom.Facilitation Playbook URL` on the event Task per § 6 of that convention.
+7. Report a per-session status table with links to all prepped Notion pages, **the Drive link and Planhat target record per artifact (plus `Playbook URL field: set on Task {_id}` for Facilitation guides)**, and a count of skipped / flagged items. Note once at the top if the Drive folder had to be created.
 
 Do NOT ask for context that's retrievable. Search first, ask once if something is genuinely missing.
 
@@ -68,3 +68,4 @@ Do NOT ask for context that's retrievable. Search first, ask once if something i
 - `--week YYYY-MM-DD` — anchor to a specific Monday–Sunday instead of today + 7 days
 - `--skip <customer>` — exclude a customer from the run
 - `--force <customer>` — rerun prep even if a brief already exists
+- `--backfill-playbook-urls` — don't prep anything: scan upcoming event Tasks, parse the `_Facilitation.html` Drive link out of `custom.Prep Notes`, and write it to `custom.Facilitation Playbook URL` where that field is empty. Read-only on Prep Notes; a differing existing URL is reported, not overwritten. Natural language: "backfill the playbook links", "fill the facilitation URL field on already-prepped sessions". Combines with `--week` and `--skip`.

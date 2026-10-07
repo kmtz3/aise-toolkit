@@ -15,19 +15,20 @@ After each session completes step 5, write a checkpoint file to `/tmp/bulk-prep-
 ```json
 {
   "week_start": "<YYYY-MM-DD>",
-  "flags": {"skip": ["<name>", "..."], "force": ["<name>", "..."]},
+  "flags": {"skip": ["<name>", "..."], "force": ["<name>", "..."], "backfill_playbook_urls": false},
   "sessions_completed": [{"planhatTaskUrl": "...", "customer": "<name>"}],
   "sessions_pending": ["<event title or customer>", "..."]
 }
 ```
 
-On start-up, check for an existing checkpoint for this week. **Before trusting it, verify `flags.skip` and `flags.force` match this run's `--skip`/`--force` arguments exactly.** If they match, skip any session already in `sessions_completed` (log as "⏭️ resumed — already prepped this run") and continue step 5 for `sessions_pending` only. If they don't match — e.g. `--force` now names a customer this checkpoint already marked complete without forcing — discard the checkpoint and re-run discovery fresh. Delete the checkpoint file once the report (step 6) shows zero sessions pending.
+On start-up, check for an existing checkpoint for this week. **Before trusting it, verify `flags.skip`, `flags.force` and `flags.backfill_playbook_urls` match this run's `--skip`/`--force`/`--backfill-playbook-urls` arguments exactly.** If they match, skip any session already in `sessions_completed` (log as "⏭️ resumed — already prepped this run") and continue step 5 for `sessions_pending` only. If they don't match — e.g. `--force` now names a customer this checkpoint already marked complete without forcing — discard the checkpoint and re-run discovery fresh. Delete the checkpoint file once the report (step 6) shows zero sessions pending.
 
 ## Inputs
 
 - `--week YYYY-MM-DD` (optional) — anchor to a specific Monday. Defaults to today → today + 7 days.
 - `--skip <customer>` (optional, repeatable) — exclude a named customer from this run.
 - `--force <customer>` (optional, repeatable) — rerun prep for a customer even if `custom.Prep Notes` is already set. Overwrites the existing prep.
+- `--backfill-playbook-urls` (optional) — **separate mode.** Skip the normal prep run and only fill `custom.Facilitation Playbook URL` on upcoming event Tasks from the Drive links already in `custom.Prep Notes`. See **Mode: `--backfill-playbook-urls`** below. Combines with `--week` and `--skip`; ignores `--force`.
 
 ## Procedure
 
@@ -81,7 +82,7 @@ For each remaining matched customer + event:
    ```
    Try both candidate forms for each lookup.
 3. **Dedup decision:**
-   - **Task or Conversation found AND `custom.Prep Notes` is non-empty:** log as **⏭️ Already prepped** and skip entirely. (Override with `--force` to rerun and overwrite.)
+   - **Task or Conversation found AND `custom.Prep Notes` is non-empty:** log as **⏭️ Already prepped** and skip the prep. (Override with `--force` to rerun and overwrite.) **One exception: the Playbook URL backfill.** If the record is an event Task, its `custom.Prep Notes` already carries a `Facilitation` block (a `Drive file:` link whose filename ends `_Facilitation.html`) and `custom.Facilitation Playbook URL` is empty, write that link into the field (rules in `context/session-artifact-convention.md` § 6). This is the only write allowed on an already-prepped record; `custom.Prep Notes` itself stays untouched.
    - **Task or Conversation found but `custom.Prep Notes` is empty:** proceed to step 5, targeting this existing record.
    - **No record found on either candidate:** proceed to step 5; session-prepper will create a Task as a last resort (per its create ladder).
 
@@ -108,6 +109,8 @@ Follow `context/session-artifact-convention.md`, with two bulk-specific rules:
 
 Per session, upload each generated file as `{CustomerName}_{YYYY-MM-DD}_{SalesforceAccountId}_{ArtifactType}.ext` and prepend the artifact link block to `custom.Prep Notes` on that session's Planhat Task (Conversation as fallback). A folder-resolution failure aborts the artifact step for the run and is reported loudly — it does not silently skip per session.
 
+**Playbook URL field.** When a session's `Facilitation` guide is produced this run, or is already published (file present in the folder, Prep Notes block present), also set `custom.Facilitation Playbook URL` to the Drive `webViewLink` on the event Task, following `context/session-artifact-convention.md` § 6 (Playbook URL write rules): read first, skip if identical, overwrite if different and note it, one `update_model_record` call, select back to verify. Event Tasks only; on a Conversation-only session skip it and report `Playbook URL field not available on Conversations`. `SessionPrep` and `KDD` links stay in `custom.Prep Notes`. An already-published guide whose field is empty still gets backfilled.
+
 ### 6. Report
 
 After all sessions are processed, post a summary table:
@@ -124,13 +127,25 @@ After all sessions are processed, post a summary table:
 
 **KDD column:** A-sessions always show ✅ with the Drive KDD file link, or 🔴 Missing with the reason – never blank. Non-A-sessions show `—`. Append `🏷️ Type set: <type>` to the Status cell for every session whose unset Planhat `type` was written this run, so misclassifications are easy to spot.
 
-Include: total events scanned, external sessions found, prepped, skipped, flagged. Link each prepped Planhat Task/Conversation URL directly (format: `https://ws.planhat.com/productboard/home/data-explorer/<path>?preview=<Model>.<_id>`). Duplicate-record entries must list both record IDs/URLs. Add an **Artifacts** block listing, per session, the Drive file name + link and the Planhat record the link landed on — plus a single line at the top if the `Customer Session Artifacts` folder had to be created this run.
+Include: total events scanned, external sessions found, prepped, skipped, flagged. Link each prepped Planhat Task/Conversation URL directly (format: `https://ws.planhat.com/productboard/home/data-explorer/<path>?preview=<Model>.<_id>`). Duplicate-record entries must list both record IDs/URLs. Add an **Artifacts** block listing, per session, the Drive file name + link and the Planhat record the link landed on — plus a single line at the top if the `Customer Session Artifacts` folder had to be created this run. For each `Facilitation` artifact add the line `Playbook URL field: set on Task {_id}` (or `already current`, `changed`, `not available on Conversations`, `write failed`).
+
+## Mode: `--backfill-playbook-urls`
+
+One-off cleanup for sessions prepped before the Playbook URL field was written. Replaces steps 3 to 6; read-only on `custom.Prep Notes`.
+
+1. **Window.** Same as step 1 (today + 7 days, or `--week`). Resolve the user identity as in step 1.
+2. **Scan.** `list_model_records(MODEL: "Task", FILTER: {"mainType[equal to]": "event", "ownerId[equal to]": "<planhat_user_id>", ...window on startTime...}, SELECT: ["_id", "companyId", "startTime", "custom.Prep Notes", "custom.Facilitation Playbook URL"])`. Apply `--skip`. Do not use Glean, Gmail or Drive: the data is already on the Task.
+3. **Parse.** In `custom.Prep Notes`, find `Drive file:` links whose filename ends `_Facilitation.html` (the filename sits on the block's first line, `FACILITATION ARTIFACT — {filename}`, or in the `Drive file` list item of the prep brief). Strip HTML tags before matching. Take the `webViewLink` that belongs to the `_Facilitation.html` block; ignore `_SessionPrep.html`, `_KDD.html` and any other artifact link. If several Facilitation links appear, use the first and flag it.
+4. **Write where empty.** If `custom.Facilitation Playbook URL` is empty, write the parsed URL with one `update_model_record` call (`{"custom": {"Facilitation Playbook URL": "<url>"}}`) and select the field back to verify. If it already holds the same URL, skip. If it holds a **different** URL, do not overwrite in this mode: report it for review. Never touch `custom.Prep Notes`.
+5. **Checkpoint** per the section above (items = Task `_id`s).
+6. **Report** one row per scanned Task: customer, session date, status (`✅ set`, `⏭️ already current`, `⚠️ differs: review`, `— no Facilitation link found`), plus totals (scanned, set, already current, differs, no link). Include `Playbook URL field: set on Task {_id}` per written row.
 
 ## Guardrails
 
 - **Never create Company records** — only match against existing ones owned by the current user.
 - **Never process sessions where Company.owner ≠ current user** — log as ⚠️ Ownership mismatch.
 - **Never overwrite `custom.Prep Notes` when already set** — if non-empty, skip. Override with `--force`.
+- **`--backfill-playbook-urls` never writes `custom.Prep Notes`** and never overwrites a differing Playbook URL.
 - **Run sessions sequentially only.**
 - **Declined events = skip** — don't prep sessions the user won't attend.
 - **Never write to Notion** — all session data goes to Planhat.

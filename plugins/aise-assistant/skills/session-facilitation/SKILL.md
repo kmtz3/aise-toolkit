@@ -390,13 +390,18 @@ Follow `context/session-artifact-convention.md` in full. Condensed:
    Salesforce Account: {SalesforceAccountId}
    ```
 
-5. **Verify.** Re-read the target record's `custom.Prep Notes` and confirm the block is present and
+5. **Set `custom.Facilitation Playbook URL`** (event Task only), per `context/session-artifact-convention.md` § 6.
+   - Read the field first. Same URL: skip. Different URL: overwrite and note the change in the report.
+   - One call: `update_model_record(MODEL: "Task", OBJECT_ID: "{_id}", PARAMETERS: {"custom": {"Facilitation Playbook URL": "{webViewLink}"}})`, then select the field back to verify.
+   - If the session has no event Task and only a Conversation, skip the field (the Conversation model has no such field), keep the `custom.Prep Notes` link as above, and report `Playbook URL field not available on Conversations`.
+   - Only the `Facilitation` artifact goes to this field. This step never runs for `SessionPrep`, `KDD` or other types.
+6. **Verify.** Re-read the target record's `custom.Prep Notes` and confirm the block is present and
    the prior content survived. Report the record `_id` the link landed on.
 
 **When invoked by `session-prepper` (step 6.5),** that agent's step 6.8 also publishes every session
 artifact. Both paths are idempotent on the same filename, so whichever runs first creates the file and
 the other updates it in place — never create a second copy or a second link block. If the artifact
-block for this filename is already present in `custom.Prep Notes`, leave it and say so in the report.
+block for this filename is already present in `custom.Prep Notes`, leave it and say so in the report. Still run sub-step 5: if the block is present but `custom.Facilitation Playbook URL` is empty, backfill it.
 
 **If the Planhat write fails with `{"el":"externalId","error":"Not valid type"}`** the target has no
 `externalId` and cannot be updated through the API — supplying one in the same call does not clear
@@ -417,6 +422,7 @@ Notion session page unless the user explicitly asks for one in that run.
    {N} panels · {session-type} · {customer}
    Drive: {webViewLink}
    Planhat: linked on {Task|Conversation} {_id} (custom.Prep Notes)
+   Playbook URL field: set on Task {_id}
    Local copy: {local path or "not written — see below"}
    Open in any browser. Timer in header — click to start/pause.
 ```
@@ -425,6 +431,7 @@ Report explicitly, when it applies:
 - `   📁 Drive folder was missing — created at {folder URL}.`
 - `   ♻️ Existing file with the same name updated in place.`
 - `   ⚠️ Planhat link-back failed on {record} — link manually into custom.Prep Notes.`
+- `   Playbook URL field: already current on Task {_id}` / `changed on Task {_id} (was {old URL})` / `not available on Conversations` / `⚠️ write failed on Task {_id}`.
 - `   ⚠️ Local copy not written ({reason}) — Drive copy is unaffected.`
 - `   ⚠️ Published skipped (--no-drive) — artifact exists only locally.`
 

@@ -111,7 +111,21 @@ An artifact that isn't linked from the session record doesn't exist. After a suc
 1. The **calendar-event Task** for the session (`MODEL: "Task"`, `mainType: "event"`, GCal-synced, matching company + date) — this is where `daily-brief` and `session-prepper` already read prep status from.
 2. The session **Conversation** on the Company (matching company + date + type) when no event Task exists.
 
-**Field:** `custom.Prep Notes` on whichever record, unless a more specific field exists for that artifact type (KDD attachments follow the Attachment path in `context/planhat-schema.md`).
+**Field, per artifact type:**
+
+| Artifact | Field(s) written |
+|---|---|
+| `Facilitation` | Task `custom.Facilitation Playbook URL` (the bare Drive `webViewLink`) **plus** the `custom.Prep Notes` block below |
+| `SessionPrep`, `KDD`, and every other type | `custom.Prep Notes` only (KDD attachments also follow the Attachment path in `context/planhat-schema.md`) |
+
+`custom.Facilitation Playbook URL` exists on the **Task model only** (string, writable). Its value is plain text, so it stays clickable outside `custom.Prep Notes`, where URLs render as plain text.
+
+**Playbook URL write rules** (any procedure that publishes or finds a `Facilitation` artifact):
+
+1. Only when the target is the event Task. On a Conversation-only session, skip the field (the Conversation model has no such field), link into `custom.Prep Notes` as usual, and report `Playbook URL field not available on Conversations`.
+2. One call: `update_model_record(MODEL: "Task", OBJECT_ID: "{_id}", PARAMETERS: {"custom": {"Facilitation Playbook URL": "<webViewLink>"}})`, then select the field back to verify.
+3. Read the field first. Same URL already there: skip the write. Different URL: overwrite (the Drive file is updated in place by filename, so the URL should normally be identical) and note the change in the report.
+4. The write is additive. It never replaces or removes the `custom.Prep Notes` block, and it is independent of whether that block was already present: if the guide is already published and linked but the field is empty, backfill the field.
 
 **Format** — prepend this block above any existing prep content, never overwrite it:
 
@@ -142,3 +156,4 @@ Every run that produces an artifact reports, per artifact:
 - the Drive link,
 - which Planhat record the link landed on,
 - and — if the folder had to be created, a duplicate name was updated, or a Planhat write failed — that fact, explicitly.
+- for `Facilitation`, the Artifacts block also carries `Playbook URL field: set on Task {_id}` (or `already current on Task {_id}`, `changed on Task {_id}` when an old URL was overwritten, `not available on Conversations`, or `write failed on Task {_id}`).

@@ -1,5 +1,13 @@
 # Changelog — aise-leadership
 
+## [1.15.0] — 2026-10-07
+
+### Added
+- `session-log-auditor` check 6g: orphan Conversation (done Task with no linked Conversation, orphan sharing its `externalId`), with `--fix` repair procedure.
+
+### Changed
+- `context/` synced from `aise-assistant` (Spark session type override, conversion field-carry notes, transcript lookup step 0).
+
 ## [1.14.5] — 2026-10-06
 
 ### Changed

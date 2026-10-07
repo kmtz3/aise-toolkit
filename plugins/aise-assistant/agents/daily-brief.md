@@ -94,6 +94,8 @@ Use `equal to` only: `sourceId[starts with]` errors with "Failed to fetch Task r
 - Record found + `custom.Prep Notes` empty or absent → `⚠️ No prep`
 - Nothing resolved (Company resolved but no Task and no Conversation for the event ID) → `— Not in Planhat` (GCal sync may not have created one yet, or the event is too recently added)
 
+**Playbook link (external sessions, today and tomorrow).** Read `custom.Facilitation Playbook URL` in the same Task read as `custom.Prep Notes` (add it to the `SELECT`). If it is empty, or the record is a Conversation (the field is Task-only), fall back to the `Drive file:` link in the artifact header whose filename ends `_Facilitation.html`, parsed **before** the header strip below. No match either way = no guide; show nothing and never infer one from a `_SessionPrep.html` or `_KDD.html` link. Store the URL per session for Step 7. Read-only: daily-brief never writes this field (`--backfill-playbook-urls` does).
+
 **Prep-notes parsing — skip the artifact header.** `custom.Prep Notes` can start with a "SESSION PREP ARTIFACT … Drive file …" header block that links the artifact. Strip it (everything up to and including the first `<hr>`, or the paragraph run that begins with that heading) before extracting the topic or the risk line below, so neither picks up the header text.
 
 **Resolve session topic — today's external sessions:**
@@ -234,6 +236,7 @@ Build a self-contained HTML file (inline CSS, no external dependencies, no CDN l
 <section: Today's Schedule>
   [Time range]  [Event title]
   [Badge: customer name + prep status | "Internal" | "Focus block"]
+  [📘 Facilitation guide: link — external sessions with a playbook URL only; omit otherwise]
   [Topic: 2-sentence agreed topic — external customer sessions only, omit if no topic resolved]
   [Risk: top-risk line — external customer sessions only, omit if none]
   [⚠️ Back-to-back flag — omit if buffer ≥ 10 min]
@@ -245,6 +248,7 @@ Build a self-contained HTML file (inline CSS, no external dependencies, no CDN l
   For each of tomorrow's external sessions (sorted by time):
   [Time]  [Event title]
   [Badge: ✅ Prep done | 🚨 Prep needed → "📅 Prep block created [time]" | "⚠️ Not in Planhat"]
+  [📘 Facilitation guide: link — only when a playbook URL resolved; omit otherwise]
   [Topic: 2-sentence agreed topic — omit if no topic resolved]
   [Risk: top-risk line — omit if none]
   [⚠️ Back-to-back flag — omit if buffer ≥ 10 min]
@@ -287,6 +291,7 @@ Build a self-contained HTML file (inline CSS, no external dependencies, no CDN l
 - Color-coded badges: green `#22c55e` = prep done, amber `#f59e0b` = no prep / warning, red `#ef4444` = overdue / prep needed, blue `#3b82f6` = today task, purple `#8b5cf6` = in-progress, grey `#94a3b8` = later / internal.
 - Session topic line: render as `<div class="sched-topic">Topic: {topic}</div>` with `font-size: 13px; color: #94a3b8; font-style: italic; margin-top: 4px;`. Omit the element entirely when no topic was resolved — do not render an empty label.
 - Top-risk line: render as `<div class="sched-risk"><span class="badge badge-red">Risk</span> {risk}</div>` directly under the topic, with `font-size: 13px; margin-top: 4px;`, red `#ef4444` badge and normal-weight text in `#e2e8f0`. Omit the element entirely when no risk line was extracted.
+- Facilitation guide link: a single `<a class="sched-guide">` row with the label `📘 Facilitation guide`, `font-size: 13px`, `target="_blank" rel="noopener"`, placed directly under the badge row; rendered only when a playbook URL resolved.
 - "Open before this call" block: `<div class="sched-open">` with a muted label and a compact list of up to 5 rows (title, priority badge, due date, link), `font-size: 13px`; overdue due dates in red.
 - Tomorrow section has a soft yellow-tinted background (`#fffbeb`) to visually separate it from today.
 - Tasks in the Later section inside a `<details><summary>Show [N] later tasks</summary>…</details>` toggle; Stale the same way (`Show [N] stale tasks (30+ days overdue)`), closed by default.

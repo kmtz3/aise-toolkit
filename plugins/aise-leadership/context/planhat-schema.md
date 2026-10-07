@@ -348,20 +348,20 @@ list_model_records(MODEL: "Company", FILTER: {"sourceId[equal to]": "<SF_ACCOUNT
 
 #### Spark / AI readiness — **[SYNCED]**
 
-These three fields are actively synced Notion → Planhat by the AISE assistant.
+**Partly stale – see § Spark fields — Company for the current field map.** `Spark Stage` is no longer synced from Notion; `AI Ready` and `Igniting?` still are.
 
 > **Renamed 2026-08-07** — all three ⚡️-prefixed fields below were renamed/relabeled in Planhat. Old field IDs (`custom.Spark Stage`, `custom.Igniting?`, `custom.Days in Current Ignite Stage`, without the emoji) and old `Spark Stage` option values (`Not Active`/`Active for Admins`/`Active for All`/`Active on Staging`) are stale — do not use them. `AI Ready` is unaffected.
 
 | Notion field | Planhat field ID | Type | Value mapping |
 |---|---|---|---|
-| `Spark Customer Journey` | `custom.⚡️ Spark Stage` | string (select) | `Not Active` → `Off` · `AI Terms Review` → `AI Terms Review` · `Active for Admins (Production)` → `Admins only` · `Active for All (Production)` → `Everyone` · `Active (Staging only)` → `Admins only` · `Icebox` → `Icebox` |
+| `Spark Customer Journey` | _(retired mapping)_ | — | **No longer synced.** `custom.⚡️ Spark Stage` is now automation-maintained from `Spark Visibility (Account)` and is never written – see § Spark fields — Company. The old Notion value mapping is obsolete. |
 | `AI Ready` | `custom.AI Ready` | string (select) | `Sparked` → `Sparked` · `Preparing` → `Preparing` · `Ignitable` → `Ignitable` · `Not ready` → `Not Ready` _(note capital R)_ |
 | `Igniting?` | `custom.⚡️ Igniting?` | boolean | `__YES__` → `true` · `__NO__` → `false` |
 | `Days in Current Ignite Phase` (formula) | `custom.⚡️ Days in Current Ignite Stage` | string (read-only) | Both are computed. Do not write either. |
 | `Ignite Journey Last Edited` (date) | _(no equivalent)_ | — | Notion-only automation field. |
-| _(no Notion equivalent)_ | `custom.Spark Enabled – SNF` / `custom.⚡️ Spark Enabled Date` / `custom.⚡️ Spark Active For Since` / `custom.Spark Engaged – SNF` / `custom.⚡️ Spark Engaged Date` / `custom.⚡️ AI Consent` / `custom.Spark Stage` | boolean / date / date / boolean / date / text / list | **Added 2026-08-07.** Written by `temp-ph-ignite-conversion-data-sync` skill from weekly CSV upload. CSV is the source of truth for these fields. |
+| _(no Notion equivalent)_ | `custom.⚡️ Spark Enabled Date` / `custom.⚡️ Spark Active For Since` / `custom.⚡️ Spark Engaged Date` / `custom.⚡️ AI Consent` | date / date / date / text | **Added 2026-08-07.** Written by `temp-ph-ignite-conversion-data-sync` skill from weekly CSV upload. CSV is the source of truth for these fields. |
 
-**Write direction:** Notion → Planhat. Notion is the source of truth for Spark fields during the current transition. When updating Spark status, write to Notion first (via `notion-update-page`), then sync to Planhat (via `update_model_record`).
+**Write direction (`AI Ready`, `Igniting?` only):** Notion → Planhat. Never write `Spark Stage`.
 
 #### Financial
 
@@ -428,16 +428,13 @@ Some accounts are named differently across systems. Always check this table befo
 
 ### "What's the Spark status for customer X?"
 
-1. Search Notion Customers DB for customer X → get `Spark Customer Journey`, `Igniting?`, `AI Ready`
-2. Optionally cross-check Planhat: `search_records(QUERY: "<customer name>")` → `get_model_record(SELECT: ["custom.⚡️ Spark Stage", "custom.AI Ready", "custom.⚡️ Igniting?"])`
-3. If they differ, **Notion is the source of truth** — flag the discrepancy and offer to re-sync Planhat.
+1. Find the Planhat Company (name search or SF sourceId) → `get_model_record(SELECT: ["custom.Spark Visibility (Account)", "custom.Spark Enabled – SNF", "custom.Spark Engaged – SNF", "custom.Spark Exemption – SF", "custom.Spark Exemption Context", "custom.AI Ready", "custom.⚡️ Igniting?"])`
+2. **Read `custom.Spark Exemption Context` first** and treat its newest dated entry as current state.
+3. On a multi-workspace account, read the per-workspace Asset fields (§ Asset / Workspace) rather than the account-level flags.
 
 ### "Update Spark status for customer X"
 
-1. Write to Notion Customer page via `notion-update-page`
-2. Find the Planhat Company record (name search or SF sourceId)
-3. Write to Planhat via `update_model_record` with mapped values (see value mapping table above)
-4. Confirm both writes succeeded before reporting done
+Spark visibility and engagement are computed or synced – there is nothing to write for them. The only writable Spark-related Company fields are `custom.⚡️ Igniting?`, `custom.AI Ready`, `custom.⚡️ AI Consent` and `custom.Spark Exemption Context` (new dated entry on top, never overwrite). If the user asks to "set" Spark Stage, explain it is automation-maintained and offer one of those instead.
 
 ### "What's the health / ARR / renewal date for customer X?"
 
@@ -602,7 +599,6 @@ writes Productboard's internal discussion of a customer onto that customer's own
 | Field ID | Type | Options | Notes |
 |---|---|---|---|
 | `custom.Priority (temp – Notion)` | string | `P0`, `P1`, `P2`, `P3`, `P4` | ← Notion Customer `Priority`. Temp field pending a native Planhat solution. Omit if Notion value is `Insufficient Data`. |
-| `custom.⚡️ Spark Stage` | string | `Off`, `AI Terms Review`, `Admins only`, `Everyone`, `Icebox`, `Mixed` | ← Notion `Spark Customer Journey`. **Renamed 2026-08-07** (was `custom.Spark Stage` with options `Not Active`/`Active for Admins`/`Active for All`/`Active on Staging`) — see value mapping table above. |
 | `custom.AI Ready` | string | `Ignitable`, `Sparked`, `Preparing`, `Not Ready` | ← Notion `AI Ready` (unchanged) |
 | `custom.⚡️ Igniting?` | boolean | `true` / `false` | ← Notion `Igniting?`. **Renamed 2026-08-07** (was `custom.Igniting?`). |
 | `custom.AISE Journey Status` | string | `Presales`, `Active (no Services)`, `Active (Services)`, `Contracted to Scale`, `Churned` | ← Notion `Account Status`. **AISE-managed accounts only (30k+ ARR).** Do not write for AIPA accounts. **`Not started` is not a valid option — omit.** Note: field ID is `custom.AISE Journey Status`, not `custom.Journey Status`. |
@@ -613,15 +609,6 @@ writes Productboard's internal discussion of a customer onto that customer's own
 | `custom.SH_Positive Outcomes` | string (Rich text) | — | Sales Handoff: value / expected outcomes from pre-sales. Auto-populated on deal close. |
 | `custom.Services Package?` | array | `V13`, `Premier Services`, `Custom SOW`, `Essentials`, `N/A` | **To be architected in Planhat** as a roll-up from the Active Product with the services SKU toggle — not a direct Notion field write. Do not populate from Notion during migration. |
 | `custom.Next Step` | string (Rich text) | — | **The account's current next action.** Written after an outbound touchpoint actually lands (a sent reply, a completed debrief), not when a draft is created. Keep it a short dated sequence with owners: what was just done, what is being waited on, what happens when it clears. Overwrite rather than append – this is a current-state field, not a log. Session history belongs in Conversations. **Rich text — format per § Rich Text Field Formatting below, never plain/`\n`-separated prose.** Refreshed by `post-session-debrief` (step 10, every run), by `inbox-triage` (after a sent reply), and by `account-refresh` (`/customer-refresh`) – which, when it has only drafted the outbound email, says `drafted, send pending` rather than claiming a send. |
-| `custom.[SIP] Tier` | string | `T1 - Priority outreach: enabled + visible, not yet ignited` · `T2 - Second wave: ignited, not yet adopted` · `T3 - Adopted/transitioned (sustain)` · `T4 - Open visibility first: enabled, admins-only` · `T5 - Enablement motion: Spark not enabled` · `T6 - No outreach: churned / planning to churn` | Spark in Practice tiering. Pass the **full option string**, not just `T1`. See `context/initiatives/spark-in-practice.md` for what each tier changes about the motion. |
-| `custom.[SIP] Rank in Tier` | number | — | Priority rank within the tier. Lower is higher priority. |
-| `custom.Spark Enabled – SNF` | boolean | `true` / `false` | Whether Spark is switched on for the account at all. The gate for Spark in Practice scope. **Corrected 2026-09-12 — the field is `custom.Spark Enabled – SNF`. The previously documented `custom.⚡️ Spark Enabled` does not exist and will error in a filter.** Note the `– SNF` dates and the `⚡️` booleans did not move together: `custom.⚡️ Spark Enabled Date` and `custom.⚡️ Spark Engaged Date` are still live under their emoji names. On a multi-workspace account prefer the per-workspace Asset fields — see § Asset / Workspace. |
-| `custom.⚡️ Spark Enabled Date` | string | — | When Spark was enabled. |
-| `custom.⚡️ Spark Active For Since` | string | — | When the current `⚡️ Spark Stage` visibility setting took effect. |
-| `custom.Spark Engaged – SNF` | boolean | `true` / `false` | Someone in the account reached L2 – ran a skill or submitted a Spark prompt. **Live value, not the weekly snapshot.** **Corrected 2026-09-12 — the field is `custom.Spark Engaged – SNF`; `custom.⚡️ Spark Engaged` does not exist.** |
-| `custom.⚡️ Spark Engaged Date` | string | — | When engagement was first detected. |
-| `custom.⚡️ AI Consent` | string | — | Where the account stands on AI terms. Set this when a terms review, extension request, or acceptance moves – it is the field that tells the rest of the team the account is mid-flight rather than untouched. |
-| `custom.AIPA Active Motion` | string | `Post-trial Activation`, `Spark Activation`, `Spark Habit`, `Re-Engagement` | AIPA-segment equivalent of `custom.AISE Journey Status`. Do not write for AISE-managed accounts. **Renamed — corrected 2026-09-12**, was documented as `custom.AIPA Journey Status` with only two of the four options. See also `custom.AIPA Next Best Action` and `custom.Spark Journey - AIPA`. |
 | `custom.Gong Summary` | string | — | Rolling Gong-derived account summary. |
 | `custom.CAB Customer` | boolean | `true` / `false` | Customer Advisory Board member. |
 | `custom.External_Slack_Channel_ID` | string | — | **The customer ↔ shared external Slack channel pairing, cached.** Channel **ID** only, upper-case (`C0AKKLJCB5E`) – never a `#name` (channels get renamed), never a URL (the value feeds `slack_read_channel` and the `/log-slack-threads` `externalId` builder directly). Written by `/log-slack-threads` the first time it resolves a channel for the account; read on every later run, which is what lets that skill take a channel *or* a customer name as input. Write only when empty or when the user has just corrected it – a resolved channel that disagrees with a populated value is a conflict to surface, not a value to overwrite (an account can have two shared channels; the field holds one). **New field: Planhat custom fields lag in MCP metadata, so it may be absent from `get_model_action_parameters` and reject writes for a while. A failed write is reported, not fatal.** Strictly the **external** channel – see the Slack-fields callout above; `custom.Slack ID` / `custom.Slack URL` are the internal channel and are never a substitute. |
@@ -633,6 +620,57 @@ writes Productboard's internal discussion of a customer onto that customer's own
 | `custom.Organization Details` | string (Rich text) | — | **Added 2026-10.** Who the customer is and who we deal with: what they bring to market and why they bought, org structure and business units, product teams, champions and stakeholders (name – title – what they own), the Productboard account team, commercial summary, headcount and growth signals. Written and kept current by `account-refresh` (`/customer-refresh`). **Titles come from End User `position`** (Salesforce-synced), never from session notes or Slack – internal notes get titles wrong. Unconfirmed attributions are written as unconfirmed. Current-state reference: refresh in place, not a log. **Rich text — format per § Rich Text Field Formatting. No `<h1>`–`<h6>` — use bold `<p><strong>` section labels.** |
 
 > **Salesforce/Productboard mirror.** `custom.PM Reach-Out Status/Note/Reviewed` are mirrored one-way (Planhat → Salesforce → Productboard) onto `PM_Reachout_Status__c` / `PM_Reachout_Note__c` / `PM_Reachout_Reviewed__c`, the same proxy pattern as the existing `ASE_Name__c` mirror — Salesforce holds these fields only so Productboard's integration (which reads Salesforce, not Planhat) can surface the value to PMs. Planhat is the source of truth; never write these SF fields directly or build SF-side logic against them.
+
+#### Spark fields — Company (AISE scope)
+
+> **Scope: AISE only.** This assistant serves the AISE team (30k+ ARR accounts). Fields prefixed or labelled **AIPA** belong to a different team's motion. **Ignore them entirely** – do not read them to make a decision, do not write them, do not surface them in output, and do not build logic on them: `custom.AIPA Active Motion`, `custom.AIPA Next Best Action`, `custom.Spark Journey - AIPA`, `custom.[AIPA] Lifecycle campaign`, `custom.AIPA ARR Band (to be removed - do not use)`. If a record carries a value in one of them, that is the other team's state, not ours.
+>
+> **Last verified against live `get_model_action_parameters`: 2026-10-07.** On a multi-workspace account, prefer the per-workspace Asset fields (§ Asset / Workspace) over the account-level flags below.
+
+**Account roll-up (formula / automation – never written)**
+
+| Field ID | Type | Notes |
+|---|---|---|
+| `custom.Spark Visibility (Account)` | string (formula) | **Source of truth** for who can see Spark across revenue-bearing workspaces: `Everyone`, `Admins only`, `Mixed`, `Spark off`, `Spark not enabled`, `No revenue-bearing workspace`. Use this for scope and reporting. Derived from the four `Spark WS` counts – see § Asset / Workspace. |
+| `custom.⚡️ Spark Stage` | string (list) | Automation-maintained copy of `Spark Visibility (Account)`, stored as a list so it can be filtered, grouped and used on dashboards. Same six values. **Never edited by hand, never written by an agent.** If it disagrees with `Spark Visibility (Account)`, the formula is right and this field has not caught up. **Stale options to never use:** `Off`, `AI Terms Review`, `Icebox`, `Not Active`, `Active for Admins`, `Active for All`, `Active on Staging`. |
+| `custom.Spark WS Paying` / `Spark WS Everyone` / `Spark WS Admins Only` / `Spark WS Enabled` | number (formula) | Counts of revenue-bearing workspaces (Asset `ARR – SF` > 0). `Paying` is the denominator. Never written. `Paying = 0` is usually a Salesforce data gap, not an unpaid account. |
+
+**Live Snowflake flags – `– SNF`, never written**
+
+| Field ID | Type | Notes |
+|---|---|---|
+| `custom.Spark Enabled – SNF` | boolean | Spark switched on for the account at all. The gate for Spark in Practice scope. |
+| `custom.Spark Engaged – SNF` | boolean | Someone reached L2 – ran a skill or submitted a Spark prompt. Live value, not the weekly snapshot. |
+| `custom.Motion – SNF` | string | `Ignite` · `Strike`. |
+
+**Dates and consent – CSV-sourced (`temp-ph-ignite-conversion-data-sync`)**
+
+| Field ID | Type | Notes |
+|---|---|---|
+| `custom.⚡️ Spark Enabled Date` | string | When Spark was enabled. |
+| `custom.⚡️ Spark Active For Since` | string | When the current visibility setting took effect. |
+| `custom.⚡️ Spark Engaged Date` | string | When engagement was first detected. |
+| `custom.⚡️ AI Consent` | string | Where the account stands on AI terms. **AISE-writable** – set it when a terms review, extension request, or acceptance moves; it tells the team the account is mid-flight rather than untouched. |
+
+**Spark in Practice**
+
+| Field ID | Type | Notes |
+|---|---|---|
+| `custom.[SIP] Tier` | string (list) | Tier from the Data team's CSV, read-only. Options (pass the **full string** when filtering): `T1 - Priority outreach: enabled + visible, not yet ignited` · `T2 - Second wave: ignited, not yet adopted` · `T3 - Adopted/transitioned (sustain)` · `T4 - Open visibility first: enabled, admins-only` · `T5 - Enablement motion: Spark not enabled` · `T6 - No outreach: churned / planning to churn`. What each tier changes: `context/initiatives/spark-in-practice.md`. |
+| `custom.[SIP] Rank in Tier` | number | Priority rank within the tier. Lower is higher priority. Read-only. |
+| `custom.⚡️ SIP Session Delivered?` | boolean | At least one call delivered titled "Spark in Practice". Computed, read-only. |
+| `custom.⚡️ # of SIP Sessions Delivered` | number | How many Spark in Practice sessions were delivered. Computed, read-only. |
+| `custom.⚡️ Igniting?` | boolean | Have talks about Spark started? AISE-writable (listed above). |
+| `custom.AI Ready` | string | `Ignitable`, `Sparked`, `Preparing`, `Not Ready`. AISE-writable (listed above). |
+
+**Spark exemption**
+
+| Field ID | Type | Notes |
+|---|---|---|
+| `custom.Spark Exemption – SF` | boolean | Is this customer on the Spark exception approved list? **Salesforce-sourced** (`– SF`), read-only, never written. Renamed from `– SNF` on 2026-10-07; as of that date live Planhat metadata still reported the old `custom.Spark Exemption – SNF` ID. Use `– SF`; if a filter or `SELECT` errors on it, re-pull the Company metadata, and fall back to `– SNF` only until the rename lands. |
+| `custom.Spark Exemption Context` | string (Rich text) | **AISE-writable.** Running context on Spark development for exempted accounts, sourced from `#ops-spark-exemption` and kept current by the account team: exemption reason, what was agreed and with whom, current status, open questions, next steps. **Format:** dated entries `YYYY-MM-DD – update – author`, **newest on top**. Never overwrite earlier entries; mark resolved items as resolved instead of deleting them. Leave empty if the account has no exemption. **Rich text – format per § Rich Text Field Formatting.** |
+
+> **Read `custom.Spark Exemption Context` first.** Before any Spark-related action, outreach, draft, session prep or reporting on an account, read this field and treat its **newest dated entry as the current state**. An exempted account (`custom.Spark Exemption – SF` = `true`) is not a candidate for standard Spark in Practice outreach on the strength of its tier alone. Add to the field (a new dated entry on top) when a session or thread changes the exemption picture; never remove history.
 
 #### `phase` vs `custom.AISE Journey Status`
 
@@ -664,7 +702,7 @@ When a field you need to write appears to be `– SF` or `– SNF`, the answer i
 
 - **Never write SF-synced fields.** See the SF-synced table above. This includes account fields (Region, Segment, ARR, Makers, Slack, Account Executive, etc.), Deal records, and Line Item records. Do not write these even if the field appears blank — the sync owns them. Exact mapping is WIP; when uncertain, treat a field as SF-synced unless it appears in the AISE-writable table.
 - **Never write read-only fields** — Planhat will error.
-- **Custom field prefix:** always use `custom.` (e.g. `"custom.⚡️ Spark Stage": "Everyone"`). Note some field IDs include an emoji (`⚡️`) as a literal part of the ID — see the 2026-08-07 rename notes above.
+- **Custom field prefix:** always use `custom.` (e.g. `"custom.⚡️ Igniting?": true`). Note some field IDs include an emoji (`⚡️`) as a literal part of the ID — see the 2026-08-07 rename notes above.
 - **Boolean custom fields:** use raw `true`/`false`, not strings.
 - **Option values:** exact casing required (e.g. `"Not Ready"` not `"Not ready"`).
 - **Do not overwrite `owner`** — managed by RevOps/CS leadership.
@@ -707,7 +745,9 @@ Run in order. Stop at the first hit.
 
 #### The Task and its Conversation share an `_id`, but not their fields
 
-When Planhat converts a completed event Task, the Conversation it creates carries the **same `_id`** as the Task (and `taskId` == `_id`). They remain two records with independent custom-field stores: writing `Conversation.custom.Prep Notes` does not touch `Task.custom.Prep Notes`. Two consequences:
+When Planhat converts a completed event Task, the Conversation it creates carries the **same `_id`** as the Task (and `taskId` == `_id`). They remain two records with independent custom-field stores: writing `Conversation.custom.Prep Notes` does not touch `Task.custom.Prep Notes`.
+
+**Planhat conversion carries `type`, `subject`, `externalId`, `endusers`, `users` and `custom.Motion Category`. It does not carry `custom.Prep Notes`, and it overwrites `date` with the conversion moment** (verified 2026-10-07: `date` came back as the conversion time, 08:54Z, against a 16:00Z Task `startTime`, with no Prep Notes). Every post-conversion write must therefore restore `date`, `startDate` and `custom.Prep Notes` from the Task, and read them back. The same applies after re-firing conversion (Task `status` `"To Do"` then `"done"`, which creates a fresh Conversation with `_id` = Task `_id`; verified 2026-10-07). Two consequences:
 
 - **The Task's copy goes stale on purpose.** Once the ladder resolves to a Conversation, the Task is historical and nobody writes to it again — so a session prepped before its conversion keeps that older brief on the Task view indefinitely. Expected, not a bug.
 - **It makes the timestamp fix cheap.** `get_model_record(MODEL: "Task", OBJECT_ID: "<conversation._id>")` returns the coupled Task — and its `startTime`, the real session start — in one call, with no `sourceId` lookup. That is why the ladder in § Session timestamp starts there.
@@ -981,6 +1021,14 @@ If either query returns a result, update it rather than creating a duplicate —
 | Customer | Event title pattern | Planhat `type` | Notes |
 |---|---|---|---|
 | SAP Signavio | "Insight-to-Impact Circle" / "Community of Champions" | `🏗️ Architecting` | Structured working session with decisions being made, despite the recurring cadence — not `🔁 Sync` or `Other`. |
+
+##### Session-title overrides — all customers, check before the default mapping
+
+| Title or Calendly event name contains | Planhat `type` | Also set | Notes |
+|---|---|---|---|
+| "Spark in Practice" or "Spark Session" (case-insensitive; includes "⚡️ Spark Session") | `🎓 Enablement` | Conversation `custom.Motion Category: ["Spark in Practice"]`; Task `custom.Spark Conversation: true` | Calendly-booked Spark sessions arrive on the GCal-synced Task typed `👟 Kick off` (observed 2026-10-06) – overwrite that on first touch. Scope and rules: `context/initiatives/spark-in-practice.md`. |
+
+This row wins over the customer-specific table and the default mapping.
 
 **Classifying an untracked call with no Notion Type source** (ad hoc title-based classification — no Notion Session record exists): check the override table above first; if no match, pick directly from the authoritative option list above — never write a raw inferred label like "Other" — default to `🔁 Sync` when nothing more specific applies. When in doubt between `Other`/`🔁 Sync` and `🏗️ Architecting`, prefer Architecting if the call is a structured working session with decisions being made — `🔁 Sync` is for ad hoc or purely social calls.
 
@@ -1270,7 +1318,7 @@ All Notion Task statuses write to the Planhat Task model. Only a `status` *trans
 | `sourceId` | string | — | Notion Task page ID. **Dedup key.** |
 | `custom.Priority` | string | — | `P0` · `P1` · `P2` · `P3` · `P4`. **Corrected 2026-09-12** — this file previously listed only P1–P3; `P0` and `P4` are valid live options. See § Account priority table for which to use. |
 | `custom.Prep Notes` | string | — | Prep brief written by session-prepper. Format: single-line HTML in the `ph-editor` vocabulary — see § Rich Text Field Formatting for the tag table and the canonical prep-brief example. Section labels are `<p><strong>…</strong></p>` (no `<h>` tags); lists **must** carry `ph-editor__bullet-list` / `ph-editor__ordered-list` + `<li class="ph-editor__list-item"><p>…</p></li>`; use `<p></p>` for a blank line and `<hr>` to separate the header block from the body. **Apply the user's `custom.AISE Profile preferences` voice rules to the sentence content** (dash style, etc.) — see `agents/session-prepper.md` § 1b/5b. Read and carried to the linked Conversation during post-session debrief. |
-| `custom.Facilitation Playbook URL` | string | — | Google Drive link to the interactive HTML facilitation guide generated by `/session-facilitation`. Written onto the session's Task so the link survives outside `custom.Prep Notes`, where URLs render as plain text. |
+| `custom.Facilitation Playbook URL` | string | — | Google Drive link to the interactive HTML facilitation guide generated by `/session-facilitation`. Written onto the session's Task so the link survives outside `custom.Prep Notes`, where URLs render as plain text. Task model only (not on Conversations). Writable via `update_model_record` with `{"custom": {"Facilitation Playbook URL": "<url>"}}`; write and read-back verified 2026-10-06. Only the `Facilitation` artifact goes here; other artifact links stay in `custom.Prep Notes`. See `context/session-artifact-convention.md` § 6. |
 | `custom.Slack message URL` | string | — | Slack permalink for a message this Task already produced, so a re-run updates the existing message instead of posting a duplicate. WIP. |
 | `custom.Spark Conversation` | boolean | — | Marks the session as Spark-related. Replaces the `activityTags: ["Spark"]` route, which is not writable via MCP. |
 | ~~`activityTags`~~ | array | — | ~~Freeform tags for filtering.~~ **Not writable via MCP — silently rejected. Apply manually in Planhat UI.** |

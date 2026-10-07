@@ -5,6 +5,23 @@ Format: `## [version] — YYYY-MM-DD` followed by bullet points grouped by type.
 
 ---
 
+## [2.68.0] — 2026-10-07
+
+### Fixed
+- **Placeholder debrief no longer creates a standalone Conversation.** Step 2b now runs step 3-A (find GCal Task, capture Prep Notes, `status` → done, capture `noteId`) and writes the placeholder onto the auto-created Conversation. Never `create_model_record(Conversation)` when a GCal Task exists, in any branch.
+- **Post-conversion update restores `date`, `startDate` and `custom.Prep Notes`** from the Task, with a read-back assert. Schema documents that conversion carries type/subject/endusers/users/Motion Category but not Prep Notes, and overwrites `date`.
+- **Spark sessions typed correctly.** New all-customer title override: "Spark in Practice" / "Spark Session" → `🎓 Enablement`, `custom.Motion Category: ["Spark in Practice"]`, Task `custom.Spark Conversation: true`.
+- `post-session-debrief` now lists `delete_model_record` in its tools.
+
+### Added
+- **Step 3-A0 integrity check** in `post-session-debrief`: a done Task with no linked Conversation plus an orphan sharing its `externalId` is read, deleted and re-converted (`"To Do"` → `"done"`), reported as "orphan repaired". `session-log-auditor` gains check 6g for the same defect class.
+- **Transcript lookup step 0:** check Planhat for a `👾 Gong Call` record (±1 day) before `ask_account`; `session-summarizer` follows it.
+
+### Changed
+- **Gong transcripts are no longer merged through MCP** (`post-session-debrief` 3-C, `ph-reconcile-gong-gcal`). The target keeps `custom.Call Recording` plus the Gong summary; the Gong Call record may be deleted without `transcript`, and the report says so. `transcript_exists` is no longer a conflict.
+
+---
+
 ## [2.67.0] — 2026-10-06
 
 ### Added

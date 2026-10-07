@@ -14,11 +14,11 @@ Customer (name or shorthand) and/or a session identifier (date, type, or Planhat
 
 ### 1. Find the transcript / notes (independently)
 
-Follow the **Transcript lookup order** in `context/project-instructions.md §3` — Gong MCP `ask_account` if available, then Glean `meeting_lookup`, then Glean `search` scoped `app:gong` (both attempts), then Gmail, then Glean `chat`, then ask once as a last resort. **Skip the Notion-specific hops in that lookup order** (the Notion session-page `Gong call` property, `query-meeting-notes`, and adjacent-page checks) — this agent has no Notion tools and Notion is retired. Exhaust every applicable remaining step before concluding a transcript is unavailable; a single tool returning empty is not proof.
+Follow the **Transcript lookup order** in `context/project-instructions.md §3` — **step 0 first: list the company's Conversations ±1 day for a `👾 Gong Call` record and read its `transcript` and `description` as the primary source** (list call metadata-only; if the transcript is >50k chars, hand it to a `general-purpose` sub-agent with an extraction template instead of reading it inline, as in `agents/post-session-debrief.md` step 2a), then Gong MCP `ask_account` as the fallback if available, then Glean `meeting_lookup`, then Glean `search` scoped `app:gong` (both attempts), then Gmail, then Glean `chat`, then ask once as a last resort. **Skip the Notion-specific hops in that lookup order** (the Notion session-page `Gong call` property, `query-meeting-notes`, and adjacent-page checks) — this agent has no Notion tools and Notion is retired. Exhaust every applicable remaining step before concluding a transcript is unavailable; a single tool returning empty is not proof.
 
 Cross-reference across sources — if Gong says X and the user's notes say Y, flag the conflict, don't silently pick one.
 
-**Also always run the Facilitator call notes in Planhat check** (`project-instructions.md §3` § "Facilitator call notes in Planhat"): once the session's Planhat Task/Conversation `_id` is resolved, check `description`, `custom.Prep Notes`, and Comments on it. This runs every time regardless of whether the transcript was found. If facilitator notes turn up, extract from them the same way as the transcript and merge, flagging any conflict between the two.
+**Also always run the Facilitator call notes in Planhat check** (`project-instructions.md §3` § "Facilitator call notes in Planhat"): once the session's Planhat Task/Conversation `_id` is resolved, check `description`, `custom.Prep Notes`, and Comments on it, and note the facilitation guide link (Task `custom.Facilitation Playbook URL`, else the `_Facilitation.html` Drive link in `custom.Prep Notes`) as a pointer only. This runs every time regardless of whether the transcript was found. If facilitator notes turn up, extract from them the same way as the transcript and merge, flagging any conflict between the two.
 
 If a Task/Conversation `_id` wasn't passed in by the caller, resolve it via `list_model_records`/`get_model_record` per `context/planhat-schema.md` § Session record resolution before running this check.
 
@@ -36,7 +36,7 @@ Produce markdown with bolded labels:
 - **Action items — Customer side** — owner + timing
 - **Risks surfaced** — link to the common-risks table entry if applicable
 - **Stakeholder changes** — new names, role changes, sentiment shifts
-- **Source** — where the notes/transcript came from (Gong link, Gmail thread, facilitator notes on the Planhat record)
+- **Source** — where the notes/transcript came from (Gong link, Gmail thread, facilitator notes on the Planhat record; add the facilitation guide link when one exists)
 
 ### 4. Return the extraction
 

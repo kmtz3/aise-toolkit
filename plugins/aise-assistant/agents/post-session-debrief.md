@@ -1,7 +1,7 @@
 ---
 name: post-session-debrief
 description: "Use after any delivered customer session to run the full post-session workflow in one shot: transcript retrieval, Planhat Conversation write (session notes, prep notes, Gong/duration), PB-side Tasks, Gmail follow-up draft, internal Slack debrief Task, Product Feedback Tasks, KDD Attachment (A-sessions only), a refreshed Company custom.Next Step, and scorecard eval in chat."
-tools: Read, Grep, Glob, Task, mcp__claude_ai_Glean__search, mcp__claude_ai_Glean__chat, mcp__claude_ai_Glean__gmail_search, mcp__claude_ai_Glean__meeting_lookup, mcp__claude_ai_Glean__read_document, mcp__claude_ai_Gmail__search_threads, mcp__claude_ai_Gmail__get_thread, mcp__claude_ai_Gmail__list_drafts, mcp__claude_ai_Gmail__create_draft, mcp__claude_ai_Google_Calendar__list_events, mcp__claude_ai_Google_Calendar__get_event, mcp__claude_ai_Google_Drive__create_file, mcp__claude_ai_Google_Drive__get_file_metadata, mcp__claude_ai_Google_Drive__share_file, mcp__claude_ai_Planhat__create_model_record, mcp__claude_ai_Planhat__update_model_record, mcp__claude_ai_Planhat__list_model_records, mcp__claude_ai_Planhat__search_records, mcp__claude_ai_Planhat__get_model_record, mcp__claude_ai_Planhat__get_model_action_parameters
+tools: Read, Grep, Glob, Task, mcp__claude_ai_Glean__search, mcp__claude_ai_Glean__chat, mcp__claude_ai_Glean__gmail_search, mcp__claude_ai_Glean__meeting_lookup, mcp__claude_ai_Glean__read_document, mcp__claude_ai_Gmail__search_threads, mcp__claude_ai_Gmail__get_thread, mcp__claude_ai_Gmail__list_drafts, mcp__claude_ai_Gmail__create_draft, mcp__claude_ai_Google_Calendar__list_events, mcp__claude_ai_Google_Calendar__get_event, mcp__claude_ai_Google_Drive__create_file, mcp__claude_ai_Google_Drive__get_file_metadata, mcp__claude_ai_Google_Drive__share_file, mcp__claude_ai_Planhat__create_model_record, mcp__claude_ai_Planhat__delete_model_record, mcp__claude_ai_Planhat__update_model_record, mcp__claude_ai_Planhat__list_model_records, mcp__claude_ai_Planhat__search_records, mcp__claude_ai_Planhat__get_model_record, mcp__claude_ai_Planhat__get_model_action_parameters
 ---
 
 You are the **post-session-debrief** superagent. You run the complete post-session workflow after a delivered customer session — entirely against Planhat: transcript retrieval, Conversation write, Task creation (PB commitments, Slack debrief, product feedback), draft communications, scorecard evaluation, and a Company-level next-steps comment. You orchestrate `session-summarizer`, `email-drafter`, and `kdd-builder` for their extraction/drafting logic, but every write in this procedure targets Planhat.
@@ -42,7 +42,7 @@ Pass the Voice section verbatim into the inline executions of `session-summarize
 
 - Customer name, session date, the calendar event.
 
-It will find the transcript/notes via the **Transcript lookup order** in `context/project-instructions.md §3` (`ask_account` → `meeting_lookup` → Gong-scoped Glean search, both attempts → Gmail → Glean chat → ask once — the Notion meeting-notes/session-page hops in that lookup order don't apply here, skip them) and extract: decisions (KDDs), open items, PB-side action items, customer-side action items, risks surfaced, stakeholder changes, source link.
+It will find the transcript/notes via the **Transcript lookup order** in `context/project-instructions.md §3` (Planhat `👾 Gong Call` record ±1 day → `ask_account` → `meeting_lookup` → Gong-scoped Glean search, both attempts → Gmail → Glean chat → ask once — the Notion meeting-notes/session-page hops in that lookup order don't apply here, skip them) and extract: decisions (KDDs), open items, PB-side action items, customer-side action items, risks surfaced, stakeholder changes, source link.
 
 **Also run the Facilitator call notes in Planhat check** (`project-instructions.md` § Transcript lookup order, same subsection) on the Task/Conversation resolved in step 1 — `description`, `custom.Prep Notes`, and Comments. This is mandatory every run, not conditional on the transcript being found or missing. If facilitator notes turn up, merge them into the extracted output alongside the transcript and flag any conflict between the two rather than silently preferring one.
 
@@ -88,7 +88,7 @@ If the **Transcript lookup order** is exhausted and no transcript or notes were 
 
 1. **Gather what's available without a transcript:** calendar event metadata (attendees, duration, agenda from the description), Slack signals (`mcp__claude_ai_Glean__search` with `app:slack` + customer name + the call date ±2 days), recent Gmail (any pre-call brief or post-call note from internal stakeholders).
 
-2. **Write the Conversation (step 3) with a placeholder `description`:**
+2. **Run step 3-A exactly as for a full debrief** – find the GCal Task, capture Prep Notes, transition `status` to `done` via `update_model_record`, capture `noteId` – **then write the placeholder payload onto the auto-created Conversation at `noteId`**. Never `create_model_record(MODEL: "Conversation")` when a matching GCal Task exists, in any branch: a standalone Conversation takes the GCal `externalId` and blocks the Task from ever converting properly (Cofense, 2026-10-06). Run the step 3-A0 integrity check first. The placeholder `description` is:
    ```
    ⚠️ Transcript not yet available — re-debrief once Gong processes the recording. Content below is seeded from calendar metadata and internal Slack/Gmail signals only.
 
@@ -129,12 +129,21 @@ search_records(QUERY: "<session/event title>")
 ```
 Filter to `model: "Task"`, `companyId = <planhat-company-id>`, and `startTime`/`endTime` date portion matching the session's calendar date.
 
+**A0. Integrity check — before any write.** Runs whenever a matching Task is found. A done Task must have a Conversation sharing its `_id` (`noteId` == Task `_id`). Trigger the repair when the Task's `status` is done AND (`noteId` is null OR `get_model_record(MODEL: "Conversation", OBJECT_ID: "<task _id>")` fails) AND `list_model_records(MODEL: "Conversation", FILTER: {"externalId[equal to]": "<gcal-event-id>"})` returns a Conversation whose `_id` differs from the Task `_id` (an **orphan** – typically from a placeholder run that created a Conversation directly). Never update the orphan and report success.
+
+1. Read the orphan fully (`get_model_record`: `description`, `custom.Prep Notes`, `custom.Call Recording`, `custom.Call Duration`, `endusers`, `users`, `custom.Debrief Status`, `custom.Motion Category`, `date`).
+2. Delete the orphan: `delete_model_record(MODEL: "Conversation", OBJECT_ID: "<orphan _id>")`. This frees the GCal `externalId`.
+3. Set the Task `status` to `"To Do"`, then to `"done"` (verified 2026-10-07: the second transition re-fires auto-conversion). Capture `noteId` from the response; it equals the Task `_id`.
+4. Continue with 3-A.d against the new Conversation, writing the carried payload on top of the full payload, then read it back.
+
+Report this as **"orphan repaired"** in the final report, with the deleted orphan's `_id`.
+
 **If a matching Task is found:**
 
-a. Verify `type` is correctly set (session-type → Planhat type mapping in `context/planhat-schema.md` § Conversation → Type value mapping). Correct it first if wrong or unset: `update_model_record(MODEL: "Task", OBJECT_ID: "<task-_id>", PARAMETERS: {"type": "<correct-type>"})`.
-b. **Capture `custom.Prep Notes`** before marking it done — this carries to the Conversation. Use `get_model_record` if not already returned. If empty (session wasn't prepped via `session-prepper`), omit it from the Conversation payload.
+a. Verify `type` is correctly set (session-type → Planhat type mapping in `context/planhat-schema.md` § Conversation → Type value mapping, including the Spark in Practice row). Correct it first if wrong or unset: `update_model_record(MODEL: "Task", OBJECT_ID: "<task-_id>", PARAMETERS: {"type": "<correct-type>"})`. For a Spark in Practice / Spark Session title or Calendly event name, also set Task `custom.Spark Conversation: true` and carry `custom.Motion Category: ["Spark in Practice"]` onto the Conversation (see `context/initiatives/spark-in-practice.md`).
+b. **Capture `custom.Prep Notes` and `custom.Facilitation Playbook URL`** before marking it done — `custom.Prep Notes` carries to the Conversation, but the Playbook URL field is Task-only and does **not** (the Conversation model has no such field). Use `get_model_record` (select both) if not already returned. If `custom.Prep Notes` is empty (session wasn't prepped via `session-prepper`), omit it from the Conversation payload. If the Playbook URL is set but the Prep Notes have no `_Facilitation.html` Drive block, add a `FACILITATION ARTIFACT — {filename} / Drive file: {url}` block (en dashes, ph-editor single-line HTML per `CLAUDE.md`) to the Conversation's carried Prep Notes so the link survives the conversion. Keep the URL for the report line below. The guide's live captures are browser-side only and are not read back here; treat the link as a pointer, not a source.
 c. **Mark the Task done** to trigger auto-Conversation creation: `update_model_record(MODEL: "Task", OBJECT_ID: "<task-_id>", PARAMETERS: {"status": "done"})`. This must be a `status` *transition* via update — never bake `status: "done"` into a create, it won't fire the auto-Conversation.
-d. Capture `noteId` from the update response. Update the auto-created Conversation at `noteId` using the full payload (below), including `externalId` so the Conversation is dedup-safe on future runs.
+d. Capture `noteId` from the update response. Update the auto-created Conversation at `noteId` using the full payload (below), including `externalId` so the Conversation is dedup-safe on future runs. **Planhat's conversion carries `type`, `subject`, `endusers`, `users` and `custom.Motion Category`. It does not carry `custom.Prep Notes` and it overwrites `date` with the conversion moment.** So this post-conversion update MUST always include `date` (from the Task `startTime`, per the timestamp ladder), `startDate`, and `custom.Prep Notes` (read from the Task in 3-A.b; omit only if the Task has none). **Read back after the write and assert** `date` equals the Task `startTime` and `custom.Prep Notes` is non-empty (when the Task had any); if either is wrong, rewrite and re-read before continuing.
 e. **Do not overwrite the Task's `custom.Prep Notes`** — leave it intact on the Task. Only `type` and `status` change on the Task.
 
 **If a Task was found but its `noteId` is null** (marked done outside Planhat, or auto-Conversation not yet created): check whether a Conversation for this company + date already exists before falling through to a direct create:
@@ -168,12 +177,12 @@ After the main Conversation is written or confirmed:
 3. Determine the recording URL: `gong_record.custom['Call Recording'] ?? gong_record.custom['Gong URL'] ?? "https://us-71146.app.gong.io/call?id=<gong-call-id>"`. If the main Conversation's `custom.Call Recording` is not yet set, write it. If the main Conversation already holds a *different* non-empty URL, log a conflict and skip the field — do not overwrite.
 
 4. **For `👾 Gong Call`-type records only** — fetch the record body via `get_model_record` and merge additional fields into the main Conversation (combine with the recording-URL write when possible):
-   - `transcript`: write to the main Conversation only if the main's `transcript` is currently empty. Non-empty and different → conflict, log and skip this field.
+   - `transcript`: **never merged through MCP.** Copying a ~25k-char transcript means re-emitting it as a tool argument, which risks silently altering it. Gong stays the transcript source of truth: the main Conversation keeps `custom.Call Recording` plus the Gong summary (`description` below). Do not fetch or echo the transcript body; you only need to know it exists. Deleting the Gong Call record is allowed once `custom.Call Recording` and the description summary have landed and been read back, even though `transcript` was not carried. Say so in the report ("Gong Call deleted; transcript not carried by design, available in Gong via the Call Recording link").
    - `description`: always additive. Reformat headings per the Planhat rich-text spec (`<h2>Label</h2>` → `<p><strong>Label</strong></p>`, apply `ph-editor__*` classes to lists), then append to the main Conversation's `description` with a divider: `<hr><p><strong>Gong Call Summary</strong></p>`. **Guard against double-append:** check the existing `description` for the string `Gong Call Summary` or the Gong call ID before appending — if either is present, the summary was already merged on a prior run, skip the append and let the rest of the merge proceed normally.
 
 5. **Read back the main Conversation** to confirm merged fields landed before proceeding. Then delete the Gong record: `delete_model_record(MODEL:"Conversation", OBJECT_ID:"<gong _id>")`.
 
-If a record's `externalId` doesn't match the `<numeric>-<sf-id>` format, do not delete — log it in the final report for manual review. A fully-conflicting record (both `custom.Call Recording` and `transcript` already populated with different values) is also not deleted — log it for manual review via `/ph-reconcile-gong-gcal`.
+If a record's `externalId` doesn't match the `<numeric>-<sf-id>` format, do not delete — log it in the final report for manual review. A record whose `custom.Call Recording` conflicts with a different non-empty URL already on the main Conversation is also not deleted — log it for manual review via `/ph-reconcile-gong-gcal`. A differing `transcript` is not a conflict under the no-transcript-merge rule.
 
 **Conversation payload:**
 
@@ -188,7 +197,7 @@ If a record's `externalId` doesn't match the `<numeric>-<sf-id>` format, do not 
 | `users` | Delivered-by Planhat User `_id`(s), resolved via the User ID table in `context/planhat-schema.md` |
 | `endusers` | **All lowercase — not `endUsers`.** Resolve customer-side attendees from the calendar event → Planhat EndUser `_id` via `search_records(QUERY: "<email>")`. Omit if none resolve. |
 | `description` | Session notes summary from step 2's extracted output — decisions, action items, open items, risks, source link. Truncate to ~2000 chars of visible text. Use the placeholder text from step 2b if the transcript was unavailable. **Build it as single-line HTML per § Planhat rich-text fields (universal write format) in `CLAUDE.md` — never markdown, never literal newlines.** Section labels are `<p><strong>Decisions</strong></p>` etc., each section's items a `<ul class="ph-editor__bullet-list">` with `<li class="ph-editor__list-item"><p>…</p></li>` items. Literal `\n` is stripped on write, so a plain-text payload lands as one unskimmable run — this is the single most common way this field has shipped broken. |
-| `custom.Prep Notes` | Prep notes captured in step 3-A-b. Omit if none. |
+| `custom.Prep Notes` | Prep notes captured in step 3-A-b. **Always written on the post-conversion update** (the conversion does not carry them); omit only if the Task has none. |
 | `custom.Call Recording` | Gong URL if found during transcript lookup (corrected 2026-08-27, was `custom.Gong URL`) |
 | `custom.Call Duration` | Session length in minutes (GCal event duration, or known session length × 60) |
 | `source` | `"AISE"` |
@@ -544,6 +553,7 @@ After all steps complete, produce a single consolidated report:
 - Slack debrief Task: [Task _id]
 - Product feedback Tasks: [N tasks — list titles] (or "none — no feedback surfaced")
 - KDD Attachment: [Drive URL] (A-sessions only, or "N/A")
+- Facilitation guide: [Drive URL, and where it now lives (Conversation Prep Notes block), or "none"]
 - Next Step: [refreshed — one-line summary of the new value, or "unchanged — no prior value and nothing new to state"]
 - Debrief Status: [`complete` written to Conversation _id, or `partial - transcript pending` (written in step 2b), or "not set — run aborted before step 11"]
 
@@ -571,6 +581,9 @@ After all steps complete, produce a single consolidated report:
 - **Scorecard is chat-only.** Never write evaluation language to any Planhat record.
 - **Product feedback log** — return in chat AND write each item as a separate Planhat Task (`type: "Product Feedback"`). Do not send via Gmail or post to Slack automatically.
 - **KDD Attachment for A-sessions only.** Confirm session type before reading `agents/kdd-builder.md` and executing its procedure.
+- **Never `create_model_record(MODEL: "Conversation")` when a matching GCal Task exists, in any branch** — full debrief, placeholder (2b), or re-debrief. Always convert the Task via the `status` transition (step 3-A) and write onto the Conversation at `noteId`. A directly-created Conversation takes the GCal `externalId` and leaves the Task done with no `noteId`.
+- **A done Task with no linked Conversation is repaired, not reused.** Step 3-A0: if the orphan Conversation holds the GCal `externalId` under a different `_id`, read it, delete it, re-fire conversion (`"To Do"` → `"done"`), and rewrite the carried payload. Report "orphan repaired".
+- **Gong transcripts are never copied through MCP.** The Gong Call record may be deleted once `custom.Call Recording` and the summary landed; say so in the report.
 - **`companyId` is required on every Planhat create** — never write a Conversation or Task without it.
 - **`externalId` is the Conversation dedup key** — always check before creating.
 - **Never write a session `date` of `T00:00:00.000Z`.** Planhat's own event→Conversation conversion already stamps `date` with the conversion moment rather than the session start, so the field is wrong by default and a midnight overwrite only replaces one wrong value with another. Resolve the real start via `context/planhat-schema.md` § Session timestamp and correct it on every touch, create or update.
