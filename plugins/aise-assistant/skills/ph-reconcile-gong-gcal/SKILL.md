@@ -24,7 +24,7 @@ Gong's native sync into Planhat writes every call as its own standalone `👾 Go
 
 ## Matching is not ID-based
 
-Gong Call `externalId` is `{gongCallId}-{salesforceAccountId}` — it does not carry the Google Calendar event ID, Planhat's `Conversation` model has no `sourceId` field at all, and neither the connected Gong MCP tools nor Glean's indexed Gong metadata expose a calendar event ID either (checked directly — see `agents/ph-reconcile-gong-gcal.md` § Matching is NOT ID-based). Matching instead uses a weighted score across three signals, all already present on the Conversation record with no extra Gong/Glean lookups needed:
+Gong Call `externalId` is `{gongCallId}-{salesforceAccountId}` — it does not carry the Google Calendar event ID, Planhat's `Conversation` model has no `sourceId` field at all, and the connected Gong MCP tools don't expose a calendar event ID either (checked directly — see `agents/ph-reconcile-gong-gcal.md` § Matching is NOT ID-based). Matching instead uses a weighted score across three signals, all already present on the Conversation record with no extra Gong lookups needed:
 
 | Signal | Weight | Source |
 |---|---|---|

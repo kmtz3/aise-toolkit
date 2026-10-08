@@ -20,7 +20,7 @@ Canonical syntax uses `--force-new`, but also recognize natural language variati
 
 1. **Resolves the Planhat Company** for the customer (name search → SF `sourceId` fallback → `domains` fallback — see `context/planhat-schema.md`). If no Company record exists yet, stops and flags it — nothing to attach research to until Salesforce sync creates one.
 2. **Checks for an existing research note** — a Planhat Conversation (`type: "note"`, subject `Account Research — <Company>`) on the Company record. If found (and `--force-new` wasn't passed), this run enriches it rather than replacing it.
-3. **Researches in parallel** — web search (company overview, industry, tech stack), Planhat Sales Handoff fields (auto-populated at deal close), Gong via Glean (goals, product areas, use cases, org structure), Gmail/Glean (stakeholders, handoff context).
+3. **Researches in parallel** — web search (company overview, industry, tech stack), Planhat Sales Handoff fields (auto-populated at deal close), Gong — Planhat `👾 Gong Call` Conversations + Gong `ask_account` (goals, product areas, use cases, org structure), Gmail / Planhat `email` Conversations (stakeholders, handoff context).
 4. **Synthesizes** a write-up: company overview, products they bring to market, customer's use cases with Productboard, org/toolstack, key stakeholders, open items — citing sources, never fabricating gaps.
 5. **Proposes in chat (always — never writes without confirmation)** the full write-up, flagging any thin sections.
 6. **Writes on approval** — creates a fresh Planhat Conversation note, or prepends a dated enrichment block to the existing one.

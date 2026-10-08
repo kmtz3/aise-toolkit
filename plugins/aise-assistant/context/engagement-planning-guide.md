@@ -2,7 +2,7 @@
 
 How to draft a structured, phased onboarding program for a new Productboard AISE engagement. This is the reference for `/customer-plan --full`.
 
-Reference case: **Kpler Holding SA** (Q1 2026) — program plan and session log, reachable via Glean.
+Reference case: **Kpler Holding SA** (Q1 2026) — program plan and session log, reachable via the Notion connector (`notion-search`).
 
 ---
 
@@ -29,7 +29,7 @@ Do **not** invoke for single-session prep, debriefs, decision register updates, 
 
 ## Inputs to confirm up front
 
-Before drafting, verify you have the following. Pull via Glean / Planhat / Gmail / Salesforce first. If anything is still missing, ask once as a single consolidated question, then proceed with stated assumptions.
+Before drafting, verify you have the following. Pull via Planhat / Gmail / Gong / Slack / Salesforce first. If anything is still missing, ask once as a single consolidated question, then proceed with stated assumptions.
 
 1. **Customer name** and industry
 2. **Contracted scope** — total Architecting + Training session pool, from `custom.AISE Working Sessions` summed across the Company's active `Line Item` records (`context/planhat-schema.md` § AISE Working Sessions). It's one shared pool, not separate Architecting/Training caps — both session types draw from it.
@@ -249,7 +249,7 @@ See `context/planhat-schema.md` for field formats and write rules.
 
 ## Reference case
 
-**Kpler Holding SA** (Q1 2026) is the canonical example, from the era when this plan lived in Notion. When in doubt about structure, depth, or tone, pull it via Glean (it predates the `custom.Engagement Plan` field) and match that level of specificity, formatting, and decisions density.
+**Kpler Holding SA** (Q1 2026) is the canonical example, from the era when this plan lived in Notion. When in doubt about structure, depth, or tone, pull it via the Notion connector (it predates the `custom.Engagement Plan` field) and match that level of specificity, formatting, and decisions density.
 
 ---
 

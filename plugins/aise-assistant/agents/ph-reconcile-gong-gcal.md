@@ -19,7 +19,7 @@ It is tempting to assume Gong Call `externalId` carries the Google Calendar even
 | `👾 Gong Call` Conversation (Gong sync) | `7668611138330097753-001f400001GC38TAAT` | `{gongCallId}-{salesforceAccountId}` |
 | Target session Conversation (GCal sync) | `ip5dj5rdolaa07e56is5m19lo4` | Bare GCal event ID (or `{eventId}_{YYYYMMDDTHHMMSSZ}` for a recurring instance) |
 
-**The Conversation model also has no `sourceId` field at all** (`get_model_action_parameters(MODEL: "Conversation")` confirms this — `sourceId` exists on `Task` and `Company`, not `Conversation`). Neither the connected Gong MCP tools (`ask_account`/`ask_deal`/`generate_brief` are synthesis-only — explicitly documented as not for raw data) nor Glean's full indexed Gong metadata (checked directly: `app`, `call_duration_range`, `opportunity`, `external_participants`, `department`, `type`, `account`, `documentcategory` — no calendar reference anywhere) expose one either. There is no shared key between a Gong Call record and its target.
+**The Conversation model also has no `sourceId` field at all** (`get_model_action_parameters(MODEL: "Conversation")` confirms this — `sourceId` exists on `Task` and `Company`, not `Conversation`). Neither the connected Gong MCP tools (`ask_account`/`ask_deal`/`generate_brief` are synthesis-only — explicitly documented as not for raw data) nor Gong's indexed call metadata (checked directly via the since-retired Glean index: `app`, `call_duration_range`, `opportunity`, `external_participants`, `department`, `type`, `account`, `documentcategory` — no calendar reference anywhere) expose one either. There is no shared key between a Gong Call record and its target.
 
 Matching is instead a **weighted score across attendee overlap, subject similarity, and date proximity** (§3.c below), confirmed against a real pair in this workspace: same company, identical subject line, call times 58 minutes apart, and — critically — the exact same `endusers[].id` for the customer contact who was on the call. Attendee identity is the strongest signal because Gong's sync already resolves participants to Planhat `EndUser`/`User` IDs; it's exact-ID overlap, not text fuzzing.
 
@@ -85,7 +85,7 @@ list_model_records(
 
 **Conversation `list_model_records` has an effective ~36-record cap regardless of the true match count.** If the returned count equals the page size, page forward with `OFFSET` and repeat until a page returns fewer records than `LIMIT`, so a large unscoped run doesn't silently stop at the cap. Report the total pulled at the top of the plan.
 
-**`endusers`/`users` come pre-resolved to Planhat IDs — this is the strongest available signal.** Gong's native sync already resolves call participants to Planhat `EndUser`/`User` records (verified live: a Gong Call Conversation and its GCal-synced target session shared the exact same `endusers[].id`). No Gong or Glean lookup is needed to get attendee identity — it's already on the record.
+**`endusers`/`users` come pre-resolved to Planhat IDs — this is the strongest available signal.** Gong's native sync already resolves call participants to Planhat `EndUser`/`User` records (verified live: a Gong Call Conversation and its GCal-synced target session shared the exact same `endusers[].id`). No Gong lookup is needed to get attendee identity — it's already on the record.
 
 ### 3. For each Gong Call Conversation, find its target
 

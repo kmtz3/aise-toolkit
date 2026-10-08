@@ -18,8 +18,8 @@ Canonical syntax uses flags, but also recognize natural language variations and 
 
 | Flag | Natural language equivalents | What it does |
 |---|---|---|
-| `--customer <name>` | "report on [customer]", "how is [customer] doing", "what's the status on [customer]", "update on [customer] for leadership" | Single-account snapshot — pull from Planhat + Glean/Gmail |
-| `--aise [me\|name]` | "my portfolio report", "report on [AISE]'s accounts", "what does [AISE]'s book look like", "portfolio status", "overview of all my accounts" | Multi-account portfolio view — Planhat-only, no per-account Glean pull |
+| `--customer <name>` | "report on [customer]", "how is [customer] doing", "what's the status on [customer]", "update on [customer] for leadership" | Single-account snapshot — pull from Planhat + Gmail |
+| `--aise [me\|name]` | "my portfolio report", "report on [AISE]'s accounts", "what does [AISE]'s book look like", "portfolio status", "overview of all my accounts" | Multi-account portfolio view — Planhat-only, no per-account Gmail pull |
 | `--chat-only` | "just show me in chat", "skip the artifact" | Suppresses the Artifact publish; inline chat rendering still happens |
 
 ---
@@ -30,14 +30,14 @@ Generate a leadership report for: **$ARGUMENTS**
 
 Read the procedure in `agents/report-builder.md` → **`--customer` mode** and execute it inline as the main assistant — do not spawn a subagent.
 
-**What it does:** Pulls Planhat state (Company, contracted session pool via Line Items, Conversations, Tasks) + supplementary activity signals from Glean and Gmail, then renders a structured account snapshot formatted for a leadership audience, both inline in chat and as a published Artifact.
+**What it does:** Pulls Planhat state (Company, contracted session pool via Line Items, Conversations, Tasks) + supplementary activity signals from Planhat `👾 Gong Call` Conversations and Gmail, then renders a structured account snapshot formatted for a leadership audience, both inline in chat and as a published Artifact.
 
 ### Steps
 
 1. Resolve the Company in Planhat (`search_records` + SF `sourceId` fallback). `owner` is the CSM field, not necessarily the AISE — if it doesn't resolve to the current user, surface the conflict as read-only rather than stopping (see `agents/report-builder.md` § Ownership note).
 2. Pull in parallel:
    - **Planhat** — Company fields (ARR, renewal date, phase, journey status), contracted session pool (Line Items), Conversations (session history, counted-eight-type split), open Tasks (owner-filtered to current user unless `--aise` is active)
-   - **Glean `meeting_lookup`** — last 2 Gong recordings for this customer
+   - **Planhat `👾 Gong Call` Conversations** — last 2 Gong recordings for this customer (`list_model_records` on Conversation, `type[equal to]: "👾 Gong Call"`, `SORT: "-date"`, `LIMIT: 2`)
    - **Gmail** — last 3–5 threads with the customer domain
 3. Derive program state: current phase, session velocity, cadence health, credit burn trajectory.
 4. Render the report inline, then publish it as an Artifact (unless `--chat-only`).

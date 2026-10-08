@@ -162,7 +162,7 @@ To change them: run `/assistant-setup` for a guided re-onboarding, or edit the f
 
 ## Tips
 
-- **Don't paste context** the assistant can retrieve. Just name the customer or session — agents pull from Glean, Gmail, Calendar, Planhat, Slack automatically.
+- **Don't paste context** the assistant can retrieve. Just name the customer or session — agents pull from Planhat, Gmail, Calendar, Gong, Slack automatically.
 - **Confirm before destructive writes.** Planhat updates ask before applying unless explicitly told otherwise.
 - **Customer-side actions don't go in the Tasks DB.** Only PB-side actions assigned to you. Customer commitments live in summaries / follow-ups.
 - **Internal tasks** (no specific customer) point at the **Productboard** customer record automatically.

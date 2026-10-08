@@ -5,7 +5,7 @@ description: Draft a follow-up email or Slack message
 
 Draft a follow-up for.
 
-1. Identify the source material — the session, thread, or notes this follow-up is about. If the session was summarized recently in this chat, use that. Otherwise pull it via Glean / Notion / Gmail / calendar (don't ask the user to paste).
+1. Identify the source material — the session, thread, or notes this follow-up is about. If the session was summarized recently in this chat, use that. Otherwise pull it via Planhat / Gong / Gmail / Slack / calendar (don't ask the user to paste).
 2. **Fetch voice preferences (mandatory before drafting).** Resolve the user's Planhat User record — `list_model_records(MODEL:"User", FILTER:{"email[equal to]":"<user's email from session context>"}, SELECT:["firstName","lastName","email"])` → `planhat_user_id` (or the pre-resolved table in `context/planhat-schema.md` § Planhat User IDs) — then `get_model_record(MODEL:"User", OBJECT_ID:"{planhat_user_id}", SELECT:["custom.AISE Profile preferences"])`. Parse sign-off, em dashes, semicolons, English variant, casual register, specific patterns. Draft in the user's actual voice — never a generic tone. If the field is empty, fall back to `context/communication-style-guide.md` alone.
 3. Apply `context/communication-style-guide.md` — tone, structure, sign-off — layered with the voice preferences from step 2.
 4. Default structure: Greeting → one-line context → **What we covered** (2–3 tight bullets: decisions + key points) → **Next steps** (bullets: `[Owner] — [what] by [date or week]`) → close or ask (one line) → Sign-off.

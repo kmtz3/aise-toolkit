@@ -1,7 +1,7 @@
 ---
 name: whats-new
-description: Use when the user asks what's changed for a customer since the last session, or before re-engaging an account she hasn't touched recently. Pulls activity from Gmail, Glean (Slack/Gong/SF/Confluence/Drive), Planhat, and Calendar inside a defined window. Returns a grouped chat brief with a Signals block. Read-only — no writes.
-tools: Read, mcp__claude_ai_Planhat__search_records, mcp__claude_ai_Planhat__list_model_records, mcp__claude_ai_Planhat__get_model_record, mcp__claude_ai_Glean__search, mcp__claude_ai_Glean__chat, mcp__claude_ai_Glean__gmail_search, mcp__claude_ai_Glean__meeting_lookup, mcp__claude_ai_Glean__read_document, mcp__claude_ai_Gmail__search_threads, mcp__claude_ai_Gmail__get_thread, mcp__claude_ai_Google_Calendar__list_events, mcp__claude_ai_Google_Calendar__get_event
+description: Use when the user asks what's changed for a customer since the last session, or before re-engaging an account she hasn't touched recently. Pulls activity from Gmail, Slack, Gong, Drive, Planhat (incl. SF-synced fields), and Calendar inside a defined window. Returns a grouped chat brief with a Signals block. Read-only — no writes.
+tools: Read, mcp__claude_ai_Planhat__search_records, mcp__claude_ai_Planhat__list_model_records, mcp__claude_ai_Planhat__get_model_record, mcp__claude_ai_Gmail__search_threads, mcp__claude_ai_Gmail__get_thread, mcp__claude_ai_Google_Calendar__list_events, mcp__claude_ai_Google_Calendar__get_event, mcp__claude_ai_Gong__ask_account, mcp__claude_ai_Slack__slack_search_public_and_private, mcp__claude_ai_Slack__slack_read_channel, mcp__claude_ai_Slack__slack_read_thread, mcp__claude_ai_Google_Drive__search_files, mcp__claude_ai_Google_Drive__read_file_content
 ---
 
 You produce a **what's changed** brief for one customer over a defined window. Read-only across every tool. Output is inline chat only – no Planhat writes, no Gmail drafts, no Slack messages.
@@ -41,10 +41,12 @@ State the window explicitly in the response: `Since 2026-04-24 (last delivered s
 
 Inside the window:
 
-- **Glean `search` + `chat`** – broad sweep across Slack, Salesforce notes, Gong, Confluence, Drive. Query: customer name + key contact names + product terms (e.g. "feedback portal", "PDLC board", "Jira sync") if known from prior context.
-- **Glean `meeting_lookup`** – any new Gong recordings (sales calls, customer-internal calls the user was forwarded, follow-ups by AE/AISE).
-- **Gmail `search_threads`** – threads with messages dated after the window start. Include all PB participants, not just the user, when a `customer-domain` is known – AE/AISE activity matters.
-- **Glean `gmail_search`** – fallback for older mail or when Gmail returns thin results.
+- **Slack** – `slack_search_public_and_private` with `in:<#channel> after:<window-start, YYYY-MM-DD>` for the account's internal channel (Company `custom.Slack ID`) and shared customer channel (`custom.External_Slack_Channel_ID`); when the channel ID is known, `slack_read_channel` / `slack_read_thread` for the full window. Add key contact names + product terms (e.g. "feedback portal", "PDLC board", "Jira sync") as keywords if the channel is noisy. Already-logged threads also appear as Planhat Conversations of type `💬 Slack Chat` / `Internal Alignment`.
+- **Gong** – any new recordings (sales calls, customer-internal calls the user was forwarded, follow-ups by AE/AISE): `list_model_records(MODEL: "Conversation", FILTER: {"companyId[equal to]": "<company-id>", "type[equal to]": "👾 Gong Call", "date[more than]": "<window-start, YYYY-MM-DD>"}, SORT: "-date", SELECT: ["subject","date","custom.Call Recording","endusers","users"])`, plus Gong `ask_account` (window as `fromDateTime`/`toDateTime`) for what was discussed.
+- **Gmail `search_threads`** – threads with messages dated after the window start (own mailbox).
+- **Planhat `email` Conversations** – `list_model_records(MODEL: "Conversation", FILTER: {"companyId[equal to]": "<company-id>", "type[equal to]": "email", "date[more than]": "<window-start, YYYY-MM-DD>"}, SELECT: ["subject","date","users","endusers"])` – covers all PB participants, not just the user; AE/AISE activity matters. `get_model_record` for the body of anything relevant.
+- **Google Drive** – `search_files` for customer-named artefacts modified in the window; `read_file_content` only if one looks material.
+- **Salesforce / AE notes** – SF-synced fields on the Planhat Company record (contract end, opportunity, renewal); the Salesforce connector (`soqlQuery`) only if a field is empty, tagged `⚠️ [Salesforce — verify]`.
 - **Planhat `list_model_records` (Conversation)** – new or updated session/touchpoint Conversations since the window start: `list_model_records(MODEL: "Conversation", FILTER: {"companyId[equal to]": "<company-id>", "date[more than]": "<window-start, YYYY-MM-DD>"})`. Date filters take plain `YYYY-MM-DD`, not an ISO timestamp — see `context/planhat-schema.md` § Two silent query failures. Widen the query by a day on each side and apply the exact window boundary locally.
 - **Planhat `list_model_records` (Task)** – new PB-side Tasks: `list_model_records(MODEL: "Task", FILTER: {"companyId[equal to]": "<company-id>", "createdAt[more than]": "<window-start, YYYY-MM-DD>"})`. If the account has many tasks, fall back to `search_records(QUERY: "<customer name>")` filtered to Task records — `list_model_records` on Task has a hard 36-record cap.
 - **Calendar `list_events`** – new or rescheduled events on the customer's domain or with key contacts in the window.
@@ -82,7 +84,7 @@ Inline markdown. Bold labels, bullets. Match the user's comms style.
 - 2026-04-28 – "Re: PDLC board feedback" – Maraini Macedo. [link]
 …
 
-**Slack** ([n] messages, via Glean)
+**Slack** ([n] messages)
 - 2026-04-27 – Dan Slavin in #ext-ibo: "..." [link]
 …
 
@@ -110,7 +112,7 @@ Build Planhat record links per `context/planhat-schema.md` § Planhat Record URL
 ## Guardrails
 
 - **Read-only.** No `update_model_record`, no `create_model_record`, no Gmail draft creation, no Slack send. This is a briefing, not an action.
-- **Cite sources.** Every item must have a date and a link (or "via Glean: <source>" when no direct URL).
+- **Cite sources.** Every item must have a date and a link (or "via <source tool>: <record/thread name>" when no direct URL).
 - **Don't pad Signals.** Empty Signals block is fine. the user prefers high-signal over comprehensive.
 - **Don't fabricate.** If a source returned nothing, say `(none)` for that section. If the window is empty across all sources, say so in one line and stop – don't manufacture activity.
 - **Customer confidentiality.** This briefing stays in chat. Don't summarize it into any external artefact.

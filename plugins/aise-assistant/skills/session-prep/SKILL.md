@@ -8,7 +8,7 @@ Prep the user for the customer session identified in the user's message (custome
 Read the procedure in `agents/session-prepper.md` and execute it inline as the main assistant — do not try to spawn `session-prepper` as a subagent (custom agents in this plugin are procedure documents, not registered subagent types). The steps:
 
 1. Confirm date, attendees, and session type (Google Calendar lookup).
-2. Pull context from Planhat (Company record, contracted session pool, recent Conversations), Glean (including Slack channel search), Gmail, Salesforce (fallback for missing snapshot fields), and past chats — in parallel.
+2. Pull context from Planhat (Company record, contracted session pool, recent Conversations), Gong (`ask_account`), Slack (account channel search), Gmail, Salesforce connector (fallback for missing snapshot fields), and past chats — in parallel.
 3. Consult `context/pb-aise-reference-guide.md` (what-good-looks-like) and `context/score-cards.md` for the session type.
 4. Draft a prep brief: customer context, goals, KDDs to drive, open items, risks, suggested agenda, questions to ask.
 5. Resolve the session's Planhat Task or Conversation (GCal-event-id ladder, never a title search first — see `agents/session-prepper.md` § 5) and write the brief to `custom.Prep Notes`, single-line HTML per `context/planhat-schema.md` § Rich Text Field Formatting.

@@ -1,7 +1,7 @@
 ---
 name: inbox-triage
 description: Use when the user asks to work through their inbox rather than write one specific email – "draft replies to my inbox", "what needs a reply", "triage my inbox". Sweeps recent mail, separates threads genuinely awaiting the user from noise, batch-drafts threaded replies in their voice, and updates each account's Planhat Next Step after the user has sent. NEVER sends. Invoked by `/inbox-triage`.
-tools: Read, Grep, Glob, mcp__claude_ai_Gmail__search_threads, mcp__claude_ai_Gmail__get_thread, mcp__claude_ai_Gmail__get_message, mcp__claude_ai_Gmail__list_drafts, mcp__claude_ai_Gmail__create_draft, mcp__claude_ai_Gmail__trash_message, mcp__claude_ai_Planhat__list_model_records, mcp__claude_ai_Planhat__get_model_record, mcp__claude_ai_Planhat__update_model_record, mcp__claude_ai_Planhat__get_model_action_parameters, mcp__claude_ai_Glean__search, mcp__claude_ai_Glean__chat, mcp__claude_ai_Glean__gmail_search, mcp__claude_ai_Glean__meeting_lookup, mcp__claude_ai_Gong__ask_account, mcp__claude_ai_Google_Calendar__list_events, mcp__claude_ai_Google_Calendar__get_event
+tools: Read, Grep, Glob, mcp__claude_ai_Gmail__search_threads, mcp__claude_ai_Gmail__get_thread, mcp__claude_ai_Gmail__get_message, mcp__claude_ai_Gmail__list_drafts, mcp__claude_ai_Gmail__create_draft, mcp__claude_ai_Gmail__trash_message, mcp__claude_ai_Planhat__list_model_records, mcp__claude_ai_Planhat__get_model_record, mcp__claude_ai_Planhat__update_model_record, mcp__claude_ai_Planhat__get_model_action_parameters, mcp__claude_ai_Gong__ask_account, mcp__claude_ai_Google_Calendar__list_events, mcp__claude_ai_Google_Calendar__get_event
 ---
 
 You are **inbox-triage**. You start from the user's inbox, decide what actually needs a reply from them, draft those
@@ -45,7 +45,7 @@ Per thread that will get a draft:
   offered a Spark demo, overview or features walkthrough – the sequence is scoping call, then working session on
   their own data, then a day-14 check-in.
 - **Thread history** – what the user already committed to, and the register the thread is using.
-- **Gong / Glean / Calendar** – only where the reply depends on what happened on a call.
+- **Gong / Calendar** – only where the reply depends on what happened on a call.
 
 If an account is not in the initiative's tier list, do not assume it is in scope. Ask, or treat it as out of scope and
 say which you did.

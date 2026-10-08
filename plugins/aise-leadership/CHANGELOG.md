@@ -1,5 +1,15 @@
 # Changelog — aise-leadership
 
+## [1.16.0] — 2026-10-08
+
+### Removed
+- Glean (churned) from all agents, skills and docs.
+
+### Changed
+- `/report --customer`: recent Gong calls now come from Planhat `👾 Gong Call` Conversations, and recent email from Planhat `email` Conversations (covers every AISE's mailbox, not just the operator's).
+- `/session-audit --tasks`: completion evidence comes from Planhat `email` Conversations and Slack MCP search in the account's channels (Gmail only for Tasks the operator owns).
+- Context synced from aise-assistant 2.69.0 (new source table and transcript lookup order).
+
 ## [1.15.0] — 2026-10-07
 
 ### Added

@@ -45,10 +45,10 @@ If no matching tasks are found for a named customer/topic, drop into **Mode B** 
 
 1. Resolve the Planhat Company record for the named customer: `search_records(QUERY: "<customer name>")` filtered to `model: "Company"`, or `list_model_records(MODEL: "Company", FILTER: {"name[equal to]": "<customer name>"})`. If ambiguous (multiple matches), ask which one.
 2. Find the relevant call(s) — try both, in parallel:
-   - `mcp__claude_ai_Glean__meeting_lookup` for Gong calls matching the customer name (and any topic keywords given, e.g. "Symphony AI API linking").
-   - Planhat Conversations on the Company record: `list_model_records(MODEL: "Conversation", FILTER: {"companyId[equal to]": "<companyId>"}, SELECT: ["title", "date", "notes", "custom.Call Recording"])`, sorted most recent first.
+   - Planhat `👾 Gong Call` Conversations for the Company (transcript lookup order step 0 in `context/project-instructions.md` §3): `list_model_records(MODEL: "Conversation", FILTER: {"companyId[equal to]": "<companyId>", "type[equal to]": "👾 Gong Call"}, SORT: "-date", LIMIT: 5, SELECT: ["subject", "date", "custom.Call Recording", "endusers", "users"])`. If none exist, `mcp__claude_ai_Gong__ask_account` with the customer name and any topic keywords given (e.g. "API linking") to identify the call(s) and get their links.
+   - Planhat session Conversations on the Company record: `list_model_records(MODEL: "Conversation", FILTER: {"companyId[equal to]": "<companyId>"}, SELECT: ["title", "date", "notes", "custom.Call Recording"])`, sorted most recent first.
 3. If a specific call was named, use that one. If multiple candidate calls exist and none was specified, prefer the most recent one that plausibly touches product feedback (title/notes mention a gap, blocker, or feature ask); if still ambiguous, ask Klara which call to source from.
-4. Read the transcript/notes (Gong via `mcp__claude_ai_Glean__read_document`, or the Conversation's `notes` field) and distill every distinct pain point raised into a Problem / Current workaround / Desired outcome triple. **A single call can surface more than one feedback item** — treat each distinct pain point as its own candidate note and run it through Steps 4–8 independently (including its own HITL confirmation in Step 6).
+4. Read the transcript/notes (`get_model_record` on the `👾 Gong Call` Conversation for its `transcript` + `description`; if only Gong MCP has the call, `ask_account` scoped to that call date for a synthesized summary; or the session Conversation's `notes` field) and distill every distinct pain point raised into a Problem / Current workaround / Desired outcome triple. **A single call can surface more than one feedback item** — treat each distinct pain point as its own candidate note and run it through Steps 4–8 independently (including its own HITL confirmation in Step 6).
 5. Continue into Step 4 to fill in ARR, contact, and remaining context for each candidate item — Step 4's context-gathering applies to both modes; where it references "the task's description," Mode B uses the transcript/Conversation notes distilled in step 4 above instead.
 
 If no feedback-worthy content is found in the named call/customer's recent activity, say so and stop rather than fabricating a note.
@@ -62,9 +62,9 @@ For each candidate (a Task in Mode A, or a distilled pain point in Mode B), pull
 1. **Mode A:** read the task's `description` field (already returned by the list query) — this is the full PM-formatted log entry `post-session-debrief` wrote, including session date and any customer quote captured at debrief time.
    **Mode B:** use the Problem/Workaround/Desired-outcome distillation already produced in Step 3B.4 as the equivalent source material.
 
-   **Cost-saving check (Mode A only) — skip steps 2–3 when the description is already sufficient:** if the task's `description` already contains enough to populate Problem, Current workaround, and Desired outcome (i.e. `post-session-debrief` already distilled it at debrief time — check for language covering what's broken, what they're doing instead, and what good looks like, plus a session date/quote if present), use it directly and **do not** call `meeting_lookup` or `read_document`. Only fall through to steps 2–3 if the description is thin (e.g. just a one-line action with no business context or quote) or a Gong URL is needed and isn't already present in the description/task fields.
-2. Use `mcp__claude_ai_Glean__meeting_lookup` to find the relevant Gong call(s) for the linked customer (`companyName`), if not already identified in Mode B and not skipped by the cost-saving check above. Try the customer name and/or keywords from the task's `action` (Mode A) or the pain point topic (Mode B).
-3. If a Gong transcript is found (or wasn't already fully read in Mode B, and wasn't skipped by the cost-saving check above), use `mcp__claude_ai_Glean__read_document` on it to extract:
+   **Cost-saving check (Mode A only) — skip steps 2–3 when the description is already sufficient:** if the task's `description` already contains enough to populate Problem, Current workaround, and Desired outcome (i.e. `post-session-debrief` already distilled it at debrief time — check for language covering what's broken, what they're doing instead, and what good looks like, plus a session date/quote if present), use it directly and **do not** run the Gong Call lookup / `ask_account`. Only fall through to steps 2–3 if the description is thin (e.g. just a one-line action with no business context or quote) or a Gong URL is needed and isn't already present in the description/task fields.
+2. Find the relevant Gong call(s) for the linked customer (`companyName`) via the transcript lookup order in `context/project-instructions.md` §3 — step 0 Planhat `👾 Gong Call` Conversation, step 1 `mcp__claude_ai_Gong__ask_account` — if not already identified in Mode B and not skipped by the cost-saving check above. Try the customer name and/or keywords from the task's `action` (Mode A) or the pain point topic (Mode B).
+3. If a Gong transcript is found (or wasn't already fully read in Mode B, and wasn't skipped by the cost-saving check above), read it — `get_model_record` on the `👾 Gong Call` Conversation (`transcript`, `description`), or `mcp__claude_ai_Gong__ask_account` scoped to the call date (synthesized, no verbatim transcript, so quotes may be unavailable) — to extract:
    - Exact customer quotes (attributed to name + role)
    - Business context
    - Workaround description
@@ -82,8 +82,8 @@ Do not begin drafting until all five are resolved (or explicitly marked `-`).
 
 5. Find the primary contact's email address using this lookup chain — stop at the first hit:
    a. **Planhat EndUser records for the company** — `list_model_records(MODEL: "End User", FILTER: {"companyId[equal to]": "<companyId>"}, SELECT: ["name", "email", "position", "primary"])`. Prefer the record with `primary: true`.
-   b. **Glean Gmail search** — `mcp__claude_ai_Glean__search` with `query: "[contact name] [company]"` and `app: gmailnative`. Scan the results for the contact's email address in thread senders, recipients, or signatures.
-   c. **Glean Gong search** — `mcp__claude_ai_Glean__search` with `query: "[contact name] [company]"` and `app: gong`. Scan for email in participant metadata.
+   b. **Gmail search** — `mcp__claude_ai_Gmail__search_threads` with `query: "[contact name] [company]"`. Scan the results for the contact's email address in thread senders, recipients, or signatures.
+   c. **Planhat `email` Conversations** — `list_model_records(MODEL: "Conversation", FILTER: {"companyId[equal to]": "<companyId>", "type[equal to]": "email"}, SORT: "-date", LIMIT: 20, SELECT: ["subject", "date", "endusers"])`. Scan the `endusers` for the contact (covers mail from teammates' mailboxes too).
    d. If all three fail, mark the email as **⚠️ MISSING** and surface it as a required gap in the HITL step — do not guess or fabricate an email address.
 
 ---
@@ -294,9 +294,8 @@ After processing all items (or after "stop"), show a summary:
 - `mcp__claude_ai_Planhat__get_model_record`
 - `mcp__claude_ai_Planhat__update_model_record`
 - `mcp__claude_ai_Planhat__search_records`
-- `mcp__claude_ai_Glean__meeting_lookup`
-- `mcp__claude_ai_Glean__read_document`
-- `mcp__claude_ai_Glean__search` (email lookup via Gmail/Gong fallback)
+- `mcp__claude_ai_Gong__ask_account` (Gong call lookup / summary when no Planhat Gong Call record exists)
+- `mcp__claude_ai_Gmail__search_threads` (contact email lookup fallback)
 - `mcp__claude_ai_Productboard__feedback_create_feedback`
 - `mcp__claude_ai_Slack__slack_search_public_and_private` (pre-draft #releases check)
 - `Read` (for context files)

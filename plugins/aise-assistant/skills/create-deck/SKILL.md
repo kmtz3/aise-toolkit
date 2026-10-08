@@ -2,7 +2,7 @@
 name: create-deck
 description: >
   Generate a customer-facing HTML presentation deck for any meeting type. Pulls context
-  from Planhat, Glean, and Gmail, plans slide structure by meeting type, and produces a
+  from Planhat, Gong, Slack, and Gmail, plans slide structure by meeting type, and produces a
   styled single-file deck using the Productboard brand template. Invoke with
   /create-deck [customer] [meeting type].
 ---
@@ -26,12 +26,14 @@ Generate a presentation deck for the customer and meeting type named in the user
 
 Run all three in parallel:
 
-### 1a. Glean — account context
+### 1a. Gong + Slack — account context
+
+Glean is retired — fan out per source in parallel (see `context/project-instructions.md` §3 Search strategy). Uses the `companyId` from 1b once resolved.
 
 ```
-glean_search:    "{customer} productboard"
-gmail_search:    "{customer}"
-meeting_lookup:  "{customer}"
+Gong:     ask_account(crmAccount: "{customer}", question: "Program stage, goals, use case interests, open asks, pain points, key contacts and titles over the last 90 days?", includeSources: true)
+Planhat:  list_model_records(MODEL: "Conversation", FILTER: {"companyId[equal to]": "{companyId}", "type[equal to]": "👾 Gong Call"}, SORT: "-date", LIMIT: 2, SELECT: ["subject", "date", "custom.Call Recording", "endusers", "users"])
+Slack:    slack_search_public_and_private(query: "in:<#channel> after:YYYY-MM-DD {customer}") — channel IDs from Company custom.Slack ID (internal) and custom.External_Slack_Channel_ID (shared)
 ```
 
 Extract: program stage, use case interests, open asks, hot context (mergers, migrations, renewals),
@@ -66,7 +68,7 @@ Open asks:       - {ask 1}
 Hot context:     {urgent flags, or "none"}
 ```
 
-If no Planhat or Glean data is found: flag it inline, continue with whatever is available,
+If no Planhat, Gong, or Slack data is found: flag it inline, continue with whatever is available,
 and mark those slides as "needs review" in the confirmation message.
 
 ---
@@ -275,8 +277,8 @@ Never omit it — decks are shared as PDFs and must print correctly.
 
 ## Edge cases
 
-- **Customer not found in Planhat:** flag it, continue with Glean + Gmail context only.
-- **No Glean results:** note it in the confirmation summary, fall back to meeting-type defaults for slide copy.
+- **Customer not found in Planhat:** flag it, continue with Gong `ask_account` (by customer name) + Gmail context only.
+- **No Gong / Slack results:** note it in the confirmation summary, fall back to meeting-type defaults for slide copy.
 - **Ambiguous meeting type:** ask the user once before proceeding.
 - **Date not available:** use today's date for the file name; set the title-slide date to "TBD — confirm before presenting".
 - **No real metric data for layout-kpi:** substitute the kpi slide with a second layout-cards slide.

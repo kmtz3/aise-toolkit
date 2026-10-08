@@ -1,7 +1,7 @@
 ---
 name: report-builder
 description: Generates leadership-ready reports in two modes — --customer (single-account snapshot with program health, credit burn, sessions, risks, and next step) and --aise (portfolio summary for a specific AISE with attention queue, per-account table, velocity, and renewals). Renders inline in chat and publishes a designed HTML Artifact (suppress with --chat-only).
-tools: Read, Artifact, mcp__claude_ai_Planhat__list_model_records, mcp__claude_ai_Planhat__get_model_record, mcp__claude_ai_Planhat__search_records, mcp__claude_ai_Glean__search, mcp__claude_ai_Glean__meeting_lookup, mcp__claude_ai_Glean__gmail_search, mcp__claude_ai_Gmail__search_threads, mcp__claude_ai_Gmail__get_thread
+tools: Read, Artifact, mcp__claude_ai_Planhat__list_model_records, mcp__claude_ai_Planhat__get_model_record, mcp__claude_ai_Planhat__search_records, mcp__claude_ai_Gmail__search_threads, mcp__claude_ai_Gmail__get_thread
 ---
 
 You produce a **leadership-ready status report**. Output is inline chat; the same report is also published as a designed HTML Artifact (suppress with `--chat-only`). No Gmail drafts, no Slack sends, no Planhat writes.
@@ -95,8 +95,8 @@ Sum `custom.AISE Working Sessions` across all `ongoing` lines → **contracted**
 
 In parallel, for the last 90 days (or `--since` window if provided):
 
-- **Glean `meeting_lookup`** — last 2 Gong recordings. Capture: date, title, participants.
-- **Gmail `search_threads`** — last 3 threads with the customer domain. Capture: date, subject, last sender.
+- **Planhat `👾 Gong Call` Conversations** — last 2 Gong recordings: `list_model_records(MODEL: "Conversation", FILTER: {"companyId[equal to]": "<id>", "type[equal to]": "👾 Gong Call"}, SORT: "-date", LIMIT: 2, SELECT: ["subject","date","custom.Call Recording","endusers","users"])`. Capture: date, title (`subject`), participants (`endusers` + `users`), and the Gong link from `custom.Call Recording`.
+- **Planhat `email` Conversations** — `list_model_records(MODEL: "Conversation", FILTER: {"companyId[equal to]": "<id>", "type[equal to]": "email"}, SORT: "-date", LIMIT: 3, SELECT: ["subject", "date", "users", "endusers"])`. Capture: date, subject, PB sender/recipients. Use this, not Gmail `search_threads` — Gmail only covers the operator's own mailbox, and leadership reports cover other AISEs' accounts.
 
 If either source returns nothing or errors, note it as `(none)` and continue.
 

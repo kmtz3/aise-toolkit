@@ -10,7 +10,7 @@ Read the procedure in `agents/diagram-builder.md` and execute it inline as the m
 **Diagram types:** `integration-flow` · `architecture`
 
 The procedure:
-1. Pull customer context from Planhat (Company record, prior session Conversations) and Glean to seed diagram content (system names, integration details, stakeholders).
+1. Pull customer context from Planhat (Company record, prior session Conversations), Gong `ask_account`, and Google Drive to seed diagram content (system names, integration details, stakeholders).
 2. Plan and confirm the diagram structure if the description is ambiguous (one question max).
 3. Detect Figma connectivity via `mcp__claude_ai_Figma__whoami`, then generate using the highest available output path:
    - **Figma design file** (primary — if Figma connected): `create_new_file` (editorType: "design") then `use_figma` with Plugin API JS to build the grid/card layout; attach Figma URL as a Planhat Attachment

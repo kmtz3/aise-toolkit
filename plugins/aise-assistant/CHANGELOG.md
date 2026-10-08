@@ -5,6 +5,24 @@ Format: `## [version] — YYYY-MM-DD` followed by bullet points grouped by type.
 
 ---
 
+## [2.69.0] — 2026-10-08
+
+### Removed
+- Glean (churned). No agent or skill calls a Glean tool any more; every `mcp__claude_ai_Glean__*` entry is gone from agent tool lists.
+
+### Changed
+- **Context sources** (`context/project-instructions.md` §3): new source table and search strategy. Resolve the Company in Planhat first, then fan out per source in parallel with a date window.
+- **Transcript lookup order:** Planhat `👾 Gong Call` record (with a widened ±3-day retry) → Gong `ask_account` (with a parent-account retry) → Planhat session record → recap emails → Slack → ask once.
+- **Slack:** Slack MCP search, scoped to the channel IDs cached on Company `custom.Slack ID` / `custom.External_Slack_Channel_ID`.
+- **Email:** Gmail for the operator's own mailbox; Planhat `email` Conversations for teammates' mail (delegated mode) and threads the operator wasn't on.
+- **Support tickets:** Planhat `Issue` records (Zendesk sync) + `ticket` Conversations.
+- **ARR / contract fallback:** Salesforce connector (`⚠️ [Salesforce — verify]`); Drive and Notion via their own connectors.
+- **Summary-only debriefs:** a session that resolves only via Gong `ask_account` is debriefed in full but marked `partial - transcript pending` with a re-debrief Task; `/bulk --debrief` re-checks the Planhat Gong Call record for it.
+- `/create-deck` and `/spark-demo-prep` account-context steps rewritten as a Planhat / Slack / Gong / Gmail fan-out.
+
+### Fixed
+- `context/project-instructions.md` §4.6 no longer tells the debrief to copy the transcript onto the session Conversation (it contradicted the no-transcript-merge rule).
+
 ## [2.68.0] — 2026-10-07
 
 ### Fixed

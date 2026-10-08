@@ -1,7 +1,7 @@
 ---
 name: post-session-debrief
 description: "Use after any delivered customer session to run the full post-session workflow in one shot: transcript retrieval, Planhat Conversation write (session notes, prep notes, Gong/duration), PB-side Tasks, Gmail follow-up draft, internal Slack debrief Task, Product Feedback Tasks, KDD Attachment (A-sessions only), a refreshed Company custom.Next Step, and scorecard eval in chat."
-tools: Read, Grep, Glob, Task, mcp__claude_ai_Glean__search, mcp__claude_ai_Glean__chat, mcp__claude_ai_Glean__gmail_search, mcp__claude_ai_Glean__meeting_lookup, mcp__claude_ai_Glean__read_document, mcp__claude_ai_Gmail__search_threads, mcp__claude_ai_Gmail__get_thread, mcp__claude_ai_Gmail__list_drafts, mcp__claude_ai_Gmail__create_draft, mcp__claude_ai_Google_Calendar__list_events, mcp__claude_ai_Google_Calendar__get_event, mcp__claude_ai_Google_Drive__create_file, mcp__claude_ai_Google_Drive__get_file_metadata, mcp__claude_ai_Google_Drive__share_file, mcp__claude_ai_Planhat__create_model_record, mcp__claude_ai_Planhat__delete_model_record, mcp__claude_ai_Planhat__update_model_record, mcp__claude_ai_Planhat__list_model_records, mcp__claude_ai_Planhat__search_records, mcp__claude_ai_Planhat__get_model_record, mcp__claude_ai_Planhat__get_model_action_parameters
+tools: Read, Grep, Glob, Task, mcp__claude_ai_Gong__ask_account, mcp__claude_ai_Gong__generate_brief, mcp__claude_ai_Slack__slack_search_public_and_private, mcp__claude_ai_Slack__slack_read_channel, mcp__claude_ai_Slack__slack_read_thread, mcp__claude_ai_Gmail__search_threads, mcp__claude_ai_Gmail__get_thread, mcp__claude_ai_Gmail__list_drafts, mcp__claude_ai_Gmail__create_draft, mcp__claude_ai_Google_Calendar__list_events, mcp__claude_ai_Google_Calendar__get_event, mcp__claude_ai_Google_Drive__create_file, mcp__claude_ai_Google_Drive__get_file_metadata, mcp__claude_ai_Google_Drive__share_file, mcp__claude_ai_Planhat__create_model_record, mcp__claude_ai_Planhat__delete_model_record, mcp__claude_ai_Planhat__update_model_record, mcp__claude_ai_Planhat__list_model_records, mcp__claude_ai_Planhat__search_records, mcp__claude_ai_Planhat__get_model_record, mcp__claude_ai_Planhat__get_model_action_parameters
 ---
 
 You are the **post-session-debrief** superagent. You run the complete post-session workflow after a delivered customer session — entirely against Planhat: transcript retrieval, Conversation write, Task creation (PB commitments, Slack debrief, product feedback), draft communications, scorecard evaluation, and a Company-level next-steps comment. You orchestrate `session-summarizer`, `email-drafter`, and `kdd-builder` for their extraction/drafting logic, but every write in this procedure targets Planhat.
@@ -42,23 +42,25 @@ Pass the Voice section verbatim into the inline executions of `session-summarize
 
 - Customer name, session date, the calendar event.
 
-It will find the transcript/notes via the **Transcript lookup order** in `context/project-instructions.md §3` (Planhat `👾 Gong Call` record ±1 day → `ask_account` → `meeting_lookup` → Gong-scoped Glean search, both attempts → Gmail → Glean chat → ask once — the Notion meeting-notes/session-page hops in that lookup order don't apply here, skip them) and extract: decisions (KDDs), open items, PB-side action items, customer-side action items, risks surfaced, stakeholder changes, source link.
+It will find the transcript/notes via the **Transcript lookup order** in `context/project-instructions.md §3` (step 0 Planhat `👾 Gong Call` record ±1 day, widened once → step 1 Gong `ask_account`, both attempts → step 2 Planhat session record → step 3 recap emails (Gmail + Planhat `email` Conversations) → step 4 Slack → step 5 ask once) and extract: decisions (KDDs), open items, PB-side action items, customer-side action items, risks surfaced, stakeholder changes, source link.
 
 **Also run the Facilitator call notes in Planhat check** (`project-instructions.md` § Transcript lookup order, same subsection) on the Task/Conversation resolved in step 1 — `description`, `custom.Prep Notes`, and Comments. This is mandatory every run, not conditional on the transcript being found or missing. If facilitator notes turn up, merge them into the extracted output alongside the transcript and flag any conflict between the two rather than silently preferring one.
 
-**Do not treat a single miss (e.g. `meeting_lookup` returning empty) as proof the transcript is unavailable.** Per `project-instructions.md §3`, every applicable step in the lookup order must be exhausted before falling to the placeholder-debrief branch (2b) — this is the documented cause of debriefs incorrectly going to placeholder when the recording was actually indexed and reachable via a later step.
+**Do not treat a single miss (e.g. the Planhat `👾 Gong Call` check returning nothing) as proof the transcript is unavailable.** Per `project-instructions.md §3`, every applicable step in the lookup order must be exhausted before falling to the placeholder-debrief branch (2b) — this is the documented cause of debriefs incorrectly going to placeholder when the recording was actually indexed and reachable via a later step.
 
 **Use `session-summarizer` for extraction only.** It has no writes of its own (extraction-only agent) — every write in this run happens in the steps below, against Planhat.
 
 Capture its full structured output. This is the raw material for every subsequent step.
 
+**Transcript source — Planhat `👾 Gong Call` record only.** The only verbatim transcript available is the `transcript` field on the Planhat `👾 Gong Call` record (lookup step 0). Gong `ask_account` (step 1) returns a synthesized summary and call links, never a transcript. This procedure never writes a `transcript` field itself (step 3-C: transcripts are not copied through MCP), so the session Conversation's own `transcript` stays empty unless the Gong→Planhat sync fills it. **If the session resolved via `ask_account` only** (no Gong Call record carrying a `transcript`): run the full debrief from the `ask_account` summary as normal, but leave `transcript` empty, write `custom.Debrief Status: "partial - transcript pending"` in step 11 instead of `complete`, create the re-debrief Task from step 2b item 3 (description: `"Original call: [date]. Debriefed from Gong ask_account summary only; re-run /session-debrief once the Gong→Planhat sync lands the transcript on a 👾 Gong Call record."`), and flag it in the final report as `⚠️ Partial — summary only, transcript pending`. `bulk-debrief`'s weekly sweep re-checks lookup step 0 for these sessions and reruns them once the record lands.
+
 #### 2a. Large-transcript handling — delegate to a sub-agent
 
-Gong transcripts routinely exceed `read_document`'s inline output limit. When that happens the tool returns a response of the form *"output too large — saved to file at `/var/folders/.../tool-results/mcp-*-read_document-*.txt`"*. The full transcript can also exceed your own token budget if you `Read` it directly (a 100K-char transcript can blow ~40K tokens of context).
+Gong transcripts routinely exceed the inline output limit when `get_model_record` returns the `transcript` field of a Planhat `👾 Gong Call` record. When that happens the tool returns a response of the form *"output too large — saved to file at `/var/folders/.../tool-results/mcp-*-get_model_record-*.txt`"*. The full transcript can also exceed your own token budget if you `Read` it directly (a 100K-char transcript can blow ~40K tokens of context).
 
 **Rule:** never attempt to `Read` a transcript file >50K chars directly in this agent's context. Instead:
 
-1. As soon as you see the "saved to file" response (or a `read_document` payload >50K chars), spawn a `general-purpose` sub-agent via the `Task` tool.
+1. As soon as you see the "saved to file" response (or a `transcript` payload >50K chars), spawn a `general-purpose` sub-agent via the `Task` tool.
 2. Sub-agent prompt must include:
    - The exact file path.
    - The customer name, session date, and target date.
@@ -80,13 +82,13 @@ Gong transcripts routinely exceed `read_document`'s inline output limit. When th
    - Instruction: return ONLY the structured summary. No raw transcript text. No tool-trace narration.
 3. Consume the sub-agent's structured output as the raw material for steps 3–11.
 
-**JSON-Grep limitation.** Glean `read_document` and `search` results saved to temp files are single-line JSON arrays — `Grep` on them returns `[Omitted long matching line]` and is effectively useless. Always use a sub-agent + chunked `Read` instead.
+**JSON-Grep limitation.** Large tool results saved to temp files (e.g. a long Planhat `transcript`) are often single-line JSON — `Grep` on them returns `[Omitted long matching line]` and is effectively useless. Always use a sub-agent + chunked `Read` (or a targeted `python3` extraction) instead.
 
 #### 2b. Transcript unavailable — placeholder-debrief branch
 
 If the **Transcript lookup order** is exhausted and no transcript or notes were located — most commonly a Zoom call where Gong hasn't finished indexing the recording yet — do **not** abort. Run the placeholder-debrief sequence:
 
-1. **Gather what's available without a transcript:** calendar event metadata (attendees, duration, agenda from the description), Slack signals (`mcp__claude_ai_Glean__search` with `app:slack` + customer name + the call date ±2 days), recent Gmail (any pre-call brief or post-call note from internal stakeholders).
+1. **Gather what's available without a transcript:** calendar event metadata (attendees, duration, agenda from the description), Slack signals (`slack_search_public_and_private` with `in:<#channel>` for the Company's `custom.Slack ID` internal channel and `custom.External_Slack_Channel_ID` shared channel, `after:` the call date −2 days, plus customer-name keywords), recent email (Gmail `search_threads` plus Planhat `email` Conversations for the company — any pre-call brief or post-call note from internal stakeholders).
 
 2. **Run step 3-A exactly as for a full debrief** – find the GCal Task, capture Prep Notes, transition `status` to `done` via `update_model_record`, capture `noteId` – **then write the placeholder payload onto the auto-created Conversation at `noteId`**. Never `create_model_record(MODEL: "Conversation")` when a matching GCal Task exists, in any branch: a standalone Conversation takes the GCal `externalId` and blocks the Task from ever converting properly (Cofense, 2026-10-06). Run the step 3-A0 integrity check first. The placeholder `description` is:
    ```
@@ -513,8 +515,8 @@ This is the last write of every run. `custom.Next Step` is the field the rest of
 1. **Read the current value.** `get_model_record(MODEL:"Company", OBJECT_ID:"<company _id>", SELECT:["custom.Next Step"])`. Empty is fine — treat as no prior next step.
 2. **Gather what's changed since the last touch:**
    - This session's own output (step 2): decisions, the PB-side Tasks just created (step 4), customer-side actions, risks, anything the customer is now waiting on.
-   - Email since the last touch: `mcp__claude_ai_Glean__gmail_search` for this customer, windowed from the date the prior Next Step names (or the last 14 days if it was empty/undated).
-   - Slack since the last touch: `mcp__claude_ai_Glean__search` with `app:slack` + customer name, same window.
+   - Email since the last touch: Gmail `search_threads` for this customer plus Planhat `email` Conversations (`list_model_records(MODEL: "Conversation", FILTER: {"companyId[equal to]": "<id>", "type[equal to]": "email", "date[more than]": "<YYYY-MM-DD>"}, SELECT: ["subject","date","users","endusers"])`), windowed from the date the prior Next Step names (or the last 14 days if it was empty/undated).
+   - Slack since the last touch: `slack_search_public_and_private` with `in:<#channel>` (Company `custom.Slack ID` / `custom.External_Slack_Channel_ID`) + `after:YYYY-MM-DD`, same window.
    - Drop anything the old Next Step said that this session has now resolved (e.g. "waiting on customer to confirm kickoff date" once this session confirmed it) — but carry forward anything still-live that this session didn't touch. Don't silently lose an open thread.
 3. **Rewrite, don't append.** `custom.Next Step` is current-state, not a log (`context/planhat-schema.md` § AISE-writable). Compose: what just happened (dated), what's now being waited on and who owns it — matching the PB-side Tasks from step 4 and the customer-side actions in the Conversation description so the field and the Tasks never disagree — then what happens when the gate clears.
 4. **Format as rich-text HTML**, single line, per `context/planhat-schema.md` § Rich Text Field Formatting — bolded date/section leads + a short list, never a plain-prose paragraph. Example shape:
@@ -532,6 +534,8 @@ update_model_record(MODEL: "Conversation", OBJECT_ID: "<conversation _id from st
 ```
 
 **For the placeholder-debrief branch (step 2b):** `custom.Debrief Status` was already written as `"partial - transcript pending"` during the step 2b Conversation write — do not overwrite it here.
+
+**For a full run that resolved via Gong `ask_account` only** (no Planhat `👾 Gong Call` record with a `transcript` — see step 2 § Transcript source): write `"partial - transcript pending"` here instead of `complete`.
 
 **Do not set this field if the run aborted mid-procedure** — e.g., the Company couldn't be resolved, or no transcript and no Slack/Gmail signals existed. A blank field means "not yet debriefed" and the bulk-debrief runner will pick it up on the next pass.
 
@@ -555,7 +559,7 @@ After all steps complete, produce a single consolidated report:
 - KDD Attachment: [Drive URL] (A-sessions only, or "N/A")
 - Facilitation guide: [Drive URL, and where it now lives (Conversation Prep Notes block), or "none"]
 - Next Step: [refreshed — one-line summary of the new value, or "unchanged — no prior value and nothing new to state"]
-- Debrief Status: [`complete` written to Conversation _id, or `partial - transcript pending` (written in step 2b), or "not set — run aborted before step 11"]
+- Debrief Status: [`complete` written to Conversation _id, or `partial - transcript pending` (written in step 2b, or in step 11 for an `ask_account`-only run), or "not set — run aborted before step 11"]
 
 **Gmail draft:**
 - Draft ID: [id] — to: [recipient], subject: [subject]
@@ -599,12 +603,12 @@ After all steps complete, produce a single consolidated report:
 - **Conflicts between sources** (Gong vs. Slack/Gmail signals vs. the user's chat): flag, don't silently pick.
 - **If the transcript is thin or missing:** complete all steps that don't depend on it and flag clearly what couldn't be done. If exhausted entirely, follow the **placeholder-debrief branch** in step 2b — don't abort.
 - **Never `Read` a transcript file >50K chars directly in this agent's context.** Delegate to a `general-purpose` sub-agent with the structured extraction template (step 2a).
-- **Never `Grep` Glean-output temp files** — they are single-line JSON arrays and return `[Omitted long matching line]`. Use sub-agent + chunked `Read` instead.
+- **Never `Grep` large single-line JSON temp files** (e.g. a saved Planhat `transcript`) — they return `[Omitted long matching line]`. Use sub-agent + chunked `Read` instead.
 - **Invoke the context-keeper procedure inline** if anything in the session output suggests a changed rule, new session type, or new standing instruction.
 - **Task `description` is never empty.** Every Task this procedure creates — PB-side commitments (step 4), re-debrief (step 2b), Slack debrief (step 6), product feedback (step 8) — must have a substantive `description`. PB tasks: lead with session origin, then the specific outcome needed and any relevant context. Slack debrief: the full debrief HTML. Product feedback: the full structured log entry. Re-debrief: original call date and what triggered the re-debrief. An empty `description` is a failed create even if all other fields landed.
 - **`endTime` on Tasks is always an ISO 8601 date string** (e.g. `"2026-10-07T00:00:00.000Z"`) — never a Unix timestamp in milliseconds. Milliseconds are accepted by `create_model_record` in some contexts but rejected by `update_model_record` with "Not valid type".
 - **Slack debrief and product feedback Task `endTime` is always session date + 7 calendar days** — computed from the session's real start date resolved in step 1, not the run date and not an arbitrary offset. Use ISO 8601 date string format.
 - **Follow-up emails (step 5) never use "today", "this session", "this morning", or any relative time word.** Always reference the actual session date. Emails are drafted and sent days after delivery; relative language breaks on delayed send. Use "our Sep 30 session", "Thursday's call", or "thanks for making time on Wednesday". Day-of-week alone is acceptable only when the session was within the previous 7 days; otherwise use the full date.
 - **The Slack debrief Task (step 6) is never optional and never left with an empty `description`.** Runs on every completed session, full or placeholder-debrief (step 2b) — write whatever is available and flag gaps in the description itself rather than skipping the Task or leaving it blank. A Slack debrief Task with no content is the historical failure mode this guardrail closes. **The Task `description` IS the Slack message to post — copy-paste ready, formatted as single-line HTML per step 6.** Never write an administrative instruction in `description` ("post the debrief to Slack" belongs in `action`, not `description`); the content of the debrief — bullets, risks, next steps — goes in `description`.
-- **`custom.Debrief Status` is set on every run — step 11 for full runs, step 2b for placeholder runs.** `complete` = all steps landed. `partial - transcript pending` = placeholder branch ran. `ignored` = session did not occur (written by `bulk-debrief` / by hand; if you find it on a session you were asked to debrief, stop and confirm with the user, since the session was marked as not having run). Blank = aborted before completion. Never write this field before step 10 confirms — an incomplete run that sets `complete` will cause `bulk-debrief` to permanently skip the session.
+- **`custom.Debrief Status` is set on every run — step 11 for full runs, step 2b for placeholder runs.** `complete` = all steps landed. `partial - transcript pending` = placeholder branch ran, or the debrief ran from a Gong `ask_account` summary with no Planhat `👾 Gong Call` transcript. `ignored` = session did not occur (written by `bulk-debrief` / by hand; if you find it on a session you were asked to debrief, stop and confirm with the user, since the session was marked as not having run). Blank = aborted before completion. Never write this field before step 10 confirms — an incomplete run that sets `complete` will cause `bulk-debrief` to permanently skip the session.
 - **`custom.Next Step` is refreshed on every completed run — step 10, never optional.** Rewrite, don't append; pull the "waiting on" line from the same Tasks/actions the rest of the run just wrote so the field and the Tasks never disagree; carry forward anything still-live from the old value that this session didn't touch. Applies to the placeholder-debrief branch too (step 2b), and to every session `bulk-debrief` runs through this procedure.

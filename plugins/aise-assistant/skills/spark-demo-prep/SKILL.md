@@ -2,8 +2,8 @@
 name: spark-demo-prep
 description: >
   Generate a fully customized Spark demo playbook for a customer. Pulls the latest
-  Spark feature releases from Slack (#releases), researches the customer via Glean /
-  Gong / Gmail, detects the customer's brand color scheme, then produces a polished
+  Spark feature releases from Slack (#releases), researches the customer via Planhat /
+  Gong / Slack / Gmail, detects the customer's brand color scheme, then produces a polished
   HTML playbook as both a Cowork artifact and a downloadable file.
 ---
 
@@ -16,7 +16,7 @@ Generate a Spark demo playbook for the customer named in the user's message.
 - `--scheme orange|teal|purple` (optional) — force a specific color scheme. If omitted,
   the skill auto-detects from the customer's logo (falling back to random).
 - `--domain` (optional) — customer's primary domain (e.g. `qlik.com`). Used for logo
-  color detection. If not provided, infer it from Glean research results.
+  color detection. If not provided, infer it from the 1b research results (contact email domains).
 
 ## Phase 1 — Parallel Research (run all 4 in parallel)
 
@@ -38,11 +38,16 @@ Build a structured feature list:
 Demo-safe = GA only. Internal features appear in the playbook under "Coming Soon" roadmap section
 with a ⚠️ internal chip — never demo them as current capabilities.
 
-### 1b. Glean — customer account context
-Run three Glean searches in parallel:
-1. `glean_search`: `"{customer} productboard"` — general account context, SF notes, support tickets
-2. `gmail_search`: `"{customer}"` — recent email threads with customer contacts
-3. `meeting_lookup`: `"{customer}"` — Gong call transcripts and summaries
+### 1b. Account context fan-out — Planhat / Slack / Gong / Gmail
+Resolve the Company first (`search_records(QUERY: "{customer}")` → `companyId`), then fan out in parallel
+(Glean is retired — see `context/project-instructions.md` §3 Search strategy):
+1. **Planhat** — Company record (`custom.Engagement Plan`, `custom.Next Step`, `custom.Slack ID`, `custom.External_Slack_Channel_ID`)
+   + recent Conversations: `list_model_records(MODEL: "Conversation", FILTER: {"companyId[equal to]": "{companyId}"}, SORT: "-date", LIMIT: 10, SELECT: ["subject", "date", "type", "endusers"])`
+   — sessions, `👾 Gong Call`, `email`, `💬 Slack Chat`. Support tickets: `Issue` records (`FILTER: {"companyIds[contains]": "{companyId}"}`).
+2. **Slack** — `slack_search_public_and_private`: `"in:<#channel> after:YYYY-MM-DD"` + keywords (spark, AI, feedback) in the
+   internal and shared channels from the Company's cached channel IDs.
+3. **Gong** — `ask_account(crmAccount: "{customer}", question: "Use case interests, pain points, goals, AI/Spark interest, open commitments, participants — last 90 days?", includeSources: true)`.
+4. **Gmail** — `search_threads`: `"{customer}"` — recent email threads with customer contacts.
 
 From results, extract:
 - **Key contacts**: name, title, team (from email signatures, calendar events, or Gong participants)
@@ -61,8 +66,9 @@ Search Google Calendar for the next meeting with `{customer}` to extract:
 
 If no upcoming meeting is found, use "TBD" for date/time and omit attendee cards.
 
-### 1d. Salesforce (via Glean fallback)
-From the Glean results in 1b, also extract:
+### 1d. Commercial snapshot — Planhat Company (SF-synced), Salesforce connector fallback
+From the Planhat Company record (`custom.ARR – SF`, `renewalDate`, `owner`), extract — falling back to the
+Salesforce connector (`soqlQuery` / `find`) only for empty fields, tagged `⚠️ [Salesforce — verify]`:
 - Renewal / contract end date
 - ARR
 - CSM / AE names
@@ -129,7 +135,7 @@ Surface anything from research that should appear as a sidebar alert or operatio
 (e.g. a pending migration, a renewal in <90 days, a pending security review).
 
 ### 3d. Attendee cards
-From calendar + Glean contacts, build an attendee list with:
+From calendar + 1b contacts (Gong participants, email signatures, Planhat End Users), build an attendee list with:
 - Name, title, company
 - Accept / Decline / Unknown status (from calendar RSVP data)
 - Any known context (e.g. "mentioned feedback analysis in May call")
@@ -290,7 +296,7 @@ After generating, print a compact research summary (≤8 lines):
 
 ## Edge cases
 
-- **No Glean results for customer**: flag in summary, proceed with generic Spark angles,
+- **No Planhat / Gong results for customer**: flag in summary, proceed with generic Spark angles,
   ask user to verify customer name spelling or try `--domain` flag.
 - **No upcoming calendar event**: omit attendee cards, set session date to "TBD — check calendar".
 - **#releases channel returns no Spark content in 60 days**: extend search to 90 days.

@@ -1,7 +1,7 @@
 ---
 name: assistant-onboarding
 description: Onboards a new user (or re-onboards an existing user) to this assistant. Auto-resolves Planhat User identity, asks short HITL questions for preferences that can't be retrieved, optionally scrapes recent Gmail + Slack to draft the user's voice profile (distinguishing internal vs client-facing tone), and writes directly to `custom.AISE *` fields on the user's Planhat User record as the sole output. Run via /assistant-setup.
-tools: Read, Write, Edit, Bash, mcp__claude_ai_Planhat__list_model_records, mcp__claude_ai_Planhat__get_model_record, mcp__claude_ai_Planhat__update_model_record, mcp__claude_ai_Planhat__search_documents, mcp__claude_ai_Planhat__get_document, mcp__claude_ai_Glean__gmail_search, mcp__claude_ai_Gmail__search_threads, mcp__claude_ai_Gmail__get_thread, mcp__claude_ai_Glean__search, mcp__claude_ai_Glean__chat, mcp__claude_ai_Slack__slack_search_public_and_private
+tools: Read, Write, Edit, Bash, mcp__claude_ai_Planhat__list_model_records, mcp__claude_ai_Planhat__get_model_record, mcp__claude_ai_Planhat__update_model_record, mcp__claude_ai_Planhat__search_documents, mcp__claude_ai_Planhat__get_document, mcp__claude_ai_Gmail__search_threads, mcp__claude_ai_Gmail__get_thread, mcp__claude_ai_Slack__slack_search_public_and_private
 ---
 
 You onboard the user to this assistant. End state: the `custom.AISE Identity`, `custom.AISE Profile preferences`, `custom.AISE Workspace`, and `custom.AISE Calendly *` fields on the user's Planhat `User` record are populated with real values (updated in place — no versioning). Plugin core remains unchanged. Local `about/` files are no longer written by this agent.
@@ -51,7 +51,7 @@ claude mcp add salesforce -- npx -y @salesforce/mcp
 > To use this assistant fully, connect these integrations in **claude.ai → Settings → Integrations**:
 > - **Planhat** — required (blocks all profile reads/writes; onboarding cannot proceed without it — also the sole customer tracker: sessions, tasks, program plans)
 > - **Gmail, Google Calendar, Google Drive** — required for drafts and session tracking
-> - **Glean** — required for Gong transcript access and cross-tool search
+> - **Gong** — required for call summaries and participant lookup (full transcripts reach Planhat via the Gong→Planhat sync)
 > - **Slack** — required for debrief drafts and channel reads
 > - **Figma** — required for diagram creation
 > - **Atlassian** — optional

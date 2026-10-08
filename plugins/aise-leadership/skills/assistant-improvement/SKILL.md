@@ -44,7 +44,7 @@ These are quieter than failures — the run may have completed fine, but the use
 | User asked to reorder steps ("do X before Y") | Sequencing preference — bake into the procedure |
 | User asked to skip, shorten, or expand a step | Depth / scope preference — adjust default behaviour or add a flag |
 | User asked for a different output shape (grouping, headings, level of detail) | Output spec preference — update agent's output section |
-| User specified a tool/source preference ("check Gong first, not Glean") | Tool-routing preference — update the agent's search strategy |
+| User specified a tool/source preference ("check Gong first, not Gmail") | Tool-routing preference — update the agent's search strategy |
 | User asked to stop confirming (or start confirming) a class of action | Interaction-style preference — update confirmation gates |
 | User validated a non-obvious choice ("yes, bundling these was right") | **Positive signal** — harden the choice into the procedure so it's not re-decided next time |
 | User reframed the goal of the skill mid-run | Skill-purpose drift — may need a description/scope update |
@@ -117,7 +117,7 @@ Group signals into two sections — **Failures** and **Preferences to encode** �
 ### Preference 1: [short label]
 **File:** `agents/<name>.md` (or wherever it belongs)
 **What the user prefers:** [1–2 sentences — sequencing, depth, format, tool routing, interaction style, or a positive confirmation worth hardening]
-**Change:** [specific, actionable instruction — e.g. "in the Discovery step, default to Gong before Glean", or "remove the per-task confirmation gate; confirm once at the batch level"]
+**Change:** [specific, actionable instruction — e.g. "in the Discovery step, default to Gong before Gmail", or "remove the per-task confirmation gate; confirm once at the batch level"]
 
 [repeat for each preference]
 

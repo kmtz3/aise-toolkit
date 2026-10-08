@@ -53,7 +53,7 @@ Here is the full command reference for the **aise-leadership** plugin.
 
 | Command | What it does |
 |---|---|
-| `/session-audit [--owner <aise-name>] [--customer <name>] [--from YYYY-MM-DD] [--to YYYY-MM-DD] [--fix] [--tasks] [--dry-run]` | Reconciles logged Planhat session history against Calendar + Gong — gaps, wrong types, duplicates, misdated session times, attribution errors. Default scope: whole workspace, grouped by AISE; narrow with `--owner <aise-name>` or `--customer <name>`. `--tasks` instead audits open Planhat Tasks for completion drift, evidenced via Gmail/Glean. Read-only by default; `--fix` applies corrections with per-write read-back verification. |
+| `/session-audit [--owner <aise-name>] [--customer <name>] [--from YYYY-MM-DD] [--to YYYY-MM-DD] [--fix] [--tasks] [--dry-run]` | Reconciles logged Planhat session history against Calendar + Gong — gaps, wrong types, duplicates, misdated session times, attribution errors. Default scope: whole workspace, grouped by AISE; narrow with `--owner <aise-name>` or `--customer <name>`. `--tasks` instead audits open Planhat Tasks for completion drift, evidenced via Gmail/Slack. Read-only by default; `--fix` applies corrections with per-write read-back verification. |
 
 > `/notion-ask` and `/notion-sync` (all modes) have been retired — Notion is no longer the working record. SF ARR/renewal data flows natively into Planhat; `/notion-check`/`/notion-fix`'s still-relevant scope is now `/session-audit` above.
 

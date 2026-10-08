@@ -83,13 +83,16 @@ Sign in to **claude.ai → Settings → Integrations** and enable:
 | **Planhat** | The sole customer tracker — Companies, Conversations, Tasks, personal profile. Required; onboarding cannot proceed without it. |
 | **Gmail** | Follow-up draft creation, email history pulls |
 | **Google Calendar** | Session lookup, prep block scheduling |
-| **Google Drive** | Diagram/KDD uploads, document access |
-| **Glean** | Gong call transcripts, Slack, Salesforce, Confluence, and Drive search |
-| **Slack** | Debrief draft posting, external channel reads |
+| **Google Drive** | Diagram/KDD uploads, customer document search and reads |
+| **Gong** | Call summaries, participants, and call links (`ask_account`, `generate_brief`). Verbatim transcripts come from Planhat `👾 Gong Call` Conversations via the Gong→Planhat sync. |
+| **Slack** | Account-channel search and thread reads (internal `#account-*` + shared customer channels), debrief draft posting |
+| **Salesforce** | Fallback for contract / ARR / opportunity detail when the Planhat Company's SF-synced fields are empty (or use the local `sf-mcp-server` below) |
 | **Figma** | Architecture diagram creation and export |
 | **Atlassian** | Jira/Confluence cross-reference (optional) |
 
 Each teammate must connect these in their own claude.ai account — they can't be bundled in the plugin.
+
+> **Glean was retired in 2026-10.** It is no longer a connector — the assistant now fans out to Planhat, Gmail, Gong, Slack, and Drive directly (see `context/project-instructions.md` §3).
 
 ### Local MCP servers
 

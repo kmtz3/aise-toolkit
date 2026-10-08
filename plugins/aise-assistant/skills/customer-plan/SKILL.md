@@ -18,12 +18,12 @@ Plan the next phase for: **$ARGUMENTS**
 
 Read the procedure in `agents/customer-plan-next.md` and execute it inline as the main assistant — do not spawn a subagent.
 
-**What it does:** Pulls Planhat state (Company, Line Items, Conversations, open Tasks, `custom.Engagement Plan`) + recent Glean/Gmail/Gong activity, maps the program to the phase model, produces a structured brief (current state, gaps, proposed session sequence, risks, customer asks), then optionally creates PB-side Tasks and — only if the proposal genuinely changes what's already sequenced — updates `custom.Engagement Plan`.
+**What it does:** Pulls Planhat state (Company, Line Items, Conversations, open Tasks, `custom.Engagement Plan`) + recent Gmail/Slack/Gong activity, maps the program to the phase model, produces a structured brief (current state, gaps, proposed session sequence, risks, customer asks), then optionally creates PB-side Tasks and — only if the proposal genuinely changes what's already sequenced — updates `custom.Engagement Plan`.
 
 ### Steps
 
 1. Pull state from Planhat: Company + contracted session pool (sum `custom.AISE Working Sessions` across `ongoing` Line Items), recent Conversations (session history), open Tasks, EndUsers (contacts), current `custom.Engagement Plan` value.
-2. Pull recent activity from Glean / Gmail / Gong / Calendar for anything that changed the picture, and read recent Company Comments for the latest logged program state.
+2. Pull recent activity from Gmail / Slack / Gong / Calendar for anything that changed the picture, and read recent Company Comments for the latest logged program state.
 3. Map current state to `context/pb-aise-reference-guide.md` phase map: what's done, in flight, not started.
 4. Produce a structured brief:
    - **Current state** — phase, last delivered, what's blocked.
@@ -51,7 +51,7 @@ Read the procedure in `agents/engagement-planner.md` and execute it inline as th
 ### Steps
 
 1. **Locate the customer in Planhat.** Company record + contracted session pool (sum `custom.AISE Working Sessions` across active Line Items) + Contacts (EndUsers) + recent Conversations + any existing plan already on `custom.Engagement Plan`.
-2. **Pull context in parallel** — Glean (Slack / Salesforce / Gong / Drive / Confluence for this customer), Gmail threads (AE handoff, kickoff coordination), Calendar (upcoming sessions already booked), past chats, recent Company Comments (running account working notes).
+2. **Pull context in parallel** — Slack (account channels) / Gong `ask_account` / Planhat SF-synced Company fields (Salesforce connector fallback) / Google Drive for this customer, Gmail threads (AE handoff, kickoff coordination), Calendar (upcoming sessions already booked), past chats, recent Company Comments (running account working notes).
 3. **Confirm scope inputs** (customer-side program owner, exec sponsor, pilot team, target timeline, key pain points, known blockers). If any can't be retrieved, ask once as a single consolidated question — do not ask for anything retrievable.
 4. **Apply `context/engagement-planning-guide.md`** — goals → milestones → phases → sessions → parallel streams. Enforce A / E / S naming conventions and the quality-check list.
 5. **Cross-check against standards** — scorecard principles (`context/score-cards.md`) and the phase map + common risks in `context/pb-aise-reference-guide.md`.

@@ -466,7 +466,7 @@ The native Planhat `arr` field (and its relatives `mrr`, `renewalArr` where used
 - **Filters / sorts:** use `custom.ARR – SF` — e.g. `FILTER: {"custom.ARR – SF[more than]": "25000"}` — not `arr[more than]`. Verify the filter operator against live `get_model_action_parameters` on first use, since custom-field filters are the less-trodden path.
 - **Formulas / automations:** reference `<<custom.ARR – SF>>`, not `<<arr>>`.
 - **Writes:** none — `custom.ARR – SF` is SF-synced (see § Field-suffix conventions). Never write ARR of either kind.
-- **If `custom.ARR – SF` is empty:** treat ARR as unknown (`-`) or fall back per the agent's existing Glean/Salesforce chain with the usual verify tag — do **not** silently substitute native `arr`.
+- **If `custom.ARR – SF` is empty:** treat ARR as unknown (`-`) or fall back to the Salesforce connector (`soqlQuery`) with the usual verify tag — do **not** silently substitute native `arr`.
 - **Existing docs that still say `arr`** (older examples, agent SELECT lists) are stale — follow this rule over them.
 
 ### Standard writable fields
