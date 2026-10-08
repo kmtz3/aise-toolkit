@@ -57,6 +57,28 @@ I have connectors for many of the systems where customer context lives. Claude s
 
 > **Glean has been retired (2026-10).** There is no single cross-system index any more. Do not call any `Glean:*` tool. "Find everything about customer X" now means fanning out to the per-source tools above **in parallel**, then synthesizing.
 
+### Tool names differ by host — resolve by role
+
+Procedures name tools by **role** (`list_model_records`, `search_threads`, `ask_account`), not by full ID, because the prefix depends on where the run happens:
+
+| Host | Prefix shape | Example |
+|---|---|---|
+| Claude Code / desktop with claude.ai connectors | `mcp__claude_ai_<Service>__` | `mcp__claude_ai_Planhat__list_model_records` |
+| Cowork cloud / scheduled sessions | `mcp__<Service>__` | `mcp__Planhat__list_model_records`, `mcp__Google_Calendar__list_events`, `mcp__Gmail__search_threads`, `mcp__Gong__ask_account` |
+| Directly installed Planhat MCP | `mcp__<server-uuid>__` | `mcp__7441c372-4b65-4805-95b0-baf2a081ceb3__list_model_records` |
+
+At the start of a run, match each role to whichever prefixed tool the session actually exposes. A full tool ID written in a procedure is an example, not a requirement: never stop because one prefix is absent while another prefix serves the same role. Agent frontmatter lists both the `mcp__claude_ai_*` and `mcp__*` forms for the tools it needs.
+
+### Minimum context fallback — when a source is missing
+
+A missing connector is a gap to report, never a reason to stop. When Slack or Drive is unavailable, or the session has none of the cross-system tools older procedures expected, the floor for customer context is:
+
+1. **Planhat** — the Company record and its latest Conversations (always available; the run cannot proceed without Planhat).
+2. **Gong `ask_account`** with `crmAccount` = the Company's Salesforce `sourceId` (more reliable than the display name), `fromDateTime` = the last session date, `toDateTime` = now.
+3. **Gmail `search_threads`** with `(<customer> OR <contact first name>) newer_than:30d`, then `get_thread` with `messageFormat: PLAIN_TEXT` on the 1–2 newest threads that have a customer participant.
+
+Write what these return, and name each missing source in the run's gaps line (e.g. `Slack: not connected in this session`).
+
 ### Search strategy
 
 When I reference a customer by name or shorthand ("the Acme discovery call", "my 3pm with Beta Corp", "Florian at Gamma"):
@@ -266,7 +288,7 @@ After every `/session-debrief`, run these Planhat steps in order:
    - **Exact field IDs only.** `name`, `assignee` and `dueDate` are not Task fields; they are discarded server-side with no error while the create still returns `200`. Read the Task back after every create and assert `action`, `ownerId`, `type` and `status` landed. See `context/planhat-schema.md` § MCP Access → silent failure 3.
 
 **Klara's Planhat user ID:** `6a44ef76c9aade50502936d5`
-**Planhat MCP prefix:** `mcp__7441c372-4b65-4805-95b0-baf2a081ceb3__`
+**Planhat MCP prefix:** varies by host — `mcp__claude_ai_Planhat__`, `mcp__Planhat__`, or `mcp__7441c372-4b65-4805-95b0-baf2a081ceb3__`. See §3 § Tool names differ by host.
 
 ---
 

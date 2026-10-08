@@ -248,7 +248,7 @@ update_model_record(
   PARAMETERS: {
     "custom.AISE Identity": "<p>Preferred name: {value}</p><p>Display name: {value}</p><p>Timezone: {value}</p><p>Working hours: {value}</p><p>Role: {value}</p><p>Team: {value}</p><p>Manager: {value}</p><p>Email: {value}</p><p>Accent variants: {value or \"none\"}</p>",
     "custom.AISE Profile preferences": "<p>Sign-off: {value}</p><p>Em dashes: {value}</p><p>Semicolons: {value}</p><p>English variant: {value}</p><p>Casual register: {value}</p><p>{specific patterns from scraping, if run}</p>",
-    "custom.AISE Workspace": "<p>Conferencing tool: {value}</p><p>Slack AISE channel: {value}</p><p>Manager: {value}</p>",
+    "custom.AISE Workspace": "<p>Conferencing tool: {value}</p><p>Slack AISE channel: {value}</p><p>Manager: {value}</p>{<p>Artifacts folder: {existing id}</p> — carried over unchanged when the field already has it}",
     "custom.AISE Voice Scrape Samples": "<p>{distilled samples, if scraping ran}</p>",
     "custom.AISE Calendly Sync": "{url or omit if blank}",
     "custom.AISE Calendly Architecting": "{url or omit if blank}",

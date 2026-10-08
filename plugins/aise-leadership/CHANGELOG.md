@@ -1,5 +1,10 @@
 # Changelog — aise-leadership
 
+## [1.16.1] — 2026-10-08
+
+### Changed
+- Synced `context/` from aise-assistant: `<a href>` is a supported Planhat rich-text tag; canonical Session artifact link shape; Artifacts folder ID persisted on `custom.AISE Workspace`; tool names resolved by role across hosts, with a minimum context fallback (Planhat → Gong → Gmail).
+
 ## [1.16.0] — 2026-10-08
 
 ### Removed

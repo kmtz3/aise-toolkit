@@ -368,40 +368,41 @@ second screen, or by a colleague covering the session.
 
 Follow `context/session-artifact-convention.md` in full. Condensed:
 
-1. **Resolve the folder.** `get_file_metadata` on the `Customer Session Artifacts` folder ID
-   (`1jqk8QqRqOJczneOCIjm0-uslf6D5bOJt`); if it errors, is trashed, or is not a folder, search by
-   title; if still nothing, **create it** and say so in the report.
+1. **Resolve the folder** per `context/session-artifact-convention.md` §1: the `Artifacts folder:`
+   line in the user's Planhat `custom.AISE Workspace` first, then an exact-title search restricted to
+   folders the user owns (oldest wins, flag the rest), and **create it** only when that search is
+   empty. Persist the resolved ID back to `custom.AISE Workspace` if it was missing or different.
 2. **Upload** with `create_file`: `title` = the Step 2 filename, `parentId` = the resolved folder,
    `contentMimeType: "text/html"`, `textContent` = the file, and
    **`disableConversionToGoogleType: true`** — without it Drive converts the guide to a Google Doc
    and every panel, timer and capture table is destroyed.
 3. **Idempotency.** Search the folder by that exact title first. If it exists, update it in place
    rather than creating a second copy, and say so in the report.
-4. **Link back into Planhat.** Prepend this block to `custom.Prep Notes` on the session's
-   calendar-event Task (`MODEL: "Task"`, `mainType: "event"`, GCal-synced, matching company + date),
-   falling back to the session Conversation on the Company when no event Task exists. **Prepend —
-   never overwrite existing prep content.** `custom.Prep Notes` is `ph-editor` rich text: emit it as
-   single-line HTML per `CLAUDE.md` § Planhat rich-text fields, with en dashes, never literal `\n`.
+4. **Link back into Planhat.** Upsert a `Facilitation` item into the **Session artifact** section of
+   `custom.Prep Notes` on the session's calendar-event Task (`MODEL: "Task"`, `mainType: "event"`,
+   GCal-synced, matching company + date), falling back to the session Conversation on the Company
+   when no event Task exists. The section sits right after the `<hr>`. Add or replace the `<li>` for
+   this filename, keep `Folder` and `Salesforce Account` as the last items, create the section only if
+   it is absent, and never prepend anything above the header or touch the rest of the prep content.
+   Rule and legacy-shape cleanup: `context/session-artifact-convention.md` § 6. Single-line
+   `ph-editor` HTML, en dashes, never literal `\n`:
 
-   ```
-   FACILITATION ARTIFACT — {filename}
-   Drive file: {webViewLink}
-   Folder: Customer Session Artifacts — {folder URL}
-   Salesforce Account: {SalesforceAccountId}
+   ```html
+   <p><strong>Session artifact</strong></p><ul class="ph-editor__bullet-list"><li class="ph-editor__list-item"><p><strong>Facilitation</strong> – <a href="{webViewLink}">{filename}</a></p></li><li class="ph-editor__list-item"><p><strong>Folder</strong> – <a href="{folderUrl}">Customer Session Artifacts</a></p></li><li class="ph-editor__list-item"><p><strong>Salesforce Account</strong> – {SalesforceAccountId}</p></li></ul>
    ```
 
 5. **Set `custom.Facilitation Playbook URL`** (event Task only), per `context/session-artifact-convention.md` § 6.
    - Read the field first. Same URL: skip. Different URL: overwrite and note the change in the report.
-   - One call: `update_model_record(MODEL: "Task", OBJECT_ID: "{_id}", PARAMETERS: {"custom": {"Facilitation Playbook URL": "{webViewLink}"}})`, then select the field back to verify.
+   - One call: `update_model_record(MODEL: "Task", OBJECT_ID: "{_id}", PARAMETERS: {"custom": {"Facilitation Playbook URL": "{webViewLink}"}})`, then select the field back and assert it is non-empty and equal to `{webViewLink}`. For `🏗️ Architecting`, `🔎 Discovery` and `👟 Kick off` sessions this read-back is the completion gate (`context/session-artifact-convention.md` § Facilitation gate); if it fails, report `🔴 Facilitation missing – Playbook URL read-back failed`.
    - If the session has no event Task and only a Conversation, skip the field (the Conversation model has no such field), keep the `custom.Prep Notes` link as above, and report `Playbook URL field not available on Conversations`.
    - Only the `Facilitation` artifact goes to this field. This step never runs for `SessionPrep`, `KDD` or other types.
-6. **Verify.** Re-read the target record's `custom.Prep Notes` and confirm the block is present and
-   the prior content survived. Report the record `_id` the link landed on.
+6. **Verify.** Re-read the target record's `custom.Prep Notes` and confirm there is exactly one
+   Session artifact section, it carries the `Facilitation` item, and the prior content survived. Report the record `_id` the link landed on.
 
 **When invoked by `session-prepper` (step 6.5),** that agent's step 6.8 also publishes every session
 artifact. Both paths are idempotent on the same filename, so whichever runs first creates the file and
-the other updates it in place — never create a second copy or a second link block. If the artifact
-block for this filename is already present in `custom.Prep Notes`, leave it and say so in the report. Still run sub-step 5: if the block is present but `custom.Facilitation Playbook URL` is empty, backfill it.
+the other updates it in place — never create a second copy or a second `<li>`. If the `Facilitation`
+item for this filename is already present in `custom.Prep Notes`, leave it and say so in the report. Still run sub-step 5: if the block is present but `custom.Facilitation Playbook URL` is empty, backfill it.
 
 **If the Planhat write fails with `{"el":"externalId","error":"Not valid type"}`** the target has no
 `externalId` and cannot be updated through the API — supplying one in the same call does not clear

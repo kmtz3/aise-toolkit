@@ -96,6 +96,7 @@ Commands are grouped by family. Type `/<family>` (or `/<family>-`) in autocomple
 /bulk --prep                               # prep all next-week sessions
 /bulk --prep --week 2026-05-12             # anchor to a specific Monday
 /bulk --prep --force Acme                 # rerun prep even if brief exists
+/bulk --prep --backfill-facilitation       # generate missing facilitation guides for prepped A/Discovery/Kick off sessions
 ```
 
 ### `/customer-plan` — two modes, one command

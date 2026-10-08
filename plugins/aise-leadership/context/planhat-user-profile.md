@@ -20,7 +20,7 @@ All fields live on the `User` model, prefixed `AISE `. Resolve them via `get_mod
 |---|---|---|
 | `custom.AISE Identity` | rich text | Preferred name, display name, accent variants, role, team, manager, time zone, working hours, email |
 | `custom.AISE Profile preferences` | rich text | Voice section — sign-off, em dashes, semicolons, English variant, casual register, specific patterns |
-| `custom.AISE Workspace` | rich text | Workspace section — conferencing tool, internal Slack channel, manager (Calendly links are NOT stored here — see below) |
+| `custom.AISE Workspace` | rich text | Workspace section — conferencing tool, internal Slack channel, manager, and `Artifacts folder: <Drive folder id>` (the user's `Customer Session Artifacts` folder, written by whichever run first resolves it — see `context/session-artifact-convention.md` §1). Calendly links are NOT stored here — see below. |
 | `custom.AISE Voice Scrape Samples` | rich text | Distilled patterns from Gmail/Slack scraping (Step 5 of onboarding) — only populated when scraping ran |
 | `custom.AISE Tracker Memory` | rich text | Cross-customer patterns/learnings the `context-keeper` agent logs — one entry per pattern (Pattern / Source / Action). Append-only in practice, unlike the other fields above which are wholesale-replaced. Shared across both plugins — same person, same accumulated pattern log regardless of which plugin is logging it. |
 | `custom.AISE Leadership Workspace` | rich text | **aise-leadership only.** Gong session-title keywords, Slack channels (AISE/leadership/CS org), internal coordinators (manager, commercial partner, PS Ops contact). Distinct from `custom.AISE Workspace` (aise-assistant's conferencing/Slack/manager fields) because the content genuinely doesn't overlap. **Report output/template sub-fields retired 2026-09** — `report-builder` no longer writes to Notion or discovers Notion templates; it publishes a single built-in HTML Artifact layout instead (see `plugins/aise-leadership/agents/report-builder.md`). |
@@ -124,8 +124,10 @@ Example — `custom.AISE Profile preferences`:
 
 Example — `custom.AISE Workspace`:
 ```html
-<p>Conferencing tool: Zoom</p><p>Slack AISE channel: <value></p><p>Manager: <value></p>
+<p>Conferencing tool: Zoom</p><p>Slack AISE channel: <value></p><p>Manager: <value></p><p>Artifacts folder: <Drive folder id></p>
 ```
+
+`Artifacts folder:` is machine-written by the artifact convention, not asked during onboarding. Any rewrite of this field (onboarding included) must carry an existing `Artifacts folder:` line over unchanged.
 
 Calendly links are separate `url` fields, not embedded in the Workspace rich text — write each directly to its own field.
 

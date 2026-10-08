@@ -5,6 +5,28 @@ Format: `## [version] — YYYY-MM-DD` followed by bullet points grouped by type.
 
 ---
 
+## [2.70.0] — 2026-10-08
+
+### Added
+- **Same-day prep in `/daily-brief`, on by default.** Today's external customer sessions that haven't started and are badged `⚠️ No prep`, `— Not in Planhat` or `⚠️ Prep stale` get the full session-prepper run inline, soonest first, including in scheduled and cloud runs. `--no-same-day-prep` turns it off; `--auto-prep` now controls tomorrow only. Chat summary and push notification list `Prepped today: <Customer> <HH:MM> → Planhat Task <_id>`.
+- **`--unattended` mode for session-prepper.** Ownership mismatches are skipped and flagged, thin context is written up with its gaps listed, never asked about. Used by `/daily-brief` and `/bulk --prep`.
+- **`/bulk --prep --backfill-facilitation`.** One-off sweep that generates (or reuses), publishes and links the facilitation guide for upcoming Architecting, Discovery and Kick off Tasks that have Prep Notes but an empty `custom.Facilitation Playbook URL`.
+- **`👀 Attendee only` class in `/daily-brief`** for forwarded customer-run calls (`FW:` / `Fwd:` title or `fyi` description, external organizer). No Task lookup, prep badge, block or prep.
+- **Stale-prep detection.** When the prep header date differs from the event date, the brief badges `⚠️ Prep stale (rescheduled from <date>)` instead of `✅ Prep done`, and same-day prep refreshes it with `--force` (keeping Goals and Agenda unless the calendar description changed).
+
+### Changed
+- **Facilitation guide is a hard gate** for Architecting, Discovery and Kick off sessions: the run isn't done until the guide is in Drive and `custom.Facilitation Playbook URL` reads back equal to its link. Failures report `🔴 Facilitation missing – <reason>`; the `Playbook URL field:` report line is mandatory. `/bulk --prep` and `/daily-brief` show a per-session Facilitation result.
+- **One canonical artifact link shape.** Every writer upserts one `<li>` per artifact (an `<a href>` link, en dashes) into the Session artifact section after the `<hr>`; no more `SESSION PREP ARTIFACT —` blocks above the header or bare URLs. Legacy shapes are folded in on the next write.
+- **`<a href>` is now a supported Planhat rich-text tag** (confirmed clickable in the Planhat UI, 2026-10-08).
+- **Artifacts folder resolution.** Persisted `Artifacts folder: <id>` line in `custom.AISE Workspace` first, then an exact-title search over folders the user owns (oldest wins, extras flagged), create only when nothing exists, then persist the ID. Onboarding preserves the line.
+- **Daily brief risk line** now takes the first `🔴` line, then the first Watch-for item, then a non-booking-note blockquote; booking notes are never risks.
+- **Tool names by role.** Procedures name tools by role, with a prefix table for Claude Code (`mcp__claude_ai_*`), Cowork cloud (`mcp__*`) and the direct Planhat MCP. daily-brief, session-prepper and bulk-prep-week list both prefix forms. New minimum context fallback (Planhat → Gong `ask_account` by SF id → Gmail) so a missing source never stops a run.
+- `/daily-brief` Step 6 documents that Task pages can come back as saved files, merged with `json.load`.
+
+### Fixed
+- `/daily-brief` skill header no longer renders an empty date ("for ****") when run without arguments.
+- Leftover Notion wording in `/bulk --prep` and the daily-brief report.
+
 ## [2.69.0] — 2026-10-08
 
 ### Removed
