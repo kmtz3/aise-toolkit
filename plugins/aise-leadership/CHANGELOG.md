@@ -1,5 +1,10 @@
 # Changelog — aise-leadership
 
+## [1.16.3] — 2026-10-13
+
+### Changed
+- Synced `context/` from aise-assistant: `project-instructions.md` adds the Gong transcripts Drive folder as a fallback transcript source (transcript lookup step 1b and the minimum context fallback).
+
 ## [1.16.2] — 2026-10-13
 
 ### Changed

@@ -46,7 +46,7 @@ Resolve the Company first (`search_records(QUERY: "{customer}")` → `companyId`
    — sessions, `👾 Gong Call`, `email`, `💬 Slack Chat`. Support tickets: `Issue` records (`FILTER: {"companyIds[contains]": "{companyId}"}`).
 2. **Slack** — `slack_search_public_and_private`: `"in:<#channel> after:YYYY-MM-DD"` + keywords (spark, AI, feedback) in the
    internal and shared channels from the Company's cached channel IDs.
-3. **Gong** — `ask_account(crmAccount: "{customer}", question: "Use case interests, pain points, goals, AI/Spark interest, open commitments, participants — last 90 days?", includeSources: true)`.
+3. **Gong** — `ask_account(crmAccount: "{customer}", question: "Use case interests, pain points, goals, AI/Spark interest, open commitments, participants — last 90 days?", includeSources: true)`. If Gong MCP is not connected, read the account's recent transcripts from the Gong transcripts Drive folder instead (`context/project-instructions.md` §3 § Minimum context fallback).
 4. **Gmail** — `search_threads`: `"{customer}"` — recent email threads with customer contacts.
 
 From results, extract:

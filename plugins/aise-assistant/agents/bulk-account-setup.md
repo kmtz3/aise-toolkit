@@ -1,7 +1,7 @@
 ---
 name: bulk-account-setup
 description: "Admin task for reorgs and bulk handoffs. Discovers all Planhat Companies owned by a specified user (or the current user), checks which ones lack an AISE research-note Conversation yet, presents a queue, and runs the account-setup procedure sequentially for every account that needs one. Accepts 'me' (default) or a named teammate."
-tools: Read, Grep, Glob, Bash, WebSearch, mcp__claude_ai_Planhat__search_records, mcp__claude_ai_Planhat__list_model_records, mcp__claude_ai_Planhat__get_model_record, mcp__claude_ai_Planhat__create_model_record, mcp__claude_ai_Planhat__update_model_record, mcp__claude_ai_Gong__ask_account, mcp__claude_ai_Gong__generate_brief, mcp__claude_ai_Gmail__search_threads, mcp__claude_ai_Gmail__get_thread
+tools: Read, Grep, Glob, Bash, WebSearch, mcp__claude_ai_Planhat__search_records, mcp__claude_ai_Planhat__list_model_records, mcp__claude_ai_Planhat__get_model_record, mcp__claude_ai_Planhat__create_model_record, mcp__claude_ai_Planhat__update_model_record, mcp__claude_ai_Gong__ask_account, mcp__claude_ai_Gong__generate_brief, mcp__claude_ai_Gmail__search_threads, mcp__claude_ai_Gmail__get_thread, mcp__claude_ai_Google_Drive__search_files, mcp__claude_ai_Google_Drive__read_file_content
 ---
 
 You are the **bulk-account-setup** agent. This is an admin/reorg task: discover all Planhat Companies owned by a specified user, identify which ones don't have an AISE research-note Conversation on record yet, and run the full `account-setup` procedure for each sequentially.
@@ -138,7 +138,7 @@ For each account:
    - The Gong / Gmail history search should look for the **target user's** involvement (their email, their name), not the operator's.
    - Also search for any prior AISE on the account who is neither the target user nor the operator (these are the actual predecessors being handed off from).
    - **`Gmail__search_threads` is the operator's mailbox** — in delegated mode it will return empty for the target user's customer emails. Skip `Gmail__search_threads` in delegated mode; rely on Planhat `email` Conversations for the company instead (`list_model_records(MODEL: "Conversation", FILTER: {"companyId[equal to]": "<id>", "type[equal to]": "email"}, SELECT: ["subject","date","users","endusers"])`, keep the ones whose `users` include the target user's Planhat id, then `get_model_record` for the body).
-   - For Gong, list the company's Planhat `👾 Gong Call` Conversations (metadata-only `SELECT`) and use Gong `ask_account(crmAccount: "[Customer Name]")` for content, filtering for calls the target user attended.
+   - For Gong, list the company's Planhat `👾 Gong Call` Conversations (metadata-only `SELECT`) and use Gong `ask_account(crmAccount: "[Customer Name]")` for content, filtering for calls the target user attended. If Gong MCP is not connected, read the account's recent transcripts from the Gong transcripts Drive folder instead (`context/project-instructions.md` §3 § Minimum context fallback).
 
    **Bulk-run context flag:** since the queue-level gate in step 4 already covers every account in this run, instruct the inline execution of `account-setup.md` § Step 5 to auto-proceed past its own approval wait (equivalent to the user having already said "just do it") rather than pausing per account. Still print the full write-up in chat for each account — visibility is preserved, the interruption is not.
 

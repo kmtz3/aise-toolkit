@@ -33,7 +33,7 @@ If Line Items return zero `ongoing` rows, flag it and ask the user whether to pr
 ### 2. Pull context (in parallel)
 
 - **Deal context / AE handoff** — Planhat Company record first (SF-synced commercial fields, `custom.SH_*` sales-handover fields); fall back to the Salesforce connector (`soqlQuery` / `find`) only when a field is empty, tagging values `⚠️ [Salesforce — verify]`.
-- **Gong** — prior recorded calls (pre-sales demos, discovery sessions): Planhat `👾 Gong Call` Conversations on the Company (`list_model_records(MODEL: "Conversation", FILTER: {"companyId[equal to]": "<id>", "type[equal to]": "👾 Gong Call"}, SORT: "-date")`) for transcripts, plus Gong `ask_account` / `generate_brief` for synthesized discovery takeaways.
+- **Gong** — prior recorded calls (pre-sales demos, discovery sessions): Planhat `👾 Gong Call` Conversations on the Company (`list_model_records(MODEL: "Conversation", FILTER: {"companyId[equal to]": "<id>", "type[equal to]": "👾 Gong Call"}, SORT: "-date")`) for transcripts, plus Gong `ask_account` / `generate_brief` for synthesized discovery takeaways. If Gong MCP is not connected, read the account's recent transcripts from the Gong transcripts Drive folder instead (`context/project-instructions.md` §3 § Minimum context fallback).
 - **Slack** — `slack_search_public_and_private` in the account's channels (`in:<#channel>`; IDs from Company `custom.Slack ID` / `custom.External_Slack_Channel_ID`).
 - **Google Drive** — `search_files` / `read_file_content` for discovery decks and shared artefacts.
 - **Gmail `search_threads`** — customer threads, AE handoff emails (own mailbox). For threads the user wasn't on, read Planhat `email` Conversations on the Company.

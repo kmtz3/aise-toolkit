@@ -5,6 +5,18 @@ Format: `## [version] — YYYY-MM-DD` followed by bullet points grouped by type.
 
 ---
 
+## [2.72.0] — 2026-10-13
+
+### Added
+- Gong transcripts Drive folder as a fallback transcript source (`0AFUExR7u9Rp5Uk9PVA`, one Google Doc per call titled `YYYY-MM-DD | <account> | <call title>`, Gong call ID in the file description). New transcript lookup step 1b in `context/project-instructions.md` §3, used when the Planhat `👾 Gong Call` record and Gong MCP are unavailable or miss; a Drive file counts as a verbatim transcript.
+- Minimum context fallback: when Gong MCP is not connected, read the account's recent transcripts from the same folder.
+
+### Changed
+- Drive `search_files` / `read_file_content` added to `session-summarizer`, `post-session-debrief`, `email-drafter`, `kdd-builder`, `bulk-debrief`, `session-backfill`, `account-refresh`, `account-setup`, `bulk-account-setup`, `diagram-builder`.
+- `bulk-debrief`: the sweep re-check for `partial - transcript pending` sessions also checks the Drive folder, so a transcript already in Drive upgrades the session to a full debrief.
+- `session-backfill`: can discover past calls from the Drive folder when Gong MCP is not connected.
+- `/log-feedback`, `/session-summary`, `account-refresh`, `account-setup`, `bulk-account-setup`, `engagement-planner`, `whats-new`, `daily-brief`, `diagram-builder`, `/spark-demo-prep`: reference the Drive folder fallback.
+
 ## [2.71.0] — 2026-10-13
 
 ### Removed
