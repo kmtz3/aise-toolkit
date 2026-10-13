@@ -76,7 +76,7 @@ Record the resolved ID once per run and reuse it across every artifact for that 
 | `SessionPrep` | `/session-prep`, `/bulk --prep`, `/daily-brief` (same-day prep, `--auto-prep`) | The prep brief rendered as a file. |
 | `Facilitation` | `/session-facilitation` | Interactive HTML run sheet. |
 | `KDD` | `/session-kdds`, `/session-prep` (A-sessions) | Customer-facing key design decisions doc. |
-| `Deck` | `/create-deck` | Single-file HTML deck. |
+| `Deck` | Slides artifact (`context/deck-guidelines.md`) | Claude Slides artifact URL. |
 | `Diagram` | `/draft-diagram` | SVG path only — a Figma file has no Drive artifact. |
 | `Debrief` | `/session-debrief`, `/bulk --debrief` | Only when the debrief produces a file; the written summary itself belongs on the Planhat Conversation, not in Drive. |
 | `Brief` | `/daily-brief` | Only when the user asks for the daily brief to be filed in Drive. Uses the brief date and the user's own name in place of a customer. |
@@ -136,7 +136,7 @@ An artifact that isn't linked from the session record doesn't exist. After a suc
 
 `{ArtifactType}` is the registry value from §4 (`SessionPrep`, `KDD`, `Facilitation`, `Deck`, …). Never write a bare URL, a `SESSION PREP ARTIFACT — …` / `FACILITATION ARTIFACT — …` paragraph run, `&ndash;`, or an em dash.
 
-**Upsert, never prepend.** Every writer (session-prepper § 6.8, `session-facilitation` step 4, `kdd-builder`, `create-deck`, `diagram-builder`, `post-session-debrief`) follows the same rule:
+**Upsert, never prepend.** Every writer (session-prepper § 6.8, `session-facilitation` step 4, `kdd-builder`, deck creation (`deck-guidelines.md`), `diagram-builder`, `post-session-debrief`) follows the same rule:
 
 1. Read the record's current `custom.Prep Notes`.
 2. **Section exists** → inside it, find the `<li>` whose anchor text is this artifact's filename (or, failing that, whose `<strong>` label is this `{ArtifactType}`) and replace it; if none matches, insert a new `<li>` before the `Folder` item. Leave every other item untouched.

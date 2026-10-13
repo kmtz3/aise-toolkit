@@ -1,5 +1,11 @@
 # Changelog — aise-leadership
 
+## [1.16.2] — 2026-10-13
+
+### Changed
+- Synced `context/` from aise-assistant: new `deck-guidelines.md` (decks are built as Claude Slides artifacts on the Productboard Slide Deck Kit design system), `/create-deck` references removed from `session-artifact-convention.md`, deck pointer added to `project-instructions.md`.
+- `CLAUDE.md`: `deck-guidelines.md` added to the universal context files table.
+
 ## [1.16.1] — 2026-10-08
 
 ### Changed

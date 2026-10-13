@@ -38,6 +38,7 @@ This file is always loaded. It points at the detail — don't duplicate it here.
 |---|---|
 | [context/pb-aise-reference-guide.md](context/pb-aise-reference-guide.md) | Program structure, session types, PB data model, licensing, credit model, common risks |
 | [context/planhat-schema.md](context/planhat-schema.md) | Planhat model schemas (Company, Conversation, Task, Comment, Attachment, EndUser, etc.), field mappings, and write rules — source of truth for account/session/task data. |
+| [context/deck-guidelines.md](context/deck-guidelines.md) | **Any request for a deck, slides or a presentation.** Build it as a Claude Slides artifact on the org default design system (Productboard Slide Deck Kit); never a hand-rolled HTML template. |
 | [context/communication-style-guide.md](context/communication-style-guide.md) | AISE-comms patterns. Personal preferences override via `custom.AISE Profile preferences` on the user's Planhat User record. |
 
 > **context/ is shared locally.** The `context/` directory is sourced from `plugins/aise-assistant/` in this monorepo and synced via `scripts/sync-context.sh`. Never edit files in `context/` directly — make changes in `plugins/aise-assistant/context/` and sync here.

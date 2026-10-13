@@ -14,7 +14,7 @@ A Cowork / Claude Code plugin that turns any Productboard **AI Success Engineer 
   - **`ph-*`** (1) — `/ph-reconcile-gong-gcal`
   - **`planhat-*`** (2) — `/planhat-automations`, `/planhat-formula-builder`
   - **`assistant-*`** (5) — `/assistant-setup`, `/assistant-help`, `/assistant-remember`, `/assistant-improvement`, `/aise-context`
-  - **Standalone** (8) — `/support-hub`, `/daily-brief`, `/spark-demo-prep`, `/create-deck`, `/session-facilitation`, `/spark-onepager`, `/inbox-triage`, `/temp-ph-ignite-conversion-data-sync`
+  - **Standalone** (7) — `/support-hub`, `/daily-brief`, `/spark-demo-prep`, `/session-facilitation`, `/spark-onepager`, `/inbox-triage`, `/temp-ph-ignite-conversion-data-sync`
 - **24 specialist agents** that execute each command (session prep, KDD generation, summaries, Planhat writes, session-log auditing, Gong/Gcal reconciliation, etc.).
 - **Universal context** — workflow rules, the AISE reference guide, scorecards, communication style guide, the full Planhat schema/field reference, engagement planning framework, KDD anchor templates per A-session type.
 - **Personal profile** — stored directly on `custom.AISE *` fields on your Planhat User record via `/assistant-setup`. Persists across installs, updates, and machines; no local files to manage.

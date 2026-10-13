@@ -5,6 +5,18 @@ Format: `## [version] — YYYY-MM-DD` followed by bullet points grouped by type.
 
 ---
 
+## [2.71.0] — 2026-10-13
+
+### Removed
+- `/create-deck` and its `deck-template.html`. Decks are now built as Claude Slides artifacts on the org default design system (Productboard Slide Deck Kit) instead of a hand-rolled HTML template saved to `~/Desktop`.
+
+### Added
+- **`context/deck-guidelines.md`**, read for any deck, slides or presentation request. Covers routing (Slides artifact type + default design system, `.pptx`/HTML only when asked), installing the `pb` design system (tokens, Proxima Nova faces, backgrounds, logo marks), slide format, context sources, content rules (Planhat names win over transcript spelling, PB team slide = presenters only, "AI Success Engineer" title), team headshots from the Figma assets file, the kickoff deck outline, live-type working slides, and the five-session program on one slide sourced from the AI Success Engineering Services deck.
+
+### Changed
+- `session-artifact-convention.md`: `Deck` registry row now points at the Slides artifact flow; writers list updated.
+- `CLAUDE.md`, `README.md` and `project-instructions.md` updated: `/create-deck` removed from the command tables (standalone count 8 → 7), `deck-guidelines.md` added to the reference files.
+
 ## [2.70.0] — 2026-10-08
 
 ### Added
