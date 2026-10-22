@@ -5,6 +5,18 @@ Format: `## [version] — YYYY-MM-DD` followed by bullet points grouped by type.
 
 ---
 
+## [2.73.0] — 2026-10-22
+
+### Changed
+- **One Gmail draft per thread – update, never duplicate.** `agents/email-drafter.md` § 4.5 replaces the subject/recipient dedup check and its "skip, replace, or create new?" prompt (singleton) / skip default (bulk). Existing drafts are now matched on `thread_id` for replies (recipient + customer/session subject for standalone emails) and updated by default in every run. The agent `get_draft`s the existing draft first and carries over any hand-made user edits; multiple drafts on one thread are collapsed into one.
+- Update method: standalone drafts are `update_draft`-ed in place (re-sending attachments); threaded replies are replaced – `create_draft` with `replyToMessageId`, then `delete_draft` the old draft ID (draft IDs are stable, unlike message IDs), then confirm one draft remains. Never `update_draft` a reply.
+- `skills/draft-email/SKILL.md`, `agents/inbox-triage.md`, `agents/post-session-debrief.md`, `agents/account-refresh.md`, `agents/bulk-debrief.md` follow the same rule. `bulk-debrief` no longer skips an existing follow-up draft – it updates it and logs "draft updated".
+- Added `update_draft`, `get_draft` and `delete_draft` to the tool lists of all five drafting agents.
+- `context/planhat-schema.md`: retired the Notion↔Planhat mapping framing – now a Planhat-only schema and traversal guide (model overview, Company, customer name aliases, Conversation session types, Task lookup and status values, EndUser). Notion field mappings, migration gate and backfill strategy removed.
+
+### Fixed
+- `agents/post-session-debrief.md`: removed the stale claim that Gmail MCP has no `update_draft`/`delete_draft` tool and that the user must trash replaced drafts manually.
+
 ## [2.72.0] — 2026-10-13
 
 ### Added

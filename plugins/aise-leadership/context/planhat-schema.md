@@ -1,8 +1,8 @@
-# Planhat Schema & Notion↔Planhat Traversal Guide
+# Planhat Schema & Traversal Guide
 
-> **Status:** Migration complete. Planhat is the sole AISE working record — Notion has been fully retired across every agent and skill, including session-prep (`session-prepper`), account-plan (`customer-plan-next`), and engagement-planner (`engagement-planner`). The "System Mapping: Notion ↔ Planhat" tables below are kept as historical/reference documentation only, not a description of current dual-write behavior.
+> **Status:** Planhat is the sole AISE working record. Every agent and skill reads and writes Planhat directly.
 >
-> **Last updated:** 2026-09-08 (rewrote `/session-backfill` Planhat-native — dropped Notion meeting-notes discovery and the Active Package/Consumed Package concepts entirely, added its GCal-event-id / `gong_`-prefixed `externalId` convention to § Conversation)
+> **Last updated:** 2026-10-16 (full field audit against live `get_model_action_parameters` on every model – documented the remaining Company, Asset, Task, EndUser, Deal, Line Item and Product fields, added `custom.Latest Renewal Risk – SF` / `custom.Latest Renewal Risk As Of – SF`, refreshed the Conversation `type` option list, and removed the retired-tracker migration material)
 
 ---
 
@@ -268,35 +268,20 @@ To confirm an inferred slug: open the record in Planhat, copy the address bar, c
 
 ---
 
-## System Mapping: Notion ↔ Planhat
+## Model overview
 
-### Migration architecture overview
-
-> This is the canonical mapping for the one-time Notion → Planhat migration. It covers all six Notion databases. **Read every row before writing anything** — connected records (e.g. Conversation → Company, Task → Company) must exist before the child record is created.
-
-| Notion DB | Planhat Model | Direction | Notes |
-|---|---|---|---|
-| **Customers** | **Company** | SF → Planhat ← AISE | Company records are SF-synced by RevOps. AISE writes `phase`, `custom.AISE Journey Status`, Spark fields only. Never create Company records via MCP. |
-| **Contacts** | **EndUser** | Notion → Planhat | Individual contacts per account. Map on session backfill; link as `endusers` on Conversations. Dedup key: `email` (or `externalId`/`sourceId`). |
-| **Sessions** | **Conversation** | Notion → Planhat | Delivered sessions only (`Call Status = Delivered`). One Conversation per session. Type mapping: see §Conversation below. Dedup key: `externalId` = Notion Session page ID. |
-| **Tasks (all statuses)** | **Task** (`mainType: "task"`) | Notion → Planhat | All Notion Tasks write to the Task model. For `status: "done"` only, Planhat auto-creates a linked Conversation (`noteId`). Post-write: check and set Conversation `type: "Task"` if not already. `"ignored"` (Canceled) stays as Task only — no auto-Conversation. Dedup key: `sourceId` = Notion Task page ID. |
-| **Active Packages** | **Deal** (read-only) | SF → Planhat | SF is SSOT. **Never write Deal or LineItem records from Notion to Planhat.** Read `list_model_records(MODEL: "Deal")` to surface contract data. |
-| **Master Packages** | **Product** (read-only) | SF → Planhat | SKU templates. SF is SSOT. **Never write from Notion to Planhat.** |
-
-### Database equivalents
-
-| Notion DB | Planhat Model | Notes |
+| Model | What it holds | Who writes it |
 |---|---|---|
-| **Customers** | **Company** | Core account record. SF-synced. AISE writes Spark/phase/Journey Status only. |
-| **Contacts** | **EndUser** | Individual contacts at accounts. |
-| **Sessions** | **Conversation** | Delivered calls/interactions. See type mapping table. |
-| **Tasks (all statuses)** | **Task** (`mainType: "task"`) | All tasks — open and closed — write to the Task model. `status: "done"` triggers Planhat to auto-create a linked Conversation (`noteId`); `"ignored"` (Canceled) does not. |
-| **Active Packages** | **Deal** (read-only from SF) | Functional equivalent. SF SSOT. Never write from Notion. |
-| **Master Packages** | **Product** (read-only from SF) | SKU logic. SF SSOT. Never write from Notion. |
+| **Company** | The customer account. | Salesforce sync creates and owns the record. AISE writes only the fields in § AISE-writable. **Never create a Company via MCP.** |
+| **End User** | Individual contacts at an account. | Salesforce / Snowflake sync, plus the AISE fields in § EndUser. Dedup key: `email` (or `externalId` / `sourceId`). |
+| **Conversation** | Delivered sessions and other touchpoints (email, Slack, Gong, tickets). | GCal / Gong / Gmail / Zendesk syncs, plus AISE writes. Dedup key: `externalId` – see § `externalId` convention. |
+| **Task** | Calendar events (`mainType: "event"`) and PB-side action items (`mainType: "task"`). | GCal sync and AISE writes. A `status` transition to `"done"` auto-creates a linked Conversation. |
+| **Deal** / **Line Item** / **Product** | Contracts, purchased SKUs, SKU templates. | Salesforce. Read-only. |
+| **Asset** (Workspace) | One Productboard workspace per record. | Salesforce + Snowflake. Read-only. |
 
 ---
 
-## Company (Planhat) ↔ Customer (Notion)
+## Company
 
 ### How to look up a Planhat Company for a given customer
 
@@ -304,12 +289,9 @@ To confirm an inferred slug: open the record in Planhat, copy the address bar, c
 ```
 search_records(QUERY: "<customer name>")
 ```
-Filter results to `model: "Company"` only. Check the name mapping table below for known mismatches before concluding no record exists.
+Filter results to `model: "Company"` only. Check § Customer name aliases below for known mismatches before concluding no record exists.
 
-**Step 2 — Fall back to Salesforce sourceId if name search fails:**
-Extract the SF Account ID from the Notion Customer's `SFDC` field URL:
-`https://productboard.lightning.force.com/lightning/r/Account/<SF_ACCOUNT_ID>/view`
-Then:
+**Step 2 — Fall back to the Salesforce Account ID if name search fails.** Planhat's `sourceId` is the 18-char Salesforce Account ID. Take it from a Salesforce URL (`https://productboard.lightning.force.com/lightning/r/Account/<SF_ACCOUNT_ID>/view`), the Gong account, or the Salesforce connector, then:
 ```
 list_model_records(MODEL: "Company", FILTER: {"sourceId[equal to]": "<SF_ACCOUNT_ID>"}, SELECT: ["name", "sourceId"])
 ```
@@ -318,71 +300,11 @@ list_model_records(MODEL: "Company", FILTER: {"sourceId[equal to]": "<SF_ACCOUNT
 
 ---
 
-### Field-level mapping: Notion Customer → Planhat Company
+## Customer name aliases
 
-> Fields marked **[SYNCED]** are actively written by the AISE assistant. Fields marked **[READ]** are pulled from Planhat for context but not written by the assistant. Fields marked **[NOTION ONLY]** have no Planhat equivalent. Fields marked **[PLANHAT ONLY]** exist in Planhat but not Notion.
+Some accounts go by a different name than their Planhat record. Always check this table before concluding no Planhat record exists. When a name doesn't match here either, check the Company's `domains` array before giving up — acquired brand names (like Entrust below) may only surface there, not in the Company name itself.
 
-#### Identity & ownership
-
-| Notion field | Planhat field ID | Type | Direction | Notes |
-|---|---|---|---|---|
-| `Customer` (title) | `name` | string | Read/Write | Display name. **May differ** — see name mapping table. |
-| `SFDC` (url) | `sourceId` | string | Read | SF Account ID embedded in the Notion URL. Planhat's `sourceId` is the 18-char Salesforce Account ID. Use for cross-system lookups. |
-| `Domain` | `domains[0]` | array | Read | Planhat stores domains as an array. |
-| `Owner` (person) | `owner` (objectId → User) | relation | [NOTION ONLY for AISE writes] | Notion Owner = AISE. Planhat `owner` = CSM. These may differ. Do not overwrite Planhat `owner` from Notion. |
-| `Account Executive` | `custom.Account Executive` | string | Read | Same role, stored as a string in Planhat custom field. |
-| `Renewal Manager` | `custom.Renewals Manager` | string | Read | |
-
-#### Account health & status
-
-| Notion field | Planhat field ID | Type | Notes |
-|---|---|---|---|
-| `Account Status` | `status` (+ `phase`) | string | Planhat `status` is auto-set from licenses (`prospect`, `customer`, `canceled`, etc.). `phase` is the manually-set lifecycle stage. Neither maps 1:1 to Notion `Account Status`. |
-| `Health (Manual)` | `csmScore` (1–5) | number | Notion is a select (`Figuring it out` → `Churning`). Planhat `csmScore` is 1–5. Rough mapping: Healthy=4–5, Figuring it out=3, Concerning=2, Churning=1. |
-| `Priority` | _(no equivalent)_ | — | Notion-only. Not in Planhat. |
-| `ARR` (rollup) | `arr` | number | Planhat `arr` = annualized MRR from active licenses. Notion ARR = rollup from Active Packages. **Do NOT use native `arr`** — its default logic is incorrect and cannot be changed. Use `custom.ARR – SF` (see § ARR — always use `custom.ARR – SF`). |
-| `Renewal Forecast` | _(no direct equivalent)_ | — | Planhat has `renewalDate` and `renewalArr` but no forecast select. |
-| _(Notion only)_ | `h` (health score 0–10) | number | **[PLANHAT ONLY]** Computed health score. Useful context when prepping sessions. |
-| _(Notion only)_ | `lastActive` | date | **[PLANHAT ONLY]** Last product activity date. |
-| _(Notion only)_ | `nextTouch` / `lastTouch` | date | **[PLANHAT ONLY]** Next/last scheduled or logged interaction. |
-
-#### Spark / AI readiness — **[SYNCED]**
-
-**Partly stale – see § Spark fields — Company for the current field map.** `Spark Stage` is no longer synced from Notion; `AI Ready` and `Igniting?` still are.
-
-> **Renamed 2026-08-07** — all three ⚡️-prefixed fields below were renamed/relabeled in Planhat. Old field IDs (`custom.Spark Stage`, `custom.Igniting?`, `custom.Days in Current Ignite Stage`, without the emoji) and old `Spark Stage` option values (`Not Active`/`Active for Admins`/`Active for All`/`Active on Staging`) are stale — do not use them. `AI Ready` is unaffected.
-
-| Notion field | Planhat field ID | Type | Value mapping |
-|---|---|---|---|
-| `Spark Customer Journey` | _(retired mapping)_ | — | **No longer synced.** `custom.⚡️ Spark Stage` is now automation-maintained from `Spark Visibility (Account)` and is never written – see § Spark fields — Company. The old Notion value mapping is obsolete. |
-| `AI Ready` | `custom.AI Ready` | string (select) | `Sparked` → `Sparked` · `Preparing` → `Preparing` · `Ignitable` → `Ignitable` · `Not ready` → `Not Ready` _(note capital R)_ |
-| `Igniting?` | `custom.⚡️ Igniting?` | boolean | `__YES__` → `true` · `__NO__` → `false` |
-| `Days in Current Ignite Phase` (formula) | `custom.⚡️ Days in Current Ignite Stage` | string (read-only) | Both are computed. Do not write either. |
-| `Ignite Journey Last Edited` (date) | _(no equivalent)_ | — | Notion-only automation field. |
-| _(no Notion equivalent)_ | `custom.⚡️ Spark Enabled Date` / `custom.⚡️ Spark Active For Since` / `custom.⚡️ Spark Engaged Date` / `custom.⚡️ AI Consent` | date / date / date / text | **Added 2026-08-07.** Written by `temp-ph-ignite-conversion-data-sync` skill from weekly CSV upload. CSV is the source of truth for these fields. |
-
-**Write direction (`AI Ready`, `Igniting?` only):** Notion → Planhat. Never write `Spark Stage`.
-
-#### Financial
-
-| Notion field | Planhat field ID | Notes |
-|---|---|---|
-| _(no equivalent)_ | `mrr` | Monthly Recurring Revenue — Planhat only |
-| _(no equivalent)_ | `arr` | ⚠️ Native ARR — **not used**; use `custom.ARR – SF` |
-| _(no equivalent)_ | `renewalDate` | Contract renewal date — Planhat only |
-| _(no equivalent)_ | `renewalDaysFromNow` | Days until next renewal — Planhat only, read-only |
-| `ARR` (rollup) | `custom.ARR – SF` | **The ARR field to use everywhere.** ARR from Salesforce — Planhat only. **Field ID is `ARR – SF`.** Native `arr` is not used. |
-| _(no equivalent)_ | `custom.Customer Status – SF` | Salesforce lifecycle status — Planhat only |
-| _(no equivalent)_ | `custom.Region` | Geographic region — Planhat only |
-| _(no equivalent)_ | `custom.Segment` | Customer segment — Planhat only |
-
----
-
-## Customer Name Mapping: Notion → Planhat
-
-Some accounts are named differently across systems. Always check this table before concluding no Planhat record exists. When a name doesn't match here either, check the Company's `domains` array before giving up — acquired brand names (like Entrust below) may only surface there, not in the Company name itself.
-
-| Notion name | Planhat name | Planhat `_id` | Match method |
+| Name people use | Planhat name | Planhat `_id` | Match method |
 |---|---|---|---|
 | WeClapp GMBH | weclapp GmbH | `6a4cd728ef3ea36a06911298` | Name |
 | Ecovadis | ECOVADIS SAS | `6a4cd724ef3ea30f44910507` | Name |
@@ -394,7 +316,7 @@ Some accounts are named differently across systems. Always check this table befo
 | SymphonyAI | Symphony AI | `6a4cd728ef3ea37f3c91135c` | Name |
 | Hilti AG | Hilti | `6a4cd722ef3ea3deb09101a6` | Name |
 | S&P Global Market Intelligence | S&P Global | `6a4cd728ef3ea3132a91125d` | Name |
-| S&P Global Ratings | S&P Global | `6a4cd728ef3ea3132a91125d` | Name — same Planhat Company; both Notion records map here |
+| S&P Global Ratings | S&P Global | `6a4cd728ef3ea3132a91125d` | Name — same Planhat Company as Market Intelligence |
 | North SALIDO | North American Bancard | `6a4cd722ef3ea332c691015a` | SF sourceId |
 | Emplifi _(duplicate)_ | Emplifi (two Company records) | `6a9add4c…` (pixlee / turnto domains) · `6a4cd724…` (socialbakers domains) | **Duplicate, resolve via the session Task.** Only one is the real account: the one that owns the session Task and conversations, which also has `owner` = the current user. Truncated ids as first observed 2026-10-06; confirm full `_id` live. |
 
@@ -402,25 +324,27 @@ Some accounts are named differently across systems. Always check this table befo
 
 **Duplicate Companies from name or domain search (e.g. Emplifi ×2):** `search_records` and `domains[contains]` can return more than one Company for the same customer. Resolution order: (1) take `companyId` from the session Task / Conversation resolved by GCal event ID (`daily-brief` step 3-A does this first); (2) otherwise prefer the Company whose `owner` equals the current user's `planhat_user_id`; (3) if still several, ask. Always name the duplicate in the run's flags so it can be merged in Planhat. A name search can also crowd in unrelated companies (a `north` query returns several): confirm by exact `domains` element (try the parent domain of a subdomain such as `contractor.north.com` → `north.com`), never by picking the first hit.
 
-**S&P Global Market Intelligence vs S&P Global Ratings:** Two separate Notion customer records. "S&P Global Market Intelligence" is the primary engagement (maps to Planhat as "S&P Global"). "S&P Global Ratings" is a separate entity but shares the same Planhat Company (`6a4cd728ef3ea3132a91125d`) — both live under one Planhat account for now. Spark data may differ between the two Notion entries. When syncing sessions or tasks, use the Notion Customer page you're working from — both will resolve to the same Planhat `companyId`.
+**S&P Global Market Intelligence vs S&P Global Ratings:** Two business units that share one Planhat Company, "S&P Global" (`6a4cd728ef3ea3132a91125d`). Market Intelligence is the primary engagement. Both resolve to the same `companyId` for sessions and tasks, so name the business unit in the session subject or notes when it matters. Spark data can differ between the two – read the per-workspace Asset records rather than the Company-level flags.
 
-**SAP sub-accounts:** Planhat has one record — "SAP SE" (`6a4cd724ef3ea383e8910516`). Notion has four separate customer records (SAP Global Content Group, SAP AIMAX, SAP LeanIX, SAP Signavio). These sub-accounts do not yet have individual Planhat Company records. When the user asks about any SAP sub-entity, check the Notion Customer page for the relevant data; do not try to write Spark fields to Planhat for these accounts until individual records exist.
+**SAP sub-accounts:** Planhat has one record — "SAP SE" (`6a4cd724ef3ea383e8910516`). SAP Global Content Group, SAP AIMAX, SAP LeanIX and SAP Signavio have no individual Company records and all resolve to SAP SE. Their per-workspace state lives on SAP SE's Asset records (§ Asset / Workspace). Do not write Spark fields expecting a sub-account split until individual records exist.
 
-### Not yet in Planhat (as of 2026-07-08)
+### Not found in Planhat (as of 2026-07-08)
 
-| Notion name | SF Account ID | Status |
+Accounts that were looked up and not found. Re-check before relying on this list – the sync may have picked them up since.
+
+| Name | SF Account ID | Status |
 |---|---|---|
-| SAP Global Content Group | _(none in Notion)_ | SAP sub-account — no individual record |
-| SAP AIMAX | _(none in Notion)_ | SAP sub-account — no individual record |
-| SAP LeanIX | _(none in Notion)_ | SAP sub-account — no individual record |
-| SAP Signavio | _(none in Notion)_ | SAP sub-account — no individual record |
+| SAP Global Content Group | — | SAP sub-account — no individual record |
+| SAP AIMAX | — | SAP sub-account — no individual record |
+| SAP LeanIX | — | SAP sub-account — no individual record |
+| SAP Signavio | — | SAP sub-account — no individual record |
 | Fnac Darty | `0015G00002TVABoQAP` | Not synced |
 | Domestic & General | `0015G00001WrPLWQA3` | Not synced |
 | Canon Medical | `001Qm00000QTRHHIA5` | Not synced |
 | Xactware | `001f400001D6n8WAAR` | Not synced |
-| Bloomreach | _(none in Notion)_ | Not found by name or ID |
-| Exact | _(none in Notion)_ | Not found by name or ID |
-| Amadeus | _(none in Notion)_ | Not found by name or ID |
+| Bloomreach | — | Not found by name or ID |
+| Exact | — | Not found by name or ID |
+| Amadeus | — | Not found by name or ID |
 
 ---
 
@@ -438,19 +362,17 @@ Spark visibility and engagement are computed or synced – there is nothing to w
 
 ### "What's the health / ARR / renewal date for customer X?"
 
-Planhat only — Notion does not track these in real time.
 1. `search_records(QUERY: "<customer name>")` → get `_id`
-2. `get_model_record(MODEL: "Company", OBJECT_ID: "<id>", SELECT: ["h", "custom.ARR – SF", "mrr", "renewalDate", "renewalDaysFromNow", "csmScore", "lastActive", "custom.Customer Status – SF", "custom.Region", "custom.Segment"])`
+2. `get_model_record(MODEL: "Company", OBJECT_ID: "<id>", SELECT: ["h", "custom.ARR – SF", "renewalDate", "renewalDaysFromNow", "csmScore", "lastActive", "custom.Customer Status – SF", "custom.Churning – SF", "custom.Latest Renewal Risk – SF", "custom.Latest Renewal Risk As Of – SF", "custom.Region", "custom.Segment"])`
+3. Quote the renewal risk only together with its `As Of` date. A blank `As Of`, or one months old, means the risk value is not current.
 
 ### "Who are the contacts at customer X?"
 
-- **Notion:** query Contacts DB linked via the Customer's `Contacts` relation
-- **Planhat:** `list_model_records(MODEL: "End User", FILTER: {"companyId[equal to]": "<planhat_company_id>"})` _(EndUser schema not yet fully documented — run `get_model_action_parameters(MODEL: "End User")` first)_
+`list_model_records(MODEL: "End User", FILTER: {"companyId[equal to]": "<planhat_company_id>"}, SELECT: ["name", "email", "position", "custom.AISE Relationship", "custom.Engagement Role"])` — the model name takes the space. Narrow to the working set with § EndUser → The working set.
 
 ### "Show me open tasks for customer X"
 
-- **Notion:** query Tasks DB with `Customers LIKE '%<customer-id>%'`
-- **Planhat:** `search_records(QUERY: "<customer name>")` then filter for Task records, or `list_model_records(MODEL: "Task", FILTER: {"companyId[equal to]": "<planhat_company_id>"})` _(note: `list_model_records` on Task has a hard 36-record cap — use `search_records` for customers with many tasks)_
+`list_model_records(MODEL: "Task", FILTER: {"companyId[equal to]": "<planhat_company_id>"}, SELECT: ["action", "status", "ownerId", "endTime", "type", "custom.Priority"])`, paged per § API Quirks, then filter open statuses locally (blank, `To Do`, `in-progress`, `blocked`). Owner-filter on `ownerId` when the question is about the current user's tasks.
 
 ---
 
@@ -494,7 +416,7 @@ The native Planhat `arr` field (and its relatives `mrr`, `renewalArr` where used
 | `customerTo` | date | Date company stops being a customer. |
 | `renewalDate` | date | Next contract renewal date. |
 | `externalId` | string | Your own external ID for this company. |
-| `orgIndependent` | boolean | Whether excluded from group hierarchy rollups. |
+| `phonePrimary` / `phoneSecondary` | string | Company phone numbers. |
 
 ### Standard read-only fields
 
@@ -517,10 +439,16 @@ The native Planhat `arr` field (and its relatives `mrr`, `renewalArr` where used
 | `orgPath`, `orgLevel`, `orgUnits`, `orgMrr`, `orgArr` | Group hierarchy fields |
 | `createdAt`, `updatedAt` | Record timestamps |
 | `sourceId` | Salesforce Account ID (sync key) |
+| `status` | License-driven lifecycle: `prospect` · `coming` · `customer` · `canceled` · `lost`. Set automatically from the most recent license – read `custom.Customer Status – SF` for the Salesforce view. |
+| `createDate` / `lastUpdated` | Record created / last changed. |
+| `mrrTotal` / `arrTotal` / `mrTotal` / `nrrTotal` / `nrr30` | Native revenue accumulators. Same caveat as `arr` – not used. |
+| `orgRootId` / `orgRootName` / `orgMrrTotal` / `orgArrTotal` / `orgHealthTotal` | Group-hierarchy roll-ups to the ultimate parent. |
+| `portalUrl` / `shareable` | Legacy customer-portal settings. Not used. |
+| `usage` / `sunits` / `pins` / `path` / `parentObject` | Internal aggregates and references. |
 
 ### Custom fields (Productboard workspace)
 
-> **Last verified against live `get_model_action_parameters` output: 2026-08-25.** Field sets drift. When a
+> **Last verified against live `get_model_action_parameters` output: 2026-10-16.** Field sets drift. When a
 > write silently no-ops or a field is missing from a read, re-pull the metadata before assuming the doc is right.
 
 > Fields marked **[SF-SYNCED]** are populated by the Salesforce → Planhat sync. **Never write these via MCP.** The exact SF mapping is WIP; treat any unmarked field as writable only if it appears as writable in the AISE-writable table below.
@@ -530,7 +458,10 @@ The native Planhat `arr` field (and its relatives `mrr`, `renewalArr` where used
 | Field ID | Type | Options | Notes |
 |---|---|---|---|
 | `custom.ARR – SF` | number | — | ARR from SF. **Field ID is `ARR – SF`, not `ARR – Salesforce`.** |
-| `custom.Customer Status – SF` | string | `1.0 Customer`, `2.0 Pipeline`, `4.0 Lost`, `5.0 Churn` | SF lifecycle |
+| `custom.Customer Status – SF` | string | `1.0 Customer`, `2.0 Pipeline`, `3.0 Pre-Pipeline`, `4.0 Lost`, `5.0 Churn`, `6.0 Prospect`, `9.9 Bad Account` | SF lifecycle |
+| `custom.Churning – SF` | boolean | — | Synced from SFDC `Account.Churning__c`. `true` = renewal lost, contract term still running, no open renewal. Read with `Customer Status – SF` = `1.0 Customer` for "in the process of churning". |
+| `custom.Latest Renewal Risk – SF` | string (list) | Mirrors the Salesforce renewal-risk values | **Added 2026-10-16.** The latest renewal-risk call from Salesforce, as a single-select so accounts can be grouped and filtered by it. The trade-off: when RevOps changes the risk values in Salesforce, the Planhat options must be updated to match, or new values land off-list. Always read it with `Latest Renewal Risk As Of – SF`. Account-level – the Deal model's `custom.Renewal Risk` is a separate, per-contract field. **New field:** not yet in MCP metadata and unpopulated as of 2026-10-16 (§ The partial state) – verify with `get_model_record` + explicit `SELECT`, and pull the option list from `get_model_action_parameters` once it appears. |
+| `custom.Latest Renewal Risk As Of – SF` | string (date) | — | **Added 2026-10-16.** The date the Latest Renewal Risk value was set in Salesforce. A risk call that is months old is not current – check this before quoting or acting on the risk. Same new-field caveat as above. |
 | `custom.Account Executive` | objectId → User | — | AE relation, managed by RevOps via SF |
 | `custom.Account Executive Name – SF` | string | — | AE name as text. Writable in the API but RevOps-owned in practice; do not write. |
 | `custom.Renewals Manager` | objectId → User | — | RM relation, managed by RevOps via SF |
@@ -552,8 +483,24 @@ The native Planhat `arr` field (and its relatives `mrr`, `renewalArr` where used
 | `custom.Last AISE Touch` | string | — | Most recent AISE interaction |
 | `custom.Last AISE Session` | string | — | Date of the most recent **counted** session. Driven by the eight-type formula in the Conversation section below. |
 | `custom.Last AISE Email` | string | — | Most recent AISE email |
+| `custom.Last AISE Touch (in days)` / `custom.Last AISE Session (in days)` / `custom.Last AISE Email (in days)` | number | — | Days since each of the three dates above. Formula, read-only. Use these for staleness thresholds instead of computing date math in the agent. |
 | `custom.Total AISE Sessions` | number | — | Count of AISE session Conversations |
 | `custom.PHS example` | string | — | Health-score scratch field. Ignore. |
+
+#### Plan, version and services entitlement – read-only
+
+| Field ID | Type | Notes |
+|---|---|---|
+| `custom.Current Plan – SNF` | string | Plan on the account's main workspace (`enterprise`, `enterprise plus`, `free`, …). Snowflake. |
+| `custom.Current Version – SNF` | number | Plan version (`11`, `12`, `13`). Snowflake. |
+| `custom.on v13 – SNF` | boolean | Snowflake v13 flag. Observed `true` on accounts whose `Current Version – SNF` is 11 or 12, so read it as "has v13 somewhere on the account", not as the main workspace's version. |
+| `custom.On v13 WS` | boolean | Formula: at least one paying workspace is on v13 (rolled up from Asset `custom.On v13 WS`). What is actually provisioned today. |
+| `custom.v13 Contract` | boolean | Whether the customer is *contracted* for v13. Differs from `On v13 WS`, which is what is provisioned. |
+| `custom.Services Session Entitlement` | number | Sessions the customer is entitled to under its current services package. **The value to check before promising anyone sessions.** Read-only. |
+| `custom.Services Package` | string | The services package behind that entitlement. Always current. Read-only. |
+| `custom.Services Package (Category)` | string (list) | Automation-stamped copy of `Services Package` so it can be filtered and grouped. Refreshed monthly – can lag a renewal. |
+| `custom.Services Band` | string (list) | Volume band for portfolio reporting: `1. Unlimited (Signature, Premier)` … `7. No Services`. Refreshed monthly. Writable in metadata but automation-maintained – never write. |
+| `usage.6ace5ff0b2706860a249b8d5` / `usage.6ace6016b2706860a249bd65` | number | Credits Used Daily / Credits Used Lifetime, summed across workspaces. For a per-workspace answer use § Asset / Workspace → Credits. |
 
 #### The three Slack fields on Company – internal vs external
 
@@ -598,17 +545,17 @@ writes Productboard's internal discussion of a customer onto that customer's own
 
 | Field ID | Type | Options | Notes |
 |---|---|---|---|
-| `custom.Priority (temp – Notion)` | string | `P0`, `P1`, `P2`, `P3`, `P4` | ← Notion Customer `Priority`. Temp field pending a native Planhat solution. Omit if Notion value is `Insufficient Data`. |
-| `custom.AI Ready` | string | `Ignitable`, `Sparked`, `Preparing`, `Not Ready` | ← Notion `AI Ready` (unchanged) |
-| `custom.⚡️ Igniting?` | boolean | `true` / `false` | ← Notion `Igniting?`. **Renamed 2026-08-07** (was `custom.Igniting?`). |
-| `custom.AISE Journey Status` | string | `Presales`, `Active (no Services)`, `Active (Services)`, `Contracted to Scale`, `Churned` | ← Notion `Account Status`. **AISE-managed accounts only (30k+ ARR).** Do not write for AIPA accounts. **`Not started` is not a valid option — omit.** Note: field ID is `custom.AISE Journey Status`, not `custom.Journey Status`. |
-| `phase` | string | **Configured options (not free-text):** `0. Preparation` · `1. Activation` · `2. Adoption` · `3. Renewal` · `4. Churned` | Universal field — applies to **all** Planhat companies (AISE and AIPA). **Directly set** by the AISE as the program moves stage — there is no Notion Active Package to derive it from anymore. `4. Churned` is set manually and aligns with `custom.AISE Journey Status = Churned`. |
+| `custom.Priority (temp – Notion)` | string | `P0`, `P1`, `P2`, `P3`, `P4` | Account priority, set by hand. Temp field pending a native Planhat solution – use the field ID verbatim, including its suffix. Omit rather than guess. |
+| `custom.AI Ready` | string | `Ignitable`, `Sparked`, `Preparing`, `Not Ready` | Readiness for Spark adoption. |
+| `custom.⚡️ Igniting?` | boolean | `true` / `false` | Have talks about Spark started? **Renamed 2026-08-07** (was `custom.Igniting?`). |
+| `custom.AISE Journey Status` | string | `Presales`, `Active (no Services)`, `Active (Services)`, `Contracted to Scale`, `Churned` | **AISE-managed accounts only (30k+ ARR).** Do not write for AIPA accounts. **`Not started` is not a valid option — omit.** Note: field ID is `custom.AISE Journey Status`, not `custom.Journey Status`. |
+| `phase` | string | **Configured options (not free-text):** `0. Preparation` · `1. Activation` · `2. Adoption` · `3. Renewal` · `4. Churned` | Universal field — applies to **all** Planhat companies (AISE and AIPA). **Directly set** by the AISE as the program moves stage — nothing derives it. `4. Churned` is set manually and aligns with `custom.AISE Journey Status = Churned`. |
 | `custom.SH_Current State` | string (Rich text) | — | **Sales Handoff** (SH_ = "Sales Handoff"): current state from pre-sales. Auto-populated on deal close for AISE-segment accounts — not manually written by AISE. Read for discovery context. |
 | `custom.SH_Future State` | string (Rich text) | — | Sales Handoff: desired future state from pre-sales. Auto-populated on deal close. |
 | `custom.SH_Negative Impacts` | string (Rich text) | — | Sales Handoff: pain points from pre-sales. Auto-populated on deal close. |
 | `custom.SH_Positive Outcomes` | string (Rich text) | — | Sales Handoff: value / expected outcomes from pre-sales. Auto-populated on deal close. |
-| `custom.Services Package?` | array | `V13`, `Premier Services`, `Custom SOW`, `Essentials`, `N/A` | **To be architected in Planhat** as a roll-up from the Active Product with the services SKU toggle — not a direct Notion field write. Do not populate from Notion during migration. |
 | `custom.Next Step` | string (Rich text) | — | **The account's current next action.** Written after an outbound touchpoint actually lands (a sent reply, a completed debrief), not when a draft is created. Keep it a short dated sequence with owners: what was just done, what is being waited on, what happens when it clears. Overwrite rather than append – this is a current-state field, not a log. Session history belongs in Conversations. **Rich text — format per § Rich Text Field Formatting below, never plain/`\n`-separated prose.** Refreshed by `post-session-debrief` (step 10, every run), by `inbox-triage` (after a sent reply), and by `account-refresh` (`/customer-refresh`) – which, when it has only drafted the outbound email, says `drafted, send pending` rather than claiming a send. |
+| `custom.Next Step Owner` | string (list) | `💸 Account Executive`, `🟢 AI Success Engineer`, `🔁 Renewals Manager`, `🧑‍💼 Leadership` | Who owns the next action with this customer. Set it in the same write as `custom.Next Step` whenever the owner is clear from what was just done. Pass the full option string, emoji included. |
 | `custom.Gong Summary` | string | — | Rolling Gong-derived account summary. |
 | `custom.CAB Customer` | boolean | `true` / `false` | Customer Advisory Board member. |
 | `custom.External_Slack_Channel_ID` | string | — | **The customer ↔ shared external Slack channel pairing, cached.** Channel **ID** only, upper-case (`C0AKKLJCB5E`) – never a `#name` (channels get renamed), never a URL (the value feeds `slack_read_channel` and the `/log-slack-threads` `externalId` builder directly). Written by `/log-slack-threads` the first time it resolves a channel for the account; read on every later run, which is what lets that skill take a channel *or* a customer name as input. Write only when empty or when the user has just corrected it – a resolved channel that disagrees with a populated value is a conflict to surface, not a value to overwrite (an account can have two shared channels; the field holds one). **New field: Planhat custom fields lag in MCP metadata, so it may be absent from `get_model_action_parameters` and reject writes for a while. A failed write is reported, not fatal.** Strictly the **external** channel – see the Slack-fields callout above; `custom.Slack ID` / `custom.Slack URL` are the internal channel and are never a substitute. |
@@ -618,6 +565,16 @@ writes Productboard's internal discussion of a customer onto that customer's own
 | `custom.Engagement Plan` | string (Rich text) | — | **Added 2026-09.** The full program plan — goals, milestones, phases, session sequence — for the account, written by `engagement-planner` (`/customer-plan --full`) on user approval. Replace wholesale on each revision; not an append/log field. `account-refresh` (`/customer-refresh`) refreshes status sections (workstream status, sessions delivered, open items, risks) in place and does not restructure goals or phases. **Rich text — format per § Rich Text Field Formatting, never plain/`\n`-separated prose. No `<h1>`–`<h6>` — use bold `<p><strong>` section labels.** |
 | `custom.Architecture Details` | string (Rich text) | — | **Added 2026-09.** The customer's Productboard workspace setup for reference during architecting sessions — taxonomy structure, internal teams using the workspace, toolstack integrations, how the customer organizes their environment. Kept current by architecting-session agents (`kdd-builder`, `session-prepper`, `account-setup`) and by `account-refresh` (`/customer-refresh`) as a running reference, not a session-by-session log. **Rich text — format per § Rich Text Field Formatting.** |
 | `custom.Organization Details` | string (Rich text) | — | **Added 2026-10.** Who the customer is and who we deal with: what they bring to market and why they bought, org structure and business units, product teams, champions and stakeholders (name – title – what they own), the Productboard account team, commercial summary, headcount and growth signals. Written and kept current by `account-refresh` (`/customer-refresh`). **Titles come from End User `position`** (Salesforce-synced), never from session notes or Slack – internal notes get titles wrong. Unconfirmed attributions are written as unconfirmed. Current-state reference: refresh in place, not a log. **Rich text — format per § Rich Text Field Formatting. No `<h1>`–`<h6>` — use bold `<p><strong>` section labels.** |
+
+**Written by others – read, do not write**
+
+| Field ID | Type | Notes |
+|---|---|---|
+| `custom.Leadership Comment` | string | A comment from AISE leadership on the account. Read it before account planning or a refresh. Never written by an agent. |
+| `custom.Engagement Plan Last Updated` | string (date, formula) | When `custom.Engagement Plan` was last edited. RAG-coloured in the UI: stale (red), aging (yellow), current (green). Read-only. |
+| `custom.Wave 2B` / `custom.Wave 3` | string | Temporary. Email-campaign engagement per account: `Not sent` · `Opened` · `Clicked` · `Ignored`. Ignore outside campaign work. |
+| `custom.FDE Touchpoint` | string | No description, empty on every account as of 2026-10-16. Do not read or write until it is documented. |
+| `custom.[Temp] Comment Package` | string | Temporary, no description. Do not read or write. |
 
 > **Salesforce/Productboard mirror.** `custom.PM Reach-Out Status/Note/Reviewed` are mirrored one-way (Planhat → Salesforce → Productboard) onto `PM_Reachout_Status__c` / `PM_Reachout_Note__c` / `PM_Reachout_Reviewed__c`, the same proxy pattern as the existing `ASE_Name__c` mirror — Salesforce holds these fields only so Productboard's integration (which reads Salesforce, not Planhat) can surface the value to PMs. Planhat is the source of truth; never write these SF fields directly or build SF-side logic against them.
 
@@ -667,8 +624,8 @@ writes Productboard's internal discussion of a customer onto that customer's own
 
 | Field ID | Type | Notes |
 |---|---|---|
-| `custom.Spark Exemption – SF` | boolean | Is this customer on the Spark exception approved list? **Salesforce-sourced** (`– SF`), read-only, never written. Renamed from `– SNF` on 2026-10-07; as of that date live Planhat metadata still reported the old `custom.Spark Exemption – SNF` ID. Use `– SF`; if a filter or `SELECT` errors on it, re-pull the Company metadata, and fall back to `– SNF` only until the rename lands. |
-| `custom.Spark Exemption Context` | string (Rich text) | **AISE-writable.** Running context on Spark development for exempted accounts, sourced from `#ops-spark-exemption` and kept current by the account team: exemption reason, what was agreed and with whom, current status, open questions, next steps. **Format:** dated entries `YYYY-MM-DD – update – author`, **newest on top**. Never overwrite earlier entries; mark resolved items as resolved instead of deleting them. Leave empty if the account has no exemption. **Rich text – format per § Rich Text Field Formatting.** |
+| `custom.Spark Exemption – SF` | boolean | Is this customer on the Spark exception approved list? **Salesforce-sourced** (`– SF`), read-only, never written. Renamed from `– SNF` on 2026-10-07; the rename is live in metadata as of 2026-10-16. The old `– SNF` ID no longer exists. |
+| `custom.Spark Exemption Context` | string (Rich text) | **AISE-writable.** Running context on Spark development for exempted accounts, sourced from `#ops-spark-customer-exception-requests` and kept current by the account team: exemption reason, what was agreed and with whom, current status, open questions, next steps. **Format:** dated entries `YYYY-MM-DD – update – author`, **newest on top**. Never overwrite earlier entries; mark resolved items as resolved instead of deleting them. Leave empty if the account has no exemption. **Rich text – format per § Rich Text Field Formatting.** |
 
 > **Read `custom.Spark Exemption Context` first.** Before any Spark-related action, outreach, draft, session prep or reporting on an account, read this field and treat its **newest dated entry as the current state**. An exempted account (`custom.Spark Exemption – SF` = `true`) is not a candidate for standard Spark in Practice outreach on the strength of its tier alone. Add to the field (a new dated entry on top) when a session or thread changes the exemption picture; never remove history.
 
@@ -786,7 +743,7 @@ Millisecond precision on `date` is the tell — a real session start is a round 
 Corrected date: 2026-08-27T00:00:00.000Z → 2026-08-27T08:30:00.000Z (source: coupled Task startTime)
 ```
 
-**Applies to session-type Conversations only** — the counted session types plus `📆 Onsite Workshop`, `📺 Webinar`, `🎙️ Demo` and `Internal Alignment`. Do **not** apply it to `💬 Slack Chat` (dated on the thread's last message by its own documented rule), to `email` / `chat` / `ticket` records (the source system's timestamp is correct), or to `👾 Gong Call` records (Gong's own call time is already right).
+**Applies to session-type Conversations only** — the counted session types plus `🔁 Renewal Call` and `Internal Alignment`. Do **not** apply it to `💬 Slack Chat` (dated on the thread's last message by its own documented rule), to `email` / `chat` / `ticket` records (the source system's timestamp is correct), or to `👾 Gong Call` records (Gong's own call time is already right).
 
 ### Rich Text Field Formatting
 
@@ -882,9 +839,9 @@ Used when setting `ownerId`, `users`, or `followers` on Planhat records.
 
 ---
 
-## Conversation (Planhat) ↔ Session (Notion)
+## Conversation
 
-> **Design note:** Planhat Conversations are the canonical home for AISE session history. AISE writes all delivered sessions (external and internal) as Conversations with `source: "AISE"`, using `externalId` as the dedup key back to Notion. Existing Conversations in Planhat are mostly Zendesk tickets (`source: "zendesk"`) and calendar events synced as Tasks (`mainType: event`). AISE-originated sessions are a distinct type and won't collide with those sources.
+> **Design note:** Planhat Conversations are the canonical home for AISE session history. Delivered sessions arrive two ways: Planhat converts a completed GCal-synced Task into a Conversation (same `_id`), or an AISE agent creates one directly with `source: "AISE"`. Other Conversations come from Zendesk (`source: "zendesk"`), Gmail, Gong's native sync (`👾 Gong Call`) and `/log-slack-threads`. Each path has its own `externalId` shape, listed below, so they never collide.
 
 ### `externalId` convention — live sources, no collision risk
 
@@ -893,10 +850,10 @@ Multiple tools write Conversations from session data, each with its own `externa
 | Path | `externalId` source | Notes |
 |---|---|---|
 | `/session-debrief` (`post-session-debrief`) | Google Calendar event ID | Live, per-session debrief path. |
-| `/session-backfill` | Google Calendar event ID (bare or instance-stamped) for calendar-sourced candidates; `gong_{gongCallId}` for a Gong-only candidate with no matching calendar event | **Rewritten 2026-09 — Notion is fully retired.** `/session-backfill` no longer sources sessions from Notion, so its old convention (Notion Session page ID, 32-char hex) no longer applies; historical records created under that convention still exist and are recognizable by their format. Reusing the GCal event ID for calendar-sourced backfills means a backfilled record and a later `/session-debrief` write for the same event resolve to the same Conversation via the session-record resolution ladder, rather than creating a second record. The `gong_` prefix on the Gong-only fallback keeps it distinct from both the GCal event ID shape and Gong's own native-sync `externalId` (`{gongCallId}-{sfAccountId}`, on a separate `👾 Gong Call` record). |
+| `/session-backfill` | Google Calendar event ID (bare or instance-stamped) for calendar-sourced candidates; `gong_{gongCallId}` for a Gong-only candidate with no matching calendar event | Reusing the GCal event ID for calendar-sourced backfills means a backfilled record and a later `/session-debrief` write for the same event resolve to the same Conversation via the session-record resolution ladder, rather than creating a second record. The `gong_` prefix on the Gong-only fallback keeps it distinct from both the GCal event ID shape and Gong's own native-sync `externalId` (`{gongCallId}-{sfAccountId}`, on a separate `👾 Gong Call` record). |
 | `/log-slack-threads` | `slack_{channelId}_{parentTsDigits}` | Shared-channel Slack threads logged as `💬 Slack Chat` touchpoints. Prefixed, so it never collides with the ID formats above and is trivially identifiable. |
 
-`externalId` is scoped per-company, and none of these formats collide with each other (different length/character set, or a distinguishing prefix), so all conventions coexist safely. Don't assume a Conversation's `externalId` is a Notion page ID just because an older record uses that format — check the format before parsing it.
+`externalId` is scoped per-company, and none of these formats collide with each other (different length/character set, or a distinguishing prefix), so all conventions coexist safely. Some older records carry a 32-char lowercase hex `externalId` from before these conventions. It matches none of the shapes above – check the format before parsing any `externalId`, and never treat one as a calendar event ID.
 
 ---
 
@@ -973,51 +930,17 @@ every Conversation `description`, not just Slack ones.
 
 ### How to look up a Planhat Conversation for a given session
 
-**Check before creating:** use `externalId` as the dedup key. ⚠️ The Notion MCP returns page `id` as a dashed UUID (`39d97e9c-7d4f-802f-add4-f23c53322209`) — Planhat `externalId` must always be the hyphen-stripped, lowercase 32-char form (`notion_id.replace('-', '').lower()`). Writing the dashed form breaks dedup and silently duplicates the session on the next run. Until historical data is confirmed clean, check **both** forms:
+Use § Session record resolution — never create a duplicate: Conversation by `externalId` (the GCal event ID, both shapes), then Task by `sourceId`, then the company + date + title fallback. A Gong-only session with no calendar event is keyed `gong_{gongCallId}` (§ `externalId` convention). Never title-search as the primary match.
 
-```
-list_model_records(
-  MODEL: "Conversation",
-  FILTER: {"externalId[equal to]": "<normalized-32-char-hex>"},
-  SELECT: ["subject", "type", "date", "companyId", "externalId"]
-)
-list_model_records(
-  MODEL: "Conversation",
-  FILTER: {"externalId[equal to]": "<original-dashed-uuid>"},
-  SELECT: ["subject", "type", "date", "companyId", "externalId"]
-)
-```
+### Session type values
 
-If either query returns a result, update it rather than creating a duplicate — and rewrite `externalId` to the normalized form if it was stored dashed.
+> ⚠️ **Emojis are part of the configured option strings.** Always use the exact values below — passing the text without the emoji will save but will not match the configured option filters.
 
-### Field-level mapping: Notion Session → Planhat Conversation
-
-| Notion field | Planhat field | Type | Direction | Notes |
-|---|---|---|---|---|
-| Session page ID (URL) | `externalId` | string | Write on create | **Dedup key.** Extract the Notion page `id`, then normalize: strip hyphens, lowercase. The Notion MCP returns a dashed UUID — never write that raw form. Unique within a company. |
-| `Name` (title) | `subject` | string | Write | Session name as-is. |
-| `Type` (select) | `type` | string | Write | See value mapping below. Custom string — Planhat accepts any value. |
-| `Call Date` | `date` | datetime | Write | ISO 8601. Use `date:Call Date:start` from Notion. |
-| `Session Length (h)` | `custom.Call Duration` | number | Write | Convert hours to minutes: `Session Length (h) × 60`. |
-| `Customers` (relation) | `companyId` | string | Write | Planhat Company `_id`. Resolve via name-search or `sourceId` lookup (see Company section). |
-| `Delivered By` (person, all values) | `users` | array | Write | Array of `{"id": "<planhat-user-id>"}`, one per presenter — never truncate to the first value (co-delivered sessions must keep all presenters). Resolve each: static User ID table above first, then live lookup (`notion-get-users` → email → `list_model_records(MODEL: "User", FILTER: {"email[equal to]": "<email>"})`) on a table miss. If still unresolvable, fall back to the session's `Current Account Owner`, then the Company's `owner`. Omit only if all fail, and log a `NEEDS ATTRIBUTION` warning. |
-| `Next Steps` / session page body | `description` | string | Write | Summary/notes from the session. Truncate to ~2000 chars if long. |
-| `Gong call` (url) | `custom.Call Recording` | string | Write | Write the URL to `custom.Call Recording`. Do **not** append to `description`. **Corrected 2026-08-27** — was `custom.Gong URL`; see § Conversation Full Field Reference. |
-| `Call Status` | _(not mapped)_ | — | — | Notion-only status lifecycle. Not meaningful in Planhat. |
-| `Consumed Package` | _(not mapped)_ | — | — | Notion credit-ledger concept. No Planhat equivalent. |
-| `Do not count` | _(not mapped)_ | — | — | Notion-only billing flag. |
-| `Spark conversation` | ~~`activityTags`~~ | array | ~~Write~~ | ~~If `__YES__`, include `"Spark"` in `activityTags`.~~ **Not writable via MCP — silently rejected by the API. Apply `Spark` tag manually in the Planhat UI.** |
-| _(no equivalent)_ | `source` | string | Write (constant) | Always `"AISE"` for sessions written by this assistant. Distinguishes from Zendesk/GCal entries. |
-
-#### Type value mapping: Notion → Planhat
-
-> ⚠️ **Emojis are part of the configured option strings.** Always use the exact values in the "Planhat `type`" column — passing the text without the emoji will save but will not match the configured option filters.
-
-> **Authoritative Planhat `type` option list** — pulled live via `get_model_action_parameters(MODEL: "Conversation")` on 2026-08-28 (same option list on Task `type`). **Never write a value outside this list**; anything else silently fails to match configured filters:
+> **Authoritative Planhat `type` option list** — pulled live via `get_model_action_parameters(MODEL: "Conversation")` on 2026-10-16 (same option list on Task `type`). **Never write a value outside this list**; anything else silently fails to match configured filters:
 >
-> `note` · `email` · `chat` · `call` · `ticket` · `other` · `🎓 Enablement` · `🔁 Sync` · `Internal Alignment` · `🏗️ Architecting` · `👟 Kick off` · `🔎 Discovery` · `🏁 Audit / Setup Review` · `📺 Webinar` · `🎙️ Demo` · `👾 Gong Call` · `Task` · `Sales Handover` · `💬 Slack Chat` · `🧑‍💻 Billable Task` · `📆 Onsite Workshop` · `Product Feedback` · `🔁 Renewal Call`
+> `note` · `email` · `chat` · `call` · `ticket` · `other` · `🎓 Enablement` · `🔁 Sync` · `Internal Alignment` · `🏗️ Architecting` · `👟 Kick off` · `🔎 Discovery` · `🏁 Audit / Setup Review` · `🎙️ Demo` · `👾 Gong Call` · `Task` · `Sales Handover` · `💬 Slack Chat` · `🧑‍💻 Billable Task` · `📆 Onsite Workshop` · `Product Feedback` · `🔁 Renewal Call` · `Other`
 >
-> **`📦 Other` and `🗣️ Sync` are Notion-only labels, not valid Planhat options.** Never write either literally — always resolve through this table. An unmapped value is the documented cause of a Conversation/Task silently falling back to `note`.
+> **Changed since the 2026-08-28 snapshot:** `📺 Webinar` is no longer an option, and a capitalized `Other` now exists alongside the generic lowercase `other`. Neither is an AISE session type – classify per the rules below. `📦 Other` and `🗣️ Sync` are not valid options; never write either. An off-list value is the documented cause of a Conversation/Task silently falling back to `note`.
 
 ##### Customer-specific type overrides — check before the default mapping
 
@@ -1033,24 +956,22 @@ If either query returns a result, update it rather than creating a duplicate —
 
 This row wins over the customer-specific table and the default mapping.
 
-**Classifying an untracked call with no Notion Type source** (ad hoc title-based classification — no Notion Session record exists): check the override table above first; if no match, pick directly from the authoritative option list above — never write a raw inferred label like "Other" — default to `🔁 Sync` when nothing more specific applies. When in doubt between `Other`/`🔁 Sync` and `🏗️ Architecting`, prefer Architecting if the call is a structured working session with decisions being made — `🔁 Sync` is for ad hoc or purely social calls.
+**Classifying a session.** Check the two override tables above first. Otherwise:
 
-| Notion `Type` | Planhat `type` (exact) | Notes |
-|---|---|---|
-| `🏗️ Architecting` | `🏗️ Architecting` | Emoji matches — use as-is |
-| `🗣️ Sync` | `🔁 Sync` | **Different emoji** (🗣️ → 🔁). Use Planhat's `🔁 Sync` |
-| `🎓 Training` | `🎓 Enablement` | **Different label.** Use Planhat's `🎓 Enablement` |
-| `👟 Kick off` | `👟 Kick off` | Emoji matches — use as-is |
-| `🔎 Discovery` | `🔎 Discovery` | Emoji matches — use as-is |
-| `📦 Other` (default) | `🔁 Sync` | Default fallback for general calls (e.g. licence discussions, commercial syncs). Check the customer-specific override table above first. |
-| `📦 Other` + "Demo" in title | `🎙️ Demo` | **Title-pattern override:** if the session title contains "Demo" (case-insensitive), use `🎙️ Demo` instead of the default `🔁 Sync`. |
-| `🫥 Internal` | `Internal Alignment` | No emoji in Planhat |
-| _(Done Notion Task — auto-created Conversation)_ | `Task` | No emoji. Planhat auto-creates this Conversation when Task `status` is set to `"done"`. Set via `noteId` post-write. Canceled (`"ignored"`) tasks do not generate a Conversation. |
+| Session looks like | Planhat `type` (exact) |
+|---|---|
+| Structured working session with decisions being made | `🏗️ Architecting` |
+| Training or enablement | `🎓 Enablement` |
+| Program kick off | `👟 Kick off` |
+| Discovery | `🔎 Discovery` |
+| Title contains "Demo" (case-insensitive) | `🎙️ Demo` |
+| Internal-only PB meeting about the account | `Internal Alignment` |
+| Ad hoc, commercial, licence or purely social call – **the default** | `🔁 Sync` |
+| Conversation auto-created from a completed PB-side Task | `Task` – set via `noteId` post-write, see § Planhat Task auto-Conversation behavior |
 
-> **This table is the authoritative source for type mappings.** The former companion doc (`notion-planhat-field-mapping.md`) has been retired now that nothing writes from Notion.
+Never write a raw inferred label. When in doubt between `🔁 Sync` and `🏗️ Architecting`, prefer Architecting if the call is a structured working session with decisions being made — `🔁 Sync` is for ad hoc or purely social calls.
 
-> **Planhat types with no Notion equivalent:** `📺 Webinar`, `👾 Gong Call` — logged directly in Planhat. `🎙️ Demo` is also available and applied automatically to `Other` sessions with "Demo" in the title.
-> **Generic Planhat types** (avoid for AISE writes): `note`, `email`, `chat`, `call`, `ticket`, `other` — these are Planhat system defaults for inbox/helpdesk syncs. AISE should only use the custom configured values above.
+> **Generic Planhat types** (avoid for AISE writes): `note`, `email`, `chat`, `call`, `ticket`, `other`, `Other` — system defaults for inbox/helpdesk syncs. `👾 Gong Call` is written only by Gong's own sync.
 
 > **`👾 Gong Call` records are a duplicate of the real session, not the session itself — and their `externalId` cannot be used to find their target.** Gong's native Planhat sync writes every call as its own standalone Conversation, separate from the GCal-synced session Conversation for the same meeting. Verified live (2026-08-27): a Gong Call Conversation's `externalId` is `{gongCallId}-{salesforceAccountId}` (e.g. `7668611138330097753-001f400001GC38TAAT`) — it does **not** carry the Google Calendar event ID the way a GCal-synced Conversation's `externalId` does (e.g. `ip5dj5rdolaa07e56is5m19lo4`). The `Conversation` model also has **no `sourceId` field at all** (`sourceId` exists on `Task` and `Company` only) — so there is no shared key between a Gong Call record and its target. Neither the Gong MCP tools (`ask_account`/`ask_deal`/`generate_brief` are synthesis-only, no raw metadata) nor Glean's indexed Gong document (checked directly — full facet set is `app`/`call_duration_range`/`opportunity`/`external_participants`/`department`/`type`/`account`/`documentcategory`, no calendar reference) expose one either. Matching the two instead uses a weighted score within a `companyId` + time window: attendee overlap via `endusers`/`users` (0.40 — Gong's sync already resolves participants to Planhat `EndUser`/`User` IDs, so this is exact-ID overlap, not text fuzzing), subject similarity (0.35), and date proximity (0.25). See `agents/ph-reconcile-gong-gcal.md` for the full scoring procedure and the merge-then-delete cleanup that reconciles a pair — a manual stopgap while the Planhat↔Gong integration is reworked to do this automatically.
 
@@ -1079,9 +1000,9 @@ FIND(Conversation.date & {
 })
 ~~~
 
-**NOT counted, even though they are valid `type` values:** `📺 Webinar`, `Internal Alignment`, `Sales Handover`,
+**NOT counted, even though they are valid `type` values:** `Internal Alignment`, `Sales Handover`,
 `🧑‍💻 Billable Task`, `👾 Gong Call`, `Task`, `Product Feedback`, `💬 Slack Chat`, `🔁 Renewal Call`, and every
-generic type (`note`, `email`, `chat`, `call`, `ticket`, `other`).
+generic type (`note`, `email`, `chat`, `call`, `ticket`, `other`, `Other`).
 
 - **`🔁 Renewal Call` does not count.** It is not in the eight-value formula above. A renewal conversation logged
   under this type is correct for engagement history but will not move session counts or `custom.Last AISE Session`.
@@ -1089,8 +1010,6 @@ generic type (`note`, `email`, `chat`, `call`, `ticket`, `other`).
 
 Consequences worth remembering:
 
-- **`📺 Webinar` does not count.** If webinar delivery is supposed to show up in session counts, that needs a
-  different type or a formula change. Flag it rather than logging webinars and assuming they register.
 - **Retyping between two uncounted types changes no number.** Moving a record from `note` to `👾 Gong Call` is
   pure hygiene. Never present it as a count fix.
 - **Retyping across the boundary changes the count.** `👾 Gong Call` → `🔁 Sync` makes a previously invisible
@@ -1102,31 +1021,18 @@ Consequences worth remembering:
   burn the roster. It does **not** affect `custom.Last AISE Session`.
 
 **Live full option list on `Conversation.type`** — derive from `get_model_action_parameters` rather than trusting
-this snapshot, it drifts:
+this snapshot, it drifts: see § Session type values above (24 values, verified 2026-10-16). `🔁 Renewal Call` shares
+the 🔁 emoji with `🔁 Sync`, so match on the full string, never the emoji alone.
 
-`note` · `email` · `chat` · `call` · `ticket` · `other` · `🎓 Enablement` · `🔁 Sync` · `Internal Alignment` ·
-`🏗️ Architecting` · `👟 Kick off` · `🔎 Discovery` · `🏁 Audit / Setup Review` · `📺 Webinar` · `🎙️ Demo` ·
-`👾 Gong Call` · `Task` · `Sales Handover` · `💬 Slack Chat` · `🧑‍💻 Billable Task` · `📆 Onsite Workshop` ·
-`Product Feedback` · `🔁 Renewal Call`
+#### Only delivered sessions
 
-*(23 values, verified against `get_model_action_parameters` on 2026-08-25. `🔁 Renewal Call` was added since the
-previous snapshot – note it shares the 🔁 emoji with `🔁 Sync`, so match on the full string, never the emoji alone.)*
-
-#### Status mapping
-
-| Notion `Call Status` | Action |
-|---|---|
-| `Delivered` | Create/update Conversation |
-| `Canceled` | Skip — do not create |
-| `Not started` / `Planned` / `Postponed` / `In progress` | Skip — session hasn't happened yet |
-
-**Only sync Delivered sessions.** Future, in-progress, or canceled sessions don't belong in Planhat's interaction history. Internal sessions (`🫥 Internal`) are synced as `"Internal Alignment"` type — they are valid customer touchpoints for engagement tracking.
+Log a session Conversation only once the session has happened. Future, cancelled and no-show sessions stay as calendar Tasks; a cancelled session that already has a Conversation gets `custom.Debrief Status: ignored` (see the field reference). Internal-only meetings about an account are logged as `Internal Alignment` — they are valid touchpoints for engagement tracking.
 
 ### Write rules
 
 - **Never create a Conversation without `companyId`** — it's a required field.
 - **`externalId` must be unique per company.** Always check before creating.
-- **`type` is free-text** — use the values above consistently so Planhat filters work.
+- **`type` must come from the live option list** in § Session type values — off-list values save but break every filter.
 - **`source: "AISE"`** on every write so records are distinguishable from ticket/email sync.
 - **Calendar events** (synced via GCal) already exist as Planhat Tasks (`mainType: event`) — do not duplicate them as Conversations.
 
@@ -1136,7 +1042,7 @@ previous snapshot – note it shares the 🔁 emoji with `🔁 Sync`, so match o
 
 | Field ID | Type | Required | Description |
 |---|---|---|---|
-| `type` | string | ✅ | Kind of interaction. Use AISE-prefixed values (see mapping above). |
+| `type` | string | ✅ | Kind of interaction. Use a value from § Session type values. |
 | `subject` | string | — | Session name / title. |
 | `description` | string | — | Summary, notes. |
 | `date` | datetime | — | When the session took place (ISO 8601). |
@@ -1145,18 +1051,18 @@ previous snapshot – note it shares the 🔁 emoji with `🔁 Sync`, so match o
 | `companyId` | string | ✅ | Planhat Company `_id`. |
 | `users` | array | — | `[{"id": "<planhat-user-id>"}]` — team members who delivered. |
 | `endusers` | array | — | `[{"id": "<planhat-enduser-id>"}]` — customer contacts who attended. |
-| `externalId` | string | — | Notion Session page ID. **Dedup key.** |
+| `externalId` | string | — | **Dedup key.** Shape depends on the writer – see § `externalId` convention. |
 | `source` | string | — | Always `"AISE"`. |
 | ~~`activityTags`~~ | array | — | ~~`["Spark"]` if `Spark conversation = YES`.~~ **Not writable via MCP — silently rejected. Apply manually in Planhat UI.** |
 | `custom.Prep Notes` | string | — | Prep brief written by session-prepper before the session. Format: single-line HTML in the `ph-editor` vocabulary — see § Rich Text Field Formatting for the tag table and the canonical prep-brief example. Section labels are `<p><strong>…</strong></p>` (no `<h>` tags); lists **must** carry `ph-editor__bullet-list` / `ph-editor__ordered-list` + `<li class="ph-editor__list-item"><p>…</p></li>`; use `<p></p>` for a blank line and `<hr>` to separate the header block from the body. **Apply the user's `custom.AISE Profile preferences` voice rules to the sentence content** (dash style, etc.) — see `agents/session-prepper.md` § 1b/5b; this field has shipped with em dashes and no section spacing before that was fixed. Carry over from the linked Task when writing the Conversation post-session. |
 | `transcript` | string | — | Full transcript text if available. |
-| `taskId` | objectId | — | Links this conversation to its originating Planhat Task. Set when writing a Done Notion Task as a Conversation — look up the existing Planhat Task by `sourceId` and pass its `_id` here. Optional on backfill if the Task doesn't exist yet in Planhat. |
+| `taskId` | objectId | — | Links this conversation to its originating Planhat Task. Set automatically when Planhat converts a completed Task (`taskId` == `_id`). Set it by hand only when creating a Conversation for a session whose Task already exists. |
 | `category` | string | — | One of: `Support`, `Feedback`, `Sales`, `Expansion`, `Billing & Contracts`, `Renewals`, `Legal`, `General Enquires`, `Spam`, `Marketing`. Leave blank for AISE sessions unless relevant. |
 | `custom.Link to PB Note` | string | — | Productboard feedback note URL. Written by `/log-feedback` onto the Conversation auto-created when a `Product Feedback` Task transitions to `done` (see § Planhat Task auto-Conversation behavior) — links the touchpoint back to the submitted PB note. Write the raw URL. |
-| `custom.Call Duration` | number | — | Session length in minutes. Derive from Notion `Session Length (h)` × 60. |
+| `custom.Call Duration` | number | — | Session length in **minutes**, not hours. |
 | `custom.Opportunity` | string → Deal | — | The customer contract the session was delivered under. Relation to a `Deal` record. Optional – set when the session is clearly attributable to one contract. **Replaces the former `custom.Services Package` field, which no longer exists on this model.** |
 | `custom.Call Recording` | string | — | **Call recording link — Gong or otherwise.** Use this instead of appending to `description`. Write the raw URL. **Corrected 2026-08-27** — `custom.Gong URL` is no longer written by any agent; `custom.Call Recording` is the single field for every recording link regardless of source (was previously Gong-only reserved for `custom.Gong URL`, non-Gong-only reserved for this field — that split is retired). A one-time migration (2026-08-27) copied every populated `custom.Gong URL` value into this field workspace-wide so the legacy field could be safely deleted — see the removal note below. |
-| ~~`custom.Gong URL`~~ | string | — | **Deprecated 2026-08-27, pending deletion — do not reintroduce.** Superseded by `custom.Call Recording` above. Kept out of this reference table as a live field on purpose; it is documented only where an agent still has to read it. **Before deleting it in Planhat:** confirm the one-time migration above completed with zero unresolved conflicts, and check the Gong↔Planhat integration config — Gong's *own* native sync writes its call link to this exact field name when it creates a `👾 Gong Call` Conversation, which is outside any agent's control. Deleting the field may either break that write path or cause Planhat to silently recreate the field the next time Gong writes to it, depending on how Gong's integration is configured. `agents/ph-reconcile-gong-gcal.md` still reads from it as the *source* field on new Gong Call records for exactly this reason — update that agent if the Gong integration is reconfigured to target a different field. |
+| ~~`custom.Gong URL`~~ | string | — | **Deleted — absent from live Conversation metadata as of 2026-10-16. Do not reintroduce.** (Deprecated 2026-08-27.) Superseded by `custom.Call Recording` above. Kept out of this reference table as a live field on purpose; it is documented only where an agent still has to read it. **Before deleting it in Planhat:** confirm the one-time migration above completed with zero unresolved conflicts, and check the Gong↔Planhat integration config — Gong's *own* native sync writes its call link to this exact field name when it creates a `👾 Gong Call` Conversation, which is outside any agent's control. Deleting the field may either break that write path or cause Planhat to silently recreate the field the next time Gong writes to it, depending on how Gong's integration is configured. `agents/ph-reconcile-gong-gcal.md` still reads from it as the *source* field on new Gong Call records for exactly this reason — update that agent if the Gong integration is reconfigured to target a different field. |
 | `custom.Handover Status` | string | — | `Not started` · `In progress` · `Validated – Ready`. Tracks the sales-to-AISE handover on a Sales Handover conversation. |
 | `custom.Debrief Status` | string | — | **Set by `post-session-debrief` at the end of a run (`complete`, `partial - transcript pending`); `ignored` is written by `bulk-debrief` or by hand.** `complete` = the full debrief ran. `partial - transcript pending` = debrief ran but no transcript was available; placeholder notes written and a re-debrief task created. `skipped` = deliberately excluded from a bulk run. `ignored` = session was cancelled or did not occur (GCal-cancelled orphan, no-show, verbal cancellation) — `bulk-debrief` skips it permanently, never re-checks it, and `--rerun` has no effect (`--force-ignored <customer>` overrides). **Blank = not yet debriefed**, which is what `bulk-debrief` keys on to pick a session up. Declared `readonly: true` in MCP metadata but **writes do land** — verify with `get_model_record` + explicit `SELECT`, or a filter on the field's value, not with the metadata flag. |
 | `custom.Motion Category` | array | — | Which time-boxed GTM motion this session belongs to. Currently one option: `Spark in Practice`. Set by `post-session-debrief` for sessions in an active initiative's scope — see `context/initiatives/`. This is the field that makes a motion reportable without adding a permanent Conversation type for a three-month experiment. **Planhat is the counting source for Spark in Practice** — an automation tags the record and the AISE corrects it by hand where needed. The calendar-title convention in the initiative doc feeds Boge's forecast report, not this count; do not conflate the two. |
@@ -1164,10 +1070,12 @@ previous snapshot – note it shares the 🔁 emoji with `🔁 Sync`, so match o
 | `custom.SH_Future State` | string (rich text) | — | As above. |
 | `custom.SH_Negative Consequences` | string (rich text) | — | As above. **Note the Conversation field is `SH_Negative Consequences`; the Company field is `SH_Negative Impacts`.** Different names, same idea – do not copy one field ID to the other model. |
 | `custom.SH_Positive Business Outcomes` | string (rich text) | — | As above. **Note the Conversation field is `SH_Positive Business Outcomes`; the Company field is `SH_Positive Outcomes`.** |
+| `pinned` / `starred` | boolean | — | Pin to the top of the timeline / mark important. Not set by agents. |
+| `sentiment` | string | — | `positive` · `neutral` · `negative` · `not_applicable`. Auto-classified. |
 
 #### Read-only fields
 
-`snippet`, `numberOfParts`, `parentId`, `parentType`, `createDate`, `companyName`, `isClassified`, `isSignalAnalyzed`, `shortSummary`, `isSeen`, `isOpen`, `isBounced`, `archived`, `scheduled`, `createdAt`, `updatedAt`
+`snippet`, `numberOfParts`, `parentId`, `parentType`, `createDate`, `companyName`, `isClassified`, `shortSummary`, `summaryDateReferenceAt`, `hasAttachments`, `isSeen`, `isOpen`, `isBounced`, `archived`, `scheduled`, `parts`, `createdAt`, `updatedAt`
 
 > **`custom.AISE Conversation` was removed — verified absent from the Conversation model 2026-09-12.** It was a
 > system-derived boolean marking a record as AISE-originated. Do not read or write it. The live equivalents are the
@@ -1178,7 +1086,7 @@ previous snapshot – note it shares the 🔁 emoji with `🔁 Sync`, so match o
 
 ## Task priority & description defaults
 
-Canonical logic for any agent creating a PB-side Planhat Task without an explicit priority, due date, or body content stated by the user. Originally a Notion-era pattern (Active Package `Status` + `ARR`); restated below entirely in Planhat terms. `post-session-debrief.md` is the reference implementation — other Task-creating agents (`customer-plan-next`, `session-backfill`, etc.) should read from here rather than duplicating their own copy.
+Canonical logic for any agent creating a PB-side Planhat Task without an explicit priority, due date, or body content stated by the user. `post-session-debrief.md` is the reference implementation — other Task-creating agents (`customer-plan-next`, `session-backfill`, etc.) should read from here rather than duplicating their own copy.
 
 ### Account priority table — PB-side commitments
 
@@ -1223,9 +1131,9 @@ Label the scaffold with a bold heading, e.g. `<p><strong>Best shot — draft art
 
 ---
 
-## Task (Planhat) ↔ Task (Notion) — all statuses
+## Task
 
-> **Design note:** ALL Notion Tasks write to the Planhat **Task** model (`mainType: "task"`) — open, done, and canceled. When `status` is set to `"done"`, Planhat automatically creates a linked **Conversation** and stores its `_id` in `noteId` on the Task. Setting `status: "ignored"` (Canceled) does **not** trigger auto-Conversation — the record stays as a Task only. The auto-created Conversation's `type` may not be `"Task"`, so the write procedure includes a type-check step for `"done"` tasks.
+> **Design note:** Tasks come in two kinds. Calendar events (`mainType: "event"`) are created by Planhat's GCal sync and carry the event ID in `sourceId`. PB-side action items (`mainType: "task"`) are created by AISE agents. When `status` transitions to `"done"`, Planhat automatically creates a linked **Conversation** and stores its `_id` in `noteId`. Setting `status: "ignored"` does **not** — the record stays a Task only. The auto-created Conversation's `type` may not be `"Task"`, so the write procedure includes a type-check step for `"done"` tasks.
 >
 > **Do not create Conversation records manually for done tasks.** Let Planhat auto-create them via the Task completion mechanism, then update the type if needed.
 
@@ -1251,57 +1159,30 @@ get_model_record(MODEL: "Conversation", OBJECT_ID: "<noteId>", SELECT: ["type"])
 
 > **"unless already selected"** — skip the update if `type` is already `"Task"`. This avoids unnecessary writes and is safe to run idempotently.
 
-### How to look up a Planhat Task for a given Notion task
+### How to look up an existing Task before creating one
 
-**Use the attempt-create dedup pattern** — do NOT use `list_model_records` for Task dedup. The Task model has a hard **36-record cap** on `list_model_records` results and FILTER is unreliable, so pre-flight list checks will silently miss existing records and cause duplicates.
+- **Calendar-event Tasks:** § Session record resolution — `sourceId[equal to]` the GCal event ID, both shapes.
+- **PB-side action items:** same Company + similar `action` + open `status`, or same source session + similar `action`. Pull the Company's Tasks with `list_model_records(MODEL: "Task", FILTER: {"companyId[equal to]": "<id>"}, SELECT: ["action", "status", "ownerId", "endTime", "type"])` and **page it** per § API Quirks — a single page is not the whole set. On a match, update or link the existing Task instead of creating a second one.
 
-```
-# Attempt-create pattern:
-create_model_record(MODEL: "Task", PARAMETERS: { sourceId: "<notion-task-page-id>", mainType: "task", ... })
-→ If response contains a `sourceId` collision error → Task already exists → switch to update_model_record
-→ If create succeeds → new Task written
-```
+### Status values
 
-Alternatively, use `search_records(QUERY: "<task title>")` and scan results for a matching `sourceId` — this is more expensive but avoids the create-on-collision side effect.
-
-### Field-level mapping: Notion Task → Planhat Task
-
-| Notion field | Planhat field | Type | Direction | Notes |
-|---|---|---|---|---|
-| Notion Task page ID (URL) | `sourceId` | string | Write on create | **Dedup key.** Extract the Notion page `id`, then normalize: strip hyphens, lowercase — same rule as Conversation `externalId` above. |
-| `Task` (title) | `action` | string | Write | Task title as-is. |
-| `Status` | `status` | string | Write | See value mapping below. |
-| `Due Date` | `endTime` | datetime | Write | ISO 8601. Set time to `T00:00:00.000Z` for date-only values. |
-| `Customers` (relation) | `companyId` | string | Write | Planhat Company `_id`. Resolve via company lookup. **Skip if Customers = Productboard internal** — internal tasks don't belong in Planhat. |
-| `Owner` (person) | `ownerId` | objectId | Write | Resolve Notion user UUID → Planhat user ID using the User ID table above. |
-| `Priority` | `custom.Priority` | string | Write | `"1"` → `"P1"`, `"2"` → `"P2"`, `"3"` → `"P3"`. Stored in `custom.Priority` — **not** the `type` field. Full live option set is `P0`–`P4`. |
-| `Do not count` | _(skip)_ | — | — | Notion billing flag. Not relevant to Planhat. |
-| `Consumed Package` | _(skip)_ | — | — | No Planhat equivalent. |
-| `Source Call` | _(skip)_ | — | — | No native foreign key in Planhat linking a Task back to its source Conversation. Skip — the relationship lives in Notion. |
-| _(constant)_ | `mainType` | string | Write (constant) | Always `"task"`. |
-
-#### Status value mapping
-
-All Notion Task statuses write to the Planhat Task model. Only a `status` *transition* to `"done"` triggers Planhat's auto-Conversation creation (never `"ignored"`, and never a direct create with `status: "done"`) — the Conversation type is then checked and updated if needed.
-
-| Notion `Status` | Planhat `status` | Post-write action |
+| Planhat `status` | Meaning | Post-write action |
 |---|---|---|
-| `Not started` | `"To Do"` | None — open task |
-| `In progress` | `"in-progress"` | None — open task. **Hyphenated, lowercase.** `"In-Progress"` will fail |
-| `Done` | `"done"` | Read `noteId` → check/update Conversation `type` to `"Task"` |
-| `Canceled` | `"ignored"` | None — `"ignored"` does **not** trigger auto-Conversation. Task stays as Task only. |
+| `"To Do"` | Open | None. The only valid open value – `"todo"` / `"to-do"` save but hide the Task from status filters. |
+| `"in-progress"` | Open, started | None. **Hyphenated, lowercase.** `"In-Progress"` will fail. |
+| `"blocked"` | Open, blocked | None. |
+| `"done"` | Completed | Read `noteId` → check/update Conversation `type` to `"Task"`. MCP takes lowercase; REST takes `"Done"` (§ REST API write quirks). |
+| `"ignored"` | Cancelled | None — does **not** trigger auto-Conversation. |
 
-#### What to skip
-
-- Tasks where `Customers` = the Productboard internal record (these are internal, not customer-facing)
-- Tasks with `Do not count = YES` (billing exclusions, rarely applicable to tasks but consistent with Sessions rule)
+Only a `status` *transition* to `"done"` triggers the auto-Conversation — never `"ignored"`, and never a direct create with `status: "done"`.
 
 ### Write rules
 
-- **`mainType: "task"` is required** and must always be set explicitly.
+- **`mainType` is required** and must always be set explicitly — `"task"` for AISE action items.
 - **`companyId` is required** — never create a Task without it.
-- **`sourceId` is the dedup key** — check before creating.
-- **Do not overwrite `ownerId`** on existing records if the task was already assigned in Planhat — only set on initial create from backfill.
+- **`type` is required in practice** — an unset `type` renders as `note` (§ MCP Access → silent failure 3).
+- **Dedup before create** per the lookup above.
+- **Do not overwrite `ownerId`** on an existing Task that is already assigned.
 
 ### Planhat Task — Full Field Reference
 
@@ -1313,19 +1194,25 @@ All Notion Task statuses write to the Planhat Task model. Only a `status` *trans
 | `action` | string | — | Task title / short description of what needs to be done. |
 | `description` | string | — | Longer details. Append source session reference if present. |
 | `status` | string | — | `"To Do"` · `"in-progress"` (hyphenated lowercase) · `"done"` · `"ignored"` · `"blocked"`. |
-| `type` | string | — | Session type emoji string for AISE-created prep tasks (e.g. `🏗️ Architecting`). Use `"Task"` for generic Notion action items migrated from Notion. **Not used for Priority** — Priority maps to `custom.Priority`. |
+| `type` | string | — | Session type emoji string for AISE-created prep tasks (e.g. `🏗️ Architecting`). Use `"Task"` for generic PB-side action items. **Not used for Priority** — Priority maps to `custom.Priority`. |
 | `endTime` | datetime | — | Due date (ISO 8601). Required for `mainType: event`; optional for tasks. |
 | `startTime` | datetime | — | Start time. Optional for tasks; required for events. |
 | `companyId` | objectId | ✅ | Planhat Company `_id`. |
 | `ownerId` | objectId | — | Planhat User `_id` of the person responsible. |
-| `sourceId` | string | — | Notion Task page ID. **Dedup key.** |
-| `custom.Priority` | string | — | `P0` · `P1` · `P2` · `P3` · `P4`. **Corrected 2026-09-12** — this file previously listed only P1–P3; `P0` and `P4` are valid live options. See § Account priority table for which to use. |
+| `sourceId` | string | — | GCal event ID on calendar-synced Tasks. **Dedup key**, unique across Tasks. Unset on most PB-side action items. |
+| `custom.Priority` | string | — | `P0` · `P1` · `P2` · `P3` · `P4`. **Corrected 2026-09-12** — this file previously listed only P1–P3; `P0` and `P4` are valid live options. `Unset` is also a live option – treat it as blank. See § Account priority table for which to use. |
 | `custom.Prep Notes` | string | — | Prep brief written by session-prepper. Format: single-line HTML in the `ph-editor` vocabulary — see § Rich Text Field Formatting for the tag table and the canonical prep-brief example. Section labels are `<p><strong>…</strong></p>` (no `<h>` tags); lists **must** carry `ph-editor__bullet-list` / `ph-editor__ordered-list` + `<li class="ph-editor__list-item"><p>…</p></li>`; use `<p></p>` for a blank line and `<hr>` to separate the header block from the body. **Apply the user's `custom.AISE Profile preferences` voice rules to the sentence content** (dash style, etc.) — see `agents/session-prepper.md` § 1b/5b. Read and carried to the linked Conversation during post-session debrief. |
 | `custom.Facilitation Playbook URL` | string | — | Google Drive link to the interactive HTML facilitation guide generated by `/session-facilitation`. The canonical facilitation link: written onto the session's Task so readers never have to parse it out of `custom.Prep Notes`. For `🏗️ Architecting`, `🔎 Discovery` and `👟 Kick off` sessions it is part of the prep gate (`context/session-artifact-convention.md` § Facilitation gate). Task model only (not on Conversations). Writable via `update_model_record` with `{"custom": {"Facilitation Playbook URL": "<url>"}}`; write and read-back verified 2026-10-06. Only the `Facilitation` artifact goes here; other artifact links stay in `custom.Prep Notes`. See `context/session-artifact-convention.md` § 6. |
 | `custom.Slack message URL` | string | — | Slack permalink for a message this Task already produced, so a re-run updates the existing message instead of posting a duplicate. WIP. |
 | `custom.Spark Conversation` | boolean | — | Marks the session as Spark-related. Replaces the `activityTags: ["Spark"]` route, which is not writable via MCP. |
 | ~~`activityTags`~~ | array | — | ~~Freeform tags for filtering.~~ **Not writable via MCP — silently rejected. Apply manually in Planhat UI.** |
 | `endusers` | array | — | Customer contacts involved: `[{"id": "<enduser-id>"}]`. |
+| `custom.Workspace` | objectId → Asset | — | The workspace this Task concerns. Optional. |
+| `checklist` | array | — | Sub-items. Populated on workflow-template Tasks (§ Task hygiene). |
+| `repeat` / `repeatDays` | string / number | — | Recurrence: `daily` · `weekly` · `monthly` · `quarterly` · `yearly` · `custom` (+ `repeatDays`). Not set by agents. |
+| `parents` | array | — | Tasks that must finish before this one can start. Workflow-template use. |
+| `dateDone` / `doneBy` | datetime / objectId | — | Completion time and who completed it. |
+| `workRoleId`, `noSpecificTime`, `location`, `state`, `isArchived`, `starred`, `shared` | various | — | Native fields not used by AISE writes. |
 
 #### Read-only fields
 
@@ -1333,7 +1220,7 @@ All Notion Task statuses write to the Planhat Task model. Only a `status` *trans
 
 ---
 
-## EndUser (Planhat) ↔ Contact (Notion)
+## EndUser
 
 > **Status:** Actively written by AISE as of 2026-09-12, and written automatically by `post-session-debrief` step 3b (and every `bulk-debrief` session that runs through it) as of 2026-09-14. The `custom.AISE *` fields below are the AISE's own read on a contact, maintained during session prep and debrief. Everything else on this model is Salesforce- or Snowflake-synced, or owned by another team — read it, do not overwrite it.
 
@@ -1414,17 +1301,9 @@ Snowflake-synced (`– SNF` suffix), refreshed on the usage pipeline's cadence:
 
 Planhat-derived, read-only: `lastTouch`, `lastActive`, `convsTotal`, `convs14`, `relevance`, `beats`, `beatTrend`, `beatsTotal`, `experience`, `sentimentScore`.
 
+Native contact fields — `firstName`, `lastName`, `email`, `otherEmails`, `phone`, `linkedInUrl`, `featured`, `archived` — are identity data, often Salesforce-synced. Read them; never edit them from an agent (same rule as § Slack Chat Conversations → Contact identity data).
+
 Writable, but owned by other teams — read, do not set: `custom.Top Project Role` (**corrected 2026-09-12** — previously documented as `custom.Project Role`, which does not exist), `custom.# of Projects`, `custom.Active Projects`, `custom.Engaged with Spark`, `custom.Comms opt out`, `custom.Last Activity – SF`.
-
-### Field-level mapping: Notion Contact → Planhat EndUser
-
-| Notion field | Planhat field | Type | Notes |
-|---|---|---|---|
-| Contact name | `firstName` + `lastName` | string | Split on first space. |
-| Email | `email` | string | Required if no `externalId`/`sourceId`. |
-| Role / Job title | `position` | string | |
-| `Customers` relation | `companyId` | string | Planhat Company `_id`. Required. |
-| Main Contact flag | `primary` | boolean | `true` if this contact is the Notion `Main Contact` for the customer. |
 
 ### Writing a person record — rules
 
@@ -1434,93 +1313,11 @@ Writable, but owned by other teams — read, do not set: `custom.Top Project Rol
 
 ---
 
-## Backfill Strategy: Notion → Planhat
-
-> **Scope:** Sessions (Delivered only) and Tasks (non-canceled, non-internal) owned by the current user. Customers and Active Packages are already synced from Salesforce — do not re-create them.
-
-### Migration gate: PH migrated + PH Last Migration Date (Notion Customer page)
-
-Before migrating a customer, check the Notion Customer page for:
-- **`PH migrated`** (checkbox): `true` = already migrated — skip unless running a delta sweep.
-- **`PH Last Migration Date`** (date + time): timestamp of the last completed migration run. Used by delta-sweep logic to find Notion records created/updated **after** this date and push them to Planhat incrementally.
-
-On **successful completion** of a migration run (zero errors), write both fields back to the Notion Customer page:
-
-```
-notion-update-page(
-  page_id: "<Notion Customer page ID>",
-  properties: {
-    "PH migrated": { "checkbox": true },
-    "PH Last Migration Date": { "date": { "start": "<current UTC datetime — YYYY-MM-DDTHH:MM:SS.000Z>" } }
-  }
-)
-```
-
-Get the current UTC datetime via Bash: `date -u +"%Y-%m-%dT%H:%M:%S.000Z"`
-
----
-
-### Pre-flight checks
-
-1. Confirm the Planhat Company exists for each customer before writing — use the name mapping table and the SF `sourceId` lookup (see Company section).
-2. Resolve the current user's Planhat user ID from the table above (Klara → `6a44ef76c9aade50502936d5`).
-3. Use `externalId` (Conversations) and `sourceId` (Tasks) as dedup keys — check before every create.
-
-### Session backfill procedure
-
-```
-For each Session WHERE:
-  - Current Account Owner LIKE '%<user-uuid>%' OR Delivered By LIKE '%<user-uuid>%'
-  - Call Status = 'Delivered'
-
-1. Extract Notion Session page ID from URL (32-char hex)
-2. Check for existing Planhat Conversation: FILTER externalId = <session-page-id>
-   → If found: update subject/description if stale; skip create (activityTags: not writable via MCP — apply manually in Planhat UI)
-   → If not found: proceed to create
-3. Resolve Planhat companyId via name search or sourceId lookup
-4. Map fields per the Session → Conversation table above
-5. create_model_record(MODEL: "Conversation", PARAMETERS: { ... })
-6. Log result: session name, company, Planhat Conversation _id
-```
-
-### Task backfill procedure
-
-```
-For each Task WHERE:
-  - (Owner LIKE '%<user-uuid>%' OR Current Account Owner LIKE '%<user-uuid>%')
-  - Customers != Productboard internal record
-
-1. Extract Notion Task page ID from URL (32-char hex)
-2. Check for existing Planhat Task: FILTER sourceId = <task-page-id> AND mainType = 'task'
-   → If found: update status/endTime if stale; skip create
-   → If not found: proceed to create
-3. Resolve Planhat companyId via name search or sourceId lookup
-4. Map fields per the Task → Planhat Task table above
-5. create_model_record(MODEL: "Task", PARAMETERS: { mainType: "task", ... })
-6. Log result: task title, company, Planhat Task _id
-```
-
-### Backfill ordering
-
-Run Sessions first, then Tasks. This way, if a Task references a Source Call, the Conversation already exists in Planhat when the Task is written (useful for future linking).
-
-### Rate limiting / batching
-
-Process one customer at a time. After each customer's sessions and tasks are written, pause briefly and log a summary before moving to the next account. This makes it easy to resume if interrupted.
-
----
-
----
-
 ## Asset / Workspace (Planhat)
 
 > Planhat calls this model "Workspace" in the UI. It represents sub-entities of a Company — for example, a specific Productboard workspace, department, or project a customer operates.
 >
 > ⛔ **Synced from Salesforce and Snowflake. Never write Asset/Workspace records via MCP.** These records are managed by the SF → Planhat sync and the Snowflake data pipeline. Read them for context (e.g. staging space flag, AI consent status) but do not create or update them.
-
-### Notion equivalent
-
-No direct Notion DB equivalent. Not part of the AISE migration.
 
 ### Key fields
 
@@ -1528,7 +1325,7 @@ No direct Notion DB equivalent. Not part of the AISE migration.
 |---|---|---|---|
 | `name` | string | ✅ | Workspace name. **Required.** |
 | `companyId` | objectId | ✅ | Parent Company `_id`. **Required.** |
-| `externalId` | string | ✅ | Your own external ID — use Notion Customer page ID if mapping a sub-account. |
+| `externalId` | string | ✅ | Your own external ID. |
 | `sourceId` | string | ✅ | SF sync key if applicable. |
 | `custom.Staging Space` | boolean | ✅ | Whether this is a staging/sandbox workspace. |
 | `custom.AI Consent Granted – SF` | boolean | ❌ Read-only | Whether AI consent is granted for this workspace. System-managed, Salesforce-synced. **Corrected 2026-09-12** — previously documented as `custom.AI Consent Granted` without the suffix, which does not exist. |
@@ -1537,6 +1334,11 @@ No direct Notion DB equivalent. Not part of the AISE migration.
 | `custom.Current Plan – SF` / `custom.Current Plan Version – SF` / `custom.Plan Name + Version` | string | ❌ Read-only | Plan on this specific workspace. Differs per workspace on multi-space accounts — the Company-level `custom.Plan Names` flattens them. |
 | `custom.ARR – SF` | number | ❌ Read-only | ARR attributed to this workspace. |
 | `custom.Has Services – SF` | boolean | ❌ Read-only | Whether this workspace has a services entitlement. |
+| `custom.Current Backend Stage – SF` | string | ❌ Read-only | Provisioning / backend stage of the workspace from Salesforce. |
+| `custom.Current Billing Cycle – SF` | string | ❌ Read-only | Billing cycle on this workspace's subscription. |
+| `custom.Subscription Start – SF` | string | ❌ Read-only | Subscription start date for this workspace. |
+| `custom.On v13 WS` | boolean | ❌ Read-only | Whether this workspace is provisioned on v13 today. Rolled up to Company `custom.On v13 WS`. |
+| `usage.6aa01a1c2c09cc73214e3385` / `usage.6aa69b492102e92bf02a1134` | number | ❌ Read-only | Credits Used Lifetime / Credits Used Daily, as Planhat usage metrics. |
 
 #### Per-workspace Spark state — **read this before trusting the Company-level Spark fields**
 
@@ -1544,6 +1346,8 @@ The Company model carries one `custom.⚡️ Spark Stage` value for the whole ac
 
 | Field ID | Type | Notes |
 |---|---|---|
+| `custom.Spark Visibility` | string (formula) | **The single derived value – read this first.** `Everyone` · `Admins only` · `Spark off` · `Spark not enabled` · blank (not in the Snowflake feed). Built from the booleans below – see the formula further down. |
+| `custom.Spark Status – SF` | string | Spark status as Salesforce records it. Can lag the Snowflake flags below; prefer `Spark Visibility` when they disagree. |
 | `custom.Spark Enabled – SNF` | boolean | Spark on for this workspace. |
 | `custom.Spark Activated Visibility – SNF` | boolean | Visibility has been activated at all. |
 | `custom.Spark Visibility Everyone – SNF` | boolean | Open to all makers in this workspace. |
@@ -1687,17 +1491,13 @@ IF(
 ### Write rules
 
 - Tasks in Planhat can be linked to a Workspace via `custom.Workspace` (an objectId field on Task pointing to an Asset `_id`).
-- Conversations can be linked to a Workspace via `custom.Services Package` (which resolves to a LineItem, but the Task→Workspace link is the relevant one for AISE).
+- Conversations have no Workspace link. Conversation `custom.Opportunity` ties a session to its contract (`Deal`), not to a workspace.
 
 ---
 
 ## Objective (Planhat)
 
-> Tracks customer-level goals and success metrics. Can contribute to the health score. Closest Notion equivalent would be engagement plan milestones or Active Package goals — but no formal mapping yet.
-
-### Notion equivalent
-
-No direct Notion DB equivalent. Potential future mapping: key milestones from the Engagement Plan in the Active Package body.
+> Tracks customer-level goals and success metrics. Can contribute to the health score. Not used by AISE workflows today.
 
 ### Key fields
 
@@ -1713,21 +1513,15 @@ No direct Notion DB equivalent. Potential future mapping: key milestones from th
 
 ## Workflow (Planhat)
 
-> Planhat Workflows are structured playbooks — **series of Tasks that define what calls and tasks a customer program includes** (e.g. an AISE onboarding program with Kick-off → Architecting → Enablement). Each Workflow step maps to a Task (and eventually a Conversation once delivered). Two template types are active in the workspace:
-> - `6a5667be04de5d468d2e4821`
-> - `6a679b421d3fcc56aecaf2f2`
+> Planhat Workflows are structured playbooks — **series of Tasks that define what calls and tasks a customer program includes** (e.g. an AISE onboarding program with Kick-off → Architecting → Enablement). Each Workflow step maps to a Task (and eventually a Conversation once delivered). Nine template IDs are live (Task `workflowTemplateId` options, 2026-10-16): `6a5667be04de5d468d2e4821` · `6a679b421d3fcc56aecaf2f2` · `6a7ced845997647cae41b9a6` · `6a9aa74dbf564f0e88267498` · `6ac0039d9be78e958c7c8479` · `6ac004be1f9889e66a11faa0` · `6ac005319be78e958c7c932d` · `6ac005b31f9889e66a12076a` · `6acf99cad17e81000473e356`.
 >
 > Workflow `outcome` options (configured): `Completed – partial adoption` · `Not completed – disengaged` · `Program completed – champion embedded`
 >
-> Workflows are Planhat-native — they are not migrated from Notion. The Tasks and Conversations inside a Workflow are the same records as the standalone Tasks/Conversations AISE writes; the Workflow is just the container that tracks program progress and percentage completion.
-
-### Notion equivalent
-
-Closest equivalent: Engagement Plan in the Active Package body. No migration path — Workflows are forward-looking structures, not historical records.
+> The Tasks and Conversations inside a Workflow are the same records as the standalone Tasks/Conversations AISE writes; the Workflow is just the container that tracks program progress and percentage completion.
 
 ### Write rules
 
-- **Do not create Workflow records from migration backfill.** Use Planhat UI to instantiate programs from templates.
+- **Do not create Workflow records via MCP.** Use the Planhat UI to instantiate programs from templates.
 - To read active/past Workflows for an account: `list_model_records(MODEL: "Workflow", FILTER: {"companyId[equal to]": "<id>"}, SELECT: ["name", "status", "percentDone", "outcome", "startDate", "expectedEndDate"])`
 
 ---
@@ -1735,10 +1529,6 @@ Closest equivalent: Engagement Plan in the Active Package body. No migration pat
 ## NPS (Planhat)
 
 > Survey response records. Planhat model name: `Nps`.
-
-### Notion equivalent
-
-No Notion equivalent. NPS is Planhat/CS team native — not migrated from Notion.
 
 ### Key fields (read-only context)
 
@@ -1759,11 +1549,7 @@ No Notion equivalent. NPS is Planhat/CS team native — not migrated from Notion
 
 > Bugs, feature requests, or tracked cases — can link to multiple companies, end users, and conversations. Useful for tracking cross-customer patterns.
 >
-> ⛔ **Auto-synced from Zendesk. Never write Issue records via MCP.** Issues are pulled automatically from Zendesk — do not create or update them from Notion or manually via the API.
-
-### Notion equivalent
-
-No Notion equivalent. Not part of the AISE migration.
+> ⛔ **Auto-synced from Zendesk. Never write Issue records via MCP.** Issues are pulled automatically from Zendesk — do not create or update them via MCP or the API.
 
 ### Key fields (read-only context)
 
@@ -1783,11 +1569,7 @@ No Notion equivalent. Not part of the AISE migration.
 
 ## Churn (Planhat)
 
-> Churn/cancellation records with reasons and revenue impact. Created when a customer fully churns.
-
-### Notion equivalent
-
-No Notion equivalent. Churn records are created in Planhat by the CSM when `custom.AISE Journey Status` is set to `Churned` and `phase` is set to `4. Churned`.
+> Churn/cancellation records with reasons and revenue impact. Created in Planhat by the CSM when a customer fully churns – when `custom.AISE Journey Status` is set to `Churned` and `phase` to `4. Churned`.
 
 ### Key fields
 
@@ -1802,18 +1584,14 @@ No Notion equivalent. Churn records are created in Planhat by the CSM when `cust
 
 ### Write rules
 
-- Do not create Churn records via migration backfill — they should be created in real-time by the CSM at churn.
+- Do not create Churn records from AISE workflows — the CSM creates them at churn.
 - When `phase` is set to `4. Churned`, check if a Churn record already exists for the account before creating one.
 
 ---
 
 ## Deal (Planhat) — read-only
 
-> Tracks active and historical contracts. Synced from Salesforce. **Never write from Notion to Planhat.**
-
-### Notion equivalent
-
-Active Packages (functional equivalent). Each Deal in Planhat represents a contract, with `LineItem` records for individual SKUs (subscription lines, services credits).
+> Tracks active and historical contracts. Synced from Salesforce. **Never write Deal records.** Each Deal represents a contract, with `LineItem` records for individual SKUs (subscription lines, services credits).
 
 ### How to read Deal data for an account
 
@@ -1834,7 +1612,10 @@ list_model_records(
 | `mrr` / `arr` | number | Revenue (locked — calculated from LineItems when lines exist) |
 | `startDate` / `endDate` | date | Contract start/end (locked when LineItems exist) |
 | `renewalDate` | date | Soonest renewal across all subscription LineItems |
-| `custom.Renewal Risk` | string | `Will Renew` · `Likely to Renew` · `Risk to Renewal` · `Planning to Contract` · `Planning to Churn` · `Churned` · `Suspended (Non Payment)` · `High` · `Medium` · `Low` · `TBD` |
+| `custom.Renewal Risk` | string | Per-contract: `Will Renew` · `Likely to Renew` · `Risk to Renewal` · `Planning to Contract` · `Planning to Churn` · `Churned` · `Suspended (Non Payment)` · `High` · `Medium` · `Low` · `TBD`. For the account-level Salesforce call read Company `custom.Latest Renewal Risk – SF`. |
+| `custom.Deal Type` | string | `Renewal` · `Expansion - Upsell` · `New Business` · `Reactivation` |
+| `custom.Notes – SF` | string | Opportunity notes from Salesforce. |
+| `custom.Incorrect Start Date` | number | Data-quality check flag on the deal start date. Read-only. |
 | `custom.Service Start Date – SF` | string | Services start from SF |
 | `custom.Service End Date – SF` | string | Services end from SF |
 
@@ -1842,7 +1623,7 @@ list_model_records(
 
 ## Product (Planhat) — read-only
 
-> SKU templates used to populate LineItems on Deals. Synced from Salesforce. **Never write from Notion to Planhat.**
+> SKU templates used to populate LineItems on Deals. Synced from Salesforce. **Never write Product records.** Product carries the same custom fields as Line Item – see the table under § Line Item.
 
 ### Key fields (read context)
 
@@ -1851,7 +1632,7 @@ list_model_records(
 | `name` | string | Product/SKU name |
 | `type` | string | `subscription` · `fee` |
 | `mrr` / `arr` | number | Default pricing |
-| `custom.SKU` | string | SKU identifier |
+| `custom.SKU – SF` | string | SKU identifier. Read-only. |
 | `custom.Service SKU – SF` | boolean | Whether this is a services SKU (vs software license). **Corrected 2026-09-12** — needs the `– SF` suffix. |
 | `custom.AISE Working Sessions` | number | Session quota for this SKU — both Architecting and Training (Enablement) sessions deduct from this shared pool |
 | `custom.License Type – SF` | string | License classification. **Corrected 2026-09-12** — needs the `– SF` suffix, and it is read-only. |
@@ -1884,12 +1665,20 @@ Sum `custom.AISE Working Sessions` across all `status: "ongoing"` lines to get t
 | `productName` | string | Read-only, denormalized from the linked Product. |
 | `custom.AISE Working Sessions` | number | This line's contribution to the customer's Architecting+Training pool. |
 | `fromDate` / `toDate` | date | Line's active period. |
+| `custom.Session Entitlement` | number | Sessions this line entitles the customer to. Read-only. Rolls up to Company `custom.Services Session Entitlement`. |
+| `custom.Services Package` | string (list) | Services package on this line: `Quick Start` · `Essential` · `Premium` · `Premium Plus` · `AI Success` · `Premier` · `Signature` · `Tier 1`–`Tier 3` · `Professional Services` · `Onboarding` · `Migration` · `Custom`. |
+| `custom.Product Type – SF` | string | `Platform` · `Services` · `Other` · `Attributed ARR Adjustment` · `Support` · `Usage Block` · `Add-on` · `Licenses`. |
+| `custom.Plan Name – SF` / `custom.Plan Version – SF` / `custom.Plan Name + Version` | string | Plan on this line. Read-only. |
+| `custom.SKU – SF` / `custom.License Type – SF` / `custom.Service SKU – SF` / `custom.Pilot SKU – SF` | string / boolean | SKU classification from Salesforce. |
+| `custom.Duration – SF` / `custom.Unit Price – SF` / `custom.Quantity` | string / number | `Annual` · `Monthly`; unit price; quantity. |
+| `custom.Software or Service Product – SF` / `custom.Software or Service Product` | string | Software vs service classification – the `– SF` one is the synced value. |
+| `custom.Default Project Plan – SF` / `custom.Is NRR` / `custom.Product Description` | boolean / boolean / string | Remaining SKU attributes. |
 
 ---
 
 ## Comment (Planhat)
 
-> Used by `post-session-debrief` to post next-session planning + account-notable updates on the Company after every debrief (replaces the old Notion "Customer page update" + "next-session planning notes" writes).
+> Used by `post-session-debrief` to post next-session planning + account-notable updates on the Company after every debrief.
 
 ### Key fields
 
@@ -1897,6 +1686,7 @@ Sum `custom.AISE Working Sessions` across all `status: "ongoing"` lines to get t
 |---|---|---|
 | `commentableType` | string | **Required.** Target model — `"Company"` for AISE account-level comments. Also supports `Conversation`, `Task`, and most other models. |
 | `commentableId` | objectId | **Required.** `_id` of the target record. |
+| `by` / `date` | objectId → User / datetime | Author and timestamp. `parentId` is set only on replies. |
 | `text` | string | **HTML restricted to `<p>`, `<a>`, and mention tags only** — bold, bullets, and other markup are not supported and will render broken or get stripped. Structure multi-part content as separate `<p>` paragraphs, not a bulleted list. |
 
 ### Write rules
@@ -1908,13 +1698,13 @@ Sum `custom.AISE Working Sessions` across all `status: "ongoing"` lines to get t
 
 > Used by the **Facilitator call notes in Planhat** check (`project-instructions.md` § Transcript lookup order) to pick up notes a facilitator left directly on the session's Task/Conversation instead of, or alongside, the Gong transcript.
 
-`list_model_records(MODEL: "Comment", FILTER: {"commentableId[equal to]": "<task_or_conversation_id>", "commentableType[equal to]": "Task"}, SELECT: ["text", "createdAt", "userId"])` — swap `"Task"` for `"Conversation"` to check the linked Conversation. Run both when the session has both a Task and a Conversation record, since either could carry a comment. Empty results are normal — most sessions have none.
+`list_model_records(MODEL: "Comment", FILTER: {"commentableId[equal to]": "<task_or_conversation_id>", "commentableType[equal to]": "Task"}, SELECT: ["text", "date", "by"])` — the author is `by` (a User `_id`), not `userId`, which does not exist on Comment — swap `"Task"` for `"Conversation"` to check the linked Conversation. Run both when the session has both a Task and a Conversation record, since either could carry a comment. Empty results are normal — most sessions have none.
 
 ---
 
 ## Attachment (Planhat)
 
-> Used by `post-session-debrief` to attach the KDD doc (`kdd-builder` output) to the session's Conversation — the Planhat equivalent of the old Notion `KDDs — …` sub-page.
+> Used by `post-session-debrief` to attach the KDD doc (`kdd-builder` output) to the session's Conversation.
 
 ### Key fields
 
@@ -1928,7 +1718,7 @@ Sum `custom.AISE Working Sessions` across all `status: "ongoing"` lines to get t
 ### Write rules
 
 - **`sourceUrl` must be directly fetchable, not a viewer page.** For Google Drive files, `https://drive.google.com/file/d/{id}/view` is an HTML wrapper and will not work — use `https://drive.google.com/uc?export=download&id={id}` instead, and only after the file has been explicitly shared "anyone with the link, reader" (Planhat's fetch isn't an authenticated Drive user, so default sharing silently fails).
-- Confidentiality: sharing a customer-facing doc "anyone with the link" is a deliberate, minimal-necessary exposure — apply the same judgment already used for diagrams leaving the Notion boundary. Don't widen sharing beyond what the Attachment step needs.
+- Confidentiality: sharing a customer-facing doc "anyone with the link" is a deliberate, minimal-necessary exposure — apply the same judgment used for any customer artifact shared outside Productboard. Don't widen sharing beyond what the Attachment step needs.
 
 ---
 
@@ -1947,7 +1737,7 @@ An entry belongs here only when the erroneous record was **hard-deleted**. Archi
 
 ## Models To Be Documented
 
-The following models exist in Planhat but have no current AISE migration use case. Use `get_model_action_parameters(MODEL: "<model>")` if needed.
+The following models exist in Planhat but have no current AISE use case. Use `get_model_action_parameters(MODEL: "<model>")` if needed.
 
 | Model | Notes |
 |---|---|

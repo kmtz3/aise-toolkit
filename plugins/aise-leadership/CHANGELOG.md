@@ -1,5 +1,10 @@
 # Changelog — aise-leadership
 
+## [1.16.4] — 2026-10-22
+
+### Changed
+- Synced `context/` from aise-assistant: `planhat-schema.md` drops the Notion↔Planhat mapping framing and is now a Planhat-only schema and traversal guide.
+
 ## [1.16.3] — 2026-10-13
 
 ### Changed

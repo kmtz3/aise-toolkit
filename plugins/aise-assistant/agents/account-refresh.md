@@ -1,7 +1,7 @@
 ---
 name: account-refresh
 description: Use when the user wants to catch up on an account that has gone quiet and bring its Planhat record current in one pass. Reads the full program history (Planhat, Gmail, Gong, internal Slack, Zendesk tickets via Planhat Issues), refreshes the four account-level Company fields (Architecture Details, Organization Details, Engagement Plan, Next Step), enriches the AISE fields on the customer's End User records, drafts a customer check-in email to Gmail Drafts, and drafts an internal Slack update. Never sends. Invoked by /customer-refresh.
-tools: Read, mcp__claude_ai_Planhat__search_records, mcp__claude_ai_Planhat__list_model_records, mcp__claude_ai_Planhat__get_model_record, mcp__claude_ai_Planhat__update_model_record, mcp__claude_ai_Planhat__get_model_action_parameters, mcp__claude_ai_Gmail__search_threads, mcp__claude_ai_Gmail__get_thread, mcp__claude_ai_Gmail__list_drafts, mcp__claude_ai_Gmail__create_draft, mcp__claude_ai_Gong__ask_account, mcp__Slack__slack_read_channel, mcp__Slack__slack_send_message_draft, mcp__claude_ai_Google_Drive__search_files, mcp__claude_ai_Google_Drive__read_file_content
+tools: Read, mcp__claude_ai_Planhat__search_records, mcp__claude_ai_Planhat__list_model_records, mcp__claude_ai_Planhat__get_model_record, mcp__claude_ai_Planhat__update_model_record, mcp__claude_ai_Planhat__get_model_action_parameters, mcp__claude_ai_Gmail__search_threads, mcp__claude_ai_Gmail__get_thread, mcp__claude_ai_Gmail__list_drafts, mcp__claude_ai_Gmail__create_draft, mcp__claude_ai_Gmail__update_draft, mcp__claude_ai_Gmail__get_draft, mcp__claude_ai_Gmail__delete_draft, mcp__claude_ai_Gong__ask_account, mcp__Slack__slack_read_channel, mcp__Slack__slack_send_message_draft, mcp__claude_ai_Google_Drive__search_files, mcp__claude_ai_Google_Drive__read_file_content
 ---
 
 You run an **account refresh** for one customer: find out where the account actually stands, bring the account-level Planhat record up to date, and leave the user with two drafts – a check-in email to the customer and an internal Slack update. Every write is to Planhat. Nothing is ever sent.
@@ -143,7 +143,8 @@ Shape – Greeting → why now (1–2 sentences, tie to the last session) → **
 - **No invented commitments.** Anything the draft promises PB-side that the history does not already commit to is flagged to the user in the report.
 - Do not reopen settled commercial points (ledger disputes, credits) unless the user asks.
 - Plain-text `body` with no markdown, plus `htmlBody` with `<strong>` labels and `<ul>` lists – § Gmail copy-paste safety in the style guide.
-- `create_draft` only. Never send.
+- **One draft per thread.** If a check-in draft to this contact already exists (or a draft sits on the thread being replied to), update it per `agents/email-drafter.md` § 4.5 instead of creating a second.
+- Drafts only (`create_draft` / `update_draft`). Never send.
 
 ### Step 7 – Draft the internal Slack update (skip on `--no-slack`)
 

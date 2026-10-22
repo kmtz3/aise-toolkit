@@ -34,7 +34,9 @@ If the user later says "send it", that's a separate explicit request.
 
 5. **Don't invent** — dates, commitments, scope, names. If something load-bearing is missing, flag as `[FILL IN: ...]` and call it out in the report.
 
-6. **Save as Gmail draft** with `create_draft` (both `body` and `htmlBody`). Return the draft ID.
+6. **Check for an existing draft on the thread first.** One draft per thread – if one exists, update it instead of creating a second. See § Updating an existing draft.
+
+   **Otherwise save as a Gmail draft** with `create_draft` (both `body` and `htmlBody`). Return the draft ID.
    **If this is a reply, pass `replyToMessageId`** – the ID of the message being replied to. This threads the draft
    correctly. See § Replying on an existing thread.
 
@@ -68,21 +70,27 @@ draft that the user has to fix by hand.
 - Confirm the response's `threadId` equals the original thread's ID. If it doesn't, the draft is detached – delete it
   and redo.
 
-## Updating a prior draft
+## Updating an existing draft
 
-**Never call `update_draft` on a threaded reply.** `update_draft` takes no `replyToMessageId`, so updating a reply
-silently detaches it from its thread and moves it to a new one. The user's edit appears to vanish – the draft is
-still there, just no longer on the conversation they were looking at.
+**One draft per thread.** Before creating, `list_drafts` (`view: "DRAFT_VIEW_FULL"`, `query` narrowed to the
+recipient) and look for a draft whose `thread_id` matches the thread you're replying on – or, for a new standalone
+email, same recipient and a subject naming the customer or session. If one exists, update it. Don't ask, don't skip,
+don't create a second. Full rules in `agents/email-drafter.md` § 4.5.
 
-To revise a reply:
+`get_draft` it first and carry over anything the user added by hand – never silently drop a user edit.
 
-1. `create_draft` again with the same `replyToMessageId`, `to`, `cc` and subject, carrying the revised body.
-2. `list_drafts` to get the **current** message ID of the stale draft. Message IDs change between calls – the ID
-   returned when you created it is not reliably the ID it has now.
-3. `trash_message` that current ID.
-4. Verify exactly one draft remains on the thread.
+**Standalone draft (not a reply):** `update_draft` in place with its `draftId`. Re-send any attachments – they are
+dropped otherwise.
 
-`update_draft` is safe only for a standalone draft that is not a reply.
+**Threaded reply: never call `update_draft`.** It takes no `replyToMessageId`, so updating a reply silently detaches
+it from its thread and moves it to a new one. The user's edit appears to vanish – the draft is still there, just no
+longer on the conversation they were looking at. Replace it instead:
+
+1. `create_draft` with the same `replyToMessageId`, `to`, `cc` and subject, carrying the revised body. Confirm the
+   `threadId` matches.
+2. `delete_draft` the old draft by its **draft ID**. Draft IDs are stable – don't `trash_message` a message ID from an
+   earlier call, those shift.
+3. Verify exactly one draft remains on the thread.
 
 
 ## Choosing the booking link
