@@ -1,6 +1,6 @@
 ---
 name: session-debrief
-description: Run the full post-session workflow in one shot, entirely against Planhat — transcript retrieval, Conversation write (session notes, prep notes, Gong/duration), contact enrichment on the customer's End User records, PB-side Tasks, Gmail follow-up draft, internal Slack debrief Task, Product Feedback Tasks, KDD Attachment (A-sessions only), a refreshed Company custom.Next Step, and scorecard eval in chat.
+description: Run the full post-session workflow in one shot, entirely against Planhat — transcript retrieval, Conversation write (session notes, prep notes, Gong/duration), contact enrichment on the customer's End User records, PB-side Tasks, customer follow-up draft (external Slack channel draft when the Company has one, Gmail draft otherwise), internal Slack debrief Task, Product Feedback Tasks, KDD Attachment (A-sessions only), a refreshed Company custom.Next Step, and scorecard eval in chat.
 ---
 
 Run the full post-session debrief workflow for.
@@ -11,7 +11,7 @@ Read the procedure in `agents/post-session-debrief.md` and execute it inline as 
 2. Resolve the session's existing Planhat record via the GCal-event-id ladder (never a title search first) and write session notes, decisions, and action items to the Conversation `description` — creating it via the linked calendar-event Task when one exists.
 3. Enrich the customer's contacts on their Planhat `End User` records — attendees plus anyone discussed with real signal. Writes `custom.AISE Relationship` (promote-only, exact numbered values), `custom.Engagement Role` (additive union), a rewritten `custom.AISE Read`, and `custom.AISE Read Reviewed` (run date), each read back after writing. Never creates, renames or archives a contact.
 4. Create Planhat Tasks for all PB-side commitments the user made (`companyId` required, priority/due-date/description-scaffold per `context/planhat-schema.md` § Task priority & description defaults). Customer-side actions stay in the Conversation description and follow-up only.
-5. Execute the customer follow-up email procedure documented in `agents/email-drafter.md` (read and run inline) — saved to Gmail Drafts, never sent. Notes if a Slack channel variant is also worth drafting. **Skip if the transcript-unavailable branch is active.**
+5. Draft the customer follow-up, never sent. **If the Company's `custom.External_Slack_Channel_ID` is populated**, it is a Slack draft in that external channel (`slack_send_message_draft`, after reading the last ~10 channel messages; no Gmail draft; an existing channel draft is reported, never overwritten). **Otherwise** run the email procedure in `agents/email-drafter.md` inline and save to Gmail Drafts. Full rules in `agents/post-session-debrief.md` step 5. **Skip if the transcript-unavailable branch is active.**
 6. Write an internal Slack debrief draft and log it as a Planhat Task (`type: "Internal Alignment"`).
 7. For A-sessions only: read `agents/kdd-builder.md` and execute its procedure inline — publishes the KDD to Google Drive and attaches it to the session's Planhat Conversation as an Attachment record.
 8. Log product feedback, feature requests, and bugs as Planhat Tasks (`type: "Product Feedback"`) for later submission via `/log-feedback`.

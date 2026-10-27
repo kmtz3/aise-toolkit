@@ -877,6 +877,12 @@ close a session gap or retyped into a counted type to move a number.
 | `users` | `[{_id, name}]` of the Productboard people who posted | **Required, not optional.** Resolved from `User` by email. Omit the key entirely if no PB person spoke – never write `[]`. |
 | `endusers` | `[{_id, name}]` of the customer contacts who posted | **Required, not optional.** Resolved from `End User` scoped to the company. Authors only – an `@`-mention or a named follow-up owner is not a participant. Fails silently on write, so always read back and assert. A participant with no contact record is reported, never auto-created. Omit the key rather than writing `[]`. |
 
+**Known read-back behavior: omitted `users` / `endusers` come back as `[]`.** Planhat returns an empty array on
+read-back for either key even when it was left out of the write, so an omitted key and a written `[]` look the
+same afterwards. "Never write `[]`" is a rule about the request you send and cannot be checked from the
+read-back. The read-back assertion is: **the side that authored messages reads back non-empty**. An empty array
+on the side that did not speak is expected.
+
 **Channel resolution and the cache.** The skill accepts either half of the pair. Given a channel, the company
 is resolved from the modal non-`productboard.com` email domain across the channel's authors matched against
 `Company.domains`, falling back on the channel name (`#ext-acme-corp-productboard` → `acme corp`) matched
@@ -901,8 +907,12 @@ existing `💬 Slack Chat` records on the company dated within the last 365 days
 field on `Conversation` (`numberOfParts` is read-only), so the cursor is the last line of the `description`:
 
 ```
-Sync: {N} messages · last message ts {ts} · logged {YYYY-MM-DD}
+Sync: {N} messages · last message ts {ts}[ · fragments {ts}, {ts}] · logged {YYYY-MM-DD}
 ```
+
+`{N} messages` counts the parent plus all replies, plus any folded top-level fragments. `slack_read_thread`
+reports replies only, so add 1 for the parent. The optional `fragments` segment lists the ts of each folded
+top-level message, so the backfill pre-filter can compare `date` against the latest of them.
 
 A live thread whose message count or last ts exceeds the watermark gets its `description` rebuilt via
 `update_model_record` on the existing `_id`, and `date` moves forward to the new last message in the same call
@@ -1265,13 +1275,14 @@ The same person often exists as two or more End User records on one account: two
 
 **Pick the AISE contact in this order – first rule that separates them wins:**
 
-1. **`custom.PB_ID` filled.** The record linked to a real Productboard user is the one that carries Spark and usage telemetry and is the one Salesforce and Productboard reconcile against. Always prefer it, even when the other record has the more recent `lastTouch` or is the one linked on a Conversation's `endusers`.
+0. **Existing AISE profile.** If exactly one of the duplicates already has a non-empty `custom.AISE Relationship` (other than `6. Not filled`) or a non-empty `custom.AISE Read`, that record is the AISE contact – even when the other one carries `custom.PB_ID`. It holds the person's AISE history, and moving it would split the read from the sessions it was built on. Write to it, leave the other record untouched, and flag the pair for a manual merge under Gaps (both `_id`s, both emails, which one has `PB_ID`). If two or more duplicates carry AISE fields, this rule does not separate them – fall through to rule 1 and handle the extra copy per "If the AISE fields already sit on the wrong record" below.
+1. **`custom.PB_ID` filled.** The record linked to a real Productboard user is the one that carries Spark and usage telemetry and is the one Salesforce and Productboard reconcile against. Prefer it over every rule below, even when the other record has the more recent `lastTouch` or is the one linked on a Conversation's `endusers` – but rule 0 comes first, so a fresh profile is never started on the `PB_ID` record while an established one sits on its duplicate.
 2. `position` filled.
 3. Most recent `lastTouch`.
 
-Fetch `custom.PB_ID` with `get_model_record` on each candidate – it comes back blank in large multi-record lists.
+Fetch `custom.PB_ID`, `custom.AISE Relationship` and `custom.AISE Read` with `get_model_record` on each candidate – `custom.PB_ID` comes back blank in large multi-record lists.
 
-**If the AISE fields already sit on the wrong record** (written before this rule, or the user corrects which record is canonical): copy `custom.AISE Relationship`, `custom.Engagement Role`, `custom.AISE Read` and `custom.AISE Read Reviewed` onto the AISE contact, then clear them on the duplicate: `custom.AISE Relationship` back to `6. Not filled`, `custom.Engagement Role` to `[]`, and `custom.AISE Read` / `custom.AISE Read Reviewed` to **`null`**. An empty string `""` clears `custom.AISE Read` but is silently ignored on the date field `custom.AISE Read Reviewed` (verified 2026-10-02) – only `null` clears it. Read both records back. Never archive, rename, merge or re-home the duplicate – identity cleanup belongs to RevOps / Salesforce – and report it under Gaps with both `_id`s and both `sourceId`s.
+**If the AISE fields already sit on the wrong record** (two or more duplicates carry AISE fields and rule 1 picks one of them, or the user corrects which record is canonical – never merely because the only AISE profile sits on the record without `PB_ID`, which rule 0 keeps as-is): copy `custom.AISE Relationship`, `custom.Engagement Role`, `custom.AISE Read` and `custom.AISE Read Reviewed` onto the AISE contact, then clear them on the duplicate: `custom.AISE Relationship` back to `6. Not filled`, `custom.Engagement Role` to `[]`, and `custom.AISE Read` / `custom.AISE Read Reviewed` to **`null`**. An empty string `""` clears `custom.AISE Read` but is silently ignored on the date field `custom.AISE Read Reviewed` (verified 2026-10-02) – only `null` clears it. Read both records back. Never archive, rename, merge or re-home the duplicate – identity cleanup belongs to RevOps / Salesforce – and report it under Gaps with both `_id`s and both `sourceId`s.
 
 A user's explicit statement of which record is canonical overrides the order above for that person.
 

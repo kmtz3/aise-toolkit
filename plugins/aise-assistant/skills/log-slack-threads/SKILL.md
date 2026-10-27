@@ -1,12 +1,12 @@
 ---
 name: log-slack-threads
 description: Log shared-Slack-channel threads as Planhat Conversations of type Slack Chat on the customer, one Conversation per thread, dated on the last message in the thread. Takes either a channel or a customer name – resolves the missing half and caches the pairing on the Planhat Company so later runs skip resolution. Deduplicates and backfills new replies into existing records via a deterministic Slack externalId. Triggers – /log-slack-threads, 'log this Slack channel', 'log Slack threads for {customer}', 'backfill Slack conversations'.
-argument-hint: "[--channel <url|#name|id>] [--customer <name>] [--since YYYY-MM-DD] [--backfill-only] [--new-only] [--limit N] [--dry-run]"
+argument-hint: "[--channel <url|#name|id>] [--customer <name>] [--mine | --owner <name>] [--since YYYY-MM-DD] [--backfill-only] [--new-only] [--limit N] [--dry-run]"
 ---
 
 Log Slack threads into Planhat for $ARGUMENTS.
 
-Read the procedure in [`agents/slack-thread-logger.md`](../../agents/slack-thread-logger.md) and execute it inline as the main assistant – do not try to spawn `slack-thread-logger` as a subagent (agent files in this plugin are procedure documents, not registered subagent types). The per-thread read + render + write is fanned out to generic subagents in batches – see § Fan-out in that file.
+Read the procedure in [`agents/slack-thread-logger.md`](../../agents/slack-thread-logger.md) and execute it inline as the main assistant. `slack-thread-logger` is now a registered subagent type (`aise-assistant:slack-thread-logger`), but inline is still the default for a single account. The per-thread read + render + write is fanned out to general-purpose subagents in batches (§ Fan-out in that file), and portfolio mode runs one general-purpose subagent per account (§ 0.2), passing each one the procedure text.
 
 ## Flags
 
@@ -16,6 +16,8 @@ Canonical syntax uses flags; also recognize natural language equivalents.
 |---|---|---|
 | `--channel <url\|#name\|id>` | a pasted `productboard.slack.com/archives/...` link, "the Kpler shared channel", "#ext-acme-productboard" | The channel to sweep. A pasted archive URL is the most reliable form – the ID is the path segment after `/archives/`. Omit it and the channel is looked up from the customer's cached `custom.External_Slack_Channel_ID`. |
 | `--customer <name>` | "for Kpler", "under Acme" | Planhat Company to log against. Omit it and the company is resolved from the channel's external email domains, falling back on the channel name. |
+| `--mine` | "all my bob", "my whole book", "all my accounts", "every customer I own" | **Portfolio mode.** Sweep every Company the current user owns in Planhat in one run. Cached accounts are swept in parallel, one subagent each; uncached accounts are resolved read-only and every new pairing is confirmed in a single table before anything is cached or swept. Ends with a portfolio report and one combined duplicate-decision list. See § 0.2 of the agent file. |
+| `--owner <name>` | "all of Sam's accounts", "sweep Sam's book" | Portfolio mode for a named teammate's book instead of your own. |
 | `--no-cache` | "don't save the channel", "just this once" | Skip the write-back to `custom.External_Slack_Channel_ID`. Use when sweeping a channel that is not the account's canonical shared channel. |
 | `--since YYYY-MM-DD` | "since April", "this year", "last 3 months" | Only consider threads whose **first message** is on or after this date. Default: the whole channel history. |
 | `--backfill-only` | "just check for new replies", "update the ones already logged" | Skip creates. Only re-check already-logged threads for new replies. |
@@ -28,10 +30,12 @@ Canonical syntax uses flags; also recognize natural language equivalents.
 1. Resolves the channel and the Planhat Company – in whichever direction the input allows – and caches the
    pairing on the Company for next time (§ Channel resolution below). Then pulls the full channel history
    (paginated).
-2. Classifies every top-level message: **thread** (has replies), **standalone substantive** (a real question, update, or recap with no replies), **broadcast reply** (a thread reply sent with "also send to channel" – looks top-level, already belongs to its parent thread's record), or **noise** (joins, channel-description changes, canvas notices, bare emoji, one-line logistics). Noise and broadcast replies are never logged.
+2. Classifies every top-level message: **thread** (has replies), **standalone substantive** (a real question, update, or recap with no replies), **broadcast reply** (a thread reply sent with "also send to channel" – looks top-level, already belongs to its parent thread's record; detected with a window test and confirmed by a ts match on a detailed thread read), or **noise** (joins, channel-description changes, canvas notices, bare emoji, one-line logistics, and threads where every message is logistics). Noise and broadcast replies are never logged. Same-author fragments within 5 minutes, and unthreaded cross-author exchanges within 15 minutes, fold into one record.
+2a. **Legacy repair and duplicate resolution** – normalizes off-format `externalId`s, reports `DATE MISMATCH` records, then presents existing duplicates (logged broadcast replies, two records for one parent, split exchanges) as one keep/delete batch per account. Deletes only on your explicit approval.
 3. **Backfill pass** – for every existing `💬 Slack Chat` Conversation on that Company dated within the last 365 days, parses its `externalId` back to a channel + parent timestamp, re-reads the thread, and compares the live message count against the `Sync:` watermark in the record's footer. Grown threads get their `description` rebuilt in place. Same record, same `externalId`, same `date`.
 4. **Create pass** – for every in-scope thread with no existing record, reads the thread, renders it, and creates one Conversation.
-5. Reports a per-thread table – created · backfilled · unchanged · skipped-as-noise – with the record IDs.
+5. Reports a per-thread table – created · backfilled · unchanged · skipped-as-noise – with the record IDs, followed by one consolidated **Hygiene** block (duplicate Companies, duplicate End Users, End Users named with an email, Productboard authors with no Planhat User). Report-only.
+6. If the run surfaced any tool quirk, rule gap or duplicate, offers to run `/assistant-improvement`, or runs it directly if you asked for that in the invocation.
 
 ## Channel resolution
 
@@ -46,8 +50,9 @@ company in chat, then cache the channel ID on it.
 **Given a customer** – resolve the Company on `name`, and when that returns nothing retry the name as a domain
 label against `domains` (the typed name is often an acquired subsidiary: `leanix` misses on name, resolves to
 **SAP SE** on `leanix.net`). Then read `custom.External_Slack_Channel_ID`. Populated, and it reads: use it, no search.
-Empty: sweep `slack_search_channels` for the `#ext-{customer}` convention (then `ext-{domain label}`), and if
-that misses, ask for the URL or ID. Cache whatever resolves.
+Empty: sweep `slack_search_channels` for the `#ext-{customer}` convention (then `ext-{domain label}`), including
+archived channels, and if that misses, ask for the URL or ID. Cache whatever resolves. An archived hit is shown
+with its archive date; if confirmed it is swept like any other channel, minus the backfill pass.
 
 > `custom.Slack ID` and `custom.Slack URL` are **not** candidates. Those hold the **internal** Productboard
 > channel for the account – RevOps-owned, frequently populated, and containing no customer. Logging one would
@@ -66,6 +71,7 @@ overwrite – an account can legitimately have two shared channels, and the fiel
 - **One Conversation per thread.** Never merge two threads into one record, and never split a thread across records.
 - **`date` is the last message of the thread**, never the run date. This matches how Planhat dates a multi-part email conversation, and it is what makes `custom.Last AISE Touch` reflect the real last touch instead of the date the thread opened. The thread start is preserved in `custom.First message time` and in the `externalId` parent ts.
 - **`externalId` is the dedup key, always present, always the same format:** `slack_{channelId}_{parentTsDigits}` – lower-case prefix, upper-case Slack channel ID, thread-parent timestamp with the dot removed (`slack_C0AKKLJCB5E_1786006420396099`). Built by the helper in § 3 of the agent file, never by hand. Checked before every create, read back and asserted after every create, and repaired to canonical on any legacy record found. A record with a missing or off-format key is invisible to the next run and gets silently duplicated.
+- **Dedupe is part of the job, not only a flag.** Every run finds existing duplicates (logged broadcast replies, two records for one parent ts, split unthreaded exchanges) and presents them as one keep/delete batch per account. Delete only on explicit approval, with `delete_model_record` followed by a read-back confirming the record is gone. Never delete as a side effect of a sweep.
 - **Legacy repair runs before the backfill pass** on every invocation, normalizing off-format keys on existing `💬 Slack Chat` records for the account. Repairs touch `externalId` only, never `date` or `subject`.
 - **Backfill re-dates forward and never re-creates.** A thread that gained replies is an `update_model_record` on the existing `_id`: `date` moves forward to the new last message alongside the rebuilt `description`, `externalId` and `custom.First message time` stay untouched, and `date` never moves backward.
 - **`💬 Slack Chat` does not count toward session delivery.** It is a touchpoint record, not a session. Never use it to fill a session gap, and never retype an uncounted Slack record into a counted session type to make a number move.
@@ -73,7 +79,8 @@ overwrite – an account can legitimately have two shared channels, and the fiel
 - **Every record names its participants.** `users` (Productboard) and `endusers` (customer) are written on
   every Conversation, resolved from who actually **authored** messages in the thread – never from `@`-mentions,
   cc's or follow-up owners. A one-sided thread gets one side and the other key omitted, never an empty array.
-  `endusers` fails silently on write, so both are read back and asserted. A participant with no `End User`
+  `endusers` fails silently on write, so both are read back, and the side that spoke must read back non-empty.
+  Planhat returns `[]` for an omitted key on read-back, so an empty array on the silent side is expected. A participant with no `End User`
   record is named in the report, not created.
 - **Never edit contact identity data.** This skill links to `End User` records; it never changes their `name`,
   `firstName`, `lastName`, `email` or `position`. Those are the customer's own data, often Salesforce-synced.

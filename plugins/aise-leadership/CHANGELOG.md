@@ -1,5 +1,10 @@
 # Changelog — aise-leadership
 
+## [1.16.5] — 2026-10-27
+
+### Changed
+- Synced `context/` from aise-assistant: `planhat-schema.md` adds the "existing AISE profile wins" duplicate End User rule and Slack Chat read-back notes; `project-instructions.md` adds the external-Slack-channel follow-up ground rule and keeps Gong Call records that hold the only transcript.
+
 ## [1.16.4] — 2026-10-22
 
 ### Changed

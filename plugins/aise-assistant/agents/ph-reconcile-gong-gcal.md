@@ -1,6 +1,6 @@
 ---
 name: ph-reconcile-gong-gcal
-description: Finds Planhat Conversations of type "👾 Gong Call" (created by the Gong→Planhat sync as standalone records) and merges their Gong URL (written to the target's `custom.Call Recording`), and description into the matching GCal-synced session Conversation for the same call, then deletes the Gong Call record. Interim manual fix while the Planhat↔Gong integration is reworked to do this automatically. Invoked by `/ph-reconcile-gong-gcal`.
+description: Finds Planhat Conversations of type "👾 Gong Call" (created by the Gong→Planhat sync as standalone records) and merges their Gong URL (written to the target's `custom.Call Recording`), and description into the matching GCal-synced session Conversation for the same call, then deletes the Gong Call record – unless it holds the only Planhat copy of the transcript, in which case it is kept (`transcript_retained_on_gong_record`). Interim manual fix while the Planhat↔Gong integration is reworked to do this automatically. Invoked by `/ph-reconcile-gong-gcal`.
 tools: Read, mcp__claude_ai_Planhat__list_model_records, mcp__claude_ai_Planhat__get_model_record, mcp__claude_ai_Planhat__get_model_action_parameters, mcp__claude_ai_Planhat__update_model_record, mcp__claude_ai_Planhat__delete_model_record, mcp__claude_ai_Planhat__search_records
 ---
 
@@ -79,7 +79,7 @@ list_model_records(
 
 **⚠️ Date filters must be plain `YYYY-MM-DD` — never a full ISO timestamp.** Verified live 2026-08-31: `"date[more than]": "2026-08-24T00:00:00.000Z"` returned **3** records where the identical query with `"date[more than]": "2026-08-24"` returned **39**. The timestamped form does not error and does not warn — it silently returns a wrong subset, which on this agent means most Gong Call records are never considered for merging at all. Pass day bounds only, widen them by a day on each side, and apply the exact hour-level window locally in code after the query returns. **This applies to every filter in this procedure — §2, §3b, and the §3d Task query.**
 
-**⚠️ Never put `transcript` or `description` in a multi-record `SELECT`.** Gong transcripts run 10–55 KB each and the MCP response has a payload ceiling that silently truncates the *record count* to fit: verified live 2026-08-31, the 39-record query above returned **2** records with `transcript` and `description` selected, and all 39 without them. This is a different and far more dangerous failure than the row cap below, because 2 records reads as a small clean result set rather than as truncation. Pull metadata only here, then fetch bodies one record at a time with `get_model_record(MODEL: "Conversation", OBJECT_ID: "<_id>", SELECT: ["description"])` for the pairs that actually reach §4 — typically a third of the records pulled. The `transcript` is never fetched (§4: transcripts are not merged). Never echo a fetched body into the run log.
+**⚠️ Never put `transcript` or `description` in a multi-record `SELECT`.** Gong transcripts run 10–55 KB each and the MCP response has a payload ceiling that silently truncates the *record count* to fit: verified live 2026-08-31, the 39-record query above returned **2** records with `transcript` and `description` selected, and all 39 without them. This is a different and far more dangerous failure than the row cap below, because 2 records reads as a small clean result set rather than as truncation. Pull metadata only here, then fetch bodies one record at a time with `get_model_record(MODEL: "Conversation", OBJECT_ID: "<_id>", SELECT: ["description"])` for the pairs that actually reach §4 — typically a third of the records pulled. The `transcript` body is never fetched into context — §4 only checks whether it is present, one record at a time, and never copies it. Never echo a fetched body into the run log.
 
 **The source recording URL is read from the Gong Call record, never written to it.** It lives on `custom.Call Recording`, with `custom.Gong URL` as a legacy fallback — see §4 for the read order and why. Both are selected above so the fallback needs no second call. Whichever one holds it, the write destination is always the *target's* `custom.Call Recording`, and `custom.Gong URL` is never written on either record.
 
@@ -141,7 +141,11 @@ Only **high** and **medium** confidence matches proceed to step 4. **unmatched**
 ### 4. Build the merge payload for the matched target
 
 - **`custom.Call Recording`** — take the source URL from the Gong Call record as `gong.custom['Call Recording'] ?? gong.custom['Gong URL']`. **Read `custom.Call Recording` first** — since the 2026-08-27 field migration Gong's own sync writes the call link there and leaves `custom.Gong URL` empty (verified 2026-08-29 on Emplifi `6a9006bc8ab9b10391dc6508`); `custom.Gong URL` remains only as a fallback for pre-migration records. Write it into the target's `custom.Call Recording` field, only if the target's `custom.Call Recording` is empty. **A target already holding the identical URL is not a conflict** — skip the field, do not flag, and let the rest of the merge proceed. If the target already has a *different* non-empty `custom.Call Recording` value, do not overwrite — flag as **conflict: recording_url_exists** and skip the whole merge for this record (do not partially merge; do not delete the Gong Call record while a conflict is open). Never write to `custom.Gong URL` on the target — that field is retired for this purpose (`context/planhat-schema.md` § Conversation Full Field Reference, corrected 2026-08-27).
-- **`transcript`** — **never merged.** Copying a ~25k-char transcript means re-emitting it as a tool argument, so the model would have to retype it and could silently alter it. Gong stays the transcript source of truth: the target keeps `custom.Call Recording` (the link to it) plus the Gong summary in `description`. Do not fetch or echo the transcript body. A Gong Call record carrying a `transcript` is **still deleted** once `custom.Call Recording` and the description summary are read back, and the report says so (`transcript not carried by design`). A target that already holds its own `transcript` is no longer a conflict. If Planhat later gains a non-MCP mechanism (e.g. an automation that copies `transcript` by `externalId` match), revisit this rule.
+- **`transcript`** — **never copied through MCP, and never lost.** Copying a ~25k–50k-char transcript means re-emitting it as a tool argument, so the model would have to retype it and could silently alter it. So this procedure never writes `transcript` on the target. But the Gong Call record is often the **only** Planhat copy of the transcript, and deleting it would destroy that copy. The rule, in both this agent and `post-session-debrief` step 3-C:
+  - **Check presence, not content.** `get_model_record(MODEL: "Conversation", OBJECT_ID: "<id>", SELECT: ["transcript"])` on the Gong Call record and on the target, one record at a time. A "saved to file" response or any non-empty string counts as present. Never `Read` the saved file, never echo the body, never put the value into a write.
+  - **Gong Call `transcript` non-empty AND target `transcript` empty** → merge every other field as normal (`custom.Call Recording`, `description`, `custom.Call Duration`, `date`), read back, then **do not delete the Gong Call record**. Outcome **transcript_retained_on_gong_record**. The duplicate is expected and intentional until a server-side copy exists; the report lists it so a human can see why both records remain.
+  - **Gong Call `transcript` empty, or the target already holds its own `transcript`** → nothing would be lost, so the Gong Call record is deleted after read-back as normal.
+  - If the transcript should move onto the session Conversation, that must happen server side (a Planhat automation that copies `transcript` from the `👾 Gong Call` record to the session Conversation, keyed on the shared Gong call id in `externalId`), never by retyping it through MCP. When such an automation exists, point this step at it and let the delete proceed once its copy is read back as present.
 - **`custom.Call Duration`** — write only if the target's is empty and the Gong record has a value. Not a blocking conflict if both are populated and differ — keep the target's existing value, note the discrepancy.
 - **`date`** — correct the target's session time in the same write. The Gong call's `date` is a real call start, so it is an authoritative ladder source (`context/planhat-schema.md` § Session timestamp), and the target's `date` is unreliable by default. Prefer the coupled Task's `startTime` when the target has one (`get_model_record(MODEL: "Task", OBJECT_ID: "<target._id>")` — the Task shares the Conversation's `_id`), and fall back to `gong.date`. Write it only when it differs from the target's current `date` by more than a minute, and never write `T00:00:00.000Z`. This is not a conflict field — a wrong stored time is the defect being fixed, not content to preserve. Report the before/after with the source used.
 - **`description`** — always additive, never a conflict. Reformat the Gong description into the Planhat rich-text vocabulary (`context/planhat-schema.md` § Rich Text Field Formatting) before appending — the raw Gong-sync description uses `<h2>` and a wrapping `<p>` around block content, which is not in the allowed tag set and will render badly:
@@ -170,7 +174,7 @@ get_model_record(MODEL: "Conversation", OBJECT_ID: "<target._id>", SELECT: ["cus
 ```
 Confirm every field you wrote actually landed. If any field silently didn't write, **do not delete the Gong Call record** — log outcome **write_unverified** and leave both records in place for manual follow-up.
 
-Only once the read-back confirms the merge landed:
+Only once the read-back confirms the merge landed, apply the §4 transcript rule. If the Gong Call record holds a `transcript` and the target does not, stop here: outcome **transcript_retained_on_gong_record**, both records stay. Otherwise:
 ```
 delete_model_record(MODEL: "Conversation", OBJECT_ID: "<gong.conversation_id>")
 ```
@@ -189,21 +193,22 @@ Append this record's outcome to `records_completed` in the checkpoint file (§ C
   Target: <target subject> (<target type>, <target date>) — <target._id>
   Confidence: high | medium   score 0.81 (attendee 1.00 · subject 1.00 · date 1.00)  Δ2.2h dayΔ0
       — or, when the recording-URL gate fired: high (url_confirmed, id 2811821172396240087)   score 0.43 (attendee 0.30 · subject 0.17 · date 1.00)  Δ16.0h dayΔ0
-  Would write: custom.Call Recording, description (+142 chars); transcript not carried by design
+  Would write: custom.Call Recording, description (+142 chars)
   Skipped: custom.Call Recording (target already holds the identical URL)
   Excluded candidates: 💬 Slack Chat <_id>, note <_id>
   Would correct date: 2026-08-27T00:00:00.000Z → 2026-08-27T08:30:00.000Z (source: coupled Task startTime)
   Would delete: Gong Call Conversation <gong._id>
+      — or, when the Gong Call record holds the only transcript: Would keep: Gong Call Conversation <gong._id> (transcript_retained_on_gong_record)
 ```
 
 **Always show the score breakdown, not just the confidence tier** — a bare "high" or "medium" label hides exactly what a reviewer needs to sanity-check (was this an attendee match with a weak subject, or the reverse?). Show the raw Δ in hours next to the date sub-score, name `url_confirmed` explicitly when the §3b-bis gate decided the match, and list every candidate the type floor excluded with its type — a reviewer needs to see that a `💬 Slack Chat` was passed over, and that a `note` carrying a GCal `externalId` exists.
 
 Then a totals table:
 
-| Company | Gong calls found | Merged + deleted | Conflicts (needs review) | Unmatched | Pending task conversion | Ambiguous |
-|---|---|---|---|---|---|---|
-| Unit4 | 3 | 2 | 1 — recording_url_exists | 0 | 0 | 0 |
-| RatedPower | 5 | 3 | 0 | 1 | 1 | 0 |
+| Company | Gong calls found | Merged + deleted | Merged, transcript retained | Conflicts (needs review) | Unmatched | Pending task conversion | Ambiguous |
+|---|---|---|---|---|---|---|---|
+| Unit4 | 3 | 2 | 0 | 1 — recording_url_exists | 0 | 0 | 0 |
+| RatedPower | 5 | 2 | 1 | 0 | 1 | 1 | 0 |
 
 List every **conflict**, **unmatched**, **pending_task_conversion**, and **ambiguous** record individually below the table with its Planhat `_id`, a link (`https://ws.planhat.com/productboard/home/data-explorer/conversation?preview=Conversation.<_id>`), and — for **ambiguous** specifically — every candidate's full score breakdown (attendee/subject/date sub-scores) so a human can pick the right one without re-deriving the comparison. These need a human decision, not a re-run.
 
@@ -213,7 +218,7 @@ List every **conflict**, **unmatched**, **pending_task_conversion**, and **ambig
 
 - **Dry-run by default.** Never write or delete without `--apply` and an explicit confirmation on the plan.
 - **Never delete a Gong Call Conversation without a verified merge write-back.** A failed or unconfirmed write leaves both records in place.
-- **Never overwrite a non-empty `custom.Call Recording` on the target** — conflicts are reported, not resolved automatically. **Never copy `transcript` through MCP**; deleting the Gong Call record without it is allowed and must be stated in the report. **Never write to `custom.Gong URL` on the target** — retired for this purpose; only read from it on the source Gong Call record.
+- **Never overwrite a non-empty `custom.Call Recording` on the target** — conflicts are reported, not resolved automatically. **Never copy `transcript` through MCP, and never delete a Gong Call record whose `transcript` is non-empty while the target's is empty** — merge the other fields, keep both records, and report **transcript_retained_on_gong_record** (§4). **Never write to `custom.Gong URL` on the target** — retired for this purpose; only read from it on the source Gong Call record.
 - **`description` is always append, never replace.**
 - **Ambiguous matches (top score below 0.4, or two-plus candidates within 0.05 of each other) are never auto-resolved** — list all candidates with score breakdowns and stop. Two-plus candidates carrying the same Gong recording id are ambiguous too — that is a duplicate target, not a match.
 - **Never append a summary a target already has.** Check `description` for `Gong Call Summary` or the call id first (§4) — re-runs are expected, and `description` is append-only.

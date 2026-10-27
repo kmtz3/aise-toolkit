@@ -1,7 +1,7 @@
 ---
 name: slack-thread-logger
 description: Procedure for logging shared-Slack-channel threads as Planhat Conversations of type "💬 Slack Chat" on the customer – one Conversation per thread, dated on the last message in the thread, deduplicated on a deterministic Slack externalId, with a reply-backfill pass over the previous 365 days. Resolves the customer↔channel pairing in either direction and caches it on `Company.custom.External_Slack_Channel_ID` so later runs skip resolution. Invoked by `/log-slack-threads`.
-tools: mcp__Slack__slack_read_channel, mcp__Slack__slack_read_thread, mcp__Slack__slack_search_channels, mcp__Slack__slack_read_user_profile, mcp__Planhat__list_model_records, mcp__Planhat__get_model_record, mcp__Planhat__create_model_record, mcp__Planhat__update_model_record, mcp__Planhat__get_model_action_parameters, Bash, Read, Write
+tools: mcp__Slack__slack_read_channel, mcp__Slack__slack_read_thread, mcp__Slack__slack_search_channels, mcp__Slack__slack_read_user_profile, mcp__Planhat__list_model_records, mcp__Planhat__get_model_record, mcp__Planhat__create_model_record, mcp__Planhat__update_model_record, mcp__Planhat__delete_model_record, mcp__Planhat__get_model_action_parameters, Bash, Read, Write
 ---
 
 # Slack thread logger
@@ -121,7 +121,7 @@ list_model_records(MODEL: "Company", FILTER: {"domains[contains]": "<name slug>"
 
    | Step | Source | How to check it |
    |---|---|---|
-   | a | `slack_search_channels` for the `#ext-` convention | Shared external channels are named `#ext-{customer}` or `#ext-{customer}-productboard`. Query `ext-{customer slug}`, and if that misses, `ext-{primary domain's second-level label}` (`emplifi.io` → `ext-emplifi`). Include `private_channel` in `channel_types` – shared channels are usually private. |
+   | a | `slack_search_channels` for the `#ext-` convention | Shared external channels are named `#ext-{customer}` or `#ext-{customer}-productboard`. Query `ext-{customer slug}`, and if that misses, `ext-{primary domain's second-level label}` (`acme.io` → `ext-acme`). Include `private_channel` in `channel_types` – shared channels are usually private – and pass `include_archived: true`. |
    | b | Ask the user | "I could not find a shared external channel for {customer} – paste the channel URL or ID and I will store it on the account." |
 
    On step a, require the match to actually look right, and require it to be **external**. Two tests, both
@@ -130,6 +130,13 @@ list_model_records(MODEL: "Company", FILTER: {"domains[contains]": "<name slug>"
    it and go to step b. More than one plausible hit, or a hit whose name does not contain the customer or
    their domain label: present the candidates and ask. Never sweep a channel you are not sure about – see
    step 4 of path A for why.
+
+   **Archived channels are candidates too.** On some accounts the only `#ext-` channel left is archived – the
+   customer moved to email, or the channel was retired after a renewal. Show an archived hit like any other
+   candidate, with its archive date (`#ext-acme-productboard – archived 2025-03-14`), and let the user confirm.
+   A confirmed archived channel is cached and swept exactly like a live one, with one difference: **skip the § 4
+   backfill pass**, because an archived channel cannot gain replies. Legacy repair (§ 3) and duplicate resolution
+   (§ 3.1) still run.
 
    **Do not consult `custom.Slack ID` or `custom.Slack URL` at this step.** They hold the internal account
    channel, which is exactly the wrong answer and looks exactly like the right one.
@@ -160,18 +167,113 @@ get_model_record(MODEL: "Company", OBJECT_ID: "<company _id>",
 **Window.** `--since` filters on the thread's **first** message, not its last reply. Default is the whole
 channel.
 
+### 0.2 Portfolio mode (`--mine` / `--owner <name>`)
+
+Sweeps every Company a user owns in one invocation instead of one account at a time. `--mine` targets the
+current user; `--owner <name>` targets a named teammate.
+
+1. **Resolve the Planhat User by email**: `list_model_records(MODEL: "User", FILTER: {"email[equal to]": "<addr>"})`.
+   For `--owner <name>`, resolve the name to an email first and confirm the match in chat.
+2. **Pull the book:**
+
+```
+list_model_records(MODEL: "Company", FILTER: {"owner[equal to]": "<user _id>"},
+                   SELECT: ["name", "domains", "phase", "custom.External_Slack_Channel_ID"], LIMIT: 100)
+```
+
+   Page with `OFFSET` until a page returns zero rows. Split the result into **cached** (channel ID populated) and
+   **uncached** accounts.
+3. **Resolve every uncached account in one batched, read-only pass.** Hand all of them to a single
+   general-purpose subagent that runs § 0 Path B step 3a (with `include_archived: true`) for each one and
+   returns candidates only. It writes nothing.
+4. **One confirmation table for every new pairing:** `account · candidate channel · ID · live/archived (date) ·
+   external authors seen`. The user confirms, corrects or drops each row. Only confirmed rows are cached
+   (§ 0.1) and added to the sweep. Never cache or sweep a pairing that was not confirmed in this table.
+5. **Sweep every cached and newly confirmed account.** Use **one general-purpose subagent per account**, run in
+   parallel. Give each one the full text of this procedure, the company `_id`, the channel ID, the flags for this
+   run, and its own scratch directory named by channel ID (`<scratch>/<CHANNEL_ID>/`). Each subagent runs §§ 1–8
+   for its account and returns its § 8 report plus its duplicate-resolution batch (§ 3.1) **without deleting
+   anything**. Validated with 10 accounts in parallel and no cross-contamination, as long as each subagent stays
+   in its own scratch directory (§ 7).
+6. **Portfolio report:** one row per account (`account · channel · created · backfilled · unchanged · repaired ·
+   duplicates found · issues`), then the **combined** duplicate-resolution decision list across all accounts
+   (§ 3.1), then one consolidated § 8 Hygiene block. Deletes happen only after the user approves that combined
+   list.
+
+**Checkpoint & resumability.** A portfolio run is long enough to be compacted mid-run. Write
+`/tmp/slack-thread-logger-portfolio-<owner-id>.json` after step 4 and after each account's subagent returns:
+`{"scope": "<owner _id>", "flags": {"since": ..., "new_only": ..., "backfill_only": ..., "dry_run": ...},
+"items_completed": ["<company _id>", ...], "items_pending": [...], "confirmed_pairings": {"<company _id>":
+"<CHANNEL_ID>"}, "unresolved": [...]}`. IDs and status only, never thread content. On start-up, resume from an
+existing checkpoint only if its `scope` and every flag match this invocation exactly; otherwise discard it and
+start fresh. Delete it when the run completes, and leave it in place after an error or partial run.
+
 ---
 
 ## 1. Pull the channel
 
 `slack_read_channel` returns newest-first and paginates. Read with `limit: 100` and follow `next_cursor`
-until `pagination_info` reports no more messages. The response is large – write it to a scratch file and parse
-it with a script rather than holding every message in context:
+until `pagination_info` reports no more messages.
+
+**Where the response ends up decides how you parse it.** Two cases, and you do not choose between them:
+
+| Case | What happens | What you do |
+|---|---|---|
+| Result over the tool-output token cap (usually page 1 of `slack_read_channel`) | The harness saves it to `tool-results/<id>.txt` and returns the path | **Copy that file into your own scratch directory right away**, then parse the copy with the reference parser below. Identify the file by its `Channel:` header line, **never by "latest file in the folder"**. `tool-results/` is shared by every agent in the session, so in a parallel fan-out the newest file is often another account's channel. |
+| Result under the cap (later pages, every Planhat `list_model_records` response) | Returned inline | Compare it in context. Do **not** retype rows into a script by hand: hand-copying 100+ IDs and timestamps into Python is a copy-error path straight into the dedup logic. |
+
+Keep the inline Planhat side small enough to compare by eye: when listing existing records for a dedup or
+backfill comparison, `SELECT` only `externalId`, `date` and `custom.Slack message Id`, **never `description`**.
+Pull `description` only for the specific records you are about to rebuild.
+
+**Reference parser for saved channel reads.** Message headers have more shapes than they look like, and a naive
+pattern drops messages silently. Guest headers carry an `external:` marker inside the parentheses, and Slackbot
+and app headers have no email at all:
 
 ```
-Bash: python3 - <<'PY'   # parse the saved tool-result file into structured JSON
-PY
+=== Message from Jane Doe <jane@productboard.com> (U01ABCDEF) at 2026-03-04 10:12 CET ===
+=== Message from Sam Lee <sam@acme.io> (U02GHIJKL, external: Acme Corp) at 2026-03-04 10:15 CET ===
+=== Message from Slackbot (USLACKBOT) at 2026-03-04 10:20 CET ===
 ```
+
+A pattern like `\((\w+)\)` matches only the first shape, and on one guest-heavy channel it dropped 77 of 100
+messages without an error. Use this parser, which asserts that it found every message:
+
+```python
+import re, json, sys
+
+HEADER = re.compile(
+    r"^=== Message from (?P<name>.+?)"
+    r"(?: <(?P<email>[^>]+)>)?"
+    r" \((?P<uid>[A-Z0-9]+)(?:, external: (?P<org>[^)]+))?\)"
+    r" at (?P<local>.+?) ===\s*$",
+    re.M,
+)
+TS = re.compile(r"^Message TS: (?P<ts>\d+\.\d+)", re.M)
+THREAD = re.compile(r"^Thread: (?P<n>\d+) repl(?:y|ies)(?: \(latest: (?P<latest>[^)]+)\))?", re.M)
+
+def parse(text: str) -> list[dict]:
+    heads = list(HEADER.finditer(text))
+    raw_headers = len(re.findall(r"^=== Message from ", text, re.M))
+    if len(heads) != raw_headers:
+        sys.exit(f"parser matched {len(heads)} of {raw_headers} message headers – fix the pattern, do not continue")
+    out = []
+    for i, h in enumerate(heads):
+        body = text[h.end(): heads[i + 1].start() if i + 1 < len(heads) else len(text)]
+        ts, th = TS.search(body), THREAD.search(body)
+        if not ts:
+            sys.exit(f"no Message TS for header at offset {h.start()}")
+        out.append({**h.groupdict(), "ts": ts["ts"],
+                    "replies": int(th["n"]) if th else 0,
+                    "latest": th["latest"] if th else None})
+    return out
+
+print(json.dumps(parse(open(sys.argv[1]).read()), indent=1))
+```
+
+If the assertion fires, look at the unmatched header, widen the pattern and re-run. Never carry on with a
+partial parse. Confirm the printed labels (`Message TS:`, `Thread:`) against the first page you read, since
+the MCP output format can change.
 
 Each top-level message gives you: author name + email + Slack user ID, an `external: <Org>` marker for guests,
 the local timestamp, `Message TS` (the parent ts – this is the thread key), a `Thread: N replies` line when it
@@ -183,32 +285,76 @@ has replies, `Files:` and `Reactions:` lines.
 
 | Class | Test | Action |
 |---|---|---|
-| **Thread** | Has a `Thread: N replies` line | Log |
+| **Thread** | Has a `Thread: N replies` line **and** at least one message in it (parent or reply) carries substance | Log |
 | **Standalone substantive** | No replies, but carries a real question, decision, status update or session recap | Log |
-| **Noise** | Join/leave notices, "X was added to this channel", canvas-update notices, channel-description changes, bare emoji or reaction-only messages, pure logistics one-liners ("booked it for Friday", "thanks!") | **Never log** |
+| **Noise** | Join/leave notices, "X was added to this channel", canvas-update notices, channel-description changes, bare emoji or reaction-only messages, pure logistics one-liners ("booked it for Friday", "thanks!"). **Also a thread whose parent and every reply are logistics, pleasantries or acks**: having replies does not make it a thread worth logging. | **Never log** |
 | **Broadcast reply** | Looks top-level in the channel read – own `Message TS`, no `Thread:` line – but is a reply someone sent with "also send to channel". | **Never log separately.** It already belongs to its parent thread's record. |
 
-Three judgement rules that matter:
+**Where the logistics line falls.** Decide on content, not shape, and apply the same test on every run so a
+record logged by one run is not reclassified as noise by the next:
+
+| Noise (never log) | Log |
+|---|---|
+| "Will book time with you next week" / "Sounds good, see you then" | "Can we book time next week? We want to walk through why the Jira sync is creating duplicates" (states the problem) |
+| A thread where the only exchange is picking a meeting slot and confirming the invite | A scheduling thread where someone also states the agenda, a blocker, a decision, or who needs to attend and why |
+| "Thanks!" / "👍" / "Got it, will check" with nothing after it | "Got it – we have decided to roll it out to the EMEA team first" (a decision, however short) |
+
+When a thread is mostly logistics but carries one substantive line, log it and make that line the `Topic`.
+When you are unsure, log it: a thin record costs less than a lost touchpoint. Count logistics-only threads in
+the § 2 report as `noise (logistics)` so the user can see what was skipped.
+
+Judgement rules that matter:
 
 - **A standalone customer question with no in-channel answer is still a touchpoint** – often it was answered in
   a call or by email, and the unanswered thread is exactly the kind of thing worth having on the timeline.
   Log it and say so in `Outcome`.
-- **Consecutive messages from the same author within a few minutes are one thread**, not three. Slack users
-  press enter mid-thought. Fold them into a single record keyed on the **first** message's ts, and render the
-  fragments as consecutive lines under one speaker heading.
+- **Consecutive messages from the same author within 5 minutes are one record**, not three. Slack users press
+  enter mid-thought. Measure each gap from the previous fragment, not from the first. Fold them into a single
+  record and render the fragments as consecutive lines under one speaker heading. **Key the record on the
+  earliest fragment, unless a later fragment is the one that carries the thread** (has the `Thread:` line): then
+  key on that fragment's ts, because it is the thread parent and the backfill pass (§ 4) reads the thread from
+  it. List every folded fragment's ts in the footer `Sync:` line (§ 4 step 3) so the backfill pre-filter can
+  account for them.
+- **Unthreaded back-and-forth between different authors is folded under a 15-minute rule.** People often answer
+  each other with new top-level messages instead of replying in a thread. Apply this test, the same way on every
+  run:
+  - A top-level message on the same topic, posted within **15 minutes** of the previous message in the exchange,
+    is folded into the earlier record. Key on the **first** message, date on the **last** (§ 5), and render all
+    messages in order under their own speaker headings.
+  - Beyond 15 minutes it is its own record, **unless it directly fulfils a promise made in the earlier message**
+    ("I'll check with the team and come back" → the answer, two hours later). Fold that one in too and say so in
+    `Outcome` ("answered 2 h later in channel").
+  - A different topic is never folded, however close in time.
+  Folding happens **before** dedup: if an earlier run split an exchange that this rule would fold, report the
+  extra records in § 3.1 rather than creating more.
 - **A broadcast reply is not a standalone message, and it is the main way this skill duplicates a thread.**
   `slack_read_channel` returns a reply sent with "also send to channel" as its own top-level entry, with its own
   `Message TS` and no `Thread:` line, so it is indistinguishable from a standalone substantive message by shape
   alone. Logging one creates a second record for text already inside a thread record, which is the
   "never split a thread across records" non-negotiable broken in the least visible way – both records look
-  legitimate. The tell is cheap and needs no extra call: **a top-level message whose ts equals some thread's
-  `latest:` reply time is that thread's broadcast reply.** More generally, treat any candidate authored by a
-  participant of a still-open thread as suspect – especially a Productboard reply that reads like an answer to
-  an earlier question – and confirm it by reading the candidate parent thread before classifying it. Confirm by
-  thread read, never by eye: on the 2026-08-27 SAP LeanIX sweep, five of them (three in one thread) each looked
-  exactly like an un-logged standalone message in the channel view.
+  legitimate.
 
-Report the counts (`N threads · M standalone · K noise`) before writing anything, and on `--dry-run` stop here.
+  **Test every unthreaded candidate with the window test before classifying it:**
+  1. **Zero-cost subset:** its ts equals some thread's `latest:` reply time → it is that thread's broadcast
+     reply. No call needed. This only catches a broadcast reply that is the **last** reply in its thread, which
+     in practice is a small minority of them, so it is never the whole check.
+  2. **Window test:** its ts falls inside some thread's `[parent ts, latest]` window **and** its author took part
+     in that thread (posted the parent, or appears in its reply authors) → **broadcast suspect**.
+  3. **Confirm each suspect by reading that thread with `response_format: "detailed"`** and matching the
+     candidate's ts against the reply `Message TS` values. Match → broadcast reply, never logged. No match →
+     classify it normally. Several candidate threads → read each until one matches.
+
+  Confirm by ts match, never by eye or by text: a broadcast reply looks exactly like an un-logged standalone
+  message in the channel view, and text matching fails on edited or truncated messages.
+- **Read threads with `response_format: "detailed"` whenever you need reply timestamps** – the broadcast check
+  above and the footer watermark (§ 4). `"concise"` omits each reply's `Message TS`, which forces text matching.
+  `"concise"` is fine only when you need the text alone.
+- **Forwarded messages arrive truncated.** The Slack MCP cuts the body of a forwarded message short. If the
+  original message is in the same channel, take its full text from there. Otherwise render what you have and
+  add `<i>(forwarded text truncated)</i>` after it, so the record does not pass off a fragment as the whole
+  message.
+
+Report the counts (`N threads · M standalone · B broadcast · K noise (L logistics)`) before writing anything, and on `--dry-run` stop here.
 
 ---
 
@@ -291,12 +437,48 @@ Run this once per company at the start of any invocation, before the backfill pa
 
 Repairs touch `externalId` only. Never re-date and never re-subject a record during this pass.
 
+**Date check (report-only).** In the same pass, compare each record's `date` with the footer `Sync:` line's
+`last message ts`, converted to UTC. They should be equal to the second. A record whose `date` disagrees – most
+often a local wall-clock time (CEST/CET) stored as if it were UTC, which leaves it 1–2 hours late – is reported
+as `DATE MISMATCH` with its `_id`, its stored `date` and the UTC value from the watermark. **Do not auto-fix
+it.** Correcting it usually means moving `date` backward, which § 4 never does on its own, so it needs a human.
+Skip the check on records with no footer watermark, and say how many were skipped.
+
 Two live examples of the drift this pass exists for, both found and fixed on 2026-08-25:
 
 - Emplifi `6a7f4ec562ab7a106e3d2919` carried `slack-C02N37LS25C-1786373402.520939` – hyphens plus a dotted ts.
 - That same record is also dated on its **last** message (Aug 14) while its parent ts is Aug 10, because it was
   logged as a multi-day channel digest rather than a single thread. Flag that shape when you meet it; a digest
   is not a thread and its `date` needs a human decision, not an automatic re-date.
+
+### 3.1 Duplicate resolution
+
+Deduplication is part of every run, not something only a flag turns on. Detecting a duplicate and listing it is
+not the end of the job: the user expects duplicates resolved. After the legacy repair pass, find existing
+records whose content is already inside another record:
+
+| Duplicate shape | How to detect it |
+|---|---|
+| **Confirmed broadcast reply logged on its own** | An existing record whose parent ts (from `externalId`) is a broadcast reply confirmed by the § 2 window test – its ts matches a reply `Message TS` in another record's thread. |
+| **Two records for one parent ts** | Two records on the company whose `externalId` or `custom.Slack message Id` resolve to the same parent ts. |
+| **Split unthreaded exchange** | Two or more records that the § 2 folding rules (5-minute same-author, 15-minute cross-author) would have made one. |
+
+Present them as **one batch per account**: `duplicate _id · subject · date · duplicates which record (_id) ·
+why`, with a recommended action (keep / delete) for each record. For a split exchange, recommend keeping the
+record keyed on the first message, rebuilding it to include the folded messages (§ 4 step 4), and deleting the
+rest.
+
+**Delete only on explicit approval, record by record.** For each approved delete:
+
+```
+delete_model_record(MODEL: "Conversation", OBJECT_ID: "<_id>")
+get_model_record(MODEL: "Conversation", OBJECT_ID: "<_id>", SELECT: ["_id"])   # must fail or return nothing
+```
+
+A record that still reads back after the delete is reported as `DELETE FAILED`. Never delete as a side effect
+of a sweep, never delete the record you are keeping, and on `--dry-run` list the batch without asking for
+approval. In portfolio mode (§ 0.2) the batches from every account are combined into one decision list at the
+end; subagents report duplicates and never delete.
 
 ## 4. Backfill pass – threads that gained replies
 
@@ -308,10 +490,12 @@ threads stay alive for months; a record logged in March is routinely wrong by Au
 ```
 list_model_records(MODEL: "Conversation",
   FILTER: {"companyId[equal to]": "<id>", "type[equal to]": "💬 Slack Chat"},
-  SELECT: ["subject", "date", "externalId", "description"], LIMIT: 100)
+  SELECT: ["externalId", "date", "custom.Slack message Id"], LIMIT: 100)
 ```
 
-   Page until a request returns zero records (Planhat truncates large responses without an error – see
+   Leave `description` out of this list call (§ 1). Fetch it with `get_model_record` only for the records the
+   pre-filter in step 3 sends to a thread read, since those are the only ones whose footer you need. The list cap
+   is 100 per page: page with `OFFSET` until a request returns zero records (Planhat truncates large responses without an error – see
    `agents/session-log-auditor.md` rule #2). Keep the window to **records dated within the last 365 days**;
    older threads are effectively closed and re-reading them every run is waste.
 
@@ -321,19 +505,31 @@ list_model_records(MODEL: "Conversation",
    `externalId` carries its own channel so no cache lookup is needed. Do not repoint the cache at a channel
    found this way.
 
-3. Read the live thread (`slack_read_thread`) and compare its total message count against the record's
-   footer watermark:
+3. Read the live thread (`slack_read_thread`, `response_format: "detailed"`, so each reply carries its
+   `Message TS`) and compare its total message count against the record's footer watermark:
 
 ```
 Sync: 4 messages · last message ts 1786366092.921679 · logged 2026-08-25
+Sync: 6 messages · last message ts 1786366092.921679 · fragments 1786365001.100200, 1786365130.200300 · logged 2026-08-25
 ```
+
+   **`{N} messages` counts the parent plus all replies (parent + replies).** `slack_read_thread` reports
+   **replies only** (`N total`), so add 1 for the parent. Folded fragments and folded cross-author messages
+   (§ 2) count too: N is every message rendered in the record. The `fragments` segment is present only on
+   records that folded extra top-level messages, and lists each one's ts in dotted form.
 
    Count grew, or the last ts moved → rebuild. Unchanged → leave it alone and count it as `unchanged`.
 
    **Pre-filter before spending a thread read.** The channel pull from § 1 already carries
    `Thread: N replies (latest: <local time>)` on every parent, so for any record whose parent is in that pull
-   the growth check is free: convert that `latest:` time to UTC and compare it against the record's `date`.
-   They match → the thread has not grown, count it `unchanged` and **do not call `slack_read_thread` at all**.
+   the growth check is free: take the **latest** of the parent's `latest:` time and the ts of every fragment
+   listed in the footer `fragments` segment, convert it to UTC, and compare it against the record's `date`.
+   They match → nothing has grown, count it `unchanged` and **do not call `slack_read_thread` at all**. A record
+   with folded fragments must use this max: comparing against the parent's `latest:` alone never matches when the
+   last folded message came after the thread's last reply, so the record falls through to a thread read on every
+   run. A record keyed on a fragment that is not the thread parent cannot be checked this way, and a thread read
+   from that fragment can look like the thread shrank. Report it as `KEYED ON FRAGMENT` with its `_id` instead of
+   rebuilding it, so the user can re-key it under § 2's fragment-keying rule.
    This works precisely because § 4's own rule puts `date` on the last message. Spend the thread read only on
    records whose timestamps disagree, whose parent is not in the pulled window (`--since` narrowed the pull, or
    the channel is longer than the pages you fetched), or whose thread you need the body of in order to rebuild.
@@ -426,13 +622,22 @@ create_model_record(MODEL: "Conversation", PARAMETERS: {
      alone, which can list a mention.
   2. **Never write an empty array.** A one-sided thread – a customer question nobody answered in channel, or a
      Productboard broadcast with no reply – gets only the side that spoke. Omit the other key entirely rather
-     than writing `[]`.
+     than writing `[]`. **Known read-back behavior:** Planhat returns `users: []` / `endusers: []` on read-back
+     even when the key was omitted on write, so a read-back cannot tell an omitted key from a written empty
+     array. The rule is about what you send. Do not try to verify it from the read-back.
   3. **A participant with no contact record is reported, never created.** Resolve what you can, log the record
      without them, and name the missing person and their email in the § 8 report so the user can decide.
      Creating an End User is a change to the customer's contact data, not a side effect of logging Slack.
-  4. **Read back and assert.** `endusers` fails silently on write. After each create or participant update:
-     `get_model_record(MODEL: "Conversation", OBJECT_ID: "<id>", SELECT: ["users", "endusers"])`. Empty after
-     two attempts is a reported failure, not a shrug.
+  4. **Read back and assert that the side that spoke is non-empty.** `endusers` fails silently on write. After
+     each create or participant update:
+     `get_model_record(MODEL: "Conversation", OBJECT_ID: "<id>", SELECT: ["users", "endusers"])`. Assert that
+     every side that authored messages reads back non-empty and contains the people you wrote. An empty array
+     on the side that did not speak is expected (rule 2) and is not a failure. A speaking side that is empty
+     after two attempts is a reported failure, not a shrug.
+
+- **`update_model_record` on `Conversation` returns only `{_id, type}`.** It never echoes the fields you set,
+  so it proves nothing about whether they stuck. Every update in this procedure (rebuilds, `externalId`
+  repairs, participant fixes) is followed by a separate `get_model_record` read-back of the fields it changed.
 
 - **Never edit a contact's identity fields as part of this run.** `name`, `firstName`, `lastName`, `email` and
   `position` on an `End User` are customer identity data, frequently synced from Salesforce, and a wrong or
@@ -466,7 +671,7 @@ line with no literal newlines**.
 <p><b>Slack thread – #{channel}</b><br>
 <b>Started by:</b> {name} ({org}) · {Day Mon D, YYYY, HH:MM tz}<br>
 <b>Participants:</b> {name (org), …}<br>
-<b>Window:</b> {Mon D – Mon D, YYYY} · {N} messages<br>
+<b>Window:</b> {Mon D – Mon D, YYYY} · {N} messages (parent + replies, same N as the Sync line)<br>
 <b>Topic:</b> {one or two sentences – what was actually being asked}<br>
 <b>Outcome:</b> {resolved / open / superseded, and what the answer was}</p>
 <hr>
@@ -479,8 +684,12 @@ line with no literal newlines**.
 <p><b>Follow-ups</b><br>
 <b>{Owner}</b> – {action}. <i>{Done – confirmed {date}.}</i><br></p>
 <p><i>Source: Slack #{channel} · times in {tz} · <a href="{permalink}">open thread in Slack</a><br>
-Sync: {N} messages · last message ts {ts} · logged {YYYY-MM-DD}</i></p>
+Sync: {N} messages · last message ts {ts}[ · fragments {ts}, {ts}] · logged {YYYY-MM-DD}</i></p>
 ```
+
+- `{N} messages` counts the parent plus all replies, plus any folded fragments or folded cross-author messages
+  (§ 2). `slack_read_thread` reports replies only, so add 1 for the parent. The `fragments` segment appears only
+  when the record folded extra top-level messages.
 
 - Speaker heading carries the side (`· Kpler` vs `· Productboard`) since colour is stripped.
 - Numbered or bulleted content inside a message: manual `1.` / `2.` or `•` prefixes on `<br>`-separated lines.
@@ -526,12 +735,15 @@ Two things that bite on a parallel fan-out, both confirmed on the 2026-08-27 por
   `scratchpad/ph/rows.tsv` gets clobbered mid-run by a sibling working a different channel. The symptom is a
   working file that silently gains rows belonging to another account, which is a data-corruption path straight
   into Planhat. Namespace the directory per channel, and have each agent verify its dataset against the tool
-  responses rather than trusting a file it wrote earlier.
-- **`externalId[starts with]` does not work on `Conversation`.** Every call using it returns
+  responses rather than trusting a file it wrote earlier. The harness's own `tool-results/` folder is shared as
+  well: copy a saved result into your scratch directory and identify it by its `Channel:` header, never as "the
+  newest file" (§ 1).
+- **`externalId[starts with]` does not work on `Conversation`; `[contains]` and `[does not contain]` do.** Every call using it returns
   `Failed to fetch Conversation records`; the operator itself is rejected for this field, not the value. Use
   `externalId[contains]: "<CHANNEL ID>"` instead – a Slack channel ID is unique, so the match set is identical –
   and assert in post-processing that every returned key actually starts with `slack_{channelId}_`.
-  `externalId[equal to]`, which the § 3 dedup check uses, is unaffected and works normally.
+  `externalId[equal to]`, which the § 3 dedup check uses, is unaffected and works normally. Use
+  `externalId[does not contain]: "slack_"` to find Slack Chat records with a missing or off-format key.
 
 ---
 
@@ -545,7 +757,28 @@ A table: `date · thread topic · action (created / backfilled / unchanged / ski
 - **how the channel was resolved** and what happened to the cache – one line: `channel C0AKKLJCB5E from
   custom.External_Slack_Channel_ID (cached)`, `resolved from #ext- search, cached on Acme Corp`, or
   `cache conflict, left as-is` – so a wrong pairing is visible in the run that made it rather than three runs
-  later.
+  later,
+- every `DATE MISMATCH` and `KEYED ON FRAGMENT` record (§ 3, § 4) with its `_id` and both values,
+- the duplicate-resolution batch (§ 3.1) and what was deleted on approval.
+
+### Hygiene
+
+One consolidated block at the end, not findings scattered through the report. Report-only: this procedure
+never fixes any of it (§ 5 contact-identity rule). Each item lists the record IDs involved.
+
+| Category | What to list |
+|---|---|
+| **Duplicate Companies** | Companies that share a name or a domain with the swept account (two `Acme Corp` rows, or `Acme Corp` and `Acme Corp Ratings` on one domain), with each `_id`. |
+| **Duplicate End Users** | Several `End User` records on the company for one person (same email, or same name with different emails), with each `_id`. |
+| **End Users named with an email** | Contacts whose `name` is an email address. |
+| **Productboard authors with no Planhat User** | Usually former staff. Name and email, plus how many records were logged without them on `users` because of it. |
+
+In portfolio mode (§ 0.2), combine every account's Hygiene findings into one block.
+
+### Close-out
+
+If the run surfaced any tool quirk, rule gap or duplicate, end by offering to run `/assistant-improvement`. If
+the user asked for it in the invocation, run it directly.
 
 ---
 
@@ -584,9 +817,12 @@ A table: `date · thread topic · action (created / backfilled / unchanged / ski
    somewhere the customer can. The only channel this procedure reads is the shared external one.
 11a. **A broadcast reply is already logged. Never log it twice.** "Also send to channel" makes a thread reply
    arrive in the channel read shaped exactly like a fresh standalone message. It is the quietest duplicate this
-   skill can produce, because both records read as legitimate and neither looks like a re-run artifact. Match a
-   candidate's ts against the `latest:` reply times already in hand, and read the parent thread before
-   classifying anything ambiguous – see § 2.
+   skill can produce, because both records read as legitimate and neither looks like a re-run artifact. The
+   "ts equals `latest:`" match alone is not enough: it catches a broadcast reply only when it is the last reply
+   in its thread. On one sweep it caught 1 of 17, on another 2 of 15, and an earlier run on a third account that
+   relied on it alone created 7 duplicate standalone records. Run the § 2 window test on every unthreaded
+   candidate and confirm each suspect by a `detailed` thread read and a ts match. Existing duplicates of this
+   kind go through § 3.1.
 
 11. **A cached ID that will not read is a report, not a fallback trigger.** Falling through to the `#ext-`
    search on a read failure and then caching the result is how an account silently ends up pointed at the

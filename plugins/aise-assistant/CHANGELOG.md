@@ -5,6 +5,18 @@ Format: `## [version] — YYYY-MM-DD` followed by bullet points grouped by type.
 
 ---
 
+## [2.74.0] — 2026-10-27
+
+### Added
+- **External Slack channel is the default customer follow-up.** When the Company's `custom.External_Slack_Channel_ID` is populated, `/session-debrief` step 5 (new § 5-S), `/bulk --debrief` and `email-drafter` (new § 2.5) draft the follow-up as a Slack draft in that channel instead of a Gmail draft: they read the last ~10 channel messages first for tone, repeats and unanswered questions, write Slack-length markdown, save with `slack_send_message_draft` only, and never overwrite an existing channel draft (`attached_draft_exists` is reported, with the text in chat). No external channel, or an explicit email request, keeps the Gmail flow. New ground rule in `context/project-instructions.md`. The debrief report now has a "Follow-up draft" section, and the bulk summary column is renamed "Follow-up draft (channel or Gmail)".
+- `/log-slack-threads` portfolio mode (`--mine` / `--owner <name>`): sweeps a whole book in one run with one confirmation table for new pairings, parallel per-account subagents and checkpointing. Archived `#ext-` channels are valid candidates (swept without the backfill pass). Adds a robust saved-result parser and guidance on parsing inline versus saved tool results.
+
+### Changed
+- **A Gong Call record that holds the only transcript is no longer deleted.** `ph-reconcile-gong-gcal` §4–5 and `post-session-debrief` step 3-C now state the same rule: the transcript is never copied through MCP; if the Gong Call record has a `transcript` and the session Conversation does not, the other fields merge, both records stay and the outcome is `transcript_retained_on_gong_record`. A server-side Planhat automation keyed on `externalId` is the documented path for moving the transcript later.
+- **Duplicate End Users: an existing AISE profile wins first.** New rule 0 in `context/planhat-schema.md` § Duplicate End Users, ahead of "PB_ID wins": if exactly one duplicate already has a `custom.AISE Relationship` (other than `6. Not filled`) or `custom.AISE Read`, it is the AISE contact and the other is flagged for a manual merge. Applied in `post-session-debrief` step 3b-A and `account-refresh`.
+- `/log-feedback`: customer-scoped mode, section-scoped reads of `planhat-schema.md`, name-first End User email lookup with paging, speaker-side quote attribution, and refreshed Known facts.
+- `context/planhat-schema.md`: documented `users`/`endusers` read-back behavior and the folded-fragment `Sync:` line format for Slack Chat Conversations.
+
 ## [2.73.0] — 2026-10-22
 
 ### Changed

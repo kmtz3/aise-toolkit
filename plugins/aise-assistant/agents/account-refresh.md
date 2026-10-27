@@ -128,7 +128,7 @@ Then `get_model_record` on each match for the authoritative current values befor
 
 **Refresh-specific rules on top of 3b:**
 
-- **Duplicates** – the same person on two or more End User records (same email local part across domains, or same name): pick the AISE contact per `context/planhat-schema.md` § Duplicate End Users – **`custom.PB_ID` filled wins**, then `position`, then most recent `lastTouch`. Fetch `PB_ID` per record with `get_model_record`. Enrich only the AISE contact, leave the others untouched, and report each duplicate under Gaps with both `_id`s. If an earlier run put AISE fields on the wrong record, move them per that section.
+- **Duplicates** – the same person on two or more End User records (same email local part across domains, or same name): pick the AISE contact per `context/planhat-schema.md` § Duplicate End Users – **an existing AISE profile wins first** (exactly one duplicate with a non-empty `custom.AISE Relationship` other than `6. Not filled`, or a non-empty `custom.AISE Read`, is the AISE contact even if the other has `PB_ID`), then **`custom.PB_ID` filled**, then `position`, then most recent `lastTouch`. Fetch `PB_ID` and the AISE fields per record with `get_model_record`. Enrich only the AISE contact, leave the others untouched, and report each duplicate under Gaps with both `_id`s, flagged for a manual merge. Move AISE fields only when two or more duplicates carry them, per that section.
 - **Placeholder names** (`Not provided`, an email as the name) – put the real name at the start of the read if the history establishes it. Never rename the record.
 - **No record** – report under Gaps. Never create.
 - A refresh that finds a contact's existing read still accurate writes nothing for them.
