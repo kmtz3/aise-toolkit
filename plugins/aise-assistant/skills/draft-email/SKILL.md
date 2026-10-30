@@ -34,7 +34,9 @@ If the user later says "send it", that's a separate explicit request.
 
 5. **Don't invent** — dates, commitments, scope, names. If something load-bearing is missing, flag as `[FILL IN: ...]` and call it out in the report.
 
-6. **Check for an existing draft on the thread first.** One draft per thread – if one exists, update it instead of creating a second. See § Updating an existing draft.
+6. **Sent check, then check for an existing draft.** If the user already sent this email, don't draft it (§ Sent check).
+   One draft per purpose – if a draft for the same customer purpose exists, update it instead of creating a second.
+   See § Updating an existing draft.
 
    **Otherwise save as a Gmail draft** with `create_draft` (both `body` and `htmlBody`). Return the draft ID.
    **If this is a reply, pass `replyToMessageId`** – the ID of the message being replied to. This threads the draft
@@ -47,7 +49,9 @@ If the user later says "send it", that's a separate explicit request.
    - Recipient, subject, cc (if any)
    - One-line angle (why this framing, tied to which session/thread)
    - `[FILL IN]` placeholders the user must resolve
-   - Threading caveat if replying to an existing thread
+   - Threading confirmation if replying to an existing thread
+   - Created, updated, or not drafted (already sent on <date>)
+   - Duplicate drafts found for the user to discard
    - Full body inline
    - Assumptions flagged (e.g. which "Richard" this is)
 
@@ -67,30 +71,41 @@ draft that the user has to fix by hand.
   and not the hash from a Gmail web URL.
 - Pass `replyToMessageId: "<message id>"`, plus `subject` as `Re: <original subject>` (or `RE:` if the thread already
   uses that form), and set `to` / `cc` to match the thread.
-- Confirm the response's `threadId` equals the original thread's ID. If it doesn't, the draft is detached – delete it
-  and redo.
+- Confirm the response's `threadId` equals the original thread's ID. If it doesn't, the draft is detached –
+  `delete_draft` the draft you just created (by draft ID) and redo.
+
+## Sent check
+
+Before drafting: `search_threads` with `in:sent to:@<customer-domain> after:<session or trigger date>`. If the user
+already sent a message covering this session or topic, don't draft – report `already sent on <date>`. For a reply,
+`get_thread` and stop if the newest message is from the user. Full rules in `agents/email-drafter.md` § 4.4.
 
 ## Updating an existing draft
 
-**One draft per thread.** Before creating, `list_drafts` (`view: "DRAFT_VIEW_FULL"`, `query` narrowed to the
-recipient) and look for a draft whose `thread_id` matches the thread you're replying on – or, for a new standalone
-email, same recipient and a subject naming the customer or session. If one exists, update it. Don't ask, don't skip,
-don't create a second. Full rules in `agents/email-drafter.md` § 4.5.
+**One draft per purpose.** The purpose key is customer + session (Planhat Conversation/Task ID or session date) for
+follow-ups, customer + thread for replies, customer + topic for anything else. Before creating, check the draft ID
+recorded on the session's Planhat record, then `list_drafts` (`view: "DRAFT_VIEW_FULL"`, `query: "to:@<customer-domain>"`
+– the domain, not one address) and treat any draft for the same customer that references the same session date,
+session title, Conversation ID or topic as the existing draft. Never match standalone drafts on `threadId` – it
+changes on every update. If one exists, update it. Don't ask, don't skip, don't create a second. Full rules in
+`agents/email-drafter.md` § 4.5.
 
 `get_draft` it first and carry over anything the user added by hand – never silently drop a user edit.
 
-**Standalone draft (not a reply):** `update_draft` in place with its `draftId`. Re-send any attachments – they are
-dropped otherwise.
+**Update in place – standalone and replies alike.** `update_draft` with the existing `draftId`, passing `subject`,
+`to`, `cc`, `body` and `htmlBody` together and re-sending any attachments (they are dropped otherwise). For a reply,
+confirm the response `threadId` still equals the original thread (verified 2026-10-29: it does). Only if it doesn't:
+`create_draft` with `replyToMessageId`, `delete_draft` the old draft ID, then `list_drafts` to confirm one remains.
+Key on `draftId`, never `messageId` – message IDs change on every update.
 
-**Threaded reply: never call `update_draft`.** It takes no `replyToMessageId`, so updating a reply silently detaches
-it from its thread and moves it to a new one. The user's edit appears to vanish – the draft is still there, just no
-longer on the conversation they were looking at. Replace it instead:
+**Record the draft ID** on the session's Planhat record afterwards (`custom.Follow-up Draft ID`, or the marker line in
+`custom.Prep Notes` until that field exists) – `agents/email-drafter.md` § 5.
 
-1. `create_draft` with the same `replyToMessageId`, `to`, `cc` and subject, carrying the revised body. Confirm the
-   `threadId` matches.
-2. `delete_draft` the old draft by its **draft ID**. Draft IDs are stable – don't `trash_message` a message ID from an
-   earlier call, those shift.
-3. Verify exactly one draft remains on the thread.
+**Never retry `create_draft` blindly.** On an error or timeout, `list_drafts` for the purpose key first and use any
+draft that now exists.
+
+**Deleting.** Only `delete_draft` a draft this run created or is replacing. `trash_message` and `label_message` are not
+permitted on this Gmail connection. Other duplicates are listed for the user to discard.
 
 
 ## Choosing the booking link

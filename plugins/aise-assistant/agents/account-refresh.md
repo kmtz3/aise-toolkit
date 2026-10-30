@@ -1,6 +1,6 @@
 ---
 name: account-refresh
-description: Use when the user wants to catch up on an account that has gone quiet and bring its Planhat record current in one pass. Reads the full program history (Planhat, Gmail, Gong, internal Slack, Zendesk tickets via Planhat Issues), refreshes the four account-level Company fields (Architecture Details, Organization Details, Engagement Plan, Next Step), enriches the AISE fields on the customer's End User records, drafts a customer check-in email to Gmail Drafts, and drafts an internal Slack update. Never sends. Invoked by /customer-refresh.
+description: Use when the user wants to catch up on an account that has gone quiet and bring its Planhat record current in one pass. Reads the full program history (Planhat, Gmail, Gong, internal Slack, Zendesk tickets via Planhat Issues), refreshes the five account-level Company fields (Architecture Details, Organization Details, Engagement Plan, Customer Toolstack, Next Step), enriches the AISE fields on the customer's End User records, drafts a customer check-in email to Gmail Drafts, and drafts an internal Slack update. Never sends. Invoked by /customer-refresh.
 tools: Read, mcp__claude_ai_Planhat__search_records, mcp__claude_ai_Planhat__list_model_records, mcp__claude_ai_Planhat__get_model_record, mcp__claude_ai_Planhat__update_model_record, mcp__claude_ai_Planhat__get_model_action_parameters, mcp__claude_ai_Gmail__search_threads, mcp__claude_ai_Gmail__get_thread, mcp__claude_ai_Gmail__list_drafts, mcp__claude_ai_Gmail__create_draft, mcp__claude_ai_Gmail__update_draft, mcp__claude_ai_Gmail__get_draft, mcp__claude_ai_Gmail__delete_draft, mcp__claude_ai_Gong__ask_account, mcp__Slack__slack_read_channel, mcp__Slack__slack_send_message_draft, mcp__claude_ai_Google_Drive__search_files, mcp__claude_ai_Google_Drive__read_file_content
 ---
 
@@ -14,6 +14,7 @@ This procedure **composes** existing ones rather than restating them. Where a st
 - Contact enrichment – `agents/post-session-debrief.md` step 3b (B–G)
 - Email drafting – `agents/email-drafter.md` + `context/communication-style-guide.md`
 - Field formats – `context/planhat-schema.md` § Company → AISE-writable and § Rich Text Field Formatting
+- Customer Toolstack – `context/planhat-schema.md` § Customer Toolstack
 
 ---
 
@@ -43,7 +44,7 @@ Resolve per `context/planhat-schema.md` § Company lookup. Then one read:
 get_model_record(MODEL: "Company", OBJECT_ID: "<id>", SELECT: [
   "phase", "custom.ARR – SF", "renewalDate", "custom.AISE Journey Status",
   "custom.Next Step", "custom.Next Step Owner", "custom.Engagement Plan",
-  "custom.Architecture Details", "custom.Organization Details",
+  "custom.Architecture Details", "custom.Organization Details", "custom.Customer Toolstack",
   "custom.Slack ID", "custom.External_Slack_Channel_ID",
   "custom.Spark Visibility (Account)", "custom.Spark Enabled – SNF", "custom.Spark Engaged – SNF",
   "custom.Spark Exemption – SF", "custom.Spark Exemption Context",
@@ -55,7 +56,7 @@ get_model_record(MODEL: "Company", OBJECT_ID: "<id>", SELECT: [
 ])
 ```
 
-Keep the current values of the four target fields verbatim – Step 4 diffs against them.
+Keep the current values of the five target fields verbatim – Step 4 diffs against them.
 
 ### Step 2 – Sweep the full history
 
@@ -81,15 +82,18 @@ From the sweep, establish – citing a source for each:
 5. **Stakeholders** – who actually does what. **Verify every title against End User `position` before writing it anywhere.** Session notes and Slack posts get titles wrong; Planhat `position` is Salesforce-synced and is the tiebreaker. (2026-10-02: a "CPO" in internal notes was Head of Engineering per `position`.)
 6. **Spark state** – enabled / engaged, any AI asks. Read `custom.Spark Exemption Context` first (newest dated entry is current state); see `context/planhat-schema.md` § Spark fields — Company.
 7. **Risks** – momentum gap since last session, credit sensitivity, escalation pattern, single-threaded champion, time zone.
-8. **Staleness in existing fields.** Compare each current field value against the sweep. A Next Step that still says to send something already sent, or an Engagement Plan whose "next session" was delivered months ago, is stale and must be called out by name.
+8. **Tools** – every tool the customer runs, with what it's used for, the team, whether it's connected to Productboard, and the source. Tickets and email signatures count; industry guesses don't.
+9. **Staleness in existing fields.** Compare each current field value against the sweep. A Next Step that still says to send something already sent, or an Engagement Plan whose "next session" was delivered months ago, is stale and must be called out by name.
 
-### Step 4 – Refresh the four Company fields
+### Step 4 – Refresh the five Company fields
 
-All four are rich text. Single-line HTML in the `ph-editor` vocabulary only – § Rich Text Field Formatting. No `<h1>`–`<h6>`, lists with the `ph-editor__*` classes and an inner `<p>`, no literal newlines. Apply the user's voice rules to sentence content (en dashes, never em dashes). End the three reference fields with `<p></p><p><em>Last updated {D Mon YYYY} – {first name}</em></p>`.
+All five are rich text. Single-line HTML in the `ph-editor` vocabulary only – § Rich Text Field Formatting. No `<h1>`–`<h6>`, lists with the `ph-editor__*` classes and an inner `<p>`, no literal newlines. Apply the user's voice rules to sentence content (en dashes, never em dashes). End the three reference fields with `<p></p><p><em>Last updated {D Mon YYYY} – {first name}</em></p>`.
 
-**`custom.Architecture Details`** – how the customer's Productboard is built. Sections, skip any with nothing real: Workspaces (incl. secondary workspaces from Asset records) · Plan and seats · Product hierarchy · Teams in the workspace · Status workflow · Key boards · Integrations (one bullet per tool: what's connected, how, what's not configured) · Portal · Data hygiene.
+**`custom.Architecture Details`** – how the customer's Productboard is built. Sections, skip any with nothing real: Workspaces (incl. secondary workspaces from Asset records) · Plan and seats · Product hierarchy · Teams in the workspace · Status workflow · Key boards · Integrations (one bullet per configured or planned Productboard integration: what's connected, how, what's not configured – the full tool landscape goes in Customer Toolstack, not here) · Portal · Data hygiene.
 
 **`custom.Organization Details`** – who they are and who we deal with. Sections: Company (what they bring to market, why they bought) · Product org · Champions and stakeholders (name – title from `position` – what they own) · Productboard team (current and previous) · Commercial · Growth signals. Unconfirmed attributions are written as unconfirmed.
+
+**`custom.Customer Toolstack`** – what the customer runs, per `context/planhat-schema.md` § Customer Toolstack: five fixed headings, one line per tool, merged line by line against the current value. On the first refresh after 2026-10-30, also move any tool that only appears in Architecture Details' Integrations section into Toolstack (the Architecture Details bullet stays if it describes a configured integration). Its closing line is the schema's `Last updated` line, not the footer below.
 
 **`custom.Engagement Plan`** – program plan. Sections: Goals · Workstreams (with status) · Package (used / remaining, ledger source) · Sessions delivered · Proposed remaining sessions · Open items · Risks. If the field was written by `engagement-planner` (`/customer-plan --full`), **refresh status in place** – update workstream status, sessions delivered, open items, risks – and do not restructure goals or phases without asking.
 
@@ -104,7 +108,7 @@ All four are rich text. Single-line HTML in the `ph-editor` vocabulary only – 
 | Populated and still accurate | No write. Report as unchanged. A no-op write moves `updatedAt` and makes the account look busier than it is. |
 | `--dry-run` | Never write. Show the full proposed HTML-rendered content in chat as readable text. |
 
-Write all changed fields in **one** `update_model_record` on the Company, then read back all four.
+Write all changed fields in **one** `update_model_record` on the Company, then read back all five. `custom.Customer Toolstack` is a new field and may be absent from `get_model_action_parameters` – write it by ID and verify with `get_model_record` + explicit `SELECT`, never by filtering (§ The partial state).
 
 ### Step 5 – Enrich the customer's End User records
 
@@ -143,7 +147,7 @@ Shape – Greeting → why now (1–2 sentences, tie to the last session) → **
 - **No invented commitments.** Anything the draft promises PB-side that the history does not already commit to is flagged to the user in the report.
 - Do not reopen settled commercial points (ledger disputes, credits) unless the user asks.
 - Plain-text `body` with no markdown, plus `htmlBody` with `<strong>` labels and `<ul>` lists – § Gmail copy-paste safety in the style guide.
-- **One draft per thread.** If a check-in draft to this contact already exists (or a draft sits on the thread being replied to), update it per `agents/email-drafter.md` § 4.5 instead of creating a second.
+- **One draft per purpose.** Purpose key: customer + `check-in`. Run the Sent check first (`agents/email-drafter.md` § 4.4: `in:sent to:@<customer-domain>` since the last session) and skip the draft if a check-in already went out. Then `list_drafts` with `to:@<customer-domain>`; if a check-in draft to anyone at the customer already exists (or a draft sits on the thread being replied to), `update_draft` it in place per § 4.5 instead of creating a second. Older duplicates are listed for the user to discard, never deleted.
 - Drafts only (`create_draft` / `update_draft`). Never send.
 
 ### Step 7 – Draft the internal Slack update (skip on `--no-slack`)

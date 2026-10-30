@@ -261,7 +261,7 @@ Additive union with what is already there: add what this session evidences, neve
 
 **D. `custom.AISE Read` — rich text, one current assessment, rewritten in place.**
 
-The field holds what is true about this person now, not a log. Regenerate the paragraph from everything known, carrying forward judgment in the existing text that this session has not overturned and dropping what it has. Two to five sentences.
+The field holds what is true about this person now, not a log. **If the field contains a paragraph starting `Sales read (` (written by `/customer-handover`), keep that paragraph byte-for-byte and rewrite only the AISE's own paragraph(s) around it** – it is the deal team's read, owned by the handover. Regenerate the paragraph from everything known, carrying forward judgment in the existing text that this session has not overturned and dropping what it has. Two to five sentences.
 
 What earns a place: what they actually decide or own, how they behave in a room (delegates, goes quiet, brings the hard question), what they need next from us, and what breaks if they leave. What does not: their job title (`position` and `custom.Job Title – SNF` already hold it), a retelling of the session (that is the Conversation `description`), scorecard language, and anything about their health, personal life, or performance. Record uncertainty as uncertainty — "name attribution from the 3 Sep transcript is weak" is worth more than a confident wrong name.
 
@@ -364,7 +364,7 @@ Use `context/planhat-schema.md` § Task priority & description defaults → Acco
 
 **Route first.** Check `custom.External_Slack_Channel_ID` on the Company record read in step 1.
 
-- **Populated** → the follow-up is a **Slack draft in that channel**. Do NOT create a Gmail draft. Follow § 5-S below.
+- **Populated** → the follow-up is a **Slack draft in that channel**. Do NOT create a Gmail draft, and delete any superseded Gmail draft for this session (see **One draft per purpose** below). Follow § 5-S below.
 - **Empty** → the follow-up is a **Gmail draft**. Read `agents/email-drafter.md` and execute its procedure inline with these inputs:
   - Customer and session context.
   - The structured output from step 2 (decisions, actions, next steps).
@@ -399,7 +399,15 @@ Use `context/planhat-schema.md` § Task priority & description defaults → Acco
 
 The customer-facing channel follow-up in this step is separate from the mandatory internal Slack debrief Task in step 6 below – drafting one never replaces or thins out the other.
 
-**One draft per thread (Gmail route).** If a follow-up draft for this session already exists (e.g. a re-run of the debrief), update it per `agents/email-drafter.md` § 4.5 — never create a second one. Replies are replaced (`create_draft` with `replyToMessageId`, then `delete_draft` the old draft ID), never `update_draft`-ed. This applies in bulk runs too.
+**One draft per purpose (both routes).** The purpose key is this session: customer + Conversation/Task `_id` + session date. Before drafting, on either route:
+
+1. **Sent check** – `search_threads` with `in:sent to:@<customer-domain> after:<session date>`. If the user already sent a recap for this session (as a new email or on another thread), do not draft; report `follow-up already sent on <date>` (`agents/email-drafter.md` § 4.4).
+2. **Existing draft** – read the draft ID recorded on the session record (`custom.Follow-up Draft ID`, or the `Follow-up draft ID:` marker in `custom.Prep Notes`), then fall back to `list_drafts` with `to:@<customer-domain>` matched on session date / title / Conversation ID (`agents/email-drafter.md` § 4.5).
+   - **Gmail route** – if found, `update_draft` it in place (replies included) and confirm the `threadId`; never create a second.
+   - **Slack route** – if a Gmail draft for this session exists, it is the assistant's own superseded draft: `delete_draft` it and report it (keep it and list it if it carries hand edits). Never leave both.
+3. **Record the draft ID** on the session record after a Gmail create/update, per `agents/email-drafter.md` § 5 § Record the draft ID.
+
+This applies in bulk runs too. Only `delete_draft` a draft this run created or is replacing; any other duplicate is listed for the user to discard.
 
 ### 6. Draft an internal Slack debrief message and log it as a Task
 
@@ -558,7 +566,8 @@ This is the last write of every run. `custom.Next Step` is the field the rest of
    ```
    <p><strong>27 Aug:</strong> Architecting session delivered — data model and rollout sequence agreed.</p><ul class="ph-editor__bullet-list"><li class="ph-editor__list-item"><p><strong>Waiting on:</strong> [Customer contact] to confirm the pilot cohort by [date].</p></li><li class="ph-editor__list-item"><p><strong>Then:</strong> PB schedules the enablement session.</p></li></ul>
    ```
-5. **Write and verify.** `update_model_record(MODEL:"Company", OBJECT_ID:"<company _id>", PARAMETERS:{"custom.Next Step":"<html>"})`. Confirm the write per `agents/inbox-triage.md` step 5.4 — `SELECT` can lag on this field; fall back to `list_model_records(FILTER:{"custom.Next Step[contains]":"<distinctive phrase>"})` before reporting it as done.
+4b. **Customer Toolstack – only on new tool evidence.** If the transcript or notes name a tool the customer runs, or change what a listed tool is used for, which team uses it, its Productboard connection (for example an integration set up in this session) or its status (being replaced, retired), read `custom.Customer Toolstack` and merge per `context/planhat-schema.md` § Customer Toolstack – add or rewrite only the affected lines, cite `[{session code} {session name}, {D Mon YYYY}]`, refresh the `Last updated` line. A tool merely shown on screen or mentioned in passing is not evidence. No new tool evidence → no Toolstack write, and the report says "Toolstack: unchanged". Never regenerate the field from this session alone.
+5. **Write and verify.** `update_model_record(MODEL:"Company", OBJECT_ID:"<company _id>", PARAMETERS:{"custom.Next Step":"<html>"})` – plus `"custom.Customer Toolstack"` in the same call when 4b produced a change. Verify the Toolstack with `get_model_record` + explicit `SELECT` (new field, may be absent from metadata – § The partial state). Confirm the write per `agents/inbox-triage.md` step 5.4 — `SELECT` can lag on this field; fall back to `list_model_records(FILTER:{"custom.Next Step[contains]":"<distinctive phrase>"})` before reporting it as done.
 
 ### 11. Set `custom.Debrief Status` on the Conversation
 
@@ -595,6 +604,7 @@ After all steps complete, produce a single consolidated report:
 - KDD Attachment: [Drive URL] (A-sessions only, or "N/A")
 - Facilitation guide: [Drive URL, and where it now lives (Conversation Prep Notes block), or "none"]
 - Next Step: [refreshed — one-line summary of the new value, or "unchanged — no prior value and nothing new to state"]
+- Toolstack: [tools added / updated with heading, or "unchanged"]
 - Debrief Status: [`complete` written to Conversation _id, or `partial - transcript pending` (written in step 2b, or in step 11 for an `ask_account`-only run), or "not set — run aborted before step 11"]
 
 **Follow-up draft:**

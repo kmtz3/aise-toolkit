@@ -1,5 +1,10 @@
 # Changelog — aise-leadership
 
+## [1.16.6] — 2026-10-30
+
+### Changed
+- Synced `context/` from aise-assistant: `planhat-schema.md` documents the Sales Handover `SH_*` fields as written by `/customer-handover`, the new Company field `custom.Customer Toolstack`, the `sales_handover_` externalId convention and the `Sales read` paragraph in End User `custom.AISE Read`; `project-instructions.md` adds the "one draft per purpose – always replace, never stack" ground rule with the sent check.
+
 ## [1.16.5] — 2026-10-27
 
 ### Changed

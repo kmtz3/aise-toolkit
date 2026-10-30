@@ -5,6 +5,24 @@ Format: `## [version] — YYYY-MM-DD` followed by bullet points grouped by type.
 
 ---
 
+## [2.75.0] — 2026-10-30
+
+### Added
+- **`/customer-handover` + `agents/sales-handover.md` – POPIT sales handover written into Planhat in two steps around a sales vouch.** Runs at the end of the sales cycle, before AISE kickoff. Based on the POPIT Handover Builder skill, with Planhat as the destination instead of a document.
+  - **Full run:** pulls the deal's pre-sales context (Salesforce, Gong, Gmail, Slack, Drive, Planhat, Productboard workspace), synthesizes the 27 POPIT fields with a citation on every populated field and `[Not captured: …]` on every gap, and writes a `Sales Handover` Conversation (Discovery Quadrant in the four `custom.SH_*` fields, the rest in `description`, `custom.Handover Status` = `In progress`) plus `custom.Engagement Role`, `custom.AISE Relationship` (blank only) and a `Sales read (…, pending validation)` paragraph on existing End Users. Nothing is written on the Company.
+  - **Vouch:** the AE corrects the Conversation in Planhat and sets `Validated – Ready`. The procedure never sets it, and a full re-run stops at a validated record unless `--force`.
+  - **`--validated`:** no new research. Builds the Company `SH_*` fields, Organization Details, Engagement Plan (goals seed – phases and sessions left to `/customer-plan --full`), Architecture Details (planned integration setup), Customer Toolstack and one `Objective` per customer-stated goal from the validated Conversation alone, merges against existing content, skips unchanged fields, and stamps End User reads validated. Never writes the Conversation. Safe to re-run.
+- **New Company field `custom.Customer Toolstack`** – the customer's own tool landscape under five fixed headings (CRM, Delivery, Automation, Feedback collection, Other), one line per tool with use, team, Productboard connection, status and a dated source. One shared write procedure in `context/planhat-schema.md` § Customer Toolstack (merge per line, never delete a tool, never infer one). Written by `/customer-handover --validated`, by `/session-debrief` step 10.4b (only when the session names or changes a tool – same Company write as Next Step) and by `/customer-refresh` (now five Company fields; the first refresh moves tools out of Architecture Details). Architecture Details narrows to how Productboard is wired into those tools.
+- `context/planhat-schema.md`: `sales_handover_` `externalId` convention for Sales Handover Conversations and Objectives. Objectives are now written by `/customer-handover --validated`.
+- `context/planhat-schema.md` refreshed (2026-10-30): Company and Conversation `SH_*` fields now documented as written by `/customer-handover` (Conversation in the full run, Company only via `--validated`) instead of "auto-populated, not written"; `custom.Customer Toolstack` confirmed filterable and backfilled on 22 accounts from Architecture Details; rich-text rule list extended to the account reference fields; End User `custom.AISE Read` documents the handover's `Sales read` paragraph.
+- `post-session-debrief` step 3b-D (and therefore `/customer-refresh`) keeps a `Sales read (` paragraph in `custom.AISE Read` byte-for-byte and rewrites only the AISE's own paragraphs.
+
+### Changed
+- **Gmail drafts: one live draft per purpose (customer + session, reply thread, or topic), not per thread.** `email-drafter` § 4.5 finds an existing draft by a recorded draft ID on the session's Planhat record, then by a domain-wide `list_drafts` lookup; duplicates are listed for the user, not deleted. The draft ID is recorded on the session record (`custom.Follow-up Draft ID`, or a marker line in `custom.Prep Notes` until that field exists).
+- **New sent check (§ 4.4):** never draft a follow-up or reply the user has already sent.
+- Threaded replies are now updated in place with `update_draft` (verified to keep the thread); create-and-delete is a fallback only. `create_draft` is never retried blindly, and sessions for the same customer are never drafted in parallel. `delete_draft` is the only delete tool (`trash_message` is not permitted on this connection).
+- Same rules applied in `inbox-triage`, `post-session-debrief`, `bulk-debrief`, `account-refresh` and `/draft-email`.
+
 ## [2.74.0] — 2026-10-27
 
 ### Added
@@ -21,7 +39,7 @@ Format: `## [version] — YYYY-MM-DD` followed by bullet points grouped by type.
 
 ### Changed
 - **One Gmail draft per thread – update, never duplicate.** `agents/email-drafter.md` § 4.5 replaces the subject/recipient dedup check and its "skip, replace, or create new?" prompt (singleton) / skip default (bulk). Existing drafts are now matched on `thread_id` for replies (recipient + customer/session subject for standalone emails) and updated by default in every run. The agent `get_draft`s the existing draft first and carries over any hand-made user edits; multiple drafts on one thread are collapsed into one.
-- Update method: standalone drafts are `update_draft`-ed in place (re-sending attachments); threaded replies are replaced – `create_draft` with `replyToMessageId`, then `delete_draft` the old draft ID (draft IDs are stable, unlike message IDs), then confirm one draft remains. Never `update_draft` a reply.
+- Update method: standalone drafts are `update_draft`-ed in place (re-sending attachments); threaded replies are replaced – `create_draft` with `replyToMessageId`, then `delete_draft` the old draft ID (draft IDs are stable, unlike message IDs), then confirm one draft remains. Never `update_draft` a reply. **Corrected 2026-10-29:** this was wrong – `update_draft` on a `replyToMessageId` draft keeps its `threadId` and draft ID (tested). Replies are now updated in place too; create-then-delete is only the fallback when the `threadId` does not match.
 - `skills/draft-email/SKILL.md`, `agents/inbox-triage.md`, `agents/post-session-debrief.md`, `agents/account-refresh.md`, `agents/bulk-debrief.md` follow the same rule. `bulk-debrief` no longer skips an existing follow-up draft – it updates it and logs "draft updated".
 - Added `update_draft`, `get_draft` and `delete_draft` to the tool lists of all five drafting agents.
 - `context/planhat-schema.md`: retired the Notion↔Planhat mapping framing – now a Planhat-only schema and traversal guide (model overview, Company, customer name aliases, Conversation session types, Task lookup and status values, EndUser). Notion field mappings, migration gate and backfill strategy removed.
