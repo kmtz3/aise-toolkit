@@ -1,5 +1,10 @@
 # Changelog — aise-leadership
 
+## [1.16.9] — 2026-11-25
+
+### Changed
+- Synced `context/` from aise-assistant 2.79.0: transcript lookup step 0 reads the session Conversation's own `transcript` first, the transcript is moved server side by Planhat's Gong transcript → session automation, and `planhat-schema.md` documents that automation (§ Gong transcript server copy).
+
 ## [1.16.8] — 2026-11-25
 
 ### Changed

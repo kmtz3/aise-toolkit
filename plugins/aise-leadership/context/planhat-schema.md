@@ -221,6 +221,15 @@ The validator also parses `<<...>>` anywhere in a Function's code text, **includ
 comments and regex literals**, and a step cannot reference itself. A commented-out
 example of the step's own output is a save-blocking error.
 
+### Gong transcript server copy — Planhat automation, not the MCP
+
+Gong's sync creates a standalone `👾 Gong Call` Conversation per recorded call (`transcript`, Gong summary in `description`, `custom.Call Recording`, `externalId` = `{gongCallId}-{salesforceAccountId}`). The session itself is the calendar-synced Conversation. A model never copies the transcript between them – retyping 25k–50k characters through a tool argument can silently change it – so the copy is done by two Planhat Custom Automations, **"Gong transcript → session (session side)"** and **"(Gong side)"**:
+
+- They match the pair on the same Company: the Gong call id inside the session's `custom.Call Recording` first, otherwise the call start ±45 min (from the coupled Task's `startTime`) plus an attendee overlap, exactly one hit.
+- They copy `transcript`, fill an empty `custom.Call Recording`, append the Gong summary under `<hr><p><strong>Gong Call Summary</strong></p>` once, read the transcript back, then delete the Gong Call record through `DELETE https://api.planhat.com/conversations/<id>` (automations have no Delete step; `archived` is read-only).
+- Checkbox `custom.Copy Gong Transcript` on Conversation asks for a copy of one record; the automation clears it. Write it only when `get_model_action_parameters` lists it.
+- Plugin outcomes: `merged_server_copy` (copy read back, Gong record deleted) and `awaiting_planhat_copy` (Gong record kept until the copy lands – expected, not an error). Full build steps live with the automation's design notes; status as of 2026-11-25: designed, not yet built.
+
 ---
 
 ## Planhat Record URLs
