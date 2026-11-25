@@ -5,6 +5,15 @@ Format: `## [version] — YYYY-MM-DD` followed by bullet points grouped by type.
 
 ---
 
+## [2.77.0] — 2026-11-25
+
+### Added
+- **Live meeting notes as a transcript source (lookup step 1c).** Gong misses customer-organized Teams and Zoom calls and in-person meetings, and the facilitator then captures the call in whatever note-taker is at hand. `context/project-instructions.md` § Transcript lookup order now checks Claude Meetings, then Notion AI meeting notes, then Zoom My Notes whenever steps 0 and 1b found no verbatim transcript, matching on calendar event id, title or time slot. A matched note is a primary source: the debrief is `complete`, not `partial`, and the Source line names the tool and links the note. Applied in `post-session-debrief`, `session-summarizer`, `/session-summary` and the `bulk-debrief` partial-session re-check; the agents' tool lists carry the Meetings, Notion and Zoom read tools in both prefix forms.
+- Recommended capture habit for calls Gong won't record: start a Notion AI meeting note (or Claude Meetings, once that is the default) at the beginning of the call.
+
+### Changed
+- **Follow-up date wording follows the day the draft is written.** `post-session-debrief` step 5 now says "today" for a same-day draft, the weekday within 7 days and the full date when older, instead of never using relative words. The draft ID is always recorded so a later `/draft-email`, `/inbox-triage` or draft-refresh pass rewrites the wording for the actual send day and adds a short apology when the follow-up is late.
+
 ## [2.75.0] — 2026-10-30
 
 ### Added

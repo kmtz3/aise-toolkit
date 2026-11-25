@@ -1,5 +1,10 @@
 # Changelog — aise-leadership
 
+## [1.16.7] — 2026-11-25
+
+### Changed
+- Synced `context/project-instructions.md` from aise-assistant 2.77.0: transcript lookup step 1c checks live meeting notes in Claude Meetings, Notion AI meeting notes and Zoom My Notes when Gong has no transcript, and the context-source table lists those tools.
+
 ## [1.16.6] — 2026-10-30
 
 ### Changed
