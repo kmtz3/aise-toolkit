@@ -1,5 +1,10 @@
 # Changelog — aise-leadership
 
+## [1.16.10] — 2026-11-25
+
+### Changed
+- Synced `context/planhat-schema.md` from aise-assistant 2.79.1: the Gong transcript server copy matches on the Google Calendar event ID (`custom.GCalEventID`), parks the transcript on the calendar Task until it is marked done, and uses `custom.ReprocessGong` on the Gong Call record as the request flag.
+
 ## [1.16.9] — 2026-11-25
 
 ### Changed

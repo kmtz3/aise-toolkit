@@ -5,10 +5,17 @@ Format: `## [version] — YYYY-MM-DD` followed by bullet points grouped by type.
 
 ---
 
+## [2.79.1] — 2026-11-25
+
+### Changed
+- **Gong transcript copy is now keyed on the Google Calendar event ID** (Planhat automation design v3, `context/planhat-schema.md` § Gong transcript server copy). The request flag is `custom.ReprocessGong`, ticked on the **Gong Call record** (it was `custom.Copy Gong Transcript` on the session in 2.79.0), and only when `get_model_action_parameters` lists it. The automation stores the event ID in `custom.GCalEventID` and parks the transcript on the calendar Task (`custom.GongTranscript` and siblings) until the Task is marked done.
+
+---
+
 ## [2.79.0] — 2026-11-25
 
 ### Changed
-- **Gong transcripts move onto the session record server side, and the Gong Call duplicate goes away once they have.** Recent debriefs reported a "transcript copy" problem on every Gong-recorded call because the reconcile rule kept any Gong Call record that held the only transcript (`transcript_retained_on_gong_record`), and nothing ever copied it – a model must not retype 25k–50k characters. The copy now belongs to a Planhat automation ("Gong transcript → session", `context/planhat-schema.md` § Gong transcript server copy). `post-session-debrief` step 3-C and `ph-reconcile-gong-gcal` §4–5 ask for the copy (`custom.Copy Gong Transcript: true`, only when that field exists), re-check the session's `transcript`, and delete the Gong Call record once it reads back (`merged_server_copy`, also when the automation already deleted it). Until then the pair is `awaiting_planhat_copy` – reported as one count line, not as a failure.
+- **Gong transcripts move onto the session record server side, and the Gong Call duplicate goes away once they have.** Recent debriefs reported a "transcript copy" problem on every Gong-recorded call because the reconcile rule kept any Gong Call record that held the only transcript (`transcript_retained_on_gong_record`), and nothing ever copied it – a model must not retype 25k–50k characters. The copy now belongs to a Planhat automation ("Gong transcript → session", `context/planhat-schema.md` § Gong transcript server copy). `post-session-debrief` step 3-C and `ph-reconcile-gong-gcal` §4–5 ask for the copy (see 2.79.1 for the field), re-check the session's `transcript`, and delete the Gong Call record once it reads back (`merged_server_copy`, also when the automation already deleted it). Until then the pair is `awaiting_planhat_copy` – reported as one count line, not as a failure.
 - **Transcript lookup step 0 reads the session Conversation's own `transcript` first**, since that is where the transcript lives once the automation has run and the Gong Call record is gone (`context/project-instructions.md` §3).
 - **Session `description` rewrites keep an existing `Gong Call Summary` block** at the end (`post-session-debrief` step 3-B), so a summary the automation appended isn't lost when the debrief writes its notes.
 
