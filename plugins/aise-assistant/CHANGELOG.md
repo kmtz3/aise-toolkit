@@ -11,6 +11,7 @@ Format: `## [version] — YYYY-MM-DD` followed by bullet points grouped by type.
 - **`/log-feedback`: `sourceUrl` must be a link a PM can open.** With no Gong recording, the source link is now the Planhat record that holds the source (an email's `email` Conversation on the Company, found by subject, or a Slack/ticket Conversation), or an internal Slack permalink. Never a Gmail or other personal-mailbox link. Added to the Step 4 checklist and as critical rule 18.
 - **`/log-feedback`: ARR is shown in USD** – the ARR Impact section now reads `$21,200 (USD)`.
 - **`/log-feedback`: job title for quote attribution.** When the End User has no `position`, the role comes from the person's own email signature or self-introduction in the session transcript, its source is named in the preview, and the missing `position` is flagged (new Step 4.5a.5). Attribution is now `First Last, Role, Company`.
+- **`/log-feedback`: feedback always lands on the Salesforce-linked company.** `companyExternalId` (Company `sourceId`) is the company key and `companyDomain` is no longer sent, since Productboard duplicates created by domain carry no ARR or custom fields. A `company.mismatch` error now triggers a re-submit by Salesforce ID only and a flag to merge the duplicate company in the Productboard UI (Step 7, preview and summary, critical rules 5 and 16).
 - **`/log-feedback`: no em dashes.** Every em dash in the skill is replaced with a spaced en dash, and the note format forbids them (critical rule 17).
 
 ## [2.75.0] — 2026-10-30

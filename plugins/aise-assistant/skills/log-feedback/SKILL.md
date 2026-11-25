@@ -91,7 +91,7 @@ For each candidate (a Task in Mode A, or a distilled pain point in Mode B), pull
    - Business context
    - Workaround description
    - Desired outcome language
-4. Pull ARR, renewal date, and Salesforce Account ID directly from the Planhat Company record: `get_model_record(MODEL: "Company", OBJECT_ID: "<companyId>", SELECT: ["name", "custom.ARR – SF", "renewalDate", "sourceId", "domains", "website"])` – `domains`/`website` feed the contact pick (4.5a) and `companyDomain` (Step 7). Reconstruct the Salesforce Account URL from `sourceId`: `https://productboard.lightning.force.com/lightning/r/Account/<sourceId>/view`.
+4. Pull ARR, renewal date, and Salesforce Account ID directly from the Planhat Company record: `get_model_record(MODEL: "Company", OBJECT_ID: "<companyId>", SELECT: ["name", "custom.ARR – SF", "renewalDate", "sourceId", "domains", "website"])` – `domains`/`website` feed the contact pick (4.5a); `sourceId` is the company key for Step 7. Reconstruct the Salesforce Account URL from `sourceId`: `https://productboard.lightning.force.com/lightning/r/Account/<sourceId>/view`.
 
 **Before drafting, confirm you have retrieved all of the following (or explicitly marked each `-`):**
 - [ ] ARR – from Planhat Company `custom.ARR – SF`
@@ -235,7 +235,7 @@ Both options require the customer to own authentication and tooling – note thi
 
 Wait for Klara to supply it before continuing.
 
-**Shared context once per batch.** When several items share a Company and session, show one summary block of the shared fields before the first preview: ARR, renewal date, Salesforce URL, Gong URL, contact + email (and any alternative End User record from Step 4.5a), and `companyDomain` (with `companyExternalId` if Step 7 uses it). Still render every field in each item's full preview below, since that preview is the last check before a create-only submission.
+**Shared context once per batch.** When several items share a Company and session, show one summary block of the shared fields before the first preview: ARR, renewal date, Salesforce URL, Gong URL, contact + email (and any alternative End User record from Step 4.5a), and the company match (`companyExternalId` = Salesforce ID, plus any known duplicate-company flag). Still render every field in each item's full preview below, since that preview is the last check before a create-only submission.
 
 Present each drafted feedback note to Klara for review before submitting anything. Render the content preview in chat with these headers:
 
@@ -244,7 +244,7 @@ Present each drafted feedback note to Klara for review before submitting anythin
 Source task: [Planhat task action]
 Title: [proposed title]
 Customer: [Company name] – [contact name] ([contact email])
-Company domain: [companyDomain] [+ "· externalId [sourceId]" when used; "· other domains: [x, y]" when the Company has several]
+Company: matched by Salesforce ID [sourceId] (the Salesforce-linked company with ARR and custom fields) [+ "⚠️ duplicate company in Productboard – merge in the UI" when Step 7 hit `company.mismatch`]
 Importance: [critical/important]
 
 Content preview:
@@ -277,9 +277,9 @@ For confirmed items, call `mcp__claude_ai_Productboard__feedback_create_feedback
 - `title`: the problem statement only – no prefix (matches the title drafted in Step 5)
 - `content`: the complete HTML body (all `<b>` section labels, `-` for empty sections) – **passed as raw HTML, never entity-escaped.** Before calling the tool, scan the exact string you are about to send for `&lt;`, `&gt;` and `&amp;`. If any appear, the body is escaped and will render as literal markup; fix it and re-check before submitting.
 - `customerEmail`: the customer contact's email address – **never Klara's own email (klara.martinez@productboard.com)**
-- `companyDomain`: the customer's company domain extracted from the contact's email or the Planhat Company record (e.g. `acme.com`) – **never `productboard.com` or any internal domain**
-  - **Multi-domain Companies** (Planhat `domains` has more than one entry): derive `companyDomain` from the chosen `customerEmail` so the two always match. Never pick one of the domains by assumption: the wrong one makes Productboard file the note under a second company (e.g. a parent brand) instead of the existing customer.
-- `companyExternalId`: the Planhat Company `sourceId` (Salesforce Account ID). **Always send it alongside `companyDomain` when the Company has more than one domain.** The MCP gives no way to check which domain PB already files the account under, and sending both makes PB match the existing company by Salesforce ID first, so it won't create a new one. Optional for single-domain Companies. Never send it alone: an unknown ID with no domain returns an error.
+- `companyExternalId`: **always** the Planhat Company `sourceId` (Salesforce Account ID). This is the company key. The Productboard company matched by Salesforce ID is the real customer record: it is connected to Salesforce and carries ARR and the other custom fields. Duplicates created by domain have none of that data, so feedback must never land on them.
+- `companyDomain`: **leave it out.** Sending it next to `companyExternalId` fails with `company.mismatch` whenever Productboard holds a second company for the same customer (e.g. one created by domain), and sending it alone can file the note on that duplicate. Only if Productboard returns an unknown-ID error for `companyExternalId` (the Salesforce company doesn't exist in Productboard yet) stop and ask the user before falling back to the customer's domain – never `productboard.com` or any internal domain.
+  - **Duplicate companies.** A `company.mismatch` error (domain and Salesforce ID resolve to different companies), or any other sign of two Productboard companies for one customer, means duplicates exist. Nothing is created on that error. Re-submit with `companyExternalId` only, and flag the duplicate to the user in the Step 9 summary (and in the preview, when known in advance) so they can merge the companies in the Productboard UI. Mention that `customerEmail` may auto-assign the contact to the duplicate company by email domain, which the merge also fixes.
 - `sourceUrl`: the Gong call URL if available. If there is no Gong recording, use a link that a Productboard PM can open: the Planhat record that holds the source, built per `planhat-schema.md` § Planhat Record URLs (for an email, the `email` Conversation on the Company – find it with `search_records(QUERY: "<email subject>")`; for a Slack thread or ticket, its Planhat Conversation), or an internal Slack thread permalink. **Never a Gmail link, a personal mailbox link, or any URL only the AISE can open** – PMs and Productboard can't follow them. Fall back to `-` only when no such URL exists. The `Gong snippet link` section in the body stays `-` when there is genuinely no Gong recording, even where `sourceUrl` points elsewhere.
 - `tags`: a **JSON string array** of tag values extracted from the Select Tags section (e.g. `["API", "portal", "automation"]`) – not a comma-separated string
 
@@ -348,7 +348,7 @@ Named by role. The prefix depends on the host (`mcp__claude_ai_<Service>__`, `mc
 2. **NEVER use Klara's own email (`klara.martinez@productboard.com`) as `customerEmail`** – this must always be the customer contact's email.
 3. **If no contact email can be found with confidence**, surface it as a gap in the HITL step and ask Klara to provide it before allowing submission.
 4. **If Gong context is thin**, flag it in the HITL preview as "⚠️ Limited session context – pain point may need enrichment."
-5. **`companyDomain` must be the customer's company domain** – never `productboard.com` or any internal domain.
+5. **The company is always matched by Salesforce ID** (`companyExternalId` = Company `sourceId`), never by domain alone and never `productboard.com` or any internal domain (Step 7).
 6. **Every section gets a value or a literal dash (`-`)** – never leave a section blank or omit it.
 7. **Owner-filter every Task result** (`ownerId` = current user's Planhat id). Without a customer, filter in the query; with a customer, query by `companyId` + `type` and apply the `ownerId` filter locally (Step 3, Mode A).
 8. **`status: "done"` must be its own `update_model_record` transition** – never combine it with the `description` append in the same call, and never set it on create.
@@ -359,6 +359,6 @@ Named by role. The prefix depends on the host (`mcp__claude_ai_<Service>__`, `mc
 13. **`status: "ignored"` closes out a skipped item, and only on the user's choice.** Set it when the user picks "Skip – mark ignored" (or asks for it in words). It keeps the Task on the record without creating the auto-Conversation that `"done"` triggers, which is correct when nothing was logged to Productboard. "Skip – leave open" leaves the Task open and untouched.
 14. **Never read `context/planhat-schema.md` whole.** Targeted section reads only (Step 1).
 15. **A Productboard-side or unattributed quote is never rendered as customer voice** (Step 5, Q1).
-16. **On multi-domain Companies, `companyDomain` follows `customerEmail`, and `companyExternalId` = Company `sourceId` goes with it** (Step 7).
+16. **Duplicate Productboard companies are flagged, never guessed between.** On `company.mismatch`, re-submit by Salesforce ID only and tell the user to merge the duplicate in the Productboard UI (Step 7).
 17. **No em dashes anywhere in the note** – title, body, quote attribution. Use a spaced en dash (–).
 18. **`sourceUrl` is always a link a PM can open** – Gong, a Planhat record, or an internal Slack permalink. Never a Gmail or other personal-mailbox link (Step 7).
