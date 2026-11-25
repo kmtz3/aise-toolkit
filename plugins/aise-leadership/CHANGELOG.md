@@ -1,5 +1,10 @@
 # Changelog — aise-leadership
 
+## [1.16.8] — 2026-11-25
+
+### Changed
+- Synced `context/` from aise-assistant 2.78.0: `project-instructions.md` adds the ground rule that follow-ups are dated for the send day and never held for deliverables (§4.3 items 6–7, §7) and the Zoom cloud-recordings path (`recordings_list` + `get_meeting_assets`) in transcript lookup step 1c; `communication-style-guide.md` adds § 3a phrases to avoid and § 3b dates and timing, fixes the em dash in the action-list format, and drops the retired Notion voice page references.
+
 ## [1.16.7] — 2026-11-25
 
 ### Changed

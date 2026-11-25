@@ -5,6 +5,30 @@ Format: `## [version] — YYYY-MM-DD` followed by bullet points grouped by type.
 
 ---
 
+## [2.78.0] — 2026-11-25
+
+### Added
+- **`/draft-followup --sweep` + `agents/followup-sweeper.md` – keep every waiting customer draft ready to send today.** Sweeps customer-facing Gmail drafts, classifies each (already sent, answered elsewhere, obsolete, duplicate, waiting) and refreshes the waiting ones **in place**: date words re-computed for the send day, one apology line added or replaced once 2+ working days have passed, stale excuses removed, past-due Productboard dates marked ✅ or flagged `[FILL IN: new date – was …]`, placeholders resolved when the fact now exists (Gong share link from `custom.Call Recording`, confirmed dates, booking links), internal `app.gong.io/call?id=` links swapped for a placeholder, phrases from style guide § 3a and em dashes removed. Everything else in the draft stays byte-for-byte, a draft being edited is skipped, and nothing is deleted unless it is the assistant's own draft and provably superseded. Also lists what is still owed: sessions with no sent recap, sent recaps with open Productboard deliverables, and customer questions waiting 2+ working days. `--brief` mode feeds `/daily-brief`.
+- **`/draft-followup <customer> --delivery`** – the message after a sent recap: a reply on the recap thread with Productboard's promised items now ✅ delivered and dates for the rest (purpose key customer + session + `delivery`).
+- **`email-drafter` § 4.6 – Timing, date wording and lateness.** One table for every customer draft on either route: "today", "yesterday", the weekday, "last" + weekday, or the date, computed against the send day; forward dates in prose plus the explicit date in action lists; past-due handling; a lateness table (no apology up to 1 working day, one plain line at 2–4, "that one is on me" at 5+, answer the customer's chase first); short placeholders only; Gong share links only.
+- **`post-session-debrief` § 5-T – a recap the user can send today.** The recap never waits for deliverables: Productboard's open actions go in as dated commitments, existing deliverables get a ✅, and the report says "Send the recap today – the N open Productboard items follow as their own message on this thread". Deliverables follow via `--delivery`.
+- **`/daily-brief` step 6c – Follow-ups owed (read-only).** Recaps still to send (draft ready or not, with a nudge once a draft is a working day old), promised deliverables, customer questions waiting, drafts to discard. `--no-followup-check` skips it.
+- **`/inbox-triage` step 4b – Drafts review.** The morning triage now re-dates every other waiting customer draft through the sweep and adds its "Send today" and "Owed" lists to the report, instead of only listing stale drafts.
+- Transcript lookup step 1c (added in 2.77.0): Zoom cloud recordings are read with `recordings_list` + `get_meeting_assets` (AI Companion summary, next steps, transcript), used directly when Zoom `search` returns an access error; `get_meeting_action_items` and the Zoom asset tools added to `post-session-debrief`, `session-summarizer` and `bulk-debrief`. Zoom's `share_url` is never used as the customer's recording link.
+- **`context/communication-style-guide.md` § 3a – Phrases to avoid in customer drafts**, from comparing AI drafts with the versions actually sent: generic closers, tacked-on praise, rationale tails, performative honesty, over-explained lateness, stale excuses, filler openers, instructions inside placeholders – plus what the sent versions keep instead. **§ 3b – Dates and timing**, including "a recap never waits for deliverables".
+
+### Changed
+- **Date wording builds on 2.77.0.** `post-session-debrief` step 5-T and its guardrail now point to `email-drafter` § 4.6 for every case ("yesterday", "last Tuesday", the date after a week) and the one apology line, and name `/draft-followup --sweep` as the pass that re-dates waiting drafts. The Slack-route context line follows the same table.
+- **`/draft-followup` default mode saves a draft** (Gmail, or a Slack draft in the external channel) through `email-drafter`, instead of returning text inline only.
+- Action lists in Gmail drafts use the en-dash format `<Owner> – <action> (timing)`, split into `Actions – <Customer>` / `Actions – Productboard` (or `Next steps – …` when the thread uses it), with delivered items kept and marked ✅. The old `[Owner] — [Action]` examples used an em dash, contradicting the em-dash ban.
+- Default follow-up structure: answers to open items first, `Recording:` / `Attached:` label lines, and a concrete close (booking link, next date or one question) instead of a generic "let me know" line.
+- New ground rules in `context/project-instructions.md` §4.3 and §7 and in `CLAUDE.md`: follow-ups dated for the send day and never held for deliverables; transcripts check live meeting notes (step 1c) after Gong.
+
+### Fixed
+- `context/communication-style-guide.md` no longer points to the retired `AISE Assistant Preferences` Notion page for voice and sign-offs.
+
+---
+
 ## [2.77.0] — 2026-11-25
 
 ### Added
@@ -13,6 +37,8 @@ Format: `## [version] — YYYY-MM-DD` followed by bullet points grouped by type.
 
 ### Changed
 - **Follow-up date wording follows the day the draft is written.** `post-session-debrief` step 5 now says "today" for a same-day draft, the weekday within 7 days and the full date when older, instead of never using relative words. The draft ID is always recorded so a later `/draft-email`, `/inbox-triage` or draft-refresh pass rewrites the wording for the actual send day and adds a short apology when the follow-up is late.
+
+---
 
 ## [2.75.0] — 2026-10-30
 

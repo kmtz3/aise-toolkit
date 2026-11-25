@@ -28,6 +28,8 @@ said. Always re-read the sent body first.
 2. **Ground** – per thread, pull the account context needed to answer, including any active initiative in scope.
 3. **Ask** – one batched round of genuine forks only. Never ask what is retrievable.
 4. **Draft** – threaded replies via the `agents/email-drafter.md` voice and formatting rules.
+4b. **Drafts review** – re-date every other waiting customer draft for today via `agents/followup-sweeper.md` (in place,
+   never a second draft) and add its "Send today" and "Owed" lists to the report.
 5. **Close the loop** – after the user sends, reconcile what actually went out and update `custom.Next Step` on each
    sent account's Planhat Company record.
 

@@ -89,20 +89,25 @@ Apply [`context/communication-style-guide.md`](../../context/communication-style
   ```
   For Klara Martinez that is `Klara Martinez` / `Senior Solutions Architect | Productboard`. The pipe is a separator, not a dash – leave it as `|`.
 - **Pattern for ongoing architecting/working cadence:** reference *what we agreed last* + *what we'll cover next* + the ask. Never frame as first-touch.
+- **Phrases to avoid.** Run every sentence against `context/communication-style-guide.md` § 3a (generic closers, tacked-on praise, "so we can X rather than Y" tails, performative honesty, stale excuses) and the user's own avoid list in `custom.AISE Profile preferences`. Cut the phrase; do not paraphrase it into a near-twin.
+- **Dates and lateness.** Every date word and any apology follows § 4.6 below, computed against the send day.
 
 **Gmail formatting rules (mandatory — applies to every draft saved via `create_draft`):**
 - **No markdown tables.** Never use pipe/column syntax (`| Owner | Action | Timing |`). Gmail does not render markdown — tables arrive as garbled plain text.
 - **No markdown bold.** Never use `**text**`. Use plain text; apply bold via HTML (`<strong>`) in the `htmlBody` field only.
-- **Next steps as a flat bulleted list.** One item per line, inline format: `[Owner] — [Action] (timing)`. Example:
-  - `[PB side] — Confirm integration scoping with engineering (this week)`
-  - `[Customer side] — Reauthorize the integration in PB after account change`
+- **Actions as flat bulleted lists, split by side.** `Actions – <Customer>` and `Actions – Productboard` (or `Next steps – …` when the thread already uses that label), one item per line, inline format `<Owner first name> – <action> (<timing>)`, with an en dash. An item already delivered stays in the list with a `✅ ` prefix. Example:
+  - `✅ Klara – Share the session recording and deck`
+  - `Klara – Confirm integration scoping with engineering (by Thu, Nov 26)`
+  - `Tom – Reauthorize the integration after the account change`
 
 Default structure for post-session follow-up (adjust to purpose):
 - Greeting (`Hi <first name>,`)
-- One-line context — single sentence: *why I'm writing*, tied to the last session or thread
-- **What we covered** — 2–3 tight bullets (decisions + key points; not a meeting recap)
-- **Next steps** — flat bulleted list: `[Owner] — [what] (timing)` for each open commitment — no table
-- Close or ask (one line)
+- One-line context – single sentence: *why I'm writing*, tied to the last session or thread. When the follow-up is late, the one apology from § 4.6 goes here, then straight into content.
+- **Answers to open items first**, when the email resolves something the customer asked or the session left open.
+- `Recording:` (Gong share link only, never `app.gong.io/call?id=`) and `Attached:` as bold label lines, when there are any
+- **What we covered** / **What we agreed** – 2–5 tight bullets (decisions + key points; not a meeting transcript)
+- **Actions – <Customer>** / **Actions – Productboard** – flat lists per the format above, no table
+- Close on a concrete next step (booking link, the next session's date, or one question) – never a generic "let me know if…" closer
 - Sign-off
 
 ### 4.4 Sent check – never draft what the user already sent
@@ -135,9 +140,53 @@ Never key a standalone draft on `threadId` or `messageId`. A standalone draft's 
 
 **Read it before replacing it.** `get_draft` the match. If it holds content the user added by hand (lines this procedure would not have written – a personal note, an extra ask, a changed date), carry that content into the new version and list it in the report. Never silently drop a user edit.
 
-**Then update it** per Step 5 § Updating an existing draft.
+**Then update it** per Step 5 § Updating an existing draft. An update re-runs § 4.6 over the whole draft, so date words and any apology match the day of this run.
 
 **More than one match.** Update the recorded draft ID if there is one, otherwise the newest. Do not delete the others: list them in the report (draft ID, date, subject, first line) as duplicates for the user to discard, and carry any hand edits they hold into the draft you update. See § Deleting drafts for what this agent may delete.
+
+### 4.6 Timing, date wording and lateness
+
+Applies to every customer-facing draft on either route (Gmail or Slack), on create, on update, and every time the follow-up sweep (`agents/followup-sweeper.md`) refreshes an existing draft. A draft has to read correctly **on the day the user sends it**, so date words are computed against the **send day**: the day of this run, in the user's time zone from `custom.AISE Identity` (Europe/Prague when unset). A later refresh recomputes every one of them.
+
+**The anchor** is the event the draft looks back on: the session date for a follow-up (calendar event start, step 1), or the date of the message being answered for a reply. Use `Bash: date` for "today"; never guess it.
+
+**Looking back at the anchor (prose):**
+
+| Anchor vs send day | Write | Example |
+|---|---|---|
+| Same day | "today" | "Thanks for the time today" |
+| Previous calendar day | "yesterday" | "Thanks for walking me through the setup yesterday" |
+| 2–6 days back, same ISO week | the weekday | "on Tuesday" |
+| 2–6 days back, previous ISO week | "last" + weekday | "last Tuesday" |
+| 7+ days back | the date, weekday optional | "on Nov 4" / "on Wednesday, Nov 4" |
+
+Never "this morning" or "earlier today" unless the anchor is the same day, never "this session", and never pair a relative word with a date that contradicts it.
+
+**Looking forward (deadlines, the next session).** Prose: "tomorrow", the weekday within the next 6 days ("on Thursday"), "next Tuesday" for the following ISO week, otherwise the date. Action lists always carry the explicit date as well (`(by Thu, Nov 26)`), because they get copied into other places and must survive being read later.
+
+**Past-due dates.** On every update or refresh, check each dated item against the send day:
+- A Productboard action whose date has passed and that is now done (sent mail, a closed Planhat Task, the user's word) → `✅` prefix, keep it in the list.
+- Passed and not done → never leave the old date standing silently. Replace the timing with `[FILL IN: new date – was <old date>]` and list it in the report. Never invent the new date.
+- A customer-side date that has passed is left as written, and listed in the report.
+- Any ask with a deadline that has passed ("let me know by Wednesday") → reword to the next sensible ask or flag it with `[FILL IN]`.
+
+**Lateness and the apology.** Lateness = working days (Mon–Fri) from the anchor to the send day.
+
+| Lateness | Opening line |
+|---|---|
+| 0–1 working days | No apology. |
+| 2–4 working days | One short, plain apology: "Sorry this took a few days to reach you." |
+| 5+ working days | Own it once, plainly: "Sorry this took so long – that one is on me." |
+| The customer chased first (any lateness) | Answer their message first, then the apology if one is due: "No problem at all – you hadn't missed anything. Sorry this took so long, that one is on me." |
+
+- **One apology per message, in the opening line**, then straight into content. Never "sorry" plus "apologies", never a second apology at the end.
+- **No excuses** ("I was traveling last week", "after the offsite") unless the user gave the reason for this draft, and only while it is still true on the send day. On a refresh, an excuse that has gone stale is removed, not reworded.
+- No over-explaining: never "This recap took longer to reach you than it should have" or "Picking this up now" openers.
+- On a refresh, **replace** the existing apology sentence with the one this table gives today; never add a second.
+
+**Placeholders.** `[FILL IN: …]` is short: what is missing, in a few words (`[FILL IN: Gong share link]`). No instructions to the user inside the draft body – those go in the report. A placeholder whose fact now exists (the share link is on `custom.Call Recording`, the date was confirmed in the thread) is resolved on the next update or refresh.
+
+**Gong links.** Customer drafts only ever carry the external share link (`gong.io/e/c-share/…`). An internal `app.gong.io/call?id=` URL is replaced with `[FILL IN: Gong share link]`, never left in.
 
 ### 5. Create the Gmail draft
 
@@ -214,6 +263,7 @@ For each draft:
 - **Slack follow-ups are drafts only** — `slack_send_message_draft`, never `slack_send_message`. One draft per channel: never overwrite an existing one (`attached_draft_exists`).
 - **One draft per purpose** — before any `create_draft`, run the Sent check (Step 4.4) and the purpose-key lookup (Step 4.5); if a draft exists, `update_draft` it in place, replies included (Step 5 § Updating an existing draft). Record the draft ID on the Planhat session record. (`update_draft`, `get_draft` and `delete_draft` load via ToolSearch if deferred.)
 - **Never retry `create_draft` blindly** — `list_drafts` for the purpose key first (Step 5).
+- **Dates are computed against the send day** – "today", "yesterday", "on Tuesday", "last Tuesday" or the date, one plain apology once 2+ working days have passed, past-due dates flagged, never silently kept (Step 4.6).
 - **Delete only your own superseded drafts** — `delete_draft` by draft ID, per Step 5 § Deleting drafts. Never `trash_message` / `label_message` (no permission on this connection).
 - **Multi-draft requests** — if the user asks for multiple drafts, create each one independently, each with its own context pass. Do not copy-paste structure across recipients. Drafts for the **same customer** are created sequentially, never in parallel, so each one's purpose-key lookup sees the one before it.
 

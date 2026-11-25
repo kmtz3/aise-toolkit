@@ -4,7 +4,7 @@
 >
 > **Planhat is the source of truth as of 2026-08-18.** The former `AISE Assistant Preferences` Notion page is legacy and read-only – do not read voice rules from it. Always pull the Planhat fields fresh before drafting; never draft from memory or from this file alone.
 
-Use this guide alongside the `AISE Assistant Preferences` Notion page (Voice section) to rewrite drafts, braindumps, or raw notes into clear, send-ready messages for **customers** and **internal colleagues**, primarily via **email** and **Slack**.
+Use this guide alongside the user's `custom.AISE Profile preferences` (Planhat User record) to rewrite drafts, braindumps, or raw notes into clear, send-ready messages for **customers** and **internal colleagues**, primarily via **email** and **Slack**.
 
 ---
 
@@ -85,7 +85,7 @@ When there are follow-ups or decisions:
 
 **Em dash ban (applies to ALL output without exception)**
 
-Never use em dashes (—). Use en dashes (–) everywhere a dash is needed — in emails, Slack messages, subject lines, Notion pages, bullets, and inline chat responses. This is an absolute rule: check every dash character before producing any draft.
+Never use em dashes (—). Use en dashes (–) everywhere a dash is needed – in emails, Slack messages, subject lines, Notion pages, bullets, and inline chat responses. This is an absolute rule: check every dash character before producing any draft.
 
 **Gmail copy-paste safety (applies to any draft saved to Gmail Drafts)**
 
@@ -93,7 +93,7 @@ Gmail does not render markdown. Every draft saved via the Gmail API or copy-past
 
 - **No markdown tables** — never use pipe syntax (`| Owner | Action | Timing |`). Tables arrive as garbled characters in Gmail.
 - **No markdown bold** — never use `**text**`. Use plain text in the `body` field; bold may appear only via `<strong>` tags in the `htmlBody` field.
-- **Next steps as a flat bulleted list** — one item per line, inline owner + action + timing: `[Owner] — [Action] (timing)`. Never a table.
+- **Actions as flat bulleted lists** – one list per side (`Actions – <Customer>`, `Actions – Productboard`), one item per line, inline owner + action + timing with an en dash: `<Owner> – <Action> (timing)`. Delivered items keep their line with a `✅ ` prefix. Never a table.
 
 **Subject line format**
 
@@ -106,6 +106,32 @@ Gmail does not render markdown. Every draft saved via the Gmail API or copy-past
 
 - Default to **high signal, medium detail** – enough that a busy PM or stakeholder can understand quickly, without over-explaining basics they already know.
 - For technical topics (API, migrations, workspace configuration): be precise and explicit, explain the "why" in 1–2 sentences, and briefly describe what any linked docs are for.
+
+### 3a. Phrases to avoid in customer drafts
+
+These are the patterns cut by hand when AI drafts were compared with the versions actually sent (Nov 2026). They read as generated, not as the sender. Cut the phrase; don't swap in a near-twin. The user's own list in `custom.AISE Profile preferences` adds to this one.
+
+- **Generic closers.** "Let me know if anything is unclear." / "If anything comes up before then, just reach out." / "Email me anytime in between." / "Happy to jump on a quick sync." / "Happy to help with any … questions." / "Don't hesitate to …" Close on something concrete instead: the booking link, the next session's date, or one specific question ("Let me know if anything in here doesn't match what you took away" is fine – it asks for something specific).
+- **Tacked-on praise or verdicts.** "The new structure looks really solid." / "Your push on X came through clearly." / "This is the sample I needed." / "That's a great question." Say what happened, not how good it was.
+- **Rationale tails.** "…so we can use the session to pressure-test it rather than walk through it cold." / "…not X, but Y." A sentence that ends by explaining why it was a good idea. End the sentence at the fact.
+- **Performative honesty or urgency.** "Being straight with you…" / "I want to be honest…" / "…that isn't good enough." / "I'm not going to guess…" When frustration is real, say what will happen and by when, calmly.
+- **Over-explained lateness.** "This recap took longer to reach you than it should have." / "Picking this up now." / stacked "sorry" + "apologies". Use the one-line apology from `agents/email-drafter.md` § 4.6, once.
+- **Stale excuses.** "I was traveling last week" in a draft sent two weeks later. Drop the reason rather than date it.
+- **Filler openers.** "I hope this finds you well." / "Just wanted to follow up." / "Circling back." / "Touching base." / "Per my last email."
+- **Instructions inside placeholders.** `[FILL IN: open it in Gong and use Share > Create public link…]`. A placeholder names what is missing; how-to goes in the report to the user.
+
+What the sent versions keep and add instead:
+- Answers to open items first, then the recap.
+- A plain apology once when late ("That one is on me, sorry about that"), then straight to content.
+- Bold labels (`Recording:`, `Attached:`, `What we covered`, `Actions – …`) and short bullets.
+- Delivered items marked `✅` rather than removed.
+- A concrete close: booking links with what each one is for, or the next date.
+
+### 3b. Dates and timing
+
+Every date word in a customer draft is computed against the day it will be sent, and recomputed whenever the draft is refreshed: "today", "yesterday", "on Tuesday", "last Tuesday", or the date once a week has passed. An apology is added once 2+ working days have passed since the session or message. Full table: `agents/email-drafter.md` § 4.6.
+
+**A recap never waits for deliverables.** The session recap goes out the same working day with Productboard's actions written as commitments with dates ("I'll send the agent knowledge guide by Thu, Nov 26"). What was promised follows later as its own message on the recap thread. One big follow-up days later, with everything attached, is the failure mode this rule exists to prevent.
 
 ---
 
@@ -170,7 +196,8 @@ Before finalizing, ensure the rewritten message:
 - Clearly calls out **next steps**, **owners**, and **timelines** where relevant.
 - Uses **plain, direct language** with enough but not excessive detail.
 - Uses **inline code** or code blocks for technical references where appropriate.
-- Ends with a sign-off appropriate to the audience (per the `AISE Assistant Preferences` Notion page, Voice section).
+- Ends with a sign-off appropriate to the audience (per `custom.AISE Profile preferences` on the user's Planhat User record).
+- Contains nothing from § 3a (phrases to avoid), and every date word matches the send day (§ 3b).
 - Punctuation conforms to `custom.AISE Profile preferences` on the user's Planhat User record (dashes, semicolons, etc.).
 
 ---

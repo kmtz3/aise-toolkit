@@ -46,7 +46,9 @@ Commands are grouped by family. Type `/<family>` (or `/<family>-`) in autocomple
 | **Generate a facilitation guide only** | `/session-facilitation <customer> [session-id]` — interactive HTML with timer, decision panels, open items, action capture |
 | **Run a full post-session debrief in one shot** | `/session-debrief <customer> [session-id]` |
 | **Just summarize a delivered call** | `/session-summary [customer or session]` |
-| **Draft a follow-up email** | `/draft-email <who/what>` (saves to Gmail Drafts, never sends) |
+| **Draft a follow-up email** | `/draft-email <who/what>` or `/draft-followup <customer>` (saves to Gmail Drafts, or a Slack draft in the external channel – never sends) |
+| **Keep waiting follow-ups current and see what's owed** | `/draft-followup --sweep` (re-dates every waiting customer draft for today, adds one apology line when late, flags drafts already sent; lists recaps, deliverables and customer questions still owed) |
+| **Send what was promised after a recap** | `/draft-followup <customer> --delivery` (reply on the recap thread with the delivered items ✅) |
 | **Work through the inbox and reply to what needs it** | `/inbox-triage [window]` (sweeps recent mail, batch-drafts threaded replies, updates Planhat Next Step after you send) |
 | **Plan the next 2–4 sessions** | `/customer-plan --next <customer>` |
 | **Build a full program plan** | `/customer-plan --full <customer>` |
@@ -62,8 +64,9 @@ Commands are grouped by family. Type `/<family>` (or `/<family>-`) in autocomple
 
 1. **Day before:** `/customer-whats-new <customer>` — surface what's changed since the last touch.
 2. **Day before / morning of:** `/session-prep <customer>` — pulls context, drafts brief, writes it to `custom.Prep Notes` on the session's Planhat Task/Conversation. For A/Discovery/Kickoff sessions, also creates a customer-facing KDD doc + interactive facilitation HTML guide, published to the `Customer Session Artifacts` Drive folder and linked back onto the session's Planhat record.
-3. **Same day after the call:** `/session-debrief <customer>` — runs summary + Planhat Conversation write + Tasks + Gmail follow-up draft + Slack debrief draft + scorecard eval, all in one go.
-4. **Optional:** `/session-score <session-type>` if you want a focused scorecard review.
+3. **Same day after the call:** `/session-debrief <customer>` – runs summary + Planhat Conversation write + Tasks + follow-up draft + Slack debrief draft + scorecard eval, all in one go. Send the recap the same day: Productboard's open items go in as dated commitments, and the deliverables follow later with `/draft-followup <customer> --delivery`.
+4. **Every morning:** `/inbox-triage` (replies + drafts review) or `/draft-followup --sweep` – re-dates waiting drafts so they read right today, and lists what's still owed.
+5. **Optional:** `/session-score <session-type>` if you want a focused scorecard review.
 
 ## Command families at a glance
 
@@ -72,7 +75,7 @@ Commands are grouped by family. Type `/<family>` (or `/<family>-`) in autocomple
 - **`session-*`** — per-session workflows (`-prep`, `-kdds`, `-facilitation`, `-summary`, `-score`, `-debrief`)
 - **`bulk`** — run a session workflow across multiple meetings at once (`--debrief`, `--prep`)
 - **`bulk-account-setup`** — admin/reorg task: set up all accounts owned by a user
-- **`draft-*`** — message / artifact drafts (`-email`, `-followup`, `-diagram`)
+- **`draft-*`** – message / artifact drafts (`-email`, `-followup [--delivery \| --sweep]`, `-diagram`)
 - **`log-*`** — log customer touchpoints into Planhat (`log-feedback`, `log-slack-threads`, `log-slack-threads-internal`)
 - **`ph-*`** — Planhat/Gong integration stopgaps (`ph-reconcile-gong-gcal`)
 - **`planhat-*`** — build/debug Planhat's own automation layer (`planhat-automations`, `planhat-formula-builder`)

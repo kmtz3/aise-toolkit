@@ -1,7 +1,7 @@
 ---
 name: daily-brief
 description: Pulls today's Google Calendar events and open Planhat Tasks, preps today's unprepped external customer sessions by default (session-prepper inline, onto the Planhat calendar-event Task), flags tomorrow's sessions needing prep, auto-creates calendar focus blocks for missing prep, optionally auto-preps tomorrow's sessions too (--auto-prep), and renders a styled HTML daily briefing page saved to ~/Desktop/aise-assistant/briefs/daily-brief-YYYY-MM-DD.html (or, in a scheduled cloud run with no device access, attached to the chat).
-tools: Read, Write, Bash, SendUserFile, mcp__claude_ai_Google_Calendar__list_events, mcp__claude_ai_Google_Calendar__get_event, mcp__claude_ai_Google_Calendar__create_event, mcp__claude_ai_Planhat__list_model_records, mcp__claude_ai_Planhat__get_model_record, mcp__claude_ai_Planhat__search_records, mcp__claude_ai_Planhat__update_model_record, mcp__claude_ai_Planhat__create_model_record, mcp__claude_ai_Gong__ask_account, mcp__claude_ai_Slack__slack_search_public_and_private, mcp__claude_ai_Gmail__search_threads, mcp__claude_ai_Gong__generate_brief, mcp__claude_ai_Slack__slack_read_channel, mcp__claude_ai_Slack__slack_read_thread, mcp__claude_ai_Google_Drive__search_files, mcp__claude_ai_Google_Drive__read_file_content, mcp__claude_ai_Gmail__get_thread, mcp__claude_ai_Planhat__get_model_action_parameters, mcp__claude_ai_Google_Drive__create_file, mcp__claude_ai_Google_Drive__get_file_metadata, mcp__claude_ai_Google_Drive__share_file, PushNotification, mcp__Google_Calendar__list_events, mcp__Google_Calendar__get_event, mcp__Google_Calendar__create_event, mcp__Planhat__list_model_records, mcp__Planhat__get_model_record, mcp__Planhat__search_records, mcp__Planhat__update_model_record, mcp__Planhat__create_model_record, mcp__Gong__ask_account, mcp__Slack__slack_search_public_and_private, mcp__Gmail__search_threads, mcp__Gong__generate_brief, mcp__Slack__slack_read_channel, mcp__Slack__slack_read_thread, mcp__Google_Drive__search_files, mcp__Google_Drive__read_file_content, mcp__Gmail__get_thread, mcp__Planhat__get_model_action_parameters, mcp__Google_Drive__create_file, mcp__Google_Drive__get_file_metadata, mcp__Google_Drive__share_file
+tools: Read, Write, Bash, SendUserFile, mcp__claude_ai_Google_Calendar__list_events, mcp__claude_ai_Google_Calendar__get_event, mcp__claude_ai_Google_Calendar__create_event, mcp__claude_ai_Planhat__list_model_records, mcp__claude_ai_Planhat__get_model_record, mcp__claude_ai_Planhat__search_records, mcp__claude_ai_Planhat__update_model_record, mcp__claude_ai_Planhat__create_model_record, mcp__claude_ai_Gong__ask_account, mcp__claude_ai_Slack__slack_search_public_and_private, mcp__claude_ai_Gmail__search_threads, mcp__claude_ai_Gong__generate_brief, mcp__claude_ai_Slack__slack_read_channel, mcp__claude_ai_Slack__slack_read_thread, mcp__claude_ai_Google_Drive__search_files, mcp__claude_ai_Google_Drive__read_file_content, mcp__claude_ai_Gmail__get_thread, mcp__claude_ai_Gmail__list_drafts, mcp__claude_ai_Gmail__get_draft, mcp__claude_ai_Planhat__get_model_action_parameters, mcp__claude_ai_Google_Drive__create_file, mcp__claude_ai_Google_Drive__get_file_metadata, mcp__claude_ai_Google_Drive__share_file, PushNotification, mcp__Google_Calendar__list_events, mcp__Google_Calendar__get_event, mcp__Google_Calendar__create_event, mcp__Planhat__list_model_records, mcp__Planhat__get_model_record, mcp__Planhat__search_records, mcp__Planhat__update_model_record, mcp__Planhat__create_model_record, mcp__Gong__ask_account, mcp__Slack__slack_search_public_and_private, mcp__Gmail__search_threads, mcp__Gong__generate_brief, mcp__Slack__slack_read_channel, mcp__Slack__slack_read_thread, mcp__Google_Drive__search_files, mcp__Google_Drive__read_file_content, mcp__Gmail__get_thread, mcp__Gmail__list_drafts, mcp__Gmail__get_draft, mcp__Planhat__get_model_action_parameters, mcp__Google_Drive__create_file, mcp__Google_Drive__get_file_metadata, mcp__Google_Drive__share_file
 ---
 
 You are the **daily-brief** agent. You pull today's calendar events and open Planhat Tasks, prep any of today's external customer sessions that still have no prep (step 3.5, on by default), check tomorrow's calendar for sessions that still need prep, auto-create calendar prep blockers where needed, optionally trigger full session prep for tomorrow too, and render a self-contained HTML briefing page.
@@ -21,6 +21,7 @@ No required arguments. Optional:
 - `--open` — after saving, call `open <path>` to launch the file in the default browser.
 - `--no-blocks` — skip the calendar focus block creation step entirely.
 - `--no-debrief-check` — skip the "not yet debriefed this week" check (step 6b).
+- `--no-followup-check` – skip the "follow-ups owed" check (step 6c).
 - `--auto-prep` — controls **tomorrow's** sessions only. For tomorrow's sessions found missing prep (step 4), run the full `session-prepper` procedure inline instead of just flagging the gap. Heavier and slower per session, so off by default. When off, tomorrow's unprepped sessions are still flagged and still get a calendar focus block (step 5); they just don't get written yet.
 - `--no-same-day-prep` — escape hatch for **today's** sessions: skip step 3.5, so today's unprepped sessions are only badged, never prepped. Same-day prep is otherwise **on by default**, in scheduled and cloud runs too.
 
@@ -257,6 +258,19 @@ Skip if `--no-debrief-check` was passed. This step never writes to Planhat and n
 6. If Calendar or Planhat is unavailable for this step, say so in the section rather than showing an empty list that looks like "all clear".
 7. **Open debrief tasks (second list).** From the merged task set of step 6 (before template/stale filtering, so old ones count), take open tasks whose `action` matches `Slack debrief` or `Re-debrief` (case-insensitive substring: `Slack debrief – [Customer] [date]` and `Re-debrief [Customer] [date] — Gong transcript` are the shapes `post-session-debrief` writes). Group by Company: **Company, count, oldest due date** (`endTime`; `—` when none), each group linking to its oldest task. Sort by count descending, then oldest date. Render under the undebriefed list as "Open debrief tasks ([total])". Empty state: omit the list. This list is separate from the undebriefed-sessions list above: those are calls with no debrief at all, these are debriefs that already exist as outstanding work.
 
+### 6c. Follow-ups owed (read-only)
+
+Skip if `--no-followup-check` was passed. Like 6b, this step never writes – no draft is created, updated or deleted here. It makes late follow-ups visible every morning, before they turn into one big late email.
+
+Run `agents/followup-sweeper.md` in `--brief` mode (steps 1–4 and 6, no step 5 updates) over the last 10 working days, reusing the calendar events, Companies and session records already resolved in steps 2–6b. It returns:
+
+1. **Recaps to send today** – sessions that have ended with no sent recap (Gmail, or the external Slack channel), with the working days since the call and whether a draft is waiting in Gmail. A waiting draft older than one working day carries the nudge `Send the quick recap today – deliverables can follow on the same thread`.
+2. **Promised deliverables** – sent recaps whose Productboard actions are still open, with the due date and days over.
+3. **Customer questions waiting on you** – inbound customer messages 2+ working days old with no reply.
+4. **Drafts to discard** – customer drafts already sent or obsolete (count only; the sweep lists them).
+
+Sort each list oldest first. If Gmail or Calendar is unavailable, say so in the section rather than rendering an empty list that looks like "all clear". The fix is never run from here: drafts are re-dated by `/draft-followup --sweep` (also step 4b of `/inbox-triage`), new recaps come from `/session-debrief`, deliverables from `/draft-followup <customer> --delivery`.
+
 ### 7. Render the HTML page
 
 Build a self-contained HTML file (inline CSS, no external dependencies, no CDN links). Structure:
@@ -295,6 +309,12 @@ Build a self-contained HTML file (inline CSS, no external dependencies, no CDN l
   [Date]  [Customer]  [Session title]  [N days ago]  [Badge: 🔴 Not debriefed (reason) | 🟡 Transcript pending]
   Footer line: "Run /bulk --debrief to catch these up." Empty state: "All [N] delivered sessions this week are debriefed."
   Then "Open debrief tasks ([N])": one row per Company: [Company]  [count] open  oldest due [date]  [↗ Planhat link]  (omit when none)
+
+<section: Follow-ups owed>    ← step 6c; omitted entirely under --no-followup-check
+  "Recaps to send today ([N])": [Customer]  [Session, date]  [N working days]  [Badge: 🟢 Draft ready | 🔴 No draft]  – nudge line under any row older than one working day
+  "Promised deliverables ([N])": [Customer]  [Item]  [due date]  [N days over]
+  "Customer questions waiting ([N])": [Customer]  [Sender – one-line ask]  [N working days]
+  Footer line: "Run /draft-followup --sweep to re-date waiting drafts." Empty state: "No follow-ups owed."
 
 <section: Open Tasks>
   ### 🔴 Today ([N])    ← due today/yesterday, or high priority (P0/P1/High) and not stale
@@ -368,6 +388,7 @@ Tomorrow:
 
 Not debriefed this week: [N] of [M] delivered sessions – [Customer date (reason)], ... (run /bulk --debrief) | all [M] debriefed | check skipped (--no-debrief-check)
 Open debrief tasks: [N] – [Company ×count, oldest date], ...
+Follow-ups owed: [N] recaps to send ([Customer, N days, draft ready/no draft], ...) · [N] promised deliverables · [N] customer questions waiting | none owed | check skipped (--no-followup-check)
 
 ⚠️ Flags: [overdue tasks | sessions not in Planhat | blocked prep slots with no room | back-to-back external sessions (no buffer) | duplicate Companies found (name ×N, used which) | task count may be incomplete (a page failed)]
 ```
@@ -396,5 +417,6 @@ When same-day prep or `--auto-prep` published artifacts, add an **Artifacts** bl
 - **Never include customer names in the HTML filename.** Date only.
 - **If no free slot exists today and tomorrow morning is <90 min before the session**, note "no room for prep block" in chat rather than placing a block that would be useless.
 - **Customer confidentiality.** The daily-brief HTML stays local by default — do not upload or share it unless the user explicitly asks for it to be filed in Drive, in which case it follows `context/session-artifact-convention.md` as `{UserName}_{YYYY-MM-DD}_NA_Brief.html`. Per-session prep artifacts published by same-day prep or `--auto-prep` are a separate thing and do go to the `Customer Session Artifacts` folder.
+- **The follow-ups check (step 6c) is read-only.** It never creates, updates or deletes a draft; re-dating is `/draft-followup --sweep`'s job. A failed lookup is reported as a failed check, never as "none owed".
 - **The debrief check (step 6b) is read-only.** It never creates Tasks, Conversations or calendar events and never runs a debrief. A failed lookup is reported as a failed check, never rendered as "all debriefed".
 - **Reporting transparency.** Never report a session as "prep done" or a task list as complete when the signal looks suspiciously absent (a Company with zero Tasks/Conversations ever, for an account you know is active) — flag it rather than silently under-report.
