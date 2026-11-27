@@ -1,4 +1,4 @@
-# Communication Style Guide — universal AISE-comms
+# Communication Style Guide – universal AISE-comms
 
 > **Universal layer.** This guide covers PB-AISE comms patterns that apply to any user in this role (structure, tone-by-context, transformation rules, action/ownership conventions). Personal preferences (sign-offs, dash rules, language quirks, name-spelling, job title) live on the user's **Planhat User record** in `custom.AISE Profile preferences` and `custom.AISE Identity`, and **override** anything here.
 >
@@ -71,7 +71,7 @@ When there are follow-ups or decisions:
 
 - Professional, clear, and concise; avoid corporate buzzwords.
 - Short intro, then quickly move into the substance.
-- Close with a short, warm sign-off — see `custom.AISE Profile preferences` on the user's Planhat User record for their sign-off preferences per audience (client, formal, internal, appreciation).
+- Close with a short, warm sign-off – see `custom.AISE Profile preferences` on the user's Planhat User record for their sign-off preferences per audience (client, formal, internal, appreciation).
 
 **Recommended email layout**
 
@@ -85,20 +85,20 @@ When there are follow-ups or decisions:
 
 **Em dash ban (applies to ALL output without exception)**
 
-Never use em dashes (—). Use en dashes (–) everywhere a dash is needed – in emails, Slack messages, subject lines, Notion pages, bullets, and inline chat responses. This is an absolute rule: check every dash character before producing any draft.
+Never use em dashes (–). Use en dashes (–) everywhere a dash is needed – in emails, Slack messages, subject lines, Notion pages, bullets, and inline chat responses. This is an absolute rule: check every dash character before producing any draft.
 
 **Gmail copy-paste safety (applies to any draft saved to Gmail Drafts)**
 
 Gmail does not render markdown. Every draft saved via the Gmail API or copy-pasted into Gmail compose must be safe to read as plain text:
 
-- **No markdown tables** — never use pipe syntax (`| Owner | Action | Timing |`). Tables arrive as garbled characters in Gmail.
-- **No markdown bold** — never use `**text**`. Use plain text in the `body` field; bold may appear only via `<strong>` tags in the `htmlBody` field.
+- **No markdown tables** – never use pipe syntax (`| Owner | Action | Timing |`). Tables arrive as garbled characters in Gmail.
+- **No markdown bold** – never use `**text**`. Use plain text in the `body` field; bold may appear only via `<strong>` tags in the `htmlBody` field.
 - **Actions as flat bulleted lists** – one list per side (`Actions – <Customer>`, `Actions – Productboard`), one item per line, inline owner + action + timing with an en dash: `<Owner> – <Action> (timing)`. Delivered items keep their line with a `✅ ` prefix. Never a table.
 
 **Subject line format**
 
 - Use `Productboard + [Customer] – [Topic]` for account-related emails (e.g. `Productboard + Cofense – Session follow-up`)
-- Always "Productboard + [Customer]", never "x" — "x" implies a match or competition; "+" signals partnership
+- Always "Productboard + [Customer]", never "x" – "x" implies a match or competition; "+" signals partnership
 - Productboard first: customers see the sender context on a skim; customer name second confirms it's relevant to them
 - For follow-ups with no account framing needed: `Follow-up: [Topic] – next steps`
 
@@ -214,4 +214,4 @@ Before finalizing, ensure the rewritten message:
 
 ## 8. User-specific overrides
 
-Personal preferences (sign-offs, dash rules, semicolons, casual register, English variant, name-spelling, job title, forbidden phrases) live on the user's Planhat User record in `custom.AISE Profile preferences` and `custom.AISE Identity`. Always cross-reference both before producing any draft on the user's behalf — the Planhat record wins where they differ.
+Personal preferences (sign-offs, dash rules, semicolons, casual register, English variant, name-spelling, job title, forbidden phrases) live on the user's Planhat User record in `custom.AISE Profile preferences` and `custom.AISE Identity`. Always cross-reference both before producing any draft on the user's behalf – the Planhat record wins where they differ.

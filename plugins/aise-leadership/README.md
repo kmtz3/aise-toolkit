@@ -2,17 +2,17 @@
 
 Portfolio visibility and account health co-pilot for Productboard AISE leadership.
 
-Install this plugin if you're a **manager, Head of AISE, or VP CS** — not an individual AISE. For the individual AISE co-pilot (session prep, debrief, follow-ups), install [aise-assistant](https://github.com/kmtz3/aise-toolkit) instead.
+Install this plugin if you're a **manager, Head of AISE, or VP CS** – not an individual AISE. For the individual AISE co-pilot (session prep, debrief, follow-ups), install [aise-assistant](https://github.com/kmtz3/aise-toolkit) instead.
 
 ---
 
 ## What it does
 
-- **`/report --aise`** — portfolio summary across all accounts owned by an AISE: attention queue (gaps, renewals, credits exhausted), per-account health table, velocity. Renders inline in chat and publishes as an Artifact.
-- **`/report --customer`** — single-account snapshot: program health, credit burn trajectory, recent sessions, open items, risks, next step. Same dual output.
-- **`/session-audit`** — reconcile logged Planhat session history against Calendar + Gong, and audit open Tasks for completion drift (`--tasks`); whole-workspace by default, `--owner <aise-name>` narrows to one AISE
+- **`/report --aise`** – portfolio summary across all accounts owned by an AISE: attention queue (gaps, renewals, credits exhausted), per-account health table, velocity. Renders inline in chat and publishes as an Artifact.
+- **`/report --customer`** – single-account snapshot: program health, credit burn trajectory, recent sessions, open items, risks, next step. Same dual output.
+- **`/session-audit`** – reconcile logged Planhat session history against Calendar + Gong, and audit open Tasks for completion drift (`--tasks`); whole-workspace by default, `--owner <aise-name>` narrows to one AISE
 
-Planhat is the sole system of record — nothing in this plugin reads or writes Notion.
+Planhat is the sole system of record – nothing in this plugin reads or writes Notion.
 
 ---
 
@@ -45,7 +45,7 @@ Then try:
 
 ## Shared knowledge base
 
-The `context/` directory (schema, reference guide, style guide) is shared with `plugins/aise-assistant/` in this monorepo and synced via `scripts/sync-context.sh`. Changes to the knowledge base happen in `plugins/aise-assistant/context/` and are pulled here — never edit `context/` files directly in this repo.
+The `context/` directory (schema, reference guide, style guide) is shared with `plugins/aise-assistant/` in this monorepo and synced via `scripts/sync-context.sh`. Changes to the knowledge base happen in `plugins/aise-assistant/context/` and are pulled here – never edit `context/` files directly in this repo.
 
 ---
 
@@ -66,4 +66,4 @@ The `context/` directory (schema, reference guide, style guide) is shared with `
 
 ## License
 
-MIT — Klara Martinez
+MIT – Klara Martinez

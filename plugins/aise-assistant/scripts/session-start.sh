@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# session-start.sh — writes the real plugin data directory to
+# session-start.sh – writes the real plugin data directory to
 # ~/.claude/aise-assistant.datadir so agents can resolve it with one Read call.
 #
 # $CLAUDE_PLUGIN_DATA is set by the Claude plugin runtime whenever a hook runs.
@@ -68,7 +68,7 @@ printf '%s' "$PLUGIN_DATA_DIR" > "$HOME/.claude/aise-assistant.datadir"
 
 # Warn if identity.md still has placeholder values (setup not yet run)
 if [[ -f "$PLUGIN_DATA_DIR/about/identity.md" ]] && grep -q '<TBD' "$PLUGIN_DATA_DIR/about/identity.md" 2>/dev/null; then
-  echo "[aise-assistant] WARNING: identity.md still contains placeholder values — run /assistant-setup to complete onboarding." >&2
+  echo "[aise-assistant] WARNING: identity.md still contains placeholder values – run /assistant-setup to complete onboarding." >&2
 fi
 
 # One-time migration from legacy paths (idempotent)

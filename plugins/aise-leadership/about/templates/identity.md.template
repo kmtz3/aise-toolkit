@@ -4,33 +4,33 @@
 
 ## Name
 
-- **Display name:** `<TBD — your full name as it should appear in writing>`
-- **Common variants in pulled context:** `<TBD — any accent or spelling variants in transcripts that should be stripped, e.g. accented form, nickname, etc. Leave empty if none.>`
-- **First name (informal):** `<TBD — what to call you in casual chat output>`
-- **Always write as:** `<TBD — the canonical spelling>`
+- **Display name:** `<TBD – your full name as it should appear in writing>`
+- **Common variants in pulled context:** `<TBD – any accent or spelling variants in transcripts that should be stripped, e.g. accented form, nickname, etc. Leave empty if none.>`
+- **First name (informal):** `<TBD – what to call you in casual chat output>`
+- **Always write as:** `<TBD – the canonical spelling>`
 
 ## Email
 
-- **Primary:** `<TBD — your work email>`
+- **Primary:** `<TBD – your work email>`
 
 ## Planhat
 
-- **User ID:** `<TBD — auto-resolved by /assistant-setup, resolved via list_model_records(MODEL: "User", FILTER: {"email[equal to]": "<your email>"})>`
-- **Used in queries as:** `ownerId` (Tasks) / `users` (Conversations), scoped to your Planhat user `_id` — see `context/planhat-schema.md` § Planhat User IDs.
+- **User ID:** `<TBD – auto-resolved by /assistant-setup, resolved via list_model_records(MODEL: "User", FILTER: {"email[equal to]": "<your email>"})>`
+- **Used in queries as:** `ownerId` (Tasks) / `users` (Conversations), scoped to your Planhat user `_id` – see `context/planhat-schema.md` § Planhat User IDs.
 
 ## Role
 
-- **Title:** `<TBD — e.g. AI Success Engineer (AISE), Account Executive>`
-- **Team:** `<TBD — your org / team / function>`
+- **Title:** `<TBD – e.g. AI Success Engineer (AISE), Account Executive>`
+- **Team:** `<TBD – your org / team / function>`
 - **Region:** `<TBD>`
 - **Working language:** `<TBD>`
 
 ## Time zone
 
-- **Primary:** `<TBD — IANA timezone, e.g. Europe/Prague, America/New_York>`
-- **Working hours:** `<TBD — local hours, e.g. 09:00 – 18:00>`
-- **Customers across:** `<TBD — regions you cover>`
+- **Primary:** `<TBD – IANA timezone, e.g. Europe/Prague, America/New_York>`
+- **Working hours:** `<TBD – local hours, e.g. 09:00 – 18:00>`
+- **Customers across:** `<TBD – regions you cover>`
 
 ## Connectors / tools the assistant uses on the user's behalf
 
-- `<TBD — list connected tools: Gmail, Calendar, Planhat, Slack, Gong, Salesforce, etc.>`
+- `<TBD – list connected tools: Gmail, Calendar, Planhat, Slack, Gong, Salesforce, etc.>`

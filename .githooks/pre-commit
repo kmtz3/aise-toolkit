@@ -1,0 +1,5 @@
+#!/usr/bin/env bash
+# Tracked pre-commit hook. Enable once per clone:
+#   git config core.hooksPath .githooks
+set -euo pipefail
+bash "$(git rev-parse --show-toplevel)/scripts/check-no-em-dash.sh" --staged

@@ -1,4 +1,4 @@
-# Salesforce Integration — Session Template
+# Salesforce Integration – Session Template
 
 **Session ID:** Usually part of admin stream or bundled with feedback integrations
 **Duration:** 45–60 min
@@ -31,7 +31,7 @@ By the close, the customer has decided:
 - Salesforce field list for Account object (or equivalent)
 - Named SFDC admin with integration permissions
 - CIS / segmentation requirements from the Insights session
-- Data quality baseline — which accounts are stale, how many have missing fields
+- Data quality baseline – which accounts are stale, how many have missing fields
 
 ---
 
@@ -41,14 +41,14 @@ By the close, the customer has decided:
 
 **Questions to ask:**
 - Is the integration one-way (SFDC → PB) or bidirectional?
-- Which SFDC object(s) are in scope — Account, Opportunity, Contact?
+- Which SFDC object(s) are in scope – Account, Opportunity, Contact?
 - Do we sync all accounts or filtered (active, paying, non-churned)?
 - Any records explicitly excluded (internal test accounts, churned)?
 
 **Key considerations:**
 - One-way SFDC → PB is the standard. Bidirectional is rare and usually unnecessary.
 - Account object is primary. Contacts sync is usually overkill for Phase 1.
-- Filter to active/live accounts — stale records pollute CIS.
+- Filter to active/live accounts – stale records pollute CIS.
 
 **Decision table:**
 
@@ -64,7 +64,7 @@ By the close, the customer has decided:
 **Questions to ask:**
 - Which SFDC fields map to PB custom company fields?
 - What attributes matter for prioritization (ARR, tier, region, industry, plan, CS health score, renewal date)?
-- Are any SFDC fields calculated/formula — do they sync cleanly?
+- Are any SFDC fields calculated/formula – do they sync cleanly?
 - Any fields that should transform on sync (e.g. concatenate, lookup)?
 
 **Key considerations:**
@@ -83,10 +83,10 @@ By the close, the customer has decided:
 ### 3. Sync cadence + triggers
 
 **Questions to ask:**
-- How often should data refresh — real-time, daily, weekly?
+- How often should data refresh – real-time, daily, weekly?
 - Event-triggered (e.g. opportunity closed) or scheduled?
 - Who monitors sync health?
-- What happens if a sync fails — alert where, to whom?
+- What happens if a sync fails – alert where, to whom?
 
 **Key considerations:**
 - Daily is the standard sweet spot. Real-time adds API cost and isn't usually needed.
@@ -109,7 +109,7 @@ By the close, the customer has decided:
 - Who owns segment definitions post-go-live?
 
 **Key considerations:**
-- Dynamic segments are almost always the right choice — they self-maintain.
+- Dynamic segments are almost always the right choice – they self-maintain.
 - Segment sprawl is a real risk. Cap at 5–8 segments for Phase 1.
 
 **Decision table:**
@@ -123,14 +123,14 @@ By the close, the customer has decided:
 ### 5. Data quality handling
 
 **Questions to ask:**
-- What's the baseline data quality in SFDC — missing fields per record, duplicates?
+- What's the baseline data quality in SFDC – missing fields per record, duplicates?
 - Do we block sync for records missing required fields, or sync with gaps?
 - How are duplicate accounts handled?
 - What's the cleanup plan if data quality is poor?
 
 **Key considerations:**
 - Data quality issues become CIS weaknesses. Address at source in SFDC, not downstream in PB.
-- Don't block sync on data quality — it becomes blameable on the integration.
+- Don't block sync on data quality – it becomes blameable on the integration.
 
 **Decision table:**
 
@@ -145,9 +145,9 @@ By the close, the customer has decided:
 ### 6. Cutover + initial load
 
 **Questions to ask:**
-- Initial historical load — all records or filtered?
+- Initial historical load – all records or filtered?
 - Timing of cutover vs pilot activity?
-- Post-load validation — spot checks, counts, CIS calculations?
+- Post-load validation – spot checks, counts, CIS calculations?
 - Rollback if initial load looks wrong?
 
 **Decision table:**
@@ -189,19 +189,19 @@ By the close, the customer has decided:
 
 ---
 
-## Close — synthesis structure
+## Close – synthesis structure
 
-1. **Decisions summary** — direction, field mappings, cadence, segments, data quality handling
-2. **Open items** — missing SFDC admin access, data cleanup before go-live
-3. **Configuration backlog** — SA builds integration + segments; customer provides SFDC access + cleanup commitment
-4. **Validation plan** — spot-check after initial load
-5. **Customer confirmation** — SFDC admin confirms the field list and sync plan are workable
+1. **Decisions summary** – direction, field mappings, cadence, segments, data quality handling
+2. **Open items** – missing SFDC admin access, data cleanup before go-live
+3. **Configuration backlog** – SA builds integration + segments; customer provides SFDC access + cleanup commitment
+4. **Validation plan** – spot-check after initial load
+5. **Customer confirmation** – SFDC admin confirms the field list and sync plan are workable
 
 ---
 
 ## Tweak guidance
 
-- If segments were already defined in the Insights session, pre-populate segment rows citing the source session — customer just validates
-- For customers not using Salesforce, swap terms (HubSpot, Dynamics, custom CRM) — structural KDDs are the same
+- If segments were already defined in the Insights session, pre-populate segment rows citing the source session – customer just validates
+- For customers not using Salesforce, swap terms (HubSpot, Dynamics, custom CRM) – structural KDDs are the same
 - If the customer has no dedicated SFDC admin, flag field mapping as conditional and offer a follow-up working session
-- If CIS isn't going to be active in Phase 1, keep this session lighter — sync is there for future use, not immediate value
+- If CIS isn't going to be active in Phase 1, keep this session lighter – sync is there for future use, not immediate value

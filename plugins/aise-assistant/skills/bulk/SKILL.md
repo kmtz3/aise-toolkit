@@ -5,68 +5,68 @@ description: Run a workflow in bulk across multiple sessions or customers. Two m
 
 Run a bulk workflow. A mode flag is required:
 
-- **`/bulk --debrief [date-range]`** — run the full post-session debrief for every external customer meeting across the target range (default: yesterday)
-- **`/bulk --prep`** — run session prep for all external customer sessions in the upcoming week
+- **`/bulk --debrief [date-range]`** – run the full post-session debrief for every external customer meeting across the target range (default: yesterday)
+- **`/bulk --prep`** – run session prep for all external customer sessions in the upcoming week
 
 If no mode flag is given, list the two modes with a one-line description and ask which to run.
 
 ---
 
-## `--debrief` — bulk post-session debrief
+## `--debrief` – bulk post-session debrief
 
 Run the full post-session debrief workflow: **$ARGUMENTS**
 
-Read the procedure in `agents/bulk-debrief.md` and execute it inline as the main assistant — do not spawn a subagent.
+Read the procedure in `agents/bulk-debrief.md` and execute it inline as the main assistant – do not spawn a subagent.
 
-**What it does:** Discovers external customer meetings across the target date range, resolves each to its Planhat Task/Conversation via the Google Calendar event ID resolution ladder, checks for evidence of a completed debrief (a done Task with a linked Conversation carrying real content), presents a debrief queue (with one round of mid-run expansion allowed), then executes the full post-session-debrief procedure for each unprocessed session sequentially — including contact enrichment on each account's `End User` records. For queues of 4+ sessions, each session runs in an isolated sub-agent to prevent parent-context exhaustion.
+**What it does:** Discovers external customer meetings across the target date range, resolves each to its Planhat Task/Conversation via the Google Calendar event ID resolution ladder, checks for evidence of a completed debrief (a done Task with a linked Conversation carrying real content), presents a debrief queue (with one round of mid-run expansion allowed), then executes the full post-session-debrief procedure for each unprocessed session sequentially – including contact enrichment on each account's `End User` records. For queues of 4+ sessions, each session runs in an isolated sub-agent to prevent parent-context exhaustion.
 
 ### Steps
 
-1. Resolve the target date range — defaults to yesterday. **Then widen it with the weekly sweep:** every delivered external session since Monday of the current week (the previous Monday if today is Monday) is checked too, and any that is not yet debriefed is scooped into the queue (labelled `swept`), so a missed day never stays missed. Turn it off with `--no-sweep`. Accepts a positional natural-language argument (`yesterday`, `today`, `this past week`, `last 3 days`, `May 11-14`, `2026-05-11..2026-05-14`) or the legacy `--date YYYY-MM-DD` flag. See `agents/bulk-debrief.md` step 1 for the full parse table. Convert each day to UTC using the time zone from the user's profile (never a default offset). Pull all calendar events for each day in the range and filter to external-confirmed meetings (≥1 non-@productboard.com attendee, user accepted, event confirmed).
-2. Match each external meeting to a Planhat Company (owner-scoped to the current user) and resolve its session record via the GCal event ID ladder — Conversation by `externalId`, then Task by `sourceId`, then a company+date+title fallback (flagged when used), matching both candidate ID forms. A resolved Conversation is only "already debriefed" if its `description` carries real findings, not just an auto-conversion stub — flag fully-debriefed sessions as skipped, transcript-pending partials as skipped by default too (rerun-able), and stub/empty records as needing a full run.
-3. Present the debrief queue — grouped by date when the range spans multiple days; lists sessions queued, sessions already debriefed (skipped by default, use `--rerun <customer>` in your reply to force-include), sessions skipped for other reasons, anything needing user input. Wait for one go-ahead. **One round of mid-run expansion is allowed** — if the user replies "yes and also add X", re-run discovery for X, merge into the queue (dedup by resolved Planhat record `_id`), and reconfirm before locking the queue.
+1. Resolve the target date range – defaults to yesterday. **Then widen it with the weekly sweep:** every delivered external session since Monday of the current week (the previous Monday if today is Monday) is checked too, and any that is not yet debriefed is scooped into the queue (labelled `swept`), so a missed day never stays missed. Turn it off with `--no-sweep`. Accepts a positional natural-language argument (`yesterday`, `today`, `this past week`, `last 3 days`, `May 11-14`, `2026-05-11..2026-05-14`) or the legacy `--date YYYY-MM-DD` flag. See `agents/bulk-debrief.md` step 1 for the full parse table. Convert each day to UTC using the time zone from the user's profile (never a default offset). Pull all calendar events for each day in the range and filter to external-confirmed meetings (≥1 non-@productboard.com attendee, user accepted, event confirmed).
+2. Match each external meeting to a Planhat Company (owner-scoped to the current user) and resolve its session record via the GCal event ID ladder – Conversation by `externalId`, then Task by `sourceId`, then a company+date+title fallback (flagged when used), matching both candidate ID forms. A resolved Conversation is only "already debriefed" if its `description` carries real findings, not just an auto-conversion stub – flag fully-debriefed sessions as skipped, transcript-pending partials as skipped by default too (rerun-able), and stub/empty records as needing a full run.
+3. Present the debrief queue – grouped by date when the range spans multiple days; lists sessions queued, sessions already debriefed (skipped by default, use `--rerun <customer>` in your reply to force-include), sessions skipped for other reasons, anything needing user input. Wait for one go-ahead. **One round of mid-run expansion is allowed** – if the user replies "yes and also add X", re-run discovery for X, merge into the queue (dedup by resolved Planhat record `_id`), and reconfirm before locking the queue.
 4. Execute the `post-session-debrief` procedure for each queued session, sequentially in chronological order. **Mode by queue size:** inline for 1–3 sessions; spawn one `general-purpose` sub-agent per session for 4+ (each sub-agent receives the full `agents/post-session-debrief.md` procedure + session-specific inputs and returns a structured summary, contact enrichment included). Pass a bulk-run flag so dedup defaults inside the agent fall to "skip" rather than interrupting for input.
-5. **Publish any debrief artifacts and link them into Planhat** per `context/session-artifact-convention.md` — same once-per-run folder and account-ID resolution as `--prep`. Written session summaries belong on the Planhat Conversation, not in Drive; only actual files (exports, decks, KDDs regenerated during debrief) get uploaded.
+5. **Publish any debrief artifacts and link them into Planhat** per `context/session-artifact-convention.md` – same once-per-run folder and account-ID resolution as `--prep`. Written session summaries belong on the Planhat Conversation, not in Drive; only actual files (exports, decks, KDDs regenerated during debrief) get uploaded.
 6. Print a master summary: sessions debriefed (with dedup skips noted per session and a per-session contact-enrichment count), sessions already debriefed and skipped, other skips, sessions awaiting Gong transcript indexing (⚠️ Partial flag), anything needing manual follow-up. Call out separately any contact promoted to `1. Key contact` and anyone with real signal who has no End User record.
 
-Do NOT start running debriefs before the step 3 confirmation. Do NOT run debriefs in parallel — sequential execution applies in both inline and sub-agent mode.
+Do NOT start running debriefs before the step 3 confirmation. Do NOT run debriefs in parallel – sequential execution applies in both inline and sub-agent mode.
 
 **Arguments / flags:**
-- **positional date-range** — `yesterday` (default), `today`, `this past week`, `last N days`, or an absolute range like `May 11-14` / `2026-05-11..2026-05-14`
-- `--date YYYY-MM-DD` — legacy single-day form (still supported)
-- `--skip <customer>` — exclude a customer from the queue (repeatable)
-- `--no-sweep` — debrief only the requested range, skip the check of the rest of the week
-- `--rerun <customer>` — force-include a session already flagged as debriefed (repeatable). Has no effect on `ignored` sessions.
-- `--mark-ignored <customer>` — don't debrief; write `custom.Debrief Status: "ignored"` on that session's Planhat record and skip it permanently (repeatable). For confirmed-in-GCal sessions that never ran: no-shows, verbal cancellations, reschedules without a GCal update. Natural language: "that call didn't happen", "mark the Acme session as a no-show". The write runs after the queue confirmation. (`--skip` is per-run only; `ignored` is permanent.)
-- `--force-ignored <customer>` — escape hatch: re-evaluate a session already marked `ignored` for this run (repeatable)
+- **positional date-range** – `yesterday` (default), `today`, `this past week`, `last N days`, or an absolute range like `May 11-14` / `2026-05-11..2026-05-14`
+- `--date YYYY-MM-DD` – legacy single-day form (still supported)
+- `--skip <customer>` – exclude a customer from the queue (repeatable)
+- `--no-sweep` – debrief only the requested range, skip the check of the rest of the week
+- `--rerun <customer>` – force-include a session already flagged as debriefed (repeatable). Has no effect on `ignored` sessions.
+- `--mark-ignored <customer>` – don't debrief; write `custom.Debrief Status: "ignored"` on that session's Planhat record and skip it permanently (repeatable). For confirmed-in-GCal sessions that never ran: no-shows, verbal cancellations, reschedules without a GCal update. Natural language: "that call didn't happen", "mark the Acme session as a no-show". The write runs after the queue confirmation. (`--skip` is per-run only; `ignored` is permanent.)
+- `--force-ignored <customer>` – escape hatch: re-evaluate a session already marked `ignored` for this run (repeatable)
 
 GCal-cancelled external events are also marked `ignored` on their orphaned Planhat record automatically (after the queue confirmation), and `ignored` sessions get their own section in the queue and master summary.
 
 ---
 
-## `--prep` — bulk session prep
+## `--prep` – bulk session prep
 
 Run bulk session prep for all external customer sessions in the upcoming week: **$ARGUMENTS**
 
-Read the procedure in `agents/bulk-prep-week.md` and execute it inline as the main assistant — do not spawn a subagent.
+Read the procedure in `agents/bulk-prep-week.md` and execute it inline as the main assistant – do not spawn a subagent.
 
 **What it does:** Scans the next 7 days of calendar events, maps each to an owned Planhat Company, deduplicates against existing Planhat Tasks/Conversations with `custom.Prep Notes`, then runs full session prep sequentially for each session that needs it.
 
 ### Steps
 
-1. Resolve the time window — default today + 7 days; `--week YYYY-MM-DD` anchors to a specific Monday–Sunday.
-2. Pull all external calendar events — filter out all-PB meetings, declines, sub-30-min events, and all-day blockers.
+1. Resolve the time window – default today + 7 days; `--week YYYY-MM-DD` anchors to a specific Monday–Sunday.
+2. Pull all external calendar events – filter out all-PB meetings, declines, sub-30-min events, and all-day blockers.
 3. Map each event to an owned Planhat Company (by attendee domain / title); log unmatched and ambiguous as ⚠️.
 4. Dedup via the GCal event ID ladder: skip sessions whose Task/Conversation already has `custom.Prep Notes`; write onto the existing record when it is empty; session-prepper creates a Task only as a last resort.
-5. Run full session prep (following `session-prepper.md`, unattended) sequentially for each session that needs it — including the KDD for Architecting sessions and the **facilitation guide for Architecting, Discovery and Kick off sessions**, which is a hard gate: not done until the guide is in Drive and `custom.Facilitation Playbook URL` reads back equal to its link, otherwise `🔴 Facilitation missing – <reason>`.
-6. **Publish artifacts and link them into Planhat** per `context/session-artifact-convention.md`. Resolve the `Customer Session Artifacts` folder **once at the start of the run** (the `Artifacts folder:` line on your Planhat User record, then an owned-folder title search, creating only when nothing exists) and reuse the ID for every session — do not re-resolve per session. Resolve each customer's Salesforce Account Id once and reuse it across that customer's artifacts. Upload per the naming convention and upsert one `<li>` per artifact into the **Session artifact** section of `custom.Prep Notes` on each session's Planhat calendar-event Task (Conversation as fallback), never prepending a header block. For each `Facilitation` guide (produced or already published) also set `custom.Facilitation Playbook URL` on the event Task per § 6 of that convention.
-7. Report a per-session status table with links to all prepped Planhat records, a **KDD** and a **Facilitation** column (✅ link / 🔴 reason / — not applicable), **the Drive link and Planhat target record per artifact (plus `Playbook URL field: set on Task {_id}` for Facilitation guides)**, and a count of skipped / flagged items. Note once at the top if the Drive folder had to be created.
+5. Run full session prep (following `session-prepper.md`, unattended) sequentially for each session that needs it – including the KDD for Architecting sessions and the **facilitation guide for Architecting, Discovery and Kick off sessions**, which is a hard gate: not done until the guide is in Drive and `custom.Facilitation Playbook URL` reads back equal to its link, otherwise `🔴 Facilitation missing – <reason>`.
+6. **Publish artifacts and link them into Planhat** per `context/session-artifact-convention.md`. Resolve the `Customer Session Artifacts` folder **once at the start of the run** (the `Artifacts folder:` line on your Planhat User record, then an owned-folder title search, creating only when nothing exists) and reuse the ID for every session – do not re-resolve per session. Resolve each customer's Salesforce Account Id once and reuse it across that customer's artifacts. Upload per the naming convention and upsert one `<li>` per artifact into the **Session artifact** section of `custom.Prep Notes` on each session's Planhat calendar-event Task (Conversation as fallback), never prepending a header block. For each `Facilitation` guide (produced or already published) also set `custom.Facilitation Playbook URL` on the event Task per § 6 of that convention.
+7. Report a per-session status table with links to all prepped Planhat records, a **KDD** and a **Facilitation** column (✅ link / 🔴 reason / – not applicable), **the Drive link and Planhat target record per artifact (plus `Playbook URL field: set on Task {_id}` for Facilitation guides)**, and a count of skipped / flagged items. Note once at the top if the Drive folder had to be created.
 
 Do NOT ask for context that's retrievable. Search first, ask once if something is genuinely missing.
 
 **Flags:**
-- `--week YYYY-MM-DD` — anchor to a specific Monday–Sunday instead of today + 7 days
-- `--skip <customer>` — exclude a customer from the run
-- `--force <customer>` — rerun prep even if a brief already exists
-- `--backfill-playbook-urls` — don't prep anything: scan upcoming event Tasks, parse the `_Facilitation.html` Drive link out of `custom.Prep Notes`, and write it to `custom.Facilitation Playbook URL` where that field is empty. Read-only on Prep Notes; a differing existing URL is reported, not overwritten. Natural language: "backfill the playbook links", "fill the facilitation URL field on already-prepped sessions". Combines with `--week` and `--skip`.
-- `--backfill-facilitation` — don't prep anything: for upcoming `🏗️ Architecting`, `🔎 Discovery` and `👟 Kick off` Tasks that have Prep Notes but an empty `custom.Facilitation Playbook URL`, generate the facilitation guide (or reuse one already in Drive), publish it, upsert its link into the Session artifact section, and write and read back the Playbook URL field. Use this when no guide exists yet; `--backfill-playbook-urls` is for when the guide exists and only the field is empty. Natural language: "generate the missing facilitation guides", "backfill facilitation for prepped sessions". Combines with `--week` and `--skip`.
+- `--week YYYY-MM-DD` – anchor to a specific Monday–Sunday instead of today + 7 days
+- `--skip <customer>` – exclude a customer from the run
+- `--force <customer>` – rerun prep even if a brief already exists
+- `--backfill-playbook-urls` – don't prep anything: scan upcoming event Tasks, parse the `_Facilitation.html` Drive link out of `custom.Prep Notes`, and write it to `custom.Facilitation Playbook URL` where that field is empty. Read-only on Prep Notes; a differing existing URL is reported, not overwritten. Natural language: "backfill the playbook links", "fill the facilitation URL field on already-prepped sessions". Combines with `--week` and `--skip`.
+- `--backfill-facilitation` – don't prep anything: for upcoming `🏗️ Architecting`, `🔎 Discovery` and `👟 Kick off` Tasks that have Prep Notes but an empty `custom.Facilitation Playbook URL`, generate the facilitation guide (or reuse one already in Drive), publish it, upsert its link into the Session artifact section, and write and read back the Playbook URL field. Use this when no guide exists yet; `--backfill-playbook-urls` is for when the guide exists and only the field is empty. Natural language: "generate the missing facilitation guides", "backfill facilitation for prepped sessions". Combines with `--week` and `--skip`.

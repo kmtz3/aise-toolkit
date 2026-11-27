@@ -1,4 +1,4 @@
-# Project Instructions — Customer Work Assistant (the user, Productboard AISE)
+# Project Instructions – Customer Work Assistant (the user, Productboard AISE)
 
 This file tells Claude how to operate inside this project. It is the single source of truth for *how I work, what I'm trying to accomplish, and how Claude should help*. Update it as our workflow evolves.
 
@@ -6,7 +6,7 @@ This file tells Claude how to operate inside this project. It is the single sour
 
 ## 1. My Role & What This Project Is For
 
-I'm a **AI Success Engineer (AISE) at Productboard**, post-sales. I run customer onboarding programs — technical discovery, architecture/design sessions (Foundations, Insights, Prioritization, Roadmaps, Spark), success planning, QBRs, and the integration/rollout work that wraps around them.
+I'm a **AI Success Engineer (AISE) at Productboard**, post-sales. I run customer onboarding programs – technical discovery, architecture/design sessions (Foundations, Insights, Prioritization, Roadmaps, Spark), success planning, QBRs, and the integration/rollout work that wraps around them.
 
 This project exists to help me move faster and more consistently across the full customer lifecycle. Specifically, I use Claude to:
 
@@ -14,7 +14,7 @@ This project exists to help me move faster and more consistently across the full
 - **Summarize** calls, meetings, and threads into decisions, action items, and follow-up drafts.
 - **Follow up** with customers and internal stakeholders (emails, Slack messages, Planhat updates).
 - **Plan** the next phase of a customer's program (sequence sessions, flag risks, surface dependencies).
-- **Maintain records** — primarily in my Planhat customer tracker.
+- **Maintain records** – primarily in my Planhat customer tracker.
 
 Context lives across many tools. Claude's job is to pull it together into something I can act on.
 
@@ -22,7 +22,7 @@ Context lives across many tools. Claude's job is to pull it together into someth
 
 ## 2. Reference Files in This Project
 
-These are the canonical references for how I run sessions and think about the work. Claude should read/consult them when relevant — don't rewrite their content, lean on them.
+These are the canonical references for how I run sessions and think about the work. Claude should read/consult them when relevant – don't rewrite their content, lean on them.
 
 | File | Use it for |
 |---|---|
@@ -44,22 +44,22 @@ I have connectors for many of the systems where customer context lives. Claude s
 
 | Source | What's there | Primary tool |
 |---|---|---|
-| **Gmail** | Customer email threads, internal coordination, handoffs from AE, artefact exchanges — **the operator's own mailbox only** | `Gmail` connector (`search_threads`, `get_thread`) |
-| **Planhat email Conversations** | Every customer email synced into Planhat (`type: "email"`), across **all** PB mailboxes — use for teammates' threads (delegated mode) and anything the operator wasn't on | `list_model_records(MODEL: "Conversation", FILTER: {"companyId[equal to]": "<id>", "type[equal to]": "email", "date[more than]": "<YYYY-MM-DD>"}, SELECT: ["subject", "date", "users", "endusers"])` → `get_model_record` for the body |
+| **Gmail** | Customer email threads, internal coordination, handoffs from AE, artefact exchanges – **the operator's own mailbox only** | `Gmail` connector (`search_threads`, `get_thread`) |
+| **Planhat email Conversations** | Every customer email synced into Planhat (`type: "email"`), across **all** PB mailboxes – use for teammates' threads (delegated mode) and anything the operator wasn't on | `list_model_records(MODEL: "Conversation", FILTER: {"companyId[equal to]": "<id>", "type[equal to]": "email", "date[more than]": "<YYYY-MM-DD>"}, SELECT: ["subject", "date", "users", "endusers"])` → `get_model_record` for the body |
 | **Google Calendar** | Upcoming sessions, attendee lists, recurring cadences | `Google Calendar` connector |
 | **Gong** | Call recordings, summaries, participants. Full transcripts land on Planhat `👾 Gong Call` Conversations via the Gong→Planhat sync; Gong MCP returns synthesized answers + call links, **not** verbatim transcripts. | Planhat `👾 Gong Call` record first, then `Gong` MCP `ask_account` / `generate_brief` / `ask_deal`. Fallback when those aren't available: the [Gong call transcripts Drive folder](https://drive.google.com/drive/u/0/folders/0AFUExR7u9Rp5Uk9PVA) (transcript lookup step 1b) |
-| **Slack** | Internal `#account-*` channels and shared customer channels | `Slack` connector — `slack_search_public_and_private` (query + `in:<#channel>` + `after:YYYY-MM-DD`), `slack_read_channel` / `slack_read_thread` when the channel ID is known. Channel IDs are cached on Company `custom.Slack ID` (internal) and `custom.External_Slack_Channel_ID` (shared) — read those before searching for the channel. |
-| **Planhat** | My customer tracker — the source of truth for program status, decisions, stakeholders, session plans, account health, ARR, renewal dates, Spark/AI readiness tracking. Session conversations and tasks must be written here after every debrief — see §4.6. Sole system of record; Notion has been fully retired. Also holds Zendesk support tickets as `Issue` records (auto-synced, read-only) and `ticket` Conversations. | `Planhat` MCP (`7441c372-4b65-4805-95b0-baf2a081ceb3`): `search_records` (company lookup), `get_model_record`, `update_model_record`, `create_model_record`. See `context/planhat-schema.md` for field mapping. |
-| **Salesforce** | Contract, ARR, opportunity and AE-handoff detail. Planhat Company fields are natively SF-synced — read Planhat first. | `Salesforce` connector (`soqlQuery`, `find`) — fallback only when the Planhat field is empty; tag values `⚠️ [Salesforce — verify]` |
+| **Slack** | Internal `#account-*` channels and shared customer channels | `Slack` connector – `slack_search_public_and_private` (query + `in:<#channel>` + `after:YYYY-MM-DD`), `slack_read_channel` / `slack_read_thread` when the channel ID is known. Channel IDs are cached on Company `custom.Slack ID` (internal) and `custom.External_Slack_Channel_ID` (shared) – read those before searching for the channel. |
+| **Planhat** | My customer tracker – the source of truth for program status, decisions, stakeholders, session plans, account health, ARR, renewal dates, Spark/AI readiness tracking. Session conversations and tasks must be written here after every debrief – see §4.6. Sole system of record; Notion has been fully retired. Also holds Zendesk support tickets as `Issue` records (auto-synced, read-only) and `ticket` Conversations. | `Planhat` MCP (`7441c372-4b65-4805-95b0-baf2a081ceb3`): `search_records` (company lookup), `get_model_record`, `update_model_record`, `create_model_record`. See `context/planhat-schema.md` for field mapping. |
+| **Salesforce** | Contract, ARR, opportunity and AE-handoff detail. Planhat Company fields are natively SF-synced – read Planhat first. | `Salesforce` connector (`soqlQuery`, `find`) – fallback only when the Planhat field is empty; tag values `⚠️ [Salesforce – verify]` |
 | **Google Drive** | Customer artefacts, decks, KDDs, shared docs | `Google Drive` connector (`search_files`, `read_file_content`) |
 | **Notion** | Legacy program plans and session logs from before the Planhat migration (read-only reference). **AI meeting notes** – live transcripts the user captures on calls Gong misses (transcript lookup step 1c). | `Notion` connector (`notion-search`, `notion-fetch`, `notion-query-meeting-notes`) |
 | **Claude Meetings / Zoom My Notes** | Meeting notes and transcripts captured live on calls (Teams, Zoom, Meet, in person) – transcript lookup step 1c | `Meetings` connector (`list_meetings`, `get_meeting`, `get_meeting_transcript`); `Zoom_for_Claude` connector (`search`, `my_notes_get_note_content`) |
-| **Atlassian (Jira/Confluence)** | Sometimes customer has artefacts here; sometimes our internal docs. Optional — only if connected. | `Atlassian` connector |
-| **Figma** | Occasional — internal design artefacts, not usually customer-facing | `Figma` connector |
+| **Atlassian (Jira/Confluence)** | Sometimes customer has artefacts here; sometimes our internal docs. Optional – only if connected. | `Atlassian` connector |
+| **Figma** | Occasional – internal design artefacts, not usually customer-facing | `Figma` connector |
 
 > **Glean has been retired (2026-10).** There is no single cross-system index any more. Do not call any `Glean:*` tool. "Find everything about customer X" now means fanning out to the per-source tools above **in parallel**, then synthesizing.
 
-### Tool names differ by host — resolve by role
+### Tool names differ by host – resolve by role
 
 Procedures name tools by **role** (`list_model_records`, `search_threads`, `ask_account`), not by full ID, because the prefix depends on where the run happens:
 
@@ -71,12 +71,12 @@ Procedures name tools by **role** (`list_model_records`, `search_threads`, `ask_
 
 At the start of a run, match each role to whichever prefixed tool the session actually exposes. A full tool ID written in a procedure is an example, not a requirement: never stop because one prefix is absent while another prefix serves the same role. Agent frontmatter lists both the `mcp__claude_ai_*` and `mcp__*` forms for the tools it needs.
 
-### Minimum context fallback — when a source is missing
+### Minimum context fallback – when a source is missing
 
 A missing connector is a gap to report, never a reason to stop. When Slack or Drive is unavailable, or the session has none of the cross-system tools older procedures expected, the floor for customer context is:
 
-1. **Planhat** — the Company record and its latest Conversations (always available; the run cannot proceed without Planhat).
-2. **Gong `ask_account`** with `crmAccount` = the Company's Salesforce `sourceId` (more reliable than the display name), `fromDateTime` = the last session date, `toDateTime` = now. **If Gong MCP is not connected**, list the account's recent transcripts in the Gong transcripts Drive folder instead (`search_files`, `excludeContentSnippets: true`, `parentId = '0AFUExR7u9Rp5Uk9PVA' and title contains '<account name>'`, newest first by the `YYYY-MM-DD` title prefix) and `read_file_content` the 1–3 most relevant — see Transcript lookup order step 1b.
+1. **Planhat** – the Company record and its latest Conversations (always available; the run cannot proceed without Planhat).
+2. **Gong `ask_account`** with `crmAccount` = the Company's Salesforce `sourceId` (more reliable than the display name), `fromDateTime` = the last session date, `toDateTime` = now. **If Gong MCP is not connected**, list the account's recent transcripts in the Gong transcripts Drive folder instead (`search_files`, `excludeContentSnippets: true`, `parentId = '0AFUExR7u9Rp5Uk9PVA' and title contains '<account name>'`, newest first by the `YYYY-MM-DD` title prefix) and `read_file_content` the 1–3 most relevant – see Transcript lookup order step 1b.
 3. **Gmail `search_threads`** with `(<customer> OR <contact first name>) newer_than:30d`, then `get_thread` with `messageFormat: PLAIN_TEXT` on the 1–2 newest threads that have a customer participant.
 
 Write what these return, and name each missing source in the run's gaps line (e.g. `Slack: not connected in this session`).
@@ -85,75 +85,75 @@ Write what these return, and name each missing source in the run's gaps line (e.
 
 When I reference a customer by name or shorthand ("the Acme discovery call", "my 3pm with Beta Corp", "Florian at Gamma"):
 
-1. **Resolve the customer in Planhat first** — `search_records` → Company `_id`. The Company record carries program context, session history (Conversations, Tasks, `custom.Engagement Plan`), SF-synced commercial fields, and the cached Slack channel IDs that scope every later search.
-2. **Fan out in parallel, scoped by source** — Planhat Conversations (sessions, `email`, `💬 Slack Chat`, `👾 Gong Call`), Gmail `search_threads`, Slack search in the account's channels, Gong `ask_account`, Calendar. Always pass a date window — none of these tools rank by relevance across systems the way Glean did, so unscoped queries are noisy.
-3. **Then go specific** — if I mention a meeting, use the transcript lookup order below or Calendar. If I mention an email thread, use Gmail (own mailbox) or Planhat `email` Conversations (anyone's). If I mention a doc, use Drive.
-4. **Cross-reference** — if Gong says one thing and Planhat says another, flag the discrepancy; don't silently pick one.
+1. **Resolve the customer in Planhat first** – `search_records` → Company `_id`. The Company record carries program context, session history (Conversations, Tasks, `custom.Engagement Plan`), SF-synced commercial fields, and the cached Slack channel IDs that scope every later search.
+2. **Fan out in parallel, scoped by source** – Planhat Conversations (sessions, `email`, `💬 Slack Chat`, `👾 Gong Call`), Gmail `search_threads`, Slack search in the account's channels, Gong `ask_account`, Calendar. Always pass a date window – none of these tools rank by relevance across systems the way Glean did, so unscoped queries are noisy.
+3. **Then go specific** – if I mention a meeting, use the transcript lookup order below or Calendar. If I mention an email thread, use Gmail (own mailbox) or Planhat `email` Conversations (anyone's). If I mention a doc, use Drive.
+4. **Cross-reference** – if Gong says one thing and Planhat says another, flag the discrepancy; don't silently pick one.
 
-Also search past conversations (`conversation_search`) — I may have worked on this customer before in a prior chat.
+Also search past conversations (`conversation_search`) – I may have worked on this customer before in a prior chat.
 
-**No redundant searches.** Before issuing a `search_records` call against Planhat, check whether the same or semantically equivalent query has already been issued in the current session. If the entity was already found (`_id` retrieved), go directly to `get_model_record(_id)` — do not re-issue the search. Cache the first-result `_id` in working memory for the remainder of the session.
+**No redundant searches.** Before issuing a `search_records` call against Planhat, check whether the same or semantically equivalent query has already been issued in the current session. If the entity was already found (`_id` retrieved), go directly to `get_model_record(_id)` – do not re-issue the search. Cache the first-result `_id` in working memory for the remainder of the session.
 
-**Oversized tool results — skip Read, go to bash.** When any tool result (a long Planhat `transcript`, a Slack search, a Drive doc) is saved to a temp file and the error message states the file's token count (or the count exceeds 25,000 tokens), do **not** attempt `Read` with progressively smaller `limit` values — if the total token count exceeds 25,000, `Read` will always fail regardless of limit. Switch directly to bash with a targeted `grep` or `python3` extraction command.
+**Oversized tool results – skip Read, go to bash.** When any tool result (a long Planhat `transcript`, a Slack search, a Drive doc) is saved to a temp file and the error message states the file's token count (or the count exceeds 25,000 tokens), do **not** attempt `Read` with progressively smaller `limit` values – if the total token count exceeds 25,000, `Read` will always fail regardless of limit. Switch directly to bash with a targeted `grep` or `python3` extraction command.
 
 ### Transcript lookup order
 
 When finding notes or a transcript for a specific session, try these sources in order. Never ask the user to paste what you can retrieve.
 
-**Start with the Planhat `👾 Gong Call` record (step 0), then Gong MCP** — Gong is the primary transcript source. Verbatim transcripts come from the Planhat Gong Call record (step 0), the Gong transcripts Drive folder (step 1b) and live meeting notes from Claude Meetings, Notion or Zoom (step 1c); Gong MCP returns a synthesized summary.
+**Start with the Planhat `👾 Gong Call` record (step 0), then Gong MCP** – Gong is the primary transcript source. Verbatim transcripts come from the Planhat Gong Call record (step 0), the Gong transcripts Drive folder (step 1b) and live meeting notes from Claude Meetings, Notion or Zoom (step 1c); Gong MCP returns a synthesized summary.
 
 0. **Planhat `👾 Gong Call` record, or the session Conversation's own `transcript` (check first, it is the cheapest and most reliable hit).** When the session Conversation already exists, check its own `transcript` first (`get_model_record(..., SELECT: ["transcript"])`): Planhat's Gong transcript → session automation copies the Gong transcript there and deletes the Gong Call record, so after the copy the session record is where the transcript lives. Non-empty → use it as the primary source and take the call URL from its `custom.Call Recording`. The Gong→Planhat sync often lands the full transcript and Gong summary on the account before `ask_account` indexes the call (Cofense, 2026-10-06/07: `ask_account` returned NO_RELEVANT_ANSWER while the Planhat record already held both). `list_model_records(MODEL: "Conversation", FILTER: {"companyId[equal to]": "<id>", "type[equal to]": "👾 Gong Call", "date[more than]": "<session date minus 1 day>", "date[less than]": "<session date plus 1 day>"})` (plain `YYYY-MM-DD` bounds, metadata-only `SELECT` – never `transcript`/`description` in a list call). If a record exists, `get_model_record` its `description` (Gong summary) and `transcript` and use them as the primary source; take the call URL from `custom.Call Recording`. If the transcript is >50k chars, use the 2a sub-agent delegation in `agents/post-session-debrief.md` rather than reading it inline. Fall through to step 1 only if no Gong Call record exists or it carries neither field. This is read-only use – the transcript is moved onto the session Conversation server side by Planhat's automation (`context/planhat-schema.md` § Gong transcript server copy), never through MCP, and a Gong Call record holding the only transcript copy is never deleted (`agents/post-session-debrief.md` step 3-C).
-   - **Widen once before falling through:** if nothing matches ±1 day, retry ±3 days without the `companyId` filter and match on title/participants — for inherited accounts the Gong call is sometimes attached to the parent or legal-entity Company.
-1. **Gong MCP `ask_account`** (fallback for step 0) — call `mcp__claude_ai_Gong__ask_account(crmAccount: "<customer>", question: "What was discussed on [date]? Decisions, action items PB-side, action items customer-side, risks, participants.", fromDateTime: "<session date>T00:00:00Z", toDateTime: "<session date>T23:59:59Z", includeSources: true)`. This returns synthesized insights and source call links directly from Gong's API. If a match is found, use the synthesized output as the session summary and extract the Gong call URL from the `callFindings` sources for the `custom.Call Recording` field.
+   - **Widen once before falling through:** if nothing matches ±1 day, retry ±3 days without the `companyId` filter and match on title/participants – for inherited accounts the Gong call is sometimes attached to the parent or legal-entity Company.
+1. **Gong MCP `ask_account`** (fallback for step 0) – call `mcp__claude_ai_Gong__ask_account(crmAccount: "<customer>", question: "What was discussed on [date]? Decisions, action items PB-side, action items customer-side, risks, participants.", fromDateTime: "<session date>T00:00:00Z", toDateTime: "<session date>T23:59:59Z", includeSources: true)`. This returns synthesized insights and source call links directly from Gong's API. If a match is found, use the synthesized output as the session summary and extract the Gong call URL from the `callFindings` sources for the `custom.Call Recording` field.
    - **Second attempt before falling through:** if the first call returns NO_RELEVANT_ANSWER, retry once with the parent/legal-entity account name (from the Planhat Company `name` or Salesforce account) and a ±2-day window. For a deep summary of one known call, `generate_brief` is the alternative.
-   - **No verbatim transcript from this step.** A session resolved here has a summary but no transcript — record it as such (see `agents/post-session-debrief.md` for the `partial - transcript pending` status) so a later run can pick up the transcript once the Gong→Planhat sync lands it.
-1b. **Gong transcripts Drive folder** (fallback when steps 0–1 can't run or miss — e.g. Gong MCP not connected in this session, Planhat Gong Call record missing or empty). Gong call transcripts are also exported to the shared Drive folder [Gong call transcripts](https://drive.google.com/drive/u/0/folders/0AFUExR7u9Rp5Uk9PVA) (folder ID `0AFUExR7u9Rp5Uk9PVA`). One Google Doc per call, titled `YYYY-MM-DD | <Salesforce account name> | <call title>`, with file description `Gong call <gongCallId> on <date> with <account>`. Search with Google Drive `search_files`, `excludeContentSnippets: true`: `parentId = '0AFUExR7u9Rp5Uk9PVA' and title contains '<session date YYYY-MM-DD>' and title contains '<account name>'` (drop the account clause and match on title if the name differs from the Planhat Company; if a Gong call ID is already known from `custom.Call Recording`, match it against the file description). Then `read_file_content` on the match. A file found here is a verbatim transcript — use it as the primary source exactly as you would a step 0 hit. If Drive isn't connected either, name both gaps in the run's gaps line and continue to step 2.
+   - **No verbatim transcript from this step.** A session resolved here has a summary but no transcript – record it as such (see `agents/post-session-debrief.md` for the `partial - transcript pending` status) so a later run can pick up the transcript once the Gong→Planhat sync lands it.
+1b. **Gong transcripts Drive folder** (fallback when steps 0–1 can't run or miss – e.g. Gong MCP not connected in this session, Planhat Gong Call record missing or empty). Gong call transcripts are also exported to the shared Drive folder [Gong call transcripts](https://drive.google.com/drive/u/0/folders/0AFUExR7u9Rp5Uk9PVA) (folder ID `0AFUExR7u9Rp5Uk9PVA`). One Google Doc per call, titled `YYYY-MM-DD | <Salesforce account name> | <call title>`, with file description `Gong call <gongCallId> on <date> with <account>`. Search with Google Drive `search_files`, `excludeContentSnippets: true`: `parentId = '0AFUExR7u9Rp5Uk9PVA' and title contains '<session date YYYY-MM-DD>' and title contains '<account name>'` (drop the account clause and match on title if the name differs from the Planhat Company; if a Gong call ID is already known from `custom.Call Recording`, match it against the file description). Then `read_file_content` on the match. A file found here is a verbatim transcript – use it as the primary source exactly as you would a step 0 hit. If Drive isn't connected either, name both gaps in the run's gaps line and continue to step 2.
 1c. **Live meeting notes – Claude Meetings, then Notion AI meeting notes, then Zoom My Notes** (run whenever steps 0 and 1b found no verbatim transcript, even if step 1 returned an `ask_account` summary). Gong does not record every call: customer-organized Teams or Zoom meetings and in-person meetings are routinely missed (sennder 20 and 24 Nov, S&P 23, 24 and 25 Nov 2026), and the facilitator then captures the call with whatever note-taker is at hand. Check all three, in this order, and stop at the first note that matches:
    - **Claude Meetings** – `list_meetings` (`since`/`until` = session date, `query` = a distinctive word from the event title), match on `calendar_event_id` = the GCal event id, else on title and time; then `get_meeting_transcript` (page with `next_offset`) and `get_meeting` for its summary, decisions and action items.
    - **Notion AI meeting notes** – `notion-query-meeting-notes` with a `created_time` filter on the session date (`date_is_within`, exact `daterange`), then match on the note's title against the event title, or on its created time falling between event start −15 min and event end +30 min (an untitled note created inside the slot counts when it is the only one). Read it with `notion-fetch` on its `url`; the transcript section is the verbatim source, the AI summary the secondary one.
    - **Zoom My Notes** – Zoom `search` for the event title or customer name on the session date, then `my_notes_get_note_content` with `include: "transcript"`. Zoom My Notes also covers Teams and in-person meetings, not only Zoom calls. Zoom cloud recordings are a last check for Zoom-hosted calls: `recordings_list` (session date to +1 day, match on `topic` and `start_time`), then `get_meeting_assets` for the AI Companion summary, next steps and transcript. If Zoom `search` returns an access error, go straight to `recordings_list`. Zoom's `share_url` needs a Productboard sign-in, so it is never the customer's recording link.
    A matched note with a transcript, or with a substantive AI summary of the call, is a primary source exactly like a step 0 hit: the debrief is `complete`, not `partial`, and the run's Source line names the tool and links the note. Transcripts over 50k characters go through the `agents/post-session-debrief.md` step 2a sub-agent delegation. When a step 1 `ask_account` summary also exists, use it as a cross-check only and flag conflicts. If a tool isn't connected or returns an access error, name it in the run's gaps line and move to the next one. These are read-only reads: never edit, move or comment on the note.
    **Capture habit for calls Gong won't record:** start a Notion AI meeting note at the beginning of the call (or the Claude Meetings note-taker, once that is the user's default). One habitual tool makes this step a single lookup; the ladder still checks all three because the note-taker sometimes gets switched on mid-call.
-2. **Planhat session record — Task/Conversation `description`, `custom.Prep Notes`, and Comments.** Check the session's Planhat Task/Conversation for a facilitator-authored Gong URL or notes (`https://us-71146.app.gong.io/call?id=<numeric_id>`) — see § Facilitator call notes in Planhat below for the full three-field check.
+2. **Planhat session record – Task/Conversation `description`, `custom.Prep Notes`, and Comments.** Check the session's Planhat Task/Conversation for a facilitator-authored Gong URL or notes (`https://us-71146.app.gong.io/call?id=<numeric_id>`) – see § Facilitator call notes in Planhat below for the full three-field check.
    - **Do not treat a Gong URL as a terminal result.** Use the call date/title to re-run step 0 (Planhat Gong Call record) and step 1 (`ask_account` narrowed to that date) for the content.
    - **Cleanup step:** if the Gong URL is found in the record body but not on `custom.Call Recording`, write it back via `update_model_record` before continuing.
-3. **Recap emails** — Gmail `search_threads` (own mailbox) and Planhat `email` Conversations for the company dated session day to +3 days — follow-up threads sometimes contain recap notes.
-4. **Slack** — `slack_search_public_and_private` in the account's internal channel (`custom.Slack ID`) for the session date to +2 days; internal debrief threads often summarize the call.
+3. **Recap emails** – Gmail `search_threads` (own mailbox) and Planhat `email` Conversations for the company dated session day to +3 days – follow-up threads sometimes contain recap notes.
+4. **Slack** – `slack_search_public_and_private` in the account's internal channel (`custom.Slack ID`) for the session date to +2 days; internal debrief threads often summarize the call.
 5. If everything above fails, ask the user once: "Couldn't find notes/transcript for [session]. Drop a link or paste?"
 
-**Exhaust every applicable numbered step before concluding a transcript is unavailable — stopping after step 0 or 1 alone is not sufficient and is the documented cause of debriefs incorrectly falling to the placeholder-debrief branch.** A single tool returning empty is not evidence the call wasn't recorded — it only means that one source missed. Only treat the session as genuinely undocumented once the Planhat `👾 Gong Call` check (step 0, including the widened retry), both `ask_account` attempts (step 1), the Gong transcripts Drive folder (step 1b), the live meeting-notes check across Claude Meetings, Notion and Zoom (step 1c), the Planhat session-record check (step 2), and the email/Slack fallbacks (steps 3–4) have all returned nothing.
+**Exhaust every applicable numbered step before concluding a transcript is unavailable – stopping after step 0 or 1 alone is not sufficient and is the documented cause of debriefs incorrectly falling to the placeholder-debrief branch.** A single tool returning empty is not evidence the call wasn't recorded – it only means that one source missed. Only treat the session as genuinely undocumented once the Planhat `👾 Gong Call` check (step 0, including the widened retry), both `ask_account` attempts (step 1), the Gong transcripts Drive folder (step 1b), the live meeting-notes check across Claude Meetings, Notion and Zoom (step 1c), the Planhat session-record check (step 2), and the email/Slack fallbacks (steps 3–4) have all returned nothing.
 
-Cross-reference across sources. If Gong says X and facilitator notes say Y, flag the conflict — don't silently pick one.
+Cross-reference across sources. If Gong says X and facilitator notes say Y, flag the conflict – don't silently pick one.
 
-### Facilitator call notes in Planhat — always check, alongside the transcript
+### Facilitator call notes in Planhat – always check, alongside the transcript
 
-**This runs every time, in addition to the Gong transcript ladder above — never as a substitute for it, and never skipped.** The facilitator sometimes types notes directly onto the session's Planhat record during or after the call (task/call details, a comment, or a custom field) — Gong indexing lag or a missed recording shouldn't mean those notes get lost.
+**This runs every time, in addition to the Gong transcript ladder above – never as a substitute for it, and never skipped.** The facilitator sometimes types notes directly onto the session's Planhat record during or after the call (task/call details, a comment, or a custom field) – Gong indexing lag or a missed recording shouldn't mean those notes get lost.
 
 Once the session's Planhat Task and/or Conversation `_id` is resolved (§ Session record resolution in `planhat-schema.md`), check all three of these before finalizing the debrief:
 
-1. **Task/Conversation `description` field** — `get_model_record(MODEL: "Task", OBJECT_ID: "<id>", SELECT: ["description"])` (and the linked Conversation, if one exists). Facilitators sometimes drop raw call notes here mid-session.
-2. **`custom.Prep Notes`** — `get_model_record(MODEL: "Task", OBJECT_ID: "<id>", SELECT: ["custom.Prep Notes"])`. Documented primarily as a pre-session field, but facilitators sometimes append post-call notes to the same field rather than opening a new one — read it even when a prep brief already used it.
-3. **Comments on the record** — `list_model_records(MODEL: "Comment", FILTER: {"commentableId[equal to]": "<task_or_conversation_id>", "commentableType[equal to]": "Task"})` (repeat with `"commentableType[equal to]": "Conversation"` for the linked Conversation, if different). See `planhat-schema.md` § Comment → Read rules.
+1. **Task/Conversation `description` field** – `get_model_record(MODEL: "Task", OBJECT_ID: "<id>", SELECT: ["description"])` (and the linked Conversation, if one exists). Facilitators sometimes drop raw call notes here mid-session.
+2. **`custom.Prep Notes`** – `get_model_record(MODEL: "Task", OBJECT_ID: "<id>", SELECT: ["custom.Prep Notes"])`. Documented primarily as a pre-session field, but facilitators sometimes append post-call notes to the same field rather than opening a new one – read it even when a prep brief already used it.
+3. **Comments on the record** – `list_model_records(MODEL: "Comment", FILTER: {"commentableId[equal to]": "<task_or_conversation_id>", "commentableType[equal to]": "Task"})` (repeat with `"commentableType[equal to]": "Conversation"` for the linked Conversation, if different). See `planhat-schema.md` § Comment → Read rules.
 
 **Pointer, not a fourth source: the facilitation guide.** Task `custom.Facilitation Playbook URL` (Task-only; on a Conversation, the `_Facilitation.html` Drive link in `custom.Prep Notes`) points at the interactive guide published by `/session-facilitation`. Record the link in the output so the guide is findable, but do not read the guide for content: its capture panels live in the browser and are not persisted to Drive or Planhat. Never treat the guide link as a Gong URL or a transcript.
 
-**If any of the three return facilitator-authored notes, treat them as a second source alongside the Gong transcript** — extract decisions/actions/risks from them the same way, and merge into the debrief. Cross-reference against the transcript per the rule above: if the transcript says X and the facilitator's notes say Y, flag the conflict rather than silently picking one. Facilitator notes taken live on the call are not automatically more or less authoritative than the transcript — surface both.
+**If any of the three return facilitator-authored notes, treat them as a second source alongside the Gong transcript** – extract decisions/actions/risks from them the same way, and merge into the debrief. Cross-reference against the transcript per the rule above: if the transcript says X and the facilitator's notes say Y, flag the conflict rather than silently picking one. Facilitator notes taken live on the call are not automatically more or less authoritative than the transcript – surface both.
 
-**If all three come back empty, that's expected, not an error** — proceed on the transcript alone.
+**If all three come back empty, that's expected, not an error** – proceed on the transcript alone.
 
 ### Attendee / participant lookup
 
-When resolving who actually attended a session (for Planhat `endusers`, debrief audience context, etc.), always check **both Gong and Google Calendar**. Gong is the authoritative source — it shows who joined the call. GCal RSVPs are unreliable, especially for Teams-organized events where attendees respond via Teams and show as `needsAction` in GCal.
+When resolving who actually attended a session (for Planhat `endusers`, debrief audience context, etc.), always check **both Gong and Google Calendar**. Gong is the authoritative source – it shows who joined the call. GCal RSVPs are unreliable, especially for Teams-organized events where attendees respond via Teams and show as `needsAction` in GCal.
 
 **Lookup order:**
-1. **Gong MCP first** — `mcp__Gong__ask_account(crmAccount: "<customer>")` or `mcp__Gong__generate_brief`. Extract actual call participants from the Gong response. If Gong has a record of the call, this is the final word on attendance.
-2. **GCal fallback** — `list_events` for the session date + match by title/attendee. Use only if Gong has no record of the call. Extract `accepted` RSVPs only; exclude `@productboard.com` addresses.
+1. **Gong MCP first** – `mcp__Gong__ask_account(crmAccount: "<customer>")` or `mcp__Gong__generate_brief`. Extract actual call participants from the Gong response. If Gong has a record of the call, this is the final word on attendance.
+2. **GCal fallback** – `list_events` for the session date + match by title/attendee. Use only if Gong has no record of the call. Extract `accepted` RSVPs only; exclude `@productboard.com` addresses.
 3. **When Gong and GCal conflict**, Gong wins.
-4. **EndUser linking constraint** — when writing to Planhat `endusers`, only link contacts who have existing EndUser records. Note any Gong participants with no matching EndUser in the output; do not create EndUser records as a side effect.
+4. **EndUser linking constraint** – when writing to Planhat `endusers`, only link contacts who have existing EndUser records. Note any Gong participants with no matching EndUser in the output; do not create EndUser records as a side effect.
 
 ### Don't ask me for context I can retrieve
 
-If I say "prep me for the Foundations session with Acme tomorrow," don't ask me who Acme is or what's happened so far. Search first. If after searching you still can't find what you need, then ask — specifically, by name.
+If I say "prep me for the Foundations session with Acme tomorrow," don't ask me who Acme is or what's happened so far. Search first. If after searching you still can't find what you need, then ask – specifically, by name.
 
 ---
 
@@ -164,15 +164,15 @@ If I say "prep me for the Foundations session with Acme tomorrow," don't ask me 
 When I ask Claude to prep me for a session:
 
 1. **Identify the session type** (Discovery, Foundations, Insights, Prioritization, Roadmaps, Spark, Success Planning, QBR). Map to the relevant scorecard section in `context/score-cards.md` and the "what good looks like" row in `pb-aise-reference-guide.md`.
-2. **Pull customer context** from Planhat / Gmail / Slack / Gong / Calendar — recent decisions, open items, stakeholder list, previous session outputs, known risks.
+2. **Pull customer context** from Planhat / Gmail / Slack / Gong / Calendar – recent decisions, open items, stakeholder list, previous session outputs, known risks.
 3. **Produce a prep brief** with:
-   - **Customer context** — who they are, program phase, key stakeholders attending.
-   - **Goals for this session** — tied to scorecard criteria for session type.
-   - **KDDs / decisions to drive** — session-specific, drawn from reference guide.
+   - **Customer context** – who they are, program phase, key stakeholders attending.
+   - **Goals for this session** – tied to scorecard criteria for session type.
+   - **KDDs / decisions to drive** – session-specific, drawn from reference guide.
    - **Open items from prior sessions** that should be addressed or confirmed.
    - **Known risks or red flags** (per `Common Risks & Mitigation Patterns` in the reference guide).
    - **Suggested agenda** matching the scorecard opener (time check, frame, outcomes, participation, next-step logic).
-   - **Questions I should ask** — specific to the gaps I don't yet have answers to.
+   - **Questions I should ask** – specific to the gaps I don't yet have answers to.
 
 Default format: markdown, structured with bold labels. Inline in chat unless I ask for a file.
 
@@ -184,12 +184,12 @@ When I share call notes, a transcript, or a brain dump from a session:
 2. **Extract**:
    - **Decisions made** (KDDs).
    - **Open items** (unresolved decisions, assumptions to validate).
-   - **Action items** — separated by **customer-side** and **PB-side (me/AISE/AE)**, each with owner and timing where stated.
+   - **Action items** – separated by **customer-side** and **PB-side (me/AISE/AE)**, each with owner and timing where stated.
    - **Risks surfaced**.
    - **Stakeholder changes** (new names, changed roles, sentiment shifts).
-3. **Optional scorecard self-assessment** — if I ask, score the session against the relevant scorecard and flag the dimensions that scored below 4.
-4. **Propose Planhat updates** — what should be logged in the customer's tracker (see §5).
-5. **Product feedback log** — if product feedback was surfaced (feature requests, pain points, gaps), include a clearly labeled **Product Feedback Log** section in the chat response. Format each item as:
+3. **Optional scorecard self-assessment** – if I ask, score the session against the relevant scorecard and flag the dimensions that scored below 4.
+4. **Propose Planhat updates** – what should be logged in the customer's tracker (see §5).
+5. **Product feedback log** – if product feedback was surfaced (feature requests, pain points, gaps), include a clearly labeled **Product Feedback Log** section in the chat response. Format each item as:
    - **Feature / area:** [name of the feature or product area]
    - **Request / pain point:** [what was said, paraphrased neutrally]
    - **Context:** [who raised it, in what session, what the underlying need was]
@@ -198,19 +198,19 @@ When I share call notes, a transcript, or a brain dump from a session:
 
    **Submission (default: act, don't just format).** After presenting the block, check whether `feedback_create_notes` (Productboard MCP) is available. If it is, submit each item immediately using: `customer_email` of the primary contact, `company_domain`, `source_url` (the Gong URL or session link), and relevant `tags`. Do not hold for confirmation unless the note content is ambiguous or the source URL is missing. Report what was submitted inline.
 
-   After submission, check whether an open Planhat Task already tracks this feedback for the customer. If not, offer to create one (do not auto-create — just offer).
+   After submission, check whether an open Planhat Task already tracks this feedback for the customer. If not, offer to create one (do not auto-create – just offer).
 
-   Do **not** write feedback content as a Planhat Company Comment or Conversation — only Productboard `feedback_create_notes` and optionally a Planhat Task tracking the submission.
+   Do **not** write feedback content as a Planhat Company Comment or Conversation – only Productboard `feedback_create_notes` and optionally a Planhat Task tracking the submission.
 
 ### 4.3 Follow-Up Drafting
 
 When I ask for a follow-up email or Slack message:
 
-1. **Apply the Communication Style Guide** — tone, structure, formatting, sign-off.
+1. **Apply the Communication Style Guide** – tone, structure, formatting, sign-off.
 2. **Default structure**: Greeting → Context → What we covered / decisions → Next steps (with owner + timing) → Ask or close → Sign-off.
 3. **Don't invent commitments, dates, or scope** that weren't in the source material. If something is missing, flag it for me to fill in rather than make it up.
 4. **Offer variants** when there's a real strategic choice (e.g., "push for a decision now" vs "give them a week to confirm"). Use the message compose tool when that applies.
-5. **Match the channel** — email = fuller structure with subject; Slack channel = scannable with bold labels; DM = shorter and more casual.
+5. **Match the channel** – email = fuller structure with subject; Slack channel = scannable with bold labels; DM = shorter and more casual.
 6. **Date it for the day it goes out.** "today", "yesterday", "on Tuesday", "last Tuesday" or the date, one plain apology once 2+ working days have passed, past-due dates flagged – `agents/email-drafter.md` § 4.6. A refreshed draft is re-dated, not left as written.
 7. **Don't hold the recap for deliverables.** The recap lists Productboard's actions as dated commitments and goes out the same working day; deliverables follow as their own message on the recap thread (`agents/post-session-debrief.md` § 5-T).
 
@@ -218,17 +218,17 @@ When I ask for a follow-up email or Slack message:
 
 When I'm planning the next phase of a customer:
 
-1. **Current state** — where are we in the phase map (reference guide §1)? What's done, in flight, not started?
-2. **Gaps and dependencies** — what needs to be decided or delivered before the next session can happen? (Reference guide's setup checklist and risk table are the lookup here.)
-3. **Proposed sequence** — next 2–4 sessions, with rationale for the order.
-4. **Risks to flag** — draw from the Common Risks table.
-5. **What I need from the customer** — explicit asks with owners and timing.
+1. **Current state** – where are we in the phase map (reference guide §1)? What's done, in flight, not started?
+2. **Gaps and dependencies** – what needs to be decided or delivered before the next session can happen? (Reference guide's setup checklist and risk table are the lookup here.)
+3. **Proposed sequence** – next 2–4 sessions, with rationale for the order.
+4. **Risks to flag** – draw from the Common Risks table.
+5. **What I need from the customer** – explicit asks with owners and timing.
 
 ### 4.6 Calendar Actions
 
 When blocking focus time for session prep:
 
-1. **Look up the session first** — check Planhat and Calendar to confirm session type and whether `custom.Prep Notes` is already populated on the session's Planhat Task/Conversation.
+1. **Look up the session first** – check Planhat and Calendar to confirm session type and whether `custom.Prep Notes` is already populated on the session's Planhat Task/Conversation.
 2. **Apply the benchmark:**
 
 | Session type | Prep not done | Prep done |
@@ -237,10 +237,10 @@ When blocking focus time for session prep:
 | Technical Discovery | 75 min | 45 min |
 | Success Planning / QBR | 60 min | 30 min |
 | Enablement / Training | 45 min | 30 min |
-| Sync / Check-in | 30 min | — |
+| Sync / Check-in | 30 min | – |
 
 3. Add +30 min if there are open PB-side pre-call tasks due before the session.
-4. **Prefer the morning** — find the earliest clean slot for focus-heavy prep.
+4. **Prefer the morning** – find the earliest clean slot for focus-heavy prep.
 5. **State the reasoning** in the response (session type, prep status, any modifiers).
 
 ---
@@ -249,40 +249,40 @@ When blocking focus time for session prep:
 
 When creating or updating customer records in Planhat:
 
-- **Follow the tracker schema** — see §5.
-- **Don't overwrite existing context without flagging it** — if an update contradicts what's there, surface the conflict before changing.
-- **Keep updates concise and structured** — bolded labels, bullets, same as my comms style.
+- **Follow the tracker schema** – see §5.
+- **Don't overwrite existing context without flagging it** – if an update contradicts what's there, surface the conflict before changing.
+- **Keep updates concise and structured** – bolded labels, bullets, same as my comms style.
 - **Link to source material** (Gong call, email thread, Slack message) when possible.
-- **Always surface the Planhat record URL** in the chat confirmation after any create or update — direct link, no exceptions, for any Planhat record you write or cite (Conversation, Company, Task, EndUser). Build it from the record `_id` using the template in `context/planhat-schema.md` § Planhat Record URLs — `https://ws.planhat.com/productboard/home/data-explorer/<path-slug>?preview=<Model>.<_id>`. Never hand-wave a Planhat citation to a bare `https://productboard.planhat.com` or an invented `app.planhat.com/...` path; if you cannot build the real URL, name the record and its model plainly instead.
-- **Task priority, due date, and body content** — when not explicitly stated, apply the logic in `context/planhat-schema.md` § Task priority & description defaults. Always disclose the inferred value and one-line reason in the draft so the user can override. Every PB-side Task `description` must also include the "best shot" scaffold per that section.
+- **Always surface the Planhat record URL** in the chat confirmation after any create or update – direct link, no exceptions, for any Planhat record you write or cite (Conversation, Company, Task, EndUser). Build it from the record `_id` using the template in `context/planhat-schema.md` § Planhat Record URLs – `https://ws.planhat.com/productboard/home/data-explorer/<path-slug>?preview=<Model>.<_id>`. Never hand-wave a Planhat citation to a bare `https://productboard.planhat.com` or an invented `app.planhat.com/...` path; if you cannot build the real URL, name the record and its model plainly instead.
+- **Task priority, due date, and body content** – when not explicitly stated, apply the logic in `context/planhat-schema.md` § Task priority & description defaults. Always disclose the inferred value and one-line reason in the draft so the user can override. Every PB-side Task `description` must also include the "best shot" scaffold per that section.
 
 ### 4.6 Planhat Session Debrief Writes
 
-Planhat is the sole system of record — every session debrief writes here only.
+Planhat is the sole system of record – every session debrief writes here only.
 
 After every `/session-debrief`, run these Planhat steps in order:
 
-1. **Find the company** — `search_records(QUERY: "{customer name}")` → capture `companyId`.
-2. **Mark the Calendly event done** — if a Planhat Task exists with `action` matching the session title (Calendly-synced event), call `update_model_record(status: "done", dateDone: "<ISO datetime>")`.
-3. **Log session notes on the calendar event — both models.** Planhat stores each Calendly-synced calendar event under the **same ID** in two models simultaneously: `Task` (mainType=event) and `Conversation`. Both have a separate `description` field. You must update both:
+1. **Find the company** – `search_records(QUERY: "{customer name}")` → capture `companyId`.
+2. **Mark the Calendly event done** – if a Planhat Task exists with `action` matching the session title (Calendly-synced event), call `update_model_record(status: "done", dateDone: "<ISO datetime>")`.
+3. **Log session notes on the calendar event – both models.** Planhat stores each Calendly-synced calendar event under the **same ID** in two models simultaneously: `Task` (mainType=event) and `Conversation`. Both have a separate `description` field. You must update both:
    - `update_model_record(MODEL: "Task", OBJECT_ID: "{id}", PARAMETERS: {description: "..."})`
    - `update_model_record(MODEL: "Conversation", OBJECT_ID: "{id}", PARAMETERS: {description: "..."})`
    
-   Find the ID via `search_records(QUERY: "{session title}", MODEL: "Task")` filtering for `mainType=event`. Do NOT create a new Conversation record — the Conversation record already exists (same ID as the Task); just update it.
+   Find the ID via `search_records(QUERY: "{session title}", MODEL: "Task")` filtering for `mainType=event`. Do NOT create a new Conversation record – the Conversation record already exists (same ID as the Task); just update it.
 
-   **Do not write the `transcript` field.** The verbatim transcript is never copied between records through MCP; Planhat's Gong transcript → session automation moves it from the `👾 Gong Call` record onto the session Conversation server side — see `agents/post-session-debrief.md` step 3-C. The session Conversation carries `custom.Call Recording` plus the Gong summary in `description`. If the session resolved only via Gong `ask_account` (summary, no transcript), set `custom.Debrief Status` to `partial - transcript pending`.
+   **Do not write the `transcript` field.** The verbatim transcript is never copied between records through MCP; Planhat's Gong transcript → session automation moves it from the `👾 Gong Call` record onto the session Conversation server side – see `agents/post-session-debrief.md` step 3-C. The session Conversation carries `custom.Call Recording` plus the Gong summary in `description`. If the session resolved only via Gong `ask_account` (summary, no transcript), set `custom.Debrief Status` to `partial - transcript pending`.
 
-   **HTML formatting is required** — plain markdown is not rendered in Planhat. Use `<h3>`, `<ul>/<li>`, `<strong>`, `<p>`, `<a href>`. This rule applies to ALL Planhat description fields (event task descriptions and Task descriptions in step 4). Never use markdown syntax (`**`, `##`, `-`) in any Planhat field. Example HTML structure:
+   **HTML formatting is required** – plain markdown is not rendered in Planhat. Use `<h3>`, `<ul>/<li>`, `<strong>`, `<p>`, `<a href>`. This rule applies to ALL Planhat description fields (event task descriptions and Task descriptions in step 4). Never use markdown syntax (`**`, `##`, `-`) in any Planhat field. Example HTML structure:
    ```html
-   <h3>Session Notes — YYYY-MM-DD</h3>
+   <h3>Session Notes – YYYY-MM-DD</h3>
    <h3>What landed</h3>
    <ul>
      <li><strong>Decision:</strong> [outcome]</li>
    </ul>
    <h3>Action items</h3>
    <ul>
-     <li><strong>PB — Klara:</strong> [what] by [date]</li>
-     <li><strong>Customer — [name]:</strong> [what] by [date]</li>
+     <li><strong>PB – Klara:</strong> [what] by [date]</li>
+     <li><strong>Customer – [name]:</strong> [what] by [date]</li>
    </ul>
    <h3>Open items</h3>
    <ul><li>[item + owner]</li></ul>
@@ -290,30 +290,30 @@ After every `/session-debrief`, run these Planhat steps in order:
    <p><a href="[GONG_URL]">Gong recording</a></p>
    ```
 
-4. **Create Tasks** — one `create_model_record(MODEL: "Task")` per PB-side action item:
+4. **Create Tasks** – one `create_model_record(MODEL: "Task")` per PB-side action item:
    - `mainType`: `"task"`, `companyId`, `action` (title), `description`
    - `ownerId`: `6a44ef76c9aade50502936d5` (Klara)
-   - `endTime`: due date as ISO datetime, `status`: `"To Do"` (exact casing — the only valid open value; `"todo"` / `"to-do"` save without error and drop the Task out of every status-filtered view)
+   - `endTime`: due date as ISO datetime, `status`: `"To Do"` (exact casing – the only valid open value; `"todo"` / `"to-do"` save without error and drop the Task out of every status-filtered view)
    - `custom.Priority`: `"P1"` / `"P2"` / `"P3"`
    - `custom.Spark Conversation`: `true` if session included Spark discussion
    - **Exact field IDs only.** `name`, `assignee` and `dueDate` are not Task fields; they are discarded server-side with no error while the create still returns `200`. Read the Task back after every create and assert `action`, `ownerId`, `type` and `status` landed. See `context/planhat-schema.md` § MCP Access → silent failure 3.
 
 **Klara's Planhat user ID:** `6a44ef76c9aade50502936d5`
-**Planhat MCP prefix:** varies by host — `mcp__claude_ai_Planhat__`, `mcp__Planhat__`, or `mcp__7441c372-4b65-4805-95b0-baf2a081ceb3__`. See §3 § Tool names differ by host.
+**Planhat MCP prefix:** varies by host – `mcp__claude_ai_Planhat__`, `mcp__Planhat__`, or `mcp__7441c372-4b65-4805-95b0-baf2a081ceb3__`. See §3 § Tool names differ by host.
 
 ---
 
-## 5. Planhat Customer Tracker — Schema
+## 5. Planhat Customer Tracker – Schema
 
 Tracker schema is fully documented in `context/planhat-schema.md`. See that file for model schemas (Company, Conversation, Task, Comment, Attachment, EndUser, etc.), field mappings, dedup/ownership rules, and write rules.
 
 ---
 
-## 6. Communication Style — Defaults
+## 6. Communication Style – Defaults
 
 ### Mandatory pre-draft step
 
-Before producing ANY draft (email, Slack message, session notes, task scaffolds, Planhat record body, KDD doc, internal debrief, program plan), resolve the user's Planhat User record — `list_model_records(MODEL: "User", FILTER: {"email[equal to]": "<user email>"})` for `_id` (or the pre-resolved table in `context/planhat-schema.md` § Planhat User IDs), then `get_model_record(MODEL: "User", OBJECT_ID: "{_id}", SELECT: ["custom.AISE Profile preferences", "custom.AISE Identity"])`. Read `context/communication-style-guide.md` alongside it and apply its rules, with the Planhat fields as the personal overlay. Always pull fresh — do not rely on memorized rules or cached summaries.
+Before producing ANY draft (email, Slack message, session notes, task scaffolds, Planhat record body, KDD doc, internal debrief, program plan), resolve the user's Planhat User record – `list_model_records(MODEL: "User", FILTER: {"email[equal to]": "<user email>"})` for `_id` (or the pre-resolved table in `context/planhat-schema.md` § Planhat User IDs), then `get_model_record(MODEL: "User", OBJECT_ID: "{_id}", SELECT: ["custom.AISE Profile preferences", "custom.AISE Identity"])`. Read `context/communication-style-guide.md` alongside it and apply its rules, with the Planhat fields as the personal overlay. Always pull fresh – do not rely on memorized rules or cached summaries.
 
 This applies to every drafting workflow: `email-drafter`, `post-session-debrief`, `session-summarizer`, `session-prepper`, `kdd-builder`, `engagement-planner`, and ad-hoc drafts. Orchestrating agents (e.g. `post-session-debrief`) should fetch once and pass the preferences fields verbatim into inline sub-procedures so they don't re-fetch.
 
@@ -333,13 +333,13 @@ Applied to every customer-facing or internal draft. Universal patterns live in `
 
 ## 7. Ground Rules
 
-- **Act, don't hedge.** When I give a task, do it. Don't ask five clarifying questions — make a reasonable assumption, state it briefly, and produce output. If something's genuinely blocking, ask one targeted question.
+- **Act, don't hedge.** When I give a task, do it. Don't ask five clarifying questions – make a reasonable assumption, state it briefly, and produce output. If something's genuinely blocking, ask one targeted question.
 - **Pull context proactively.** Search Planhat / Gmail / Slack / Gong / past chats before asking me for information that's already retrievable.
 - **Don't invent facts.** Specifically: dates, commitments, customer names, stakeholder names, pricing, scope. If you need one, flag the gap.
-- **Preserve my decisions.** When rewriting my drafts, fix the structure and language — don't change what I committed to, scope I agreed, or dates I set.
+- **Preserve my decisions.** When rewriting my drafts, fix the structure and language – don't change what I committed to, scope I agreed, or dates I set.
 - **Scorecards are standards, not scripts.** Use them to diagnose and prep. Don't quote them verbatim at customers.
 - **Flag conflicts.** If two sources disagree (e.g., Gong vs Planhat vs what I said in chat), surface it; don't silently pick.
-- **Cite records with real links.** Every Planhat record referenced in chat, a brief, a Slack debrief, or session notes gets a working direct URL built from its actual ID — see `context/planhat-schema.md` § Planhat Record URLs for the template. A guessed or root-domain link is worse than no link: it reads as verified when it is not.
+- **Cite records with real links.** Every Planhat record referenced in chat, a brief, a Slack debrief, or session notes gets a working direct URL built from its actual ID – see `context/planhat-schema.md` § Planhat Record URLs for the template. A guessed or root-domain link is worse than no link: it reads as verified when it is not.
 - **Customer follow-ups go to the external Slack channel when there is one.** If the Planhat Company's `custom.External_Slack_Channel_ID` is populated, a customer follow-up (post-session recap, next steps, check-in) is a Slack draft in that channel via `slack_send_message_draft`, not a Gmail draft; read the last ~10 channel messages first. No external channel, or I explicitly ask for an email → Gmail draft. Never send on either route, and never overwrite an existing channel draft. Procedure: `agents/post-session-debrief.md` step 5 / `agents/email-drafter.md` § 2.5.
 - **One draft per purpose – always replace, never stack.** Exactly one live draft per customer purpose at any time (purpose = customer + session for follow-ups, customer + thread for replies, customer + topic otherwise). Before any `create_draft`: run the Sent check (`in:sent to:@<customer-domain>` since the session or trigger date; for replies, stop if the newest thread message is mine) and the purpose-key lookup (draft ID recorded on the Planhat session record, then `list_drafts` with `to:@<customer-domain>`). If a draft exists, `update_draft` it in place, replies included; then record the draft ID on the Planhat session record. Never retry `create_draft` blindly, never draft the same customer in parallel, and only `delete_draft` a draft the run itself created or is replacing – list any other duplicate for me to discard. Applies to every drafting skill (`/draft-email`, `/session-debrief`, `/bulk --debrief`, `/inbox-triage`, `/customer-refresh`). Procedure: `agents/email-drafter.md` § 4.4–5.
 - **Follow-ups are timed to the send day and never wait for deliverables.** Every customer draft reads correctly on the day it is sent: date words and any apology are computed against the send day and recomputed whenever the draft is refreshed (`agents/email-drafter.md` § 4.6). A session recap goes out the same working day with Productboard's actions as dated commitments; deliverables follow later on the recap thread (`agents/post-session-debrief.md` § 5-T). `/draft-followup --sweep` (`agents/followup-sweeper.md`) re-dates waiting drafts and flags what is owed; `/daily-brief` step 6c shows what is still unsent.
@@ -347,20 +347,20 @@ Applied to every customer-facing or internal draft. Universal patterns live in `
 
 ---
 
-## 8. Planhat Patterns — Operational Tips
+## 8. Planhat Patterns – Operational Tips
 
 ### Core MCP tools
 
-The Planhat MCP (`7441c372-4b65-4805-95b0-baf2a081ceb3`) exposes `search_records` (fuzzy lookup, e.g. company by name), `list_model_records` (filtered listing), `get_model_record` (single record by `_id`, with `SELECT` to scope returned fields), `create_model_record`, `update_model_record`, and `get_model_action_parameters` (discover writable fields per model). Always pass the `PARAMETERS` key on writes — `DATA` returns "Missing required parameter".
+The Planhat MCP (`7441c372-4b65-4805-95b0-baf2a081ceb3`) exposes `search_records` (fuzzy lookup, e.g. company by name), `list_model_records` (filtered listing), `get_model_record` (single record by `_id`, with `SELECT` to scope returned fields), `create_model_record`, `update_model_record`, and `get_model_action_parameters` (discover writable fields per model). Always pass the `PARAMETERS` key on writes – `DATA` returns "Missing required parameter".
 
-### Two silent query failures — check every time
+### Two silent query failures – check every time
 
 Verified live against `Conversation`; neither raises an error and both return a plausible-looking short result set:
 
 1. **Date filters take plain `YYYY-MM-DD`, not ISO timestamps.** A timestamped filter (`"date[more than]": "2026-08-24T00:00:00.000Z"`) silently returns a wrong subset versus the day-bounded form. Pass day bounds and widen by a day on each side.
-2. **Selecting a large text field truncates the record *count*, not the field.** Never put `transcript` or `description` in a multi-record `SELECT` — pull metadata in the list query, then fetch bodies one record at a time via `get_model_record(..., SELECT: ["transcript", "description"])` for just the records that need them.
+2. **Selecting a large text field truncates the record *count*, not the field.** Never put `transcript` or `description` in a multi-record `SELECT` – pull metadata in the list query, then fetch bodies one record at a time via `get_model_record(..., SELECT: ["transcript", "description"])` for just the records that need them.
 
-Full detail and more quirks: `context/planhat-schema.md` § Two silent query failures and § Planhat API — When Stuck (§10 below).
+Full detail and more quirks: `context/planhat-schema.md` § Two silent query failures and § Planhat API – When Stuck (§10 below).
 
 ### Dedup before create
 
@@ -373,12 +373,12 @@ Before creating any Task or Conversation, check whether one already exists for t
 - **Inline in chat** for most asks (prep briefs, summaries, follow-up drafts, analysis).
 - **Files in `~/Desktop/aise-assistant/briefs/`** (HTML briefings, daily briefs) or **`~/Desktop/aise-assistant/diagrams/<customer>/`** (diagrams) when producing output the user needs to open immediately. Use the appropriate subfolder: `briefs/` for session-facing and daily output, `diagrams/` for visual artefacts. Create the subdirectory if it doesn't exist.
 - **Message compose tool** when drafting emails or Slack messages, especially when there's a real strategic choice.
-- **Structured markdown** — bolded labels, bullets, tables where they help.
+- **Structured markdown** – bolded labels, bullets, tables where they help.
 - **Match length to complexity.** Don't pad.
 
 ---
 
-## 10. Planhat API — When Stuck
+## 10. Planhat API – When Stuck
 
 Planhat's public API docs are thin. When a write is being silently ignored, a field format is unclear, or behavior differs from what the schema suggests, escalate to Planhat's support chat before guessing further.
 
@@ -387,7 +387,7 @@ Planhat's public API docs are thin. When a write is being silently ignored, a fi
 1. Stop what you're doing and tell the user you're stuck on a specific Planhat API question.
 2. Give the user this message to paste into **Planhat's Fin chat** (the AI support bot, accessible from the Planhat app via the help/chat icon):
 
-> *"I'm using the Planhat REST API / MCP to write to [field name] on the [Model] model. [Describe the problem — e.g. 'The field exists in the UI but writes are silently ignored' / 'What format does a rich text custom field expect?' / 'Does the API accept HTML or Tiptap JSON for rich text fields?']. Can you confirm the expected format and any known limitations?"*
+> *"I'm using the Planhat REST API / MCP to write to [field name] on the [Model] model. [Describe the problem – e.g. 'The field exists in the UI but writes are silently ignored' / 'What format does a rich text custom field expect?' / 'Does the API accept HTML or Tiptap JSON for rich text fields?']. Can you confirm the expected format and any known limitations?"*
 
 3. Ask the user to **copy the Fin answer back** into the chat.
 4. Continue from there using the confirmed information.
@@ -399,8 +399,8 @@ Planhat's public API docs are thin. When a write is being silently ignored, a fi
 - API behavior contradicts the schema (e.g. `activityTags` rejected despite being listed)
 - A filter in `list_model_records` returns empty but records clearly exist
 
-**Known confirmed quirks** (do not re-investigate these — answers already confirmed):
-- `activityTags` — listed in schema but **not writable via MCP**. Apply manually in Planhat UI.
-- Rich text custom fields — accept **single-line HTML** in the `ph-editor` vocabulary (`<p>`, `<strong>`, `<em>`, `<blockquote><p>`, `<hr>`, and lists as `<ul class="ph-editor__bullet-list">` / `<ol class="ph-editor__ordered-list">` with `<li class="ph-editor__list-item"><p>…</p></li>`), not Tiptap JSON, not plain text. Literal `\n` is stripped on write. Bare `<ul><li>text</li></ul>` renders mangled — the classes and the inner `<p>` are both required. Full spec: `context/planhat-schema.md` § Rich Text Field Formatting.
-- `list_model_records` on Task — **36-record hard cap**; filters unreliable. Use attempt-create dedup or `search_records`.
-- `PARAMETERS` not `DATA` — the MCP requires `PARAMETERS` key; `DATA` returns "Missing required parameter".
+**Known confirmed quirks** (do not re-investigate these – answers already confirmed):
+- `activityTags` – listed in schema but **not writable via MCP**. Apply manually in Planhat UI.
+- Rich text custom fields – accept **single-line HTML** in the `ph-editor` vocabulary (`<p>`, `<strong>`, `<em>`, `<blockquote><p>`, `<hr>`, and lists as `<ul class="ph-editor__bullet-list">` / `<ol class="ph-editor__ordered-list">` with `<li class="ph-editor__list-item"><p>…</p></li>`), not Tiptap JSON, not plain text. Literal `\n` is stripped on write. Bare `<ul><li>text</li></ul>` renders mangled – the classes and the inner `<p>` are both required. Full spec: `context/planhat-schema.md` § Rich Text Field Formatting.
+- `list_model_records` on Task – **36-record hard cap**; filters unreliable. Use attempt-create dedup or `search_records`.
+- `PARAMETERS` not `DATA` – the MCP requires `PARAMETERS` key; `DATA` returns "Missing required parameter".

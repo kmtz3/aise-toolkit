@@ -1,14 +1,14 @@
 #!/usr/bin/env bash
-# session-start.sh — called by the SessionStart hook at the start of every session.
+# session-start.sh – called by the SessionStart hook at the start of every session.
 #
 # Goal: write the real persistent data directory to ~/.claude/aise-leadership.datadir
 # so agents can read it with a single Read-tool call (never via $CLAUDE_PLUGIN_DATA,
 # which is volatile in Claude Code CLI).
 #
 # Context awareness:
-#   Claude Code CLI  — $CLAUDE_PLUGIN_DATA is a volatile temp path.
+#   Claude Code CLI – $CLAUDE_PLUGIN_DATA is a volatile temp path.
 #                      Real data lives at ~/.claude/plugins/data/aise-leadership*/
-#   Cowork / Desktop — $CLAUDE_PLUGIN_DATA IS the persistent, accessible data dir.
+#   Cowork / Desktop – $CLAUDE_PLUGIN_DATA IS the persistent, accessible data dir.
 #                      ~/.claude/plugins/data/ does not exist in the Linux sandbox.
 #
 # Discovery order:
@@ -73,7 +73,7 @@ printf '%s' "$PLUGIN_DATA_DIR" > "$HOME/.claude/aise-leadership.datadir"
 
 # Warn if identity.md still has placeholder values (setup not yet run)
 if [[ -f "$PLUGIN_DATA_DIR/about/identity.md" ]] && grep -q '<TBD' "$PLUGIN_DATA_DIR/about/identity.md" 2>/dev/null; then
-  echo "[aise-leadership] WARNING: identity.md still contains placeholder values — run /assistant-setup to complete onboarding." >&2
+  echo "[aise-leadership] WARNING: identity.md still contains placeholder values – run /assistant-setup to complete onboarding." >&2
 fi
 
 # One-time migration from legacy paths (idempotent)

@@ -1,4 +1,4 @@
-# Session Templates — System Index
+# Session Templates – System Index
 
 Reusable session architecture templates for Productboard SA engagements. Each template mirrors a FigJam page and drives a specific set of Key Design Decisions (KDDs).
 
@@ -33,7 +33,7 @@ Companion to [`context/engagement-planning-guide.md`](../../context/engagement-p
 **Workflow:**
 
 1. **Identify the right template** from the library above. If the session is genuinely a new type, say so rather than forcing a fit.
-2. **Read the customer's program context** from project knowledge — stakeholders, prior decisions (decisions register), open items, risks.
+2. **Read the customer's program context** from project knowledge – stakeholders, prior decisions (decisions register), open items, risks.
 3. **Tweak the template** by:
    - Customizing the KDD questions to reference the customer's actual terminology (e.g. "tribes/crews" for Kpler, not generic "teams")
    - Pre-populating decision tables with anything already decided in prior sessions (cite D-numbers)
@@ -47,7 +47,7 @@ Companion to [`context/engagement-planning-guide.md`](../../context/engagement-p
 ## Template structure (every file follows this shape)
 
 ```
-# [Session Name] — Template
+# [Session Name] – Template
 
 Session ID | Duration | Attendees
 
@@ -62,19 +62,19 @@ Session ID | Duration | Attendees
   ### Topic 2
   ...
 ## Red flags & rebuttals (internal)
-## Close — synthesis structure
+## Close – synthesis structure
 ## Tweak guidance
 ```
 
-The consistency is deliberate — an agent can reliably extract any section programmatically.
+The consistency is deliberate – an agent can reliably extract any section programmatically.
 
 ---
 
 ## Customer-facing KDD doc (copy-paste output)
 
-For every **A-session** (architecting), the user runs the call off a **customer-facing KDD doc** — a cleaned-up derivative of the internal template above. The internal template stays internal. The customer-facing doc is what gets shared / copy-pasted into the customer's space (Confluence, shared doc) to anchor the session and capture decisions live.
+For every **A-session** (architecting), the user runs the call off a **customer-facing KDD doc** – a cleaned-up derivative of the internal template above. The internal template stays internal. The customer-facing doc is what gets shared / copy-pasted into the customer's space (Confluence, shared doc) to anchor the session and capture decisions live.
 
-**Storage:** the doc is published as a Google Drive file (shared, direct-download link) and attached to the session's Planhat Conversation as an Attachment record. Title: `KDDs — [Session ID] [Session Name]`. Created automatically by `session-prepper` during `/session-prep` for A-sessions, or on demand via `/session-kdds` → `kdd-builder`.
+**Storage:** the doc is published as a Google Drive file (shared, direct-download link) and attached to the session's Planhat Conversation as an Attachment record. Title: `KDDs – [Session ID] [Session Name]`. Created automatically by `session-prepper` during `/session-prep` for A-sessions, or on demand via `/session-kdds` → `kdd-builder`.
 
 ### Required structure
 
@@ -104,11 +104,11 @@ By the end of this session, we will have:
 ### D#. [Topic]
 **Question:** [one-line framing from the internal template's "Questions to ask"]
 
-**Starter example — react to this, not decide from it:**
+**Starter example – react to this, not decide from it:**
 | column | column | … |
 |---|---|---|
 | [seeded row 1] | | |
-| [seeded row 2 — optional] | | |
+| [seeded row 2 – optional] | | |
 
 **Decision (captured live):**
 | column | column | … |
@@ -132,13 +132,13 @@ By the end of this session, we will have:
 | Pre-read / inputs | **EXCLUDED** (or surfaced in the follow-up email) | |
 | Tweak guidance | **EXCLUDED** | |
 
-### Starter examples — sourcing rules
+### Starter examples – sourcing rules
 
 Fill Starter-example rows from (in priority order):
 
-1. **Customer-specific context from discovery / prior sessions** — decisions already captured on the customer's Active Package decisions register, terminology they use (tribes vs BUs vs crews), org chart, pilot team. Cite inline: `from discovery (D7): tribes = Energy, Agri, Freight`.
-2. **Anchoring defaults** drawn from the `Key considerations` block of the internal template — labeled `Typical starting point` or `Example — not a recommendation`.
-3. **Never** fabricate customer-specific stakeholders, names, or structural choices. If nothing sources, leave only the header row and a note: `No starter example — we'll fill live.`
+1. **Customer-specific context from discovery / prior sessions** – decisions already captured on the customer's Active Package decisions register, terminology they use (tribes vs BUs vs crews), org chart, pilot team. Cite inline: `from discovery (D7): tribes = Energy, Agri, Freight`.
+2. **Anchoring defaults** drawn from the `Key considerations` block of the internal template – labeled `Typical starting point` or `Example – not a recommendation`.
+3. **Never** fabricate customer-specific stakeholders, names, or structural choices. If nothing sources, leave only the header row and a note: `No starter example – we'll fill live.`
 
 Starter examples must be visibly tagged and never mixed into the live Decision table.
 
@@ -169,7 +169,7 @@ These come from the PSP/SA Score Cards. Don't lose them when customizing.
 Every A-session scorecard has ~9–10 dimensions. Common across all:
 
 1. Framing and outcome setting
-2. Domain-specific KDD facilitation (the bulk — varies by session type)
+2. Domain-specific KDD facilitation (the bulk – varies by session type)
 3. Customer-specific definitions vs generic concepts
 4. Prerequisites and dependency mapping
 5. Red flags surfaced and addressed

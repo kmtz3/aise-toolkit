@@ -1,13 +1,13 @@
 ---
 name: draft-email
-description: Draft an email and save it as a Gmail draft (never sends — always drafts for review)
+description: Draft an email and save it as a Gmail draft (never sends – always drafts for review)
 ---
 
 Draft email(s) for.
 
-Read the procedure in `agents/email-drafter.md` and execute it inline as the main assistant — do not try to spawn `email-drafter` as a subagent (custom agents in this plugin are procedure documents, not registered subagent types). The procedure pulls context across Planhat / Gmail / Slack / Gong / Calendar / past chats so the draft is grounded in the actual session history, outstanding tasks, and prior commitments — not a generic sales-toned outreach.
+Read the procedure in `agents/email-drafter.md` and execute it inline as the main assistant – do not try to spawn `email-drafter` as a subagent (custom agents in this plugin are procedure documents, not registered subagent types). The procedure pulls context across Planhat / Gmail / Slack / Gong / Calendar / past chats so the draft is grounded in the actual session history, outstanding tasks, and prior commitments – not a generic sales-toned outreach.
 
-## Hard rule — NEVER SEND
+## Hard rule – NEVER SEND
 
 The drafted email is **always** saved to Gmail Drafts. Under no circumstance should the email be sent. No send tool. No "should I send?" question. Drafts folder, review, done.
 
@@ -15,24 +15,24 @@ If the user later says "send it", that's a separate explicit request.
 
 ## What the procedure must do
 
-1. **Identify the source material** — which customer, which session / thread / task this email references, who the recipient is. Never guess recipients — look them up in the Planhat `EndUser` records for the company or a recent Gmail thread.
+1. **Identify the source material** – which customer, which session / thread / task this email references, who the recipient is. Never guess recipients – look them up in the Planhat `EndUser` records for the company or a recent Gmail thread.
 
 2. **Pull context across connectors in parallel:**
-   - **Planhat** — Company record, most recent Conversations (session/touchpoint history), open PB-side Tasks, the specific Conversation being referenced.
-   - **Gmail** — recent threads with the recipient; the specific thread if this is a reply. Capture the user's prior phrasing to match tone.
-   - **Planhat `email` Conversations** — threads with adjacent stakeholders or from teammates' mailboxes (`type: "email"`, see `context/project-instructions.md` §3).
-   - **Slack / Gong** — `slack_search_public_and_private` in the account's channels (`custom.Slack ID`, `custom.External_Slack_Channel_ID`); recorded calls via the transcript lookup order (Planhat `👾 Gong Call` record, then Gong `ask_account`).
-   - **Google Drive** — `search_files` / `read_file_content` when a specific doc is referenced. Salesforce detail comes from the Planhat Company record (SF-synced), Salesforce connector as fallback.
-   - **Calendar** — confirm meeting date/time anchors.
-   - **Past chats** — prior decisions and state. (Per-customer current state lives in Company `custom.Next Step`; pull from there if relevant.)
+   - **Planhat** – Company record, most recent Conversations (session/touchpoint history), open PB-side Tasks, the specific Conversation being referenced.
+   - **Gmail** – recent threads with the recipient; the specific thread if this is a reply. Capture the user's prior phrasing to match tone.
+   - **Planhat `email` Conversations** – threads with adjacent stakeholders or from teammates' mailboxes (`type: "email"`, see `context/project-instructions.md` §3).
+   - **Slack / Gong** – `slack_search_public_and_private` in the account's channels (`custom.Slack ID`, `custom.External_Slack_Channel_ID`); recorded calls via the transcript lookup order (Planhat `👾 Gong Call` record, then Gong `ask_account`).
+   - **Google Drive** – `search_files` / `read_file_content` when a specific doc is referenced. Salesforce detail comes from the Planhat Company record (SF-synced), Salesforce connector as fallback.
+   - **Calendar** – confirm meeting date/time anchors.
+   - **Past chats** – prior decisions and state. (Per-customer current state lives in Company `custom.Next Step`; pull from there if relevant.)
 
    Before drafting a sentence, you should be able to state: what was agreed, what's outstanding, what this recipient owes or is owed, what tone the thread uses.
 
-3. **Fetch voice preferences (mandatory before drafting).** Resolve the user's Planhat User record — `list_model_records(MODEL:"User", FILTER:{"email[equal to]":"<user's email from session context>"}, SELECT:["firstName","lastName","email"])` → `planhat_user_id` (or the pre-resolved table in `context/planhat-schema.md` § Planhat User IDs) — then `get_model_record(MODEL:"User", OBJECT_ID:"{planhat_user_id}", SELECT:["custom.AISE Profile preferences"])`. Parse sign-off, em dashes, semicolons, English variant, casual register, specific patterns. Draft in the user's actual voice — never a generic tone. If the field is empty, fall back to `context/communication-style-guide.md` alone.
+3. **Fetch voice preferences (mandatory before drafting).** Resolve the user's Planhat User record – `list_model_records(MODEL:"User", FILTER:{"email[equal to]":"<user's email from session context>"}, SELECT:["firstName","lastName","email"])` → `planhat_user_id` (or the pre-resolved table in `context/planhat-schema.md` § Planhat User IDs) – then `get_model_record(MODEL:"User", OBJECT_ID:"{planhat_user_id}", SELECT:["custom.AISE Profile preferences"])`. Parse sign-off, em dashes, semicolons, English variant, casual register, specific patterns. Draft in the user's actual voice – never a generic tone. If the field is empty, fall back to `context/communication-style-guide.md` alone.
 
 4. **Draft in the user's voice (per `custom.AISE Profile preferences` on the user's Planhat User record)** per `context/communication-style-guide.md`. Warm + direct, American English, bold labels over headers, bullets for lists, **never em dashes – use en dashes (–) everywhere a dash is needed**, and the signature block exactly as the profile defines it (for Klara Martinez: `Klara Martinez` / `Senior Solutions Architect | Productboard`). Take the job title from the Planhat profile, never from this file. For ongoing architecting / working cadence: reference *what we agreed* + *what's next* + the ask. Never frame as a first-touch sales reach-out.
 
-5. **Don't invent** — dates, commitments, scope, names. If something load-bearing is missing, flag as `[FILL IN: ...]` and call it out in the report.
+5. **Don't invent** – dates, commitments, scope, names. If something load-bearing is missing, flag as `[FILL IN: ...]` and call it out in the report.
 
 6. **Sent check, then check for an existing draft.** If the user already sent this email, don't draft it (§ Sent check).
    One draft per purpose – if a draft for the same customer purpose exists, update it instead of creating a second.
@@ -42,7 +42,7 @@ If the user later says "send it", that's a separate explicit request.
    **If this is a reply, pass `replyToMessageId`** – the ID of the message being replied to. This threads the draft
    correctly. See § Replying on an existing thread.
 
-7. **Multi-draft requests** — each draft gets its own context pass. Don't template across recipients.
+7. **Multi-draft requests** – each draft gets its own context pass. Don't template across recipients.
 
 8. **Report back in chat** for each draft:
    - Draft ID
@@ -60,7 +60,7 @@ If the user later says "send it", that's a separate explicit request.
 - Internal-only context (commercial stance, credit/renewal detail, Ozzy-side tactics) unless the user explicitly asked.
 - Speculation presented as fact.
 - Sales-toned filler ("circling back", "touching base", "reach out to see if").
-- Long sections — customer emails should scan in 30 seconds.
+- Long sections – customer emails should scan in 30 seconds.
 
 ## Replying on an existing thread
 

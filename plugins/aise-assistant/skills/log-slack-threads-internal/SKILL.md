@@ -35,7 +35,7 @@ Canonical syntax uses flags; also recognize natural language equivalents.
 
 1. Resolves the channel and the Planhat Company – in whichever direction the input allows – and, **only on
    the user's explicit confirmation**, writes the channel to `Company.custom.Slack ID` (§ Channel resolution
-   below — `custom.Slack URL` is a derived formula field and is never written). Then pulls the full channel
+   below – `custom.Slack URL` is a derived formula field and is never written). Then pulls the full channel
    history (paginated).
 2. Classifies every top-level message: **thread** (has replies), **standalone substantive** (a real question,
    update, or recap with no replies), **broadcast reply** (already belongs to its parent thread's record), or

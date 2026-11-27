@@ -1,15 +1,15 @@
-# Dev tooling — never distributed
+# Dev tooling – never distributed
 .claude/
 .DS_Store
 
-# Personal about files — populated per-user by /assistant-setup
+# Personal about files – populated per-user by /assistant-setup
 plugins/*/about/identity.md
 plugins/*/about/voice.md
 plugins/*/about/workspace.md
 plugins/*/about/tracker-memory.md
 plugins/*/about/voice-scrape-samples.md
 
-# Runtime output dirs — generated per-user
+# Runtime output dirs – generated per-user
 plugins/*/diagrams/
 plugins/*/memory/
 
@@ -20,5 +20,5 @@ plugins/*/dist/
 
 # Personal working docs at repo root (prep notes, playbooks, etc.)
 /*.html
-/Planhat — Spark Adoption Program Workflow.md
+/Planhat * Spark Adoption Program Workflow.md
 /Claude outputs/

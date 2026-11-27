@@ -11,43 +11,43 @@ Generate a Spark demo playbook for the customer named in the user's message.
 
 ## Args
 
-- `customer` (required) — customer name (e.g. "Qlik", "Brandwatch"). Used as the key for
+- `customer` (required) – customer name (e.g. "Qlik", "Brandwatch"). Used as the key for
   all research queries and in the playbook title.
-- `--scheme orange|teal|purple` (optional) — force a specific color scheme. If omitted,
+- `--scheme orange|teal|purple` (optional) – force a specific color scheme. If omitted,
   the skill auto-detects from the customer's logo (falling back to random).
-- `--domain` (optional) — customer's primary domain (e.g. `qlik.com`). Used for logo
+- `--domain` (optional) – customer's primary domain (e.g. `qlik.com`). Used for logo
   color detection. If not provided, infer it from the 1b research results (contact email domains).
 
-## Phase 1 — Parallel Research (run all 4 in parallel)
+## Phase 1 – Parallel Research (run all 4 in parallel)
 
-### 1a. Slack #releases — Spark feature inventory
+### 1a. Slack #releases – Spark feature inventory
 Search the `#releases` Slack channel for the last 60 days:
 ```
 mcp: slack_search_public_and_private, query: "in:#releases spark", date_range: last 60 days
 ```
 From the results, extract every Spark-related release entry and classify each as:
-- **GA** — explicitly marked as generally available, shipped to all customers, or "released to 100%"
-- **Internal / Early Access** — marked as internal-only, beta, early access, feature-flagged,
+- **GA** – explicitly marked as generally available, shipped to all customers, or "released to 100%"
+- **Internal / Early Access** – marked as internal-only, beta, early access, feature-flagged,
   "not announced yet", or "limited rollout"
-- **Roadmap / Coming Soon** — announced but not yet shipped
+- **Roadmap / Coming Soon** – announced but not yet shipped
 
 Build a structured feature list:
 ```
 | Feature name | Status | What it does (1 sentence) | Demo-safe? |
 ```
 Demo-safe = GA only. Internal features appear in the playbook under "Coming Soon" roadmap section
-with a ⚠️ internal chip — never demo them as current capabilities.
+with a ⚠️ internal chip – never demo them as current capabilities.
 
-### 1b. Account context fan-out — Planhat / Slack / Gong / Gmail
+### 1b. Account context fan-out – Planhat / Slack / Gong / Gmail
 Resolve the Company first (`search_records(QUERY: "{customer}")` → `companyId`), then fan out in parallel
-(Glean is retired — see `context/project-instructions.md` §3 Search strategy):
-1. **Planhat** — Company record (`custom.Engagement Plan`, `custom.Next Step`, `custom.Slack ID`, `custom.External_Slack_Channel_ID`)
+(Glean is retired – see `context/project-instructions.md` §3 Search strategy):
+1. **Planhat** – Company record (`custom.Engagement Plan`, `custom.Next Step`, `custom.Slack ID`, `custom.External_Slack_Channel_ID`)
    + recent Conversations: `list_model_records(MODEL: "Conversation", FILTER: {"companyId[equal to]": "{companyId}"}, SORT: "-date", LIMIT: 10, SELECT: ["subject", "date", "type", "endusers"])`
-   — sessions, `👾 Gong Call`, `email`, `💬 Slack Chat`. Support tickets: `Issue` records (`FILTER: {"companyIds[contains]": "{companyId}"}`).
-2. **Slack** — `slack_search_public_and_private`: `"in:<#channel> after:YYYY-MM-DD"` + keywords (spark, AI, feedback) in the
+   – sessions, `👾 Gong Call`, `email`, `💬 Slack Chat`. Support tickets: `Issue` records (`FILTER: {"companyIds[contains]": "{companyId}"}`).
+2. **Slack** – `slack_search_public_and_private`: `"in:<#channel> after:YYYY-MM-DD"` + keywords (spark, AI, feedback) in the
    internal and shared channels from the Company's cached channel IDs.
-3. **Gong** — `ask_account(crmAccount: "{customer}", question: "Use case interests, pain points, goals, AI/Spark interest, open commitments, participants — last 90 days?", includeSources: true)`. If Gong MCP is not connected, read the account's recent transcripts from the Gong transcripts Drive folder instead (`context/project-instructions.md` §3 § Minimum context fallback).
-4. **Gmail** — `search_threads`: `"{customer}"` — recent email threads with customer contacts.
+3. **Gong** – `ask_account(crmAccount: "{customer}", question: "Use case interests, pain points, goals, AI/Spark interest, open commitments, participants – last 90 days?", includeSources: true)`. If Gong MCP is not connected, read the account's recent transcripts from the Gong transcripts Drive folder instead (`context/project-instructions.md` §3 § Minimum context fallback).
+4. **Gmail** – `search_threads`: `"{customer}"` – recent email threads with customer contacts.
 
 From results, extract:
 - **Key contacts**: name, title, team (from email signatures, calendar events, or Gong participants)
@@ -58,7 +58,7 @@ From results, extract:
 - **Hot context**: time-sensitive items (merges, migrations, org changes, upcoming deadlines)
 - **Customer domain**: infer from email addresses if `--domain` not provided
 
-### 1c. Calendar — session metadata
+### 1c. Calendar – session metadata
 Search Google Calendar for the next meeting with `{customer}` to extract:
 - Date, time, duration
 - Attendee names and accept/decline status
@@ -66,15 +66,15 @@ Search Google Calendar for the next meeting with `{customer}` to extract:
 
 If no upcoming meeting is found, use "TBD" for date/time and omit attendee cards.
 
-### 1d. Commercial snapshot — Planhat Company (SF-synced), Salesforce connector fallback
-From the Planhat Company record (`custom.ARR – SF`, `renewalDate`, `owner`), extract — falling back to the
-Salesforce connector (`soqlQuery` / `find`) only for empty fields, tagged `⚠️ [Salesforce — verify]`:
+### 1d. Commercial snapshot – Planhat Company (SF-synced), Salesforce connector fallback
+From the Planhat Company record (`custom.ARR – SF`, `renewalDate`, `owner`), extract – falling back to the
+Salesforce connector (`soqlQuery` / `find`) only for empty fields, tagged `⚠️ [Salesforce – verify]`:
 - Renewal / contract end date
 - ARR
 - CSM / AE names
 - Any open opportunities or risk flags
 
-## Phase 2 — Color Scheme Selection
+## Phase 2 – Color Scheme Selection
 
 Priority order: explicit flag → logo detection → random fallback.
 
@@ -108,7 +108,7 @@ randomly pick from `["orange-navy", "teal-dark"]` using Python:
 python3 -c "import random; print(random.choice(['orange-navy', 'teal-dark']))"
 ```
 
-## Phase 3 — Content Synthesis
+## Phase 3 – Content Synthesis
 
 Before generating HTML, produce an internal working outline:
 
@@ -140,7 +140,7 @@ From calendar + 1b contacts (Gong participants, email signatures, Planhat End Us
 - Accept / Decline / Unknown status (from calendar RSVP data)
 - Any known context (e.g. "mentioned feedback analysis in May call")
 
-## Phase 4 — HTML Generation
+## Phase 4 – HTML Generation
 
 Generate a single self-contained HTML file following the exact structure and visual design
 of the reference playbooks. Read both reference files first to extract the exact CSS, JS,
@@ -153,7 +153,7 @@ and component patterns before writing the new file:
 ### CSS color variables to parameterize by scheme:
 
 The reference files define scheme colors as named variables in `:root`. Model the variable
-naming after the reference files exactly — use semantic names matching the scheme, not
+naming after the reference files exactly – use semantic names matching the scheme, not
 generic `--primary` names. For each scheme, define variables for the main brand color,
 its light tint, the nav background, and the active nav state. Examples from reference files:
 
@@ -174,7 +174,7 @@ its light tint, the nav background, and the active nav state. Examples from refe
 /* nav active: background: rgba(13,122,110,0.25); border-left-color: var(--bw-teal) */
 ```
 
-**purple-dark** (new scheme — use analogous naming pattern):
+**purple-dark** (new scheme – use analogous naming pattern):
 ```css
 --pb-purple: #6B4FBB;
 --pb-purple-light: #F0EBF8;
@@ -189,7 +189,7 @@ Always keep `--bg: #F7F8FA`, `--white: #FFFFFF`, `--text: #1A1A2E`, `--text-ligh
 ### Required HTML sections (in order):
 
 **Cover / Header**
-- Title: "{Customer} — Spark Demo Playbook"
+- Title: "{Customer} – Spark Demo Playbook"
 - Meta-card grid: customer name, session date/time, session type, PB team names
 - Account status chips (pill badges): AI add-on enabled, Spark enabled, renewal date, any flags
 
@@ -200,11 +200,11 @@ Always keep `--bg: #F7F8FA`, `--white: #FFFFFF`, `--text: #1A1A2E`, `--text-ligh
   each with a 2-sentence description of why it's relevant to this customer
 - Hot context callout (if any): amber/orange background with ⚠️ icon
 
-**Section 1 — Framing Spark** (id="framing")
+**Section 1 – Framing Spark** (id="framing")
 - "What Spark is" table: 2-col, "What it is" | "What it means for {customer}"
 - Opening questions prompt box
 
-**Section 2 — Company Knowledge** (id="company-knowledge")
+**Section 2 – Company Knowledge** (id="company-knowledge")
 With 4 sub-sections:
 - 2a Templates
 - 2b Personas
@@ -212,21 +212,21 @@ With 4 sub-sections:
 - 2d Strategic Docs + external connections
   → if the customer has a notable public knowledge base or academy, call it out here specifically
 
-**Section 3 — Integrations & MCP Connectors** (id="integrations")
+**Section 3 – Integrations & MCP Connectors** (id="integrations")
 - Connection methods overview
 - MCP connectors grid (GA only)
 - File attachment connectors
 - Chat-based workspace context table
 
-**Section 4 — Skills** (id="skills")
+**Section 4 – Skills** (id="skills")
 - 4 skill cards 2×2 grid: Product Brief, Feedback Analysis, Competitor Analysis, Spec
 - Custom skills / Prompts library callout
 
-**Section 5 — Use Cases** (id="use-cases")
+**Section 5 – Use Cases** (id="use-cases")
 - 2–3 use case blocks with customer-specific hooks, step flows, prompt boxes
 - Coming Soon roadmap block (internal features flagged appropriately)
 
-**Section 6 — Q&A & Next Steps** (id="objections" for Q&A, id="next-steps" for next steps)
+**Section 6 – Q&A & Next Steps** (id="objections" for Q&A, id="next-steps" for next steps)
 - Anticipated Q&A items
 - Next steps list split by customer-side vs PB-side
 - Links to share row
@@ -276,7 +276,7 @@ CSS for `.nav-alert` / `.alert-title` from reference:
 }
 ```
 
-## Phase 5 — Output
+## Phase 5 – Output
 
 ### 5a. Save HTML file
 Save to `~/Projects/pb-tools/spark-{customer-slug}-demo-playbook.html`
@@ -285,7 +285,7 @@ where `{customer-slug}` = customer name lowercased, spaces → hyphens.
 ### 5b. Present summary
 After generating, print a compact research summary (≤8 lines):
 ```
-📋 Research summary — {Customer}
+📋 Research summary – {Customer}
 • Session: {date/time} | {attendee count} attendees
 • Scheme: {scheme name} ({detection method: logo-detected | random | flag-override})
 • Primary angles: {angle 1}, {angle 2}
@@ -298,11 +298,11 @@ After generating, print a compact research summary (≤8 lines):
 
 - **No Planhat / Gong results for customer**: flag in summary, proceed with generic Spark angles,
   ask user to verify customer name spelling or try `--domain` flag.
-- **No upcoming calendar event**: omit attendee cards, set session date to "TBD — check calendar".
+- **No upcoming calendar event**: omit attendee cards, set session date to "TBD – check calendar".
 - **#releases channel returns no Spark content in 60 days**: extend search to 90 days.
   If still empty, note in the playbook that feature inventory was unavailable and use the
   static GA feature list from `context/pb-aise-reference-guide.md`.
-- **Logo detection fails**: silent fallback to random — never surface the error to the user
+- **Logo detection fails**: silent fallback to random – never surface the error to the user
   in the final output (only in the research summary line).
 - **Customer domain ambiguous**: use `--domain` flag and ask user once if not provided and
   inference fails.

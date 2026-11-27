@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
-# sync-context.sh — Copy the latest context/ from aise-assistant (canonical source in this monorepo).
+# sync-context.sh – Copy the latest context/ from aise-assistant (canonical source in this monorepo).
 #
-# Never edit context/ directly in aise-leadership — all changes go in plugins/aise-assistant/context/
+# Never edit context/ directly in aise-leadership – all changes go in plugins/aise-assistant/context/
 # and are synced here by running this script (or automatically via /commit).
 #
 # Usage:
@@ -29,5 +29,5 @@ cd "$PLUGIN_DIR"
 if git diff --quiet context/; then
   echo "context/ already up to date"
 else
-  echo "context/ updated — run git add context/ to stage"
+  echo "context/ updated – run git add context/ to stage"
 fi

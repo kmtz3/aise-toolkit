@@ -1,27 +1,27 @@
 # AISE Assistant
 
-A Cowork / Claude Code plugin that turns any Productboard **AI Success Engineer (AISE)** workstation into a full customer-onboarding co-pilot — prep, deliver, summarize, follow up, plan, and keep your Planhat account record up to date. Planhat is the sole system of record.
+A Cowork / Claude Code plugin that turns any Productboard **AI Success Engineer (AISE)** workstation into a full customer-onboarding co-pilot – prep, deliver, summarize, follow up, plan, and keep your Planhat account record up to date. Planhat is the sole system of record.
 
 ## What's in the box
 
 - **36 slash commands** grouped by family. Type `/<family>` (or `/<family>-`) in autocomplete to see siblings.
-  - **`customer-*`** (5) — `/customer-setup [--force-new]`, `/bulk-account-setup`, `/customer-whats-new`, `/customer-refresh`, `/customer-handover`
-  - **`customer-plan`** (1, two modes) — `/customer-plan --next`, `/customer-plan --full`
-  - **`session-*`** (7) — `/session-prep`, `/session-kdds`, `/session-summary`, `/session-score`, `/session-backfill [--bulk]`, `/session-debrief`, `/session-audit`
-  - **`bulk`** (1, two modes) — `/bulk --debrief`, `/bulk --prep`
-  - **`draft-*`** (3) — `/draft-email`, `/draft-followup`, `/draft-diagram`
-  - **`log-*`** (3) — `/log-feedback`, `/log-slack-threads`, `/log-slack-threads-internal`
-  - **`ph-*`** (1) — `/ph-reconcile-gong-gcal`
-  - **`planhat-*`** (2) — `/planhat-automations`, `/planhat-formula-builder`
-  - **`assistant-*`** (5) — `/assistant-setup`, `/assistant-help`, `/assistant-remember`, `/assistant-improvement`, `/aise-context`
-  - **Standalone** (7) — `/support-hub`, `/daily-brief`, `/spark-demo-prep`, `/session-facilitation`, `/spark-onepager`, `/inbox-triage`, `/temp-ph-ignite-conversion-data-sync`
+  - **`customer-*`** (5) – `/customer-setup [--force-new]`, `/bulk-account-setup`, `/customer-whats-new`, `/customer-refresh`, `/customer-handover`
+  - **`customer-plan`** (1, two modes) – `/customer-plan --next`, `/customer-plan --full`
+  - **`session-*`** (7) – `/session-prep`, `/session-kdds`, `/session-summary`, `/session-score`, `/session-backfill [--bulk]`, `/session-debrief`, `/session-audit`
+  - **`bulk`** (1, two modes) – `/bulk --debrief`, `/bulk --prep`
+  - **`draft-*`** (3) – `/draft-email`, `/draft-followup`, `/draft-diagram`
+  - **`log-*`** (3) – `/log-feedback`, `/log-slack-threads`, `/log-slack-threads-internal`
+  - **`ph-*`** (1) – `/ph-reconcile-gong-gcal`
+  - **`planhat-*`** (2) – `/planhat-automations`, `/planhat-formula-builder`
+  - **`assistant-*`** (5) – `/assistant-setup`, `/assistant-help`, `/assistant-remember`, `/assistant-improvement`, `/aise-context`
+  - **Standalone** (7) – `/support-hub`, `/daily-brief`, `/spark-demo-prep`, `/session-facilitation`, `/spark-onepager`, `/inbox-triage`, `/temp-ph-ignite-conversion-data-sync`
 - **26 specialist agents** that execute each command (session prep, KDD generation, summaries, Planhat writes, session-log auditing, Gong/Gcal reconciliation, etc.).
-- **Universal context** — workflow rules, the AISE reference guide, scorecards, communication style guide, the full Planhat schema/field reference, engagement planning framework, KDD anchor templates per A-session type.
-- **Personal profile** — stored directly on `custom.AISE *` fields on your Planhat User record via `/assistant-setup`. Persists across installs, updates, and machines; no local files to manage.
+- **Universal context** – workflow rules, the AISE reference guide, scorecards, communication style guide, the full Planhat schema/field reference, engagement planning framework, KDD anchor templates per A-session type.
+- **Personal profile** – stored directly on `custom.AISE *` fields on your Planhat User record via `/assistant-setup`. Persists across installs, updates, and machines; no local files to manage.
 
 ## Installation
 
-**Marketplace (recommended)** — install both AISE plugins at once via the [aise-toolkit](https://github.com/kmtz3/aise-toolkit) personal marketplace:
+**Marketplace (recommended)** – install both AISE plugins at once via the [aise-toolkit](https://github.com/kmtz3/aise-toolkit) personal marketplace:
 
 ```
 https://github.com/kmtz3/aise-toolkit
@@ -29,9 +29,9 @@ https://github.com/kmtz3/aise-toolkit
 
 Add it as a marketplace source in Claude Code / Cowork, then install `aise-assistant`. Updates are available via **Settings → Extensions → Check for Updates**.
 
-**Local dev / single user** — open this directory as your project root in Claude Code. `CLAUDE.md` loads automatically as project context.
+**Local dev / single user** – open this directory as your project root in Claude Code. `CLAUDE.md` loads automatically as project context.
 
-**Manual `.plugin` install (offline / air-gapped)** — package first, then load:
+**Manual `.plugin` install (offline / air-gapped)** – package first, then load:
 
 ```bash
 npm run pack   # builds aise-assistant-vX.Y.Z.plugin in parent dir
@@ -41,7 +41,7 @@ Install via Cowork UI → Settings → Extensions → upload the `.plugin` file.
 
 Skills are namespaced: `/aise-assistant:session-prep`, `/aise-assistant:session-debrief`, etc.
 
-> **Context loading note.** Per the Claude Code plugin spec, `CLAUDE.md` at the plugin root is not loaded as project context for plugin installs. Instead, context is loaded per-invocation — each skill dispatches to an agent that carries its full operating instructions in its system prompt. Run `/aise-assistant:assistant-setup` first so your personal profile is populated on your Planhat User record; subsequent skill invocations read it for voice, identity, and workspace preferences.
+> **Context loading note.** Per the Claude Code plugin spec, `CLAUDE.md` at the plugin root is not loaded as project context for plugin installs. Instead, context is loaded per-invocation – each skill dispatches to an agent that carries its full operating instructions in its system prompt. Run `/aise-assistant:assistant-setup` first so your personal profile is populated on your Planhat User record; subsequent skill invocations read it for voice, identity, and workspace preferences.
 
 ## First-run setup
 
@@ -80,7 +80,7 @@ Sign in to **claude.ai → Settings → Integrations** and enable:
 
 | Integration | Used for |
 |---|---|
-| **Planhat** | The sole customer tracker — Companies, Conversations, Tasks, personal profile. Required; onboarding cannot proceed without it. |
+| **Planhat** | The sole customer tracker – Companies, Conversations, Tasks, personal profile. Required; onboarding cannot proceed without it. |
 | **Gmail** | Follow-up draft creation, email history pulls |
 | **Google Calendar** | Session lookup, prep block scheduling |
 | **Google Drive** | Diagram/KDD uploads, customer document search and reads |
@@ -90,9 +90,9 @@ Sign in to **claude.ai → Settings → Integrations** and enable:
 | **Figma** | Architecture diagram creation and export |
 | **Atlassian** | Jira/Confluence cross-reference (optional) |
 
-Each teammate must connect these in their own claude.ai account — they can't be bundled in the plugin.
+Each teammate must connect these in their own claude.ai account – they can't be bundled in the plugin.
 
-> **Glean was retired in 2026-10.** It is no longer a connector — the assistant now fans out to Planhat, Gmail, Gong, Slack, and Drive directly (see `context/project-instructions.md` §3).
+> **Glean was retired in 2026-10.** It is no longer a connector – the assistant now fans out to Planhat, Gmail, Gong, Slack, and Drive directly (see `context/project-instructions.md` §3).
 
 ### Local MCP servers
 
@@ -112,11 +112,11 @@ Pass `--check` first to see what's already configured without making any changes
 
 ## Project conventions
 
-- **Owner-filter every Planhat query** — the workspace is shared across AISEs. Filter Tasks by `ownerId`, Conversations by `users`, scoped to the current user's Planhat id.
-- **Pre-create dedup check** for every Task and Conversation before write — `externalId`/`sourceId` are the dedup keys; see `context/planhat-schema.md` per model.
-- **Every Task must have `companyId` set** — internal/non-customer tasks are the one exception the write rules call out explicitly.
-- **Planhat is SSOT** for active engagements — account working notes live as dated Company Comments; cross-customer observations live on `custom.AISE Tracker Memory` on your Planhat User record.
-- **Communication style** — universal in `context/communication-style-guide.md`, personal overlay wins via `custom.AISE Profile preferences` on your Planhat User record.
+- **Owner-filter every Planhat query** – the workspace is shared across AISEs. Filter Tasks by `ownerId`, Conversations by `users`, scoped to the current user's Planhat id.
+- **Pre-create dedup check** for every Task and Conversation before write – `externalId`/`sourceId` are the dedup keys; see `context/planhat-schema.md` per model.
+- **Every Task must have `companyId` set** – internal/non-customer tasks are the one exception the write rules call out explicitly.
+- **Planhat is SSOT** for active engagements – account working notes live as dated Company Comments; cross-customer observations live on `custom.AISE Tracker Memory` on your Planhat User record.
+- **Communication style** – universal in `context/communication-style-guide.md`, personal overlay wins via `custom.AISE Profile preferences` on your Planhat User record.
 
 ## Maintainer
 

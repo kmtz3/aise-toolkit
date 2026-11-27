@@ -1,4 +1,4 @@
-# SSO / Okta / SCIM — Session Template
+# SSO / Okta / SCIM – Session Template
 
 **Session ID:** Usually `A7` (admin stream, runs parallel to PM-facing architecture)
 **Duration:** 60–90 min
@@ -41,7 +41,7 @@ By the close, the customer has decided:
 ### 1. SSO approach
 
 **Questions to ask:**
-- Which IdP — Okta, Azure AD, OneLogin, Google Workspace, other?
+- Which IdP – Okta, Azure AD, OneLogin, Google Workspace, other?
 - SAML or OIDC? (PB supports SAML; confirm the customer's IdP supports this.)
 - Single or multi-domain setup?
 - Any SSO-specific compliance requirements (MFA enforcement, session length, IP restrictions)?
@@ -67,7 +67,7 @@ By the close, the customer has decided:
 ### 2. Okta / IdP group model
 
 **Questions to ask:**
-- Which Okta groups are relevant to PB users — PM, Engineering, CS, Exec, IT, Contributors?
+- Which Okta groups are relevant to PB users – PM, Engineering, CS, Exec, IT, Contributors?
 - How do groups map to the four PB roles?
 - Do groups map to teamspace membership as well, or just roles?
 - Is there a sensible default group for new hires?
@@ -76,7 +76,7 @@ By the close, the customer has decided:
 **Key considerations:**
 - Group-based role assignment is far cleaner than individual user assignment.
 - Default group for new hires should be Contributor or Viewer unless PM Ops manually promotes.
-- Admin role should be tightly scoped — ideally named individuals, not a group.
+- Admin role should be tightly scoped – ideally named individuals, not a group.
 
 **Decision table:**
 
@@ -91,8 +91,8 @@ By the close, the customer has decided:
 **Questions to ask:**
 - Which Okta groups are SCIM-managed (full lifecycle) vs manually managed?
 - Which user attributes sync via SCIM (name, email, title, department)?
-- How are role changes handled — group membership change in Okta propagates to PB?
-- What happens when a user is deactivated in Okta — immediate PB deactivation or grace period?
+- How are role changes handled – group membership change in Okta propagates to PB?
+- What happens when a user is deactivated in Okta – immediate PB deactivation or grace period?
 
 **Key considerations:**
 - SCIM-managed = scalable. Manual = tech debt. Prefer SCIM for all groups.
@@ -114,7 +114,7 @@ By the close, the customer has decided:
 ### 4. Provisioning rules
 
 **Questions to ask:**
-- What happens on first login — auto-assign to a default role/teamspace?
+- What happens on first login – auto-assign to a default role/teamspace?
 - Domain-based auto-assignment (e.g. @customer.com → Contributor)?
 - How are guest / external users handled (contractors, agencies)?
 - Any approval workflow for role upgrades (Contributor → Maker)?
@@ -133,8 +133,8 @@ By the close, the customer has decided:
 ### 5. Offboarding workflow
 
 **Questions to ask:**
-- When a user leaves, what's the PB action — immediate deactivate, deactivate after X days, archive?
-- What happens to their owned features / notes — reassign, leave unassigned, archive?
+- When a user leaves, what's the PB action – immediate deactivate, deactivate after X days, archive?
+- What happens to their owned features / notes – reassign, leave unassigned, archive?
 - Who handles the reassignment (manager, PM lead, admin)?
 - Is there an audit requirement (log of who had access when)?
 
@@ -166,9 +166,9 @@ By the close, the customer has decided:
 
 **Questions to ask:**
 - Test users / groups before going live?
-- Rollout sequence — IT first, pilot PMs, then wider?
+- Rollout sequence – IT first, pilot PMs, then wider?
 - Rollback plan if SCIM behaves unexpectedly?
-- Validation checklist — can we provision, role-change, deprovision cleanly?
+- Validation checklist – can we provision, role-change, deprovision cleanly?
 
 **Decision table:**
 
@@ -207,13 +207,13 @@ By the close, the customer has decided:
 
 ---
 
-## Close — synthesis structure
+## Close – synthesis structure
 
-1. **Decisions summary** — SSO protocol, group → role mapping, SCIM scope, provisioning + offboarding rules
-2. **Open items** — missing IdP access, pending security approvals
-3. **Configuration backlog** — IT configures SCIM; SA validates in PB
-4. **Testing plan** — pilot group, validation checklist, rollback
-5. **Customer confirmation** — IT lead confirms they can execute the config
+1. **Decisions summary** – SSO protocol, group → role mapping, SCIM scope, provisioning + offboarding rules
+2. **Open items** – missing IdP access, pending security approvals
+3. **Configuration backlog** – IT configures SCIM; SA validates in PB
+4. **Testing plan** – pilot group, validation checklist, rollback
+5. **Customer confirmation** – IT lead confirms they can execute the config
 
 ---
 
@@ -221,5 +221,5 @@ By the close, the customer has decided:
 
 - For customers on Azure AD or Google Workspace, replace Okta-specific terms but keep the structural KDDs
 - If SCIM isn't supported on the customer's PB plan, flag this early and propose the manual provisioning alternative
-- For smaller customers (<50 users), SCIM may be overkill — offer a simpler SAML-only SSO
+- For smaller customers (<50 users), SCIM may be overkill – offer a simpler SAML-only SSO
 - If Security team is in the session, add a section on audit logging + data residency requirements

@@ -1,5 +1,11 @@
 # Changelog – aise-leadership
 
+## [1.16.13] – 2026-11-27
+
+### Changed
+- **No em dashes anywhere in the plugin.** Every em dash in agents, skills, context, templates, scripts and docs is now a spaced en dash; context synced from aise-assistant 2.80.2. The only exception kept verbatim is the `Spark in Practice` calendar-title reporting key.
+- **New ground rule in `CLAUDE.md`:** no em dashes in any output or plugin file, and treat the en dash and the em dash as the same character when matching Planhat or Notion data written before today.
+
 ## [1.16.12] – 2026-11-27
 
 ### Fixed
@@ -10,58 +16,58 @@
 ### Changed
 - Synced `context/` from aise-assistant 2.80.0: `planhat-schema.md` gains § Field description standard (labelled Source / Write / Values / Blank / Format / Use lines for Planhat field descriptions), and `communication-style-guide.md` § 4 gains Slack thread-reply and API-draft rules.
 
-## [1.16.10] — 2026-11-25
+## [1.16.10] – 2026-11-25
 
 ### Changed
 - Synced `context/planhat-schema.md` from aise-assistant 2.79.1: the Gong transcript server copy matches on the Google Calendar event ID (`custom.GCalEventID`), parks the transcript on the calendar Task until it is marked done, and uses `custom.ReprocessGong` on the Gong Call record as the request flag.
 
-## [1.16.9] — 2026-11-25
+## [1.16.9] – 2026-11-25
 
 ### Changed
 - Synced `context/` from aise-assistant 2.79.0: transcript lookup step 0 reads the session Conversation's own `transcript` first, the transcript is moved server side by Planhat's Gong transcript → session automation, and `planhat-schema.md` documents that automation (§ Gong transcript server copy).
 
-## [1.16.8] — 2026-11-25
+## [1.16.8] – 2026-11-25
 
 ### Changed
 - Synced `context/` from aise-assistant 2.78.0: `project-instructions.md` adds the ground rule that follow-ups are dated for the send day and never held for deliverables (§4.3 items 6–7, §7) and the Zoom cloud-recordings path (`recordings_list` + `get_meeting_assets`) in transcript lookup step 1c; `communication-style-guide.md` adds § 3a phrases to avoid and § 3b dates and timing, fixes the em dash in the action-list format, and drops the retired Notion voice page references.
 
-## [1.16.7] — 2026-11-25
+## [1.16.7] – 2026-11-25
 
 ### Changed
 - Synced `context/project-instructions.md` from aise-assistant 2.77.0: transcript lookup step 1c checks live meeting notes in Claude Meetings, Notion AI meeting notes and Zoom My Notes when Gong has no transcript, and the context-source table lists those tools.
 
-## [1.16.6] — 2026-10-30
+## [1.16.6] – 2026-10-30
 
 ### Changed
 - Synced `context/` from aise-assistant: `planhat-schema.md` documents the Sales Handover `SH_*` fields as written by `/customer-handover`, the new Company field `custom.Customer Toolstack`, the `sales_handover_` externalId convention and the `Sales read` paragraph in End User `custom.AISE Read`; `project-instructions.md` adds the "one draft per purpose – always replace, never stack" ground rule with the sent check.
 
-## [1.16.5] — 2026-10-27
+## [1.16.5] – 2026-10-27
 
 ### Changed
 - Synced `context/` from aise-assistant: `planhat-schema.md` adds the "existing AISE profile wins" duplicate End User rule and Slack Chat read-back notes; `project-instructions.md` adds the external-Slack-channel follow-up ground rule and keeps Gong Call records that hold the only transcript.
 
-## [1.16.4] — 2026-10-22
+## [1.16.4] – 2026-10-22
 
 ### Changed
 - Synced `context/` from aise-assistant: `planhat-schema.md` drops the Notion↔Planhat mapping framing and is now a Planhat-only schema and traversal guide.
 
-## [1.16.3] — 2026-10-13
+## [1.16.3] – 2026-10-13
 
 ### Changed
 - Synced `context/` from aise-assistant: `project-instructions.md` adds the Gong transcripts Drive folder as a fallback transcript source (transcript lookup step 1b and the minimum context fallback).
 
-## [1.16.2] — 2026-10-13
+## [1.16.2] – 2026-10-13
 
 ### Changed
 - Synced `context/` from aise-assistant: new `deck-guidelines.md` (decks are built as Claude Slides artifacts on the Productboard Slide Deck Kit design system), `/create-deck` references removed from `session-artifact-convention.md`, deck pointer added to `project-instructions.md`.
 - `CLAUDE.md`: `deck-guidelines.md` added to the universal context files table.
 
-## [1.16.1] — 2026-10-08
+## [1.16.1] – 2026-10-08
 
 ### Changed
 - Synced `context/` from aise-assistant: `<a href>` is a supported Planhat rich-text tag; canonical Session artifact link shape; Artifacts folder ID persisted on `custom.AISE Workspace`; tool names resolved by role across hosts, with a minimum context fallback (Planhat → Gong → Gmail).
 
-## [1.16.0] — 2026-10-08
+## [1.16.0] – 2026-10-08
 
 ### Removed
 - Glean (churned) from all agents, skills and docs.
@@ -71,7 +77,7 @@
 - `/session-audit --tasks`: completion evidence comes from Planhat `email` Conversations and Slack MCP search in the account's channels (Gmail only for Tasks the operator owns).
 - Context synced from aise-assistant 2.69.0 (new source table and transcript lookup order).
 
-## [1.15.0] — 2026-10-07
+## [1.15.0] – 2026-10-07
 
 ### Added
 - `session-log-auditor` check 6g: orphan Conversation (done Task with no linked Conversation, orphan sharing its `externalId`), with `--fix` repair procedure.
@@ -79,381 +85,381 @@
 ### Changed
 - `context/` synced from `aise-assistant` (Spark session type override, conversion field-carry notes, transcript lookup step 0).
 
-## [1.14.5] — 2026-10-06
+## [1.14.5] – 2026-10-06
 
 ### Changed
 - `context/planhat-schema.md` synced from `aise-assistant` (`custom.Debrief Status` now documents the `ignored` value; task-hygiene and paging notes).
 
-## [1.14.4] — 2026-10-05
+## [1.14.4] – 2026-10-05
 
 ### Fixed
 - **ARR now comes from `custom.ARR – SF`, never native `arr`.** `context/planhat-schema.md` synced from `aise-assistant` (new standing ARR rule). `report-builder` (both SELECTs and the ARR total) and `session-log-auditor` (domain-map filter) switched from `arr` to `custom.ARR – SF`.
 
-## [1.14.3] — 2026-10-02
+## [1.14.3] – 2026-10-02
 
 ### Changed
-- `context/planhat-schema.md` synced from `aise-assistant` — adds § Duplicate End Users (`custom.PB_ID` decides which record carries the AISE fields).
+- `context/planhat-schema.md` synced from `aise-assistant` – adds § Duplicate End Users (`custom.PB_ID` decides which record carries the AISE fields).
 
-## [1.14.2] — 2026-10-02
+## [1.14.2] – 2026-10-02
 
 ### Changed
-- `context/planhat-schema.md` synced from `aise-assistant` — documents `custom.Organization Details` on the Company model and notes that `account-refresh` (aise-assistant-only; not ported here) also maintains `custom.Architecture Details`, `custom.Engagement Plan` and `custom.Next Step`.
+- `context/planhat-schema.md` synced from `aise-assistant` – documents `custom.Organization Details` on the Company model and notes that `account-refresh` (aise-assistant-only; not ported here) also maintains `custom.Architecture Details`, `custom.Engagement Plan` and `custom.Next Step`.
 
-## [1.14.1] — 2026-09-14
+## [1.14.1] – 2026-09-14
 
 ### Fixed
-- `context/planhat-schema.md` synced from `aise-assistant` — corrects the `EndUser` model name to `"End User"` (with the space) everywhere it's called, adds the two missing `custom.AISE Relationship` options (`5. Left the company`, `6. Not filled`), and notes the field is now also written automatically by `aise-assistant`'s `post-session-debrief` step 3b (aise-assistant-only; not ported here).
+- `context/planhat-schema.md` synced from `aise-assistant` – corrects the `EndUser` model name to `"End User"` (with the space) everywhere it's called, adds the two missing `custom.AISE Relationship` options (`5. Left the company`, `6. Not filled`), and notes the field is now also written automatically by `aise-assistant`'s `post-session-debrief` step 3b (aise-assistant-only; not ported here).
 
-## [1.14.0] — 2026-09-12
+## [1.14.0] – 2026-09-12
 
 ### Added
-- `CLAUDE.md` ground rules — write-safety bullet covering every `--fix` write: Planhat discards unknown `PARAMETERS` keys server-side with no error while still returning `200`, so field IDs come from `get_model_action_parameters` and every write is read back and asserted. Names the `Task` aliases that silently vanish (`name`/`title` → `action`, `assignee` → `ownerId`, `dueDate` → `endTime`, `priority` → `custom.Priority`) and the unvalidated-`status` trap (`"To Do"` is the only valid open value).
+- `CLAUDE.md` ground rules – write-safety bullet covering every `--fix` write: Planhat discards unknown `PARAMETERS` keys server-side with no error while still returning `200`, so field IDs come from `get_model_action_parameters` and every write is read back and asserted. Names the `Task` aliases that silently vanish (`name`/`title` → `action`, `assignee` → `ownerId`, `dueDate` → `endTime`, `priority` → `custom.Priority`) and the unvalidated-`status` trap (`"To Do"` is the only valid open value).
 
 ### Changed
-- `context/planhat-schema.md` synced from `aise-assistant` — new § MCP Access "Three silent MCP failures" (adds the dropped-unknown-keys failure with its reproduction table and Task alias table), the note that an unset `type` renders as `note` in Planhat, and two new § Write Rules entries. Relevant to `/session-audit --tasks`, which surfaces these records as drift: roughly 40 untyped debrief-created Tasks remain across other AISEs' accounts from the same agent bug.
-- `context/project-instructions.md` synced from `aise-assistant` — § 4 step 4 corrected from the invalid `status: "to-do"` to `"To Do"`, with the exact-field-ID and read-back requirement added.
+- `context/planhat-schema.md` synced from `aise-assistant` – new § MCP Access "Three silent MCP failures" (adds the dropped-unknown-keys failure with its reproduction table and Task alias table), the note that an unset `type` renders as `note` in Planhat, and two new § Write Rules entries. Relevant to `/session-audit --tasks`, which surfaces these records as drift: roughly 40 untyped debrief-created Tasks remain across other AISEs' accounts from the same agent bug.
+- `context/project-instructions.md` synced from `aise-assistant` – § 4 step 4 corrected from the invalid `status: "to-do"` to `"To Do"`, with the exact-field-ID and read-back requirement added.
 
-## [1.13.1] — 2026-09-11
+## [1.13.1] – 2026-09-11
 
 ### Fixed
-- Follow-up cleanup pass on the Notion retirement (1.13.0/2.61.0): `CLAUDE.md` pointed at `context/notion-schema.md` and `context/notion-writer-playbook.md`, both deleted in that migration — replaced with the current `context/planhat-schema.md` reference and fixed a stale "pull context via Notion" ground rule. `about/README.md` onboarding description updated to Planhat identity resolution. `about/templates/*.template` (identity, team-roster, tracker-memory, workspace) updated from Notion UUID/DB fields to their Planhat equivalents. `context/project-instructions.md` and `context/planhat-schema.md` (canonical, synced from aise-assistant) and `context/planhat-user-profile.md` cleaned of stale Notion fallback references.
+- Follow-up cleanup pass on the Notion retirement (1.13.0/2.61.0): `CLAUDE.md` pointed at `context/notion-schema.md` and `context/notion-writer-playbook.md`, both deleted in that migration – replaced with the current `context/planhat-schema.md` reference and fixed a stale "pull context via Notion" ground rule. `about/README.md` onboarding description updated to Planhat identity resolution. `about/templates/*.template` (identity, team-roster, tracker-memory, workspace) updated from Notion UUID/DB fields to their Planhat equivalents. `context/project-instructions.md` and `context/planhat-schema.md` (canonical, synced from aise-assistant) and `context/planhat-user-profile.md` cleaned of stale Notion fallback references.
 
-## [1.13.0] — 2026-09-08
+## [1.13.0] – 2026-09-08
 
 ### Removed
 - Notion fully retired as a data source. Deleted `agents/notion-writer.md`, `agents/notion-ask.md`, `agents/notion-integrity-check.md`, `agents/notion-completion-fix.md`, `agents/sf-backfill.md` (redundant with native SF→Planhat sync) and their skills, plus the mirrored `context/notion-schema.md`, `context/notion-writer-playbook.md`, `context/notion-planhat-field-mapping.md`.
 - `/notion-ask`, `/notion-sync` (`--sf`/`--owner`/`--renewals`), `/notion-check`, `/notion-fix` commands are gone.
 
 ### Added
-- **New `agents/session-log-auditor.md` + `/session-audit` skill** — portfolio-scoped session-reconciliation and task-completion-drift agent, replacing `notion-integrity-check`/`notion-completion-fix`. Defaults to the whole workspace; `--owner <aise-name>` narrows to one AISE. Carries all 20 hard-won production rules from the aise-assistant original, plus a new per-AISE fan-out and portfolio-scoped checkpoint for whole-workspace runs.
+- **New `agents/session-log-auditor.md` + `/session-audit` skill** – portfolio-scoped session-reconciliation and task-completion-drift agent, replacing `notion-integrity-check`/`notion-completion-fix`. Defaults to the whole workspace; `--owner <aise-name>` narrows to one AISE. Carries all 20 hard-won production rules from the aise-assistant original, plus a new per-AISE fan-out and portfolio-scoped checkpoint for whole-workspace runs.
 
 ### Changed
 - **`report-builder.md` rewritten Planhat-native.** Both `--customer` and `--aise` modes now read Company/Conversation/Task/Line Item data instead of Notion SQL; credit burn is computed from `custom.AISE Working Sessions` (Line Item) vs. delivered-count of the eight counted session types. `--aise` mode's book-of-accounts resolution reconciles Company `owner` (the CSM field, not necessarily the AISE) against empirical Conversation/Task activity rather than trusting either signal blindly.
-- **Report output moved from a Notion page write to a published in-Claude Artifact** (`--no-notion` renamed to `--chat-only`). The Notion-template-discovery system is retired — a single built-in layout is used for both modes now.
+- **Report output moved from a Notion page write to a published in-Claude Artifact** (`--no-notion` renamed to `--chat-only`). The Notion-template-discovery system is retired – a single built-in layout is used for both modes now.
 - Updated `README.md`, `CLAUDE.md`, `skills/assistant-help/SKILL.md`, and `context/planhat-user-profile.md`'s `custom.AISE Leadership Workspace` field description (dropped the Notion-templates-DB sub-fields) to match.
 
 ---
 
-## [1.12.13] — 2026-09-01
+## [1.12.13] – 2026-09-01
 
 ### Fixed
-- `context/planhat-schema.md` — synced from aise-assistant: documented two silent Planhat query failures (ISO-timestamp date filters return a wrong subset instead of erroring; selecting `transcript`/`description` in a multi-record query silently truncates the record count). Related to aise-assistant's `ph-reconcile-gong-gcal` rework, which is aise-assistant-only and not ported here.
+- `context/planhat-schema.md` – synced from aise-assistant: documented two silent Planhat query failures (ISO-timestamp date filters return a wrong subset instead of erroring; selecting `transcript`/`description` in a multi-record query silently truncates the record count). Related to aise-assistant's `ph-reconcile-gong-gcal` rework, which is aise-assistant-only and not ported here.
 
 ---
 
-## [1.12.12] — 2026-08-28
+## [1.12.12] – 2026-08-28
 
 ### Fixed
-- `context/planhat-schema.md`, `context/notion-planhat-field-mapping.md`, `context/project-instructions.md` — synced from aise-assistant: corrected `custom.Slack ID` write guidance (it is AISE-writable, gated on chat confirmation, not "never write"); `custom.Slack URL` documented as a locked formula field derived from `custom.Slack ID`, never a write target. Related to aise-assistant's new `/log-slack-threads-internal` skill, which is aise-assistant-only and not ported here.
+- `context/planhat-schema.md`, `context/notion-planhat-field-mapping.md`, `context/project-instructions.md` – synced from aise-assistant: corrected `custom.Slack ID` write guidance (it is AISE-writable, gated on chat confirmation, not "never write"); `custom.Slack URL` documented as a locked formula field derived from `custom.Slack ID`, never a write target. Related to aise-assistant's new `/log-slack-threads-internal` skill, which is aise-assistant-only and not ported here.
 
 ---
 
-## [1.12.11] — 2026-08-27
+## [1.12.11] – 2026-08-27
 
 ### Added
-- `context/planhat-schema.md` — synced from aise-assistant: `custom.Gong URL` marked deprecated/pending deletion after a one-time workspace-wide migration copied every populated value into `custom.Call Recording` (394 records, zero conflicts). See aise-assistant's `ph-reconcile-gong-gcal` context note for the pre-deletion check against the Gong↔Planhat integration config.
+- `context/planhat-schema.md` – synced from aise-assistant: `custom.Gong URL` marked deprecated/pending deletion after a one-time workspace-wide migration copied every populated value into `custom.Call Recording` (394 records, zero conflicts). See aise-assistant's `ph-reconcile-gong-gcal` context note for the pre-deletion check against the Gong↔Planhat integration config.
 
 ---
 
-## [1.12.10] — 2026-08-27
+## [1.12.10] – 2026-08-27
 
 ### Fixed
-- `context/planhat-schema.md` and `context/notion-planhat-field-mapping.md` — synced from aise-assistant: Gong call recording links now go to `custom.Call Recording`, not `custom.Gong URL`. `custom.Gong URL` is still read (Gong's own native sync writes it on the Conversation it creates) but never written by any agent going forward.
+- `context/planhat-schema.md` and `context/notion-planhat-field-mapping.md` – synced from aise-assistant: Gong call recording links now go to `custom.Call Recording`, not `custom.Gong URL`. `custom.Gong URL` is still read (Gong's own native sync writes it on the Conversation it creates) but never written by any agent going forward.
 
 ---
 
-## [1.12.9] — 2026-08-27
+## [1.12.9] – 2026-08-27
 
 ### Added
-- `context/planhat-schema.md` § Conversation type mapping — synced from aise-assistant. Notes that `👾 Gong Call` Conversations cannot be matched to their GCal-synced target by ID (Gong Call `externalId` is `{gongCallId}-{salesforceAccountId}`, `Conversation` has no `sourceId`, and neither the Gong MCP tools nor Glean's indexed Gong metadata expose a calendar event ID) — matching instead uses a weighted score across attendee overlap, subject similarity, and date proximity. See aise-assistant's new `ph-reconcile-gong-gcal` agent.
+- `context/planhat-schema.md` § Conversation type mapping – synced from aise-assistant. Notes that `👾 Gong Call` Conversations cannot be matched to their GCal-synced target by ID (Gong Call `externalId` is `{gongCallId}-{salesforceAccountId}`, `Conversation` has no `sourceId`, and neither the Gong MCP tools nor Glean's indexed Gong metadata expose a calendar event ID) – matching instead uses a weighted score across attendee overlap, subject similarity, and date proximity. See aise-assistant's new `ph-reconcile-gong-gcal` agent.
 
 ---
 
-## [1.12.8] — 2026-08-27
+## [1.12.8] – 2026-08-27
 
 ### Added
-- `context/planhat-schema.md` § Session record resolution — synced from aise-assistant. The GCal-event-ID ladder (Conversation by `externalId` → Task by `sourceId`, both ID shapes → title/company/date fallback → create as last resort with the event ID set), and the rule that a create without a dedup key is a bug.
-- `context/planhat-schema.md` § Rich Text Field Formatting — canonical prep-brief structure table, pre-write sanity checklist, and the named gold-standard record (Task `6a73dff47c78485e7c3daa27`).
+- `context/planhat-schema.md` § Session record resolution – synced from aise-assistant. The GCal-event-ID ladder (Conversation by `externalId` → Task by `sourceId`, both ID shapes → title/company/date fallback → create as last resort with the event ID set), and the rule that a create without a dedup key is a bug.
+- `context/planhat-schema.md` § Rich Text Field Formatting – canonical prep-brief structure table, pre-write sanity checklist, and the named gold-standard record (Task `6a73dff47c78485e7c3daa27`).
 
 ---
 
-## [1.12.7] — 2026-08-27
+## [1.12.7] – 2026-08-27
 
 ### Changed
-- `context/planhat-schema.md` § Rich Text Field Formatting — synced from aise-assistant: canonical prep-brief structure table (11 fixed sections), pre-write sanity checklist, the rule that the format governs every rich-text field (plain text and `\n`-separated text banned), and the named gold-standard record (Task `6a73dff47c78485e7c3daa27`). Guardrail added that existing Planhat records predate the en-dash rule and are not the style reference.
+- `context/planhat-schema.md` § Rich Text Field Formatting – synced from aise-assistant: canonical prep-brief structure table (11 fixed sections), pre-write sanity checklist, the rule that the format governs every rich-text field (plain text and `\n`-separated text banned), and the named gold-standard record (Task `6a73dff47c78485e7c3daa27`). Guardrail added that existing Planhat records predate the en-dash rule and are not the style reference.
 
 ---
 
-## [1.12.6] — 2026-08-27
+## [1.12.6] – 2026-08-27
 
 ### Changed
-- `context/` synced from aise-assistant: `planhat-schema.md` rewrites the Rich Text Field Formatting section into the full verified `ph-editor` tag reference (paragraphs, classed `ul`/`ol` lists, blockquote, `hr`, table) and corrects the earlier "never use `<ol>`/`<ul>`" guidance — bare lists were the actual cause of rendering mangling, not lists themselves. `notion-planhat-field-mapping.md` and `planhat-user-profile.md` updated to the same convention.
-- `context/session-artifact-convention.md` — new file synced from aise-assistant: naming and Drive-folder convention for session artifacts (prep briefs, KDDs, facilitation guides, debrief exports), with Salesforce duplicate-account and Planhat `externalId` write-failure guardrails.
+- `context/` synced from aise-assistant: `planhat-schema.md` rewrites the Rich Text Field Formatting section into the full verified `ph-editor` tag reference (paragraphs, classed `ul`/`ol` lists, blockquote, `hr`, table) and corrects the earlier "never use `<ol>`/`<ul>`" guidance – bare lists were the actual cause of rendering mangling, not lists themselves. `notion-planhat-field-mapping.md` and `planhat-user-profile.md` updated to the same convention.
+- `context/session-artifact-convention.md` – new file synced from aise-assistant: naming and Drive-folder convention for session artifacts (prep briefs, KDDs, facilitation guides, debrief exports), with Salesforce duplicate-account and Planhat `externalId` write-failure guardrails.
 
 ---
 
-## [1.12.5] — 2026-08-25
+## [1.12.5] – 2026-08-25
 
 ### Changed
 - `context/` synced from aise-assistant: `communication-style-guide.md` and `planhat-schema.md` repointed voice source of truth to the Planhat User record (`custom.AISE Profile preferences` / `custom.AISE Identity`), corrected Company/Conversation custom-field documentation (renamed and removed fields, 20+ previously missing fields, `🔁 Renewal Call` added to the Conversation `type` options), and dated the Company custom-field section as last verified 2026-08-25.
 
 ---
 
-## [1.12.4] — 2026-08-25
+## [1.12.4] – 2026-08-25
 
 ### Changed
 - `context/` synced from aise-assistant: `planhat-schema.md` gains a new § Known non-sessions (do not recreate) table for calendar events that looked like delivered sessions but were cancelled or never held.
 
 ---
 
-## [1.12.3] — 2026-08-24
+## [1.12.3] – 2026-08-24
 
 ### Changed
 - `context/` synced from aise-assistant: new `custom.Link to PB Note` Conversation field documented in `planhat-schema.md` (written by aise-assistant's `/log-feedback` skill when closing out a Product Feedback Task).
 
 ---
 
-## [1.12.2] — 2026-08-21
+## [1.12.2] – 2026-08-21
 
 ### Changed
 - `context/` synced from aise-assistant: new `context/initiatives/` folder (time-boxed GTM/adoption motions, e.g. Spark in Practice), initiative-override callouts in `project-instructions.md` and `session-naming-convention.md`, and pending Planhat schema/field-mapping/user-profile updates that hadn't been synced yet.
 
 ---
 
-## [1.12.1] — 2026-08-20
+## [1.12.1] – 2026-08-20
 
 ### Fixed
-- `agents/assistant-onboarding.md`, `agents/context-keeper.md`, `agents/notion-completion-fix.md`, `agents/report-builder.md`: corrected the format of `custom.AISE Identity`, `custom.AISE Profile preferences`, and `custom.AISE Tracker Memory` on the Planhat User record — these are HTML rich-text fields (`<p>Key: value</p>` per line, `<ul><li>` for bullets), not `\n`-separated plain text. Planhat silently strips bare `\n` on write, so a prior plain-text write would collapse into one run-on string. All four agents now strip tags before parsing and write `<p>`/`<li>`-wrapped HTML back.
-- `agents/assistant-onboarding.md`: added a mandatory post-write verification step — immediately re-reads a just-written rich-text field to confirm the `<p>` boundaries survived, since a successful (HTTP 200) write doesn't guarantee the content landed correctly.
+- `agents/assistant-onboarding.md`, `agents/context-keeper.md`, `agents/notion-completion-fix.md`, `agents/report-builder.md`: corrected the format of `custom.AISE Identity`, `custom.AISE Profile preferences`, and `custom.AISE Tracker Memory` on the Planhat User record – these are HTML rich-text fields (`<p>Key: value</p>` per line, `<ul><li>` for bullets), not `\n`-separated plain text. Planhat silently strips bare `\n` on write, so a prior plain-text write would collapse into one run-on string. All four agents now strip tags before parsing and write `<p>`/`<li>`-wrapped HTML back.
+- `agents/assistant-onboarding.md`: added a mandatory post-write verification step – immediately re-reads a just-written rich-text field to confirm the `<p>` boundaries survived, since a successful (HTTP 200) write doesn't guarantee the content landed correctly.
 
 ---
 
-## [1.12.0] — 2026-08-16
+## [1.12.0] – 2026-08-16
 
 ### Changed
-- `/assistant-setup` onboarding rewritten to write directly to `custom.AISE *` fields on the user's Planhat User record instead of Notion pages — `custom.AISE Identity` and `custom.AISE Profile preferences` are shared with aise-assistant (same person, one identity, one voice); a new `custom.AISE Leadership Workspace` field holds report templates, cadence formats, Gong keywords, Slack channels, and coordinators.
-- Team roster is no longer a stored page or field — `report-builder` and `notion-completion-fix` now resolve "who's on my team" live from Planhat's native `managers`/`teams` fields, falling back to `notion-get-users` per teammate only when a Notion UUID is needed for ownership scoping.
+- `/assistant-setup` onboarding rewritten to write directly to `custom.AISE *` fields on the user's Planhat User record instead of Notion pages – `custom.AISE Identity` and `custom.AISE Profile preferences` are shared with aise-assistant (same person, one identity, one voice); a new `custom.AISE Leadership Workspace` field holds report templates, cadence formats, Gong keywords, Slack channels, and coordinators.
+- Team roster is no longer a stored page or field – `report-builder` and `notion-completion-fix` now resolve "who's on my team" live from Planhat's native `managers`/`teams` fields, falling back to `notion-get-users` per teammate only when a Notion UUID is needed for ownership scoping.
 - `context-keeper`'s voice-preference and cross-team-pattern rows now target the shared Planhat fields (`custom.AISE Profile preferences`, `custom.AISE Tracker Memory`), matching the aise-assistant copy.
-- Simplified `notion-writer`, `sf-backfill`, `notion-ask`, `notion-integrity-check` to resolve the Notion UUID directly via `notion-get-users` — they never needed the full identity fetch, just ownership scoping.
+- Simplified `notion-writer`, `sf-backfill`, `notion-ask`, `notion-integrity-check` to resolve the Notion UUID directly via `notion-get-users` – they never needed the full identity fetch, just ownership scoping.
 - Agents that previously hard-stopped on an empty profile (`notion-completion-fix`, `report-builder`) now auto-migrate from a legacy Notion page if one exists, or run `assistant-onboarding` inline if nothing exists anywhere, instead of telling the user to go run `/assistant-setup` themselves.
 - `context/planhat-user-profile.md` synced from aise-assistant with the full field map, team-roster live-query procedure, and auto-resolve procedure.
 
 ---
 
-## [1.11.2] — 2026-08-10
+## [1.11.2] – 2026-08-10
 
 ### Changed
-- `context/notion-planhat-field-mapping.md`: resynced from aise-assistant v2.34.0 — added bolded `companyId`-required notes atop the Sessions→Conversation and Tasks→Task field-mapping tables.
+- `context/notion-planhat-field-mapping.md`: resynced from aise-assistant v2.34.0 – added bolded `companyId`-required notes atop the Sessions→Conversation and Tasks→Task field-mapping tables.
 
 ---
 
-## [1.11.1] — 2026-08-08
+## [1.11.1] – 2026-08-08
 
 ### Fixed
 - Checkpoint & resumability (`notion-integrity-check`, `notion-completion-fix`): checkpoints now record the flags/args that shaped the run (`--customer`, `--owner`, `--past`) and must be verified against the current invocation before being trusted, rather than resuming silently against a stale or scope-mismatched checkpoint.
 
 ---
 
-## [1.11.0] — 2026-08-08
+## [1.11.0] – 2026-08-08
 
 ### Added
 - Checkpoint & resumability for `notion-integrity-check` and `notion-completion-fix`: each now writes a `/tmp/<agent-name>-<scope>.json` checkpoint after each completed fix/candidate, resumes from the next incomplete item on a subsequent run, and deletes the checkpoint on full completion. Mirrors the pattern added to the aise-assistant versions of these agents and to aise-assistant's bulk agents.
 
 ---
 
-## [1.10.5] — 2026-08-08
+## [1.10.5] – 2026-08-08
 
 ### Changed
-- `context/notion-planhat-field-mapping.md`: resynced from aise-assistant v2.32.0 — added Brandwatch/Cision dual-email EndUser resolution note.
+- `context/notion-planhat-field-mapping.md`: resynced from aise-assistant v2.32.0 – added Brandwatch/Cision dual-email EndUser resolution note.
 
 ---
 
-## [1.10.4] — 2026-08-07
+## [1.10.4] – 2026-08-07
 
 ### Changed
 - `context/notion-schema.md`, `context/notion-planhat-field-mapping.md`, `context/planhat-schema.md`, `context/planhat-user-profile.md`: resynced from aise-assistant v2.31.0.
 
 ---
 
-## [1.10.3] — 2026-08-06
+## [1.10.3] – 2026-08-06
 
 ### Changed
-- `context/notion-planhat-field-mapping.md`: resynced from aise-assistant v2.30.3 — corrected Planhat Conversation field name from `endUsers` (camelCase) to `endusers` (all lowercase); Planhat silently drops writes to the wrong field name without an error.
+- `context/notion-planhat-field-mapping.md`: resynced from aise-assistant v2.30.3 – corrected Planhat Conversation field name from `endUsers` (camelCase) to `endusers` (all lowercase); Planhat silently drops writes to the wrong field name without an error.
 
 ---
 
-## [1.10.2] — 2026-08-06
+## [1.10.2] – 2026-08-06
 
 ### Changed
-- `context/notion-planhat-field-mapping.md`: resynced from aise-assistant v2.30.2 — removed remaining `Spark Conversation`/`activityTags` references (field already dropped as non-writable via MCP in a prior sync).
+- `context/notion-planhat-field-mapping.md`: resynced from aise-assistant v2.30.2 – removed remaining `Spark Conversation`/`activityTags` references (field already dropped as non-writable via MCP in a prior sync).
 
 ---
 
-## [1.10.1] — 2026-08-06
+## [1.10.1] – 2026-08-06
 
 ### Changed
-- `context/planhat-schema.md`: resynced from aise-assistant v2.30.1 — Task auto-Conversation behavior corrected (transition-only trigger, `type` defaults to `"note"`, shared Task/Conversation `_id`), `📦 Other` Conversation type mapping fixed, Entrust → Onfido Ltd domains alias added.
+- `context/planhat-schema.md`: resynced from aise-assistant v2.30.1 – Task auto-Conversation behavior corrected (transition-only trigger, `type` defaults to `"note"`, shared Task/Conversation `_id`), `📦 Other` Conversation type mapping fixed, Entrust → Onfido Ltd domains alias added.
 
 ---
 
-## [1.10.0] — 2026-08-05
+## [1.10.0] – 2026-08-05
 
 ### Changed
-- `context/planhat-schema.md`, `context/project-instructions.md`: caught up to aise-assistant's canonical copies — resynced via `scripts/sync-context.sh` after two prior aise-assistant context commits (`7365582`, `9b59412`) landed without a follow-up sync. Picks up: `custom.Priority` mapping fix, `activityTags` read-only caveat, task dedup pattern fix, `Session Length (h)` → `custom.Call Duration` mapping, `custom.Prep Notes` field, PH-migration-gate section, `create_model_record` `PARAMETERS`-not-`DATA` param fix, Gong-MCP-preference note, and the Fin chat escalation section (§10).
+- `context/planhat-schema.md`, `context/project-instructions.md`: caught up to aise-assistant's canonical copies – resynced via `scripts/sync-context.sh` after two prior aise-assistant context commits (`7365582`, `9b59412`) landed without a follow-up sync. Picks up: `custom.Priority` mapping fix, `activityTags` read-only caveat, task dedup pattern fix, `Session Length (h)` → `custom.Call Duration` mapping, `custom.Prep Notes` field, PH-migration-gate section, `create_model_record` `PARAMETERS`-not-`DATA` param fix, Gong-MCP-preference note, and the Fin chat escalation section (§10).
 
 ---
 
-## [1.9.13] — 2026-07-31
+## [1.9.13] – 2026-07-31
 
 ### Changed
-- `context/project-instructions.md`: Planhat transcript field rule — write Gong transcript to Conversation.transcript after every debrief — synced from aise-assistant v2.29.5
+- `context/project-instructions.md`: Planhat transcript field rule – write Gong transcript to Conversation.transcript after every debrief – synced from aise-assistant v2.29.5
 
 ---
 
-## [1.9.12] — 2026-07-31
+## [1.9.12] – 2026-07-31
 
 ### Changed
-- `context/project-instructions.md`: Planhat dual-write fix — update both Task and Conversation models with same ID; HTML-only formatting rule for descriptions — synced from aise-assistant v2.29.4
+- `context/project-instructions.md`: Planhat dual-write fix – update both Task and Conversation models with same ID; HTML-only formatting rule for descriptions – synced from aise-assistant v2.29.4
 
 ---
 
-## [1.9.11] — 2026-07-31
+## [1.9.11] – 2026-07-31
 
 ### Changed
 - `context/communication-style-guide.md`: added explicit em dash ban section – synced from aise-assistant v2.29.3
 
 ---
 
-## [1.9.10] — 2026-07-31
+## [1.9.10] – 2026-07-31
 
 ### Changed
-- `context/communication-style-guide.md`: added subject line format convention — use `Productboard + [Customer] – [Topic]` (never "x"); synced from aise-assistant v2.29.2
+- `context/communication-style-guide.md`: added subject line format convention – use `Productboard + [Customer] – [Topic]` (never "x"); synced from aise-assistant v2.29.2
 
 ---
 
-## [1.9.9] — 2026-07-15
+## [1.9.9] – 2026-07-15
 
 ### Fixed
-- `context/notion-schema.md`: synced from aise-assistant v2.28.1 — Sessions create rule updated: `Current Account Owner` must be set explicitly on create; removed "leave blank" instruction
+- `context/notion-schema.md`: synced from aise-assistant v2.28.1 – Sessions create rule updated: `Current Account Owner` must be set explicitly on create; removed "leave blank" instruction
 
 ---
 
-## [1.9.8] — 2026-07-15
+## [1.9.8] – 2026-07-15
 
 ### Changed
 - `context/` synced from aise-assistant v2.28.0: `notion-schema.md` updated with Planhat cross-reference; `planhat-schema.md` and `notion-planhat-field-mapping.md` added; `project-instructions.md` updated with Planhat connector entry
 
 ---
 
-## [1.9.7] — 2026-06-24
+## [1.9.7] – 2026-06-24
 
 ### Fixed
-- `context/` synced from aise-assistant v2.23.3: Gmail copy-paste safety rules added to `communication-style-guide.md` — no markdown tables, no markdown bold in draft body, next steps as flat bulleted list
+- `context/` synced from aise-assistant v2.23.3: Gmail copy-paste safety rules added to `communication-style-guide.md` – no markdown tables, no markdown bold in draft body, next steps as flat bulleted list
 
 ---
 
-## [1.9.6] — 2026-06-15
+## [1.9.6] – 2026-06-15
 
 ### Fixed
-- `context/` synced from aise-assistant v2.23.2: Gong search strategy in transcript lookup order — `after:` date filter + people-keywords; two-attempt rule before placeholder branch
+- `context/` synced from aise-assistant v2.23.2: Gong search strategy in transcript lookup order – `after:` date filter + people-keywords; two-attempt rule before placeholder branch
 
 ---
 
-## [1.9.5] — 2026-06-15
+## [1.9.5] – 2026-06-15
 
 ### Changed
 - `context/` synced from aise-assistant v2.23.1: `notion-schema.md` Customers DB updated with `Spark Customer Journey`, `Ignite Journey Last Edited`, `Igniting?` fields and read-only Ignite formulas
 
 ---
 
-## [1.9.4] — 2026-05-22
+## [1.9.4] – 2026-05-22
 
 ### Changed
 - `context/` synced from aise-assistant v2.19.0: `notion-schema.md` Sessions field reference updated with `Prepped` and `Debriefed` checkbox properties
 
 ---
 
-## [1.9.3] — 2026-05-15
+## [1.9.3] – 2026-05-15
 
 ### Changed
 - `context/` synced from aise-assistant v2.18.0: added `session-naming-convention.md`; updated `notion-schema.md` Sessions Name field to reference the new convention
 
 ---
 
-## [1.9.2] — 2026-05-15
+## [1.9.2] – 2026-05-15
 
 ### Fixed
 - `context/` synced from aise-assistant v2.17.1: Gong transcript lookup improvements, no-redundant-search rule, oversized-result bash fallback, product feedback auto-submit, and identity resolution email-first fix
 
 ---
 
-## [1.9.1] — 2026-05-14
+## [1.9.1] – 2026-05-14
 
 ### Fixed
-- `context/notion-schema.md`: synced from aise-assistant — clarification that the Active Package `Status` field has no `No services` option; the no-services state is expressed via Customer `Account Status = Active (no Services)` + `Master Package = AISE No Services`
+- `context/notion-schema.md`: synced from aise-assistant – clarification that the Active Package `Status` field has no `No services` option; the no-services state is expressed via Customer `Account Status = Active (no Services)` + `Master Package = AISE No Services`
 
 ---
 
-## [1.9.0] — 2026-05-14
+## [1.9.0] – 2026-05-14
 
 ### Changed
-- `skills/assistant-improvement/SKILL.md`: now captures **preference signals** (sequencing, depth, output shape, tool routing, interaction style, positive confirmations of non-obvious choices) in addition to failures. Step 2 split into `2a — Failures` and `2b — Preferences`; Step 3 maps preferences to source layers; Step 4 output groups signals into `Failures` and `Preferences to encode` sections so the coding agent can prioritize. Mirrors the aise-assistant v2.14.0 change.
+- `skills/assistant-improvement/SKILL.md`: now captures **preference signals** (sequencing, depth, output shape, tool routing, interaction style, positive confirmations of non-obvious choices) in addition to failures. Step 2 split into `2a – Failures` and `2b – Preferences`; Step 3 maps preferences to source layers; Step 4 output groups signals into `Failures` and `Preferences to encode` sections so the coding agent can prioritize. Mirrors the aise-assistant v2.14.0 change.
 
 ---
 
-## [1.8.3] — 2026-05-14
+## [1.8.3] – 2026-05-14
 
 ### Fixed
-- `context/project-instructions.md`: synced from aise-assistant — new Mandatory pre-draft step (fetch `AISE Assistant Preferences` Voice section before any draft, always pull fresh)
+- `context/project-instructions.md`: synced from aise-assistant – new Mandatory pre-draft step (fetch `AISE Assistant Preferences` Voice section before any draft, always pull fresh)
 
 ---
 
-## [1.8.2] — 2026-05-14
+## [1.8.2] – 2026-05-14
 
 ### Fixed
-- `agents/notion-writer.md`: corrected the `userDefined:` prefix rule — apply it only to properties literally named `URL` or `id`; all other URL-typed properties use the property name directly with no prefix
+- `agents/notion-writer.md`: corrected the `userDefined:` prefix rule – apply it only to properties literally named `URL` or `id`; all other URL-typed properties use the property name directly with no prefix
 - `context/notion-schema.md`, `context/score-cards.md`: synced from aise-assistant (userDefined: prefix correction + new Sync / Office Hours scorecard)
 
 ---
 
-## [1.8.1] — 2026-05-11
+## [1.8.1] – 2026-05-11
 
 ### Fixed
-- `context/notion-schema.md`: synced from aise-assistant — new session fields (`Gong call`, `Spark conversation`, `Related Tasks`), `Parent Company` on Customers, stale field removals, and undocumented read-only field additions
+- `context/notion-schema.md`: synced from aise-assistant – new session fields (`Gong call`, `Spark conversation`, `Related Tasks`), `Parent Company` on Customers, stale field removals, and undocumented read-only field additions
 
 ---
 
-## [1.8.0] — 2026-05-11
+## [1.8.0] – 2026-05-11
 
 ### Removed
-- `skills/commit/SKILL.md`: removed `/commit` as a user-facing skill — moved to dev-only `.claude/commands/commit.md` in the toolkit root
+- `skills/commit/SKILL.md`: removed `/commit` as a user-facing skill – moved to dev-only `.claude/commands/commit.md` in the toolkit root
 
 ---
 
-## [1.6.2] — 2026-05-10
+## [1.6.2] – 2026-05-10
 
 ### Fixed
-- `context/notion-schema.md`: rewrote Identity resolution procedure — removed pointer-file and glob-fallback steps; Notion lookup (`notion-get-users` + `AISE Identity` page) is now the sole resolver
+- `context/notion-schema.md`: rewrote Identity resolution procedure – removed pointer-file and glob-fallback steps; Notion lookup (`notion-get-users` + `AISE Identity` page) is now the sole resolver
 - `agents/notion-writer.md`: replaced all `about/identity.md` references with `AISE Identity` Notion page
 - `skills/report/SKILL.md`: `me` target resolution updated to reference `AISE Identity` Notion page
-- `skills/assistant-setup/SKILL.md`: description updated — removed "writes the about/ folder"
+- `skills/assistant-setup/SKILL.md`: description updated – removed "writes the about/ folder"
 - `context/communication-style-guide.md`, `context/project-instructions.md`, `context/notion-writer-playbook.md`: updated all `about/voice.md` pointers to `AISE Leadership Preferences` Notion page
-- `CLAUDE.md`: communication-style-guide table row updated — `about/voice.md` → `AISE Leadership Preferences` Notion page
+- `CLAUDE.md`: communication-style-guide table row updated – `about/voice.md` → `AISE Leadership Preferences` Notion page
 
 ---
 
-## [1.6.1] — 2026-05-10
+## [1.6.1] – 2026-05-10
 
 ### Fixed
-- `agents/notion-writer.md`, `agents/sf-backfill.md`, `agents/notion-integrity-check.md`: unified "not found" handling — each now outputs "AISE Identity page not found — run `/assistant-setup` to configure your profile." and stops; previously noted the gap in chat and asked once if needed
-- `agents/report-builder.md`: same — "not found" path now stops instead of noting the gap and continuing
+- `agents/notion-writer.md`, `agents/sf-backfill.md`, `agents/notion-integrity-check.md`: unified "not found" handling – each now outputs "AISE Identity page not found – run `/assistant-setup` to configure your profile." and stops; previously noted the gap in chat and asked once if needed
+- `agents/report-builder.md`: same – "not found" path now stops instead of noting the gap and continuing
 
 ---
 
-## [1.6.0] — 2026-05-10
+## [1.6.0] – 2026-05-10
 
 ### Changed
-- `agents/assistant-onboarding.md`: removed Path B (local file read via `~/.claude/aise-leadership.datadir`) from Step 1 — Notion-only resolver now; removed Step 7 (local `about/` file writes) entirely — Notion profile pages are the only output; updated `--reset` mode to not delete local files; updated frontmatter description, end-state line, and Step 8 report to reference Notion pages; guardrails updated to reflect Notion-only output
+- `agents/assistant-onboarding.md`: removed Path B (local file read via `~/.claude/aise-leadership.datadir`) from Step 1 – Notion-only resolver now; removed Step 7 (local `about/` file writes) entirely – Notion profile pages are the only output; updated `--reset` mode to not delete local files; updated frontmatter description, end-state line, and Step 8 report to reference Notion pages; guardrails updated to reflect Notion-only output
 - `agents/notion-ask.md` Step 4.1: removed Step A (local file read), Step B is now the sole resolver renamed to "Resolve identity"
 - `agents/notion-writer.md`: removed Step A (local file read) from identity resolution preamble; "Before every write" and ownership contract updated to reference Notion identity page instead of `identity.md`
 - `agents/notion-integrity-check.md`: removed Step A (local file read) from identity resolution preamble; Step 1 updated to use preamble-resolved UUID; all `about/identity.md` references replaced with `AISE Identity` Notion page references
@@ -464,23 +470,23 @@
 
 ---
 
-## [1.5.1] — 2026-05-10
+## [1.5.1] – 2026-05-10
 
 ### Fixed
-- `agents/notion-ask.md` Step 4.1: replaced broken Bash `cat` resolver (Bash not in tools list) with two-path Read tool resolver — Step A reads `~/.claude/aise-leadership.datadir` + `identity.md`; Step B falls back to `notion-get-users` + `notion-search("AISE Identity — {display_name}")` + `notion-fetch` for Cowork compatibility
-- `agents/notion-ask.md` Step 4.1: corrected wrong pointer file name (`aise-assistant.datadir` → `aise-leadership.datadir`) — copy-paste bug from the aise-assistant agent that would have caused identity queries to resolve to the wrong user context
+- `agents/notion-ask.md` Step 4.1: replaced broken Bash `cat` resolver (Bash not in tools list) with two-path Read tool resolver – Step A reads `~/.claude/aise-leadership.datadir` + `identity.md`; Step B falls back to `notion-get-users` + `notion-search("AISE Identity – {display_name}")` + `notion-fetch` for Cowork compatibility
+- `agents/notion-ask.md` Step 4.1: corrected wrong pointer file name (`aise-assistant.datadir` → `aise-leadership.datadir`) – copy-paste bug from the aise-assistant agent that would have caused identity queries to resolve to the wrong user context
 
 ---
 
-## [1.5.0] — 2026-05-10
+## [1.5.0] – 2026-05-10
 
 ### Added
 - `agents/assistant-onboarding.md`: added `mcp__claude_ai_Notion__notion-create-pages` and `mcp__claude_ai_Notion__notion-update-page` to tools frontmatter
-- `agents/assistant-onboarding.md` Step 7b (new): writes 4-page private Notion hierarchy — parent `AISE Profile`, child `AISE Identity` (shared with aise-assistant), child `AISE Leadership Preferences` (Voice + Workspace), child `AISE Leadership Team Roster` (markdown table from Step 2.5); always runs, never creates `AISE Assistant Preferences`
-- `agents/assistant-onboarding.md`: no-early-exit rule at top of Procedure — all modes including "already onboarded" must run Step 7b and Step 8
+- `agents/assistant-onboarding.md` Step 7b (new): writes 4-page private Notion hierarchy – parent `AISE Profile`, child `AISE Identity` (shared with aise-assistant), child `AISE Leadership Preferences` (Voice + Workspace), child `AISE Leadership Team Roster` (markdown table from Step 2.5); always runs, never creates `AISE Assistant Preferences`
+- `agents/assistant-onboarding.md`: no-early-exit rule at top of Procedure – all modes including "already onboarded" must run Step 7b and Step 8
 
 ### Changed
-- `agents/assistant-onboarding.md` Step 1: added Path A (Notion — CLI + Cowork) before existing bash resolver (now Path B); Path A searches `AISE Identity`, `AISE Leadership Preferences`, and `AISE Leadership Team Roster` pages; Notion pages authoritative when both paths differ; "already onboarded" default-mode path now skips to Step 7b instead of exiting
+- `agents/assistant-onboarding.md` Step 1: added Path A (Notion – CLI + Cowork) before existing bash resolver (now Path B); Path A searches `AISE Identity`, `AISE Leadership Preferences`, and `AISE Leadership Team Roster` pages; Notion pages authoritative when both paths differ; "already onboarded" default-mode path now skips to Step 7b instead of exiting
 - `agents/report-builder.md` preamble: replaced 3-step CLI-only identity resolution with CLI (Step A) + Cowork (Step B: `AISE Identity` + `AISE Leadership Preferences` + `AISE Leadership Team Roster`) + proceed (Step C) pattern
 - `agents/notion-writer.md`, `agents/notion-integrity-check.md`, `agents/sf-backfill.md` preambles: updated to Step A (CLI pointer file) + Step B (Cowork: `notion-get-users` + `AISE Identity` search/fetch) + Step C pattern
 - `skills/assistant-setup/SKILL.md`: replaced with clean delegation-only file (stripped all osascript and Cowork file-writing instructions; now delegates entirely to `agents/assistant-onboarding.md`)
@@ -489,41 +495,41 @@
 
 ---
 
-## [1.4.1] — 2026-05-10
+## [1.4.1] – 2026-05-10
 
 ### Fixed
-- `CLAUDE.md`: added Cowork osascript fallback to the path resolver — when Read tool is blocked, use `mcp__Control_your_Mac__osascript` with `do shell script "cat $HOME/.claude/aise-leadership.datadir"` to reach `~/.claude/`; matches the pattern already working in aise-assistant; added "Finding these files" note to the per-user table identical to aise-assistant's
+- `CLAUDE.md`: added Cowork osascript fallback to the path resolver – when Read tool is blocked, use `mcp__Control_your_Mac__osascript` with `do shell script "cat $HOME/.claude/aise-leadership.datadir"` to reach `~/.claude/`; matches the pattern already working in aise-assistant; added "Finding these files" note to the per-user table identical to aise-assistant's
 
-## [1.4.0] — 2026-05-10
+## [1.4.0] – 2026-05-10
 
 ### Added
-- All 4 agents (`report-builder`, `notion-integrity-check`, `sf-backfill`, `notion-writer`): added `⚠️ Identity resolution — EXECUTE BEFORE ANY OTHER ACTION` preamble block at the top of every agent that accesses `about/` files — placed before any mode steps so the model cannot run Glob or plugin-path discovery before reading the pointer file
+- All 4 agents (`report-builder`, `notion-integrity-check`, `sf-backfill`, `notion-writer`): added `⚠️ Identity resolution – EXECUTE BEFORE ANY OTHER ACTION` preamble block at the top of every agent that accesses `about/` files – placed before any mode steps so the model cannot run Glob or plugin-path discovery before reading the pointer file
 - Identity fallback: when `identity.md` is missing or contains `<TBD>` values (plugin not yet set up), agents now call `notion-get-users` to resolve the current user's UUID by name match, then note in chat to run `/assistant-setup`; previously agents would fail silently or misroute
 
 ### Changed
 - `report-builder`: preamble also covers `workspace.md` resolution (Step C) to avoid a second pre-step Notion query for the templates DB
 
-## [1.3.3] — 2026-05-10
+## [1.3.3] – 2026-05-10
 
 ### Fixed
-- `session-start.sh`: added step 0 (use `$CLAUDE_PLUGIN_DATA` when `about/identity.md` already exists there — Cowork populated) and changed final fallback to prefer `$CLAUDE_PLUGIN_DATA` over a Linux-VM home path (Cowork fresh install); pointer file now always contains a path accessible in the current execution context
+- `session-start.sh`: added step 0 (use `$CLAUDE_PLUGIN_DATA` when `about/identity.md` already exists there – Cowork populated) and changed final fallback to prefer `$CLAUDE_PLUGIN_DATA` over a Linux-VM home path (Cowork fresh install); pointer file now always contains a path accessible in the current execution context
 
-## [1.3.2] — 2026-05-10
-
-### Fixed
-- `notion-integrity-check`, `sf-backfill`, `notion-writer`: added explicit PLUGIN_DATA_DIR resolver — Read `~/.claude/aise-leadership.datadir` before any `about/identity.md` access; consistent with the fix already applied to `report-builder` in v1.3.1
-
-## [1.3.1] — 2026-05-10
+## [1.3.2] – 2026-05-10
 
 ### Fixed
-- `report-builder`: replaced bare `about/` path references with explicit `{PLUGIN_DATA_DIR}/about/` form; PLUGIN_DATA_DIR is now resolved via `Read ~/.claude/aise-leadership.datadir` in Step 1 of both modes — prevents the model from falling back to the volatile `CLAUDE_PLUGIN_DATA` env variable (which points to `/Library/Application Support/Claude/...` in desktop contexts and is outside connected folders)
+- `notion-integrity-check`, `sf-backfill`, `notion-writer`: added explicit PLUGIN_DATA_DIR resolver – Read `~/.claude/aise-leadership.datadir` before any `about/identity.md` access; consistent with the fix already applied to `report-builder` in v1.3.1
+
+## [1.3.1] – 2026-05-10
+
+### Fixed
+- `report-builder`: replaced bare `about/` path references with explicit `{PLUGIN_DATA_DIR}/about/` form; PLUGIN_DATA_DIR is now resolved via `Read ~/.claude/aise-leadership.datadir` in Step 1 of both modes – prevents the model from falling back to the volatile `CLAUDE_PLUGIN_DATA` env variable (which points to `/Library/Application Support/Claude/...` in desktop contexts and is outside connected folders)
 - `CLAUDE.md`: path resolver note updated to call out the `CLAUDE_PLUGIN_DATA` env variable as volatile and forbidden; Read-tool resolution is now the documented pattern
 
-## [1.3.0] — 2026-05-10
+## [1.3.0] – 2026-05-10
 
 ### Added
 - `report-builder`: `/report` now automatically writes each report to a Notion page after rendering in chat; suppress with `--no-notion`
-- `report-builder`: best-fit template auto-selection by name match — `--aise` prefers "portfolio"/"team brief"/"aise"/"weekly"; `--customer` prefers "account"/"customer"/"snapshot"
+- `report-builder`: best-fit template auto-selection by name match – `--aise` prefers "portfolio"/"team brief"/"aise"/"weekly"; `--customer` prefers "account"/"customer"/"snapshot"
 - `report-builder`: presales and lapsed-contract accounts are now pre-filtered from 🔴/🟠/🟡 attention queue flags in `--aise` mode; appear in the queue under ℹ️ (Presales always; lapsed within 180 days only)
 - `report-builder`: `--customer` mode Step 4 now checks Active Package liveness before raising ⚠️/🔴 cadence flags; presales/lapsed accounts get ℹ️ Signals instead
 
@@ -531,7 +537,7 @@
 - `report-builder`: "Template-based output" section reframed from optional to the default behavior
 - `report-builder`: added `notion-create-pages` to the agent's tool list; guardrails updated from "Read-only" to "Mostly read-only"
 
-## [1.2.2] — 2026-05-10
+## [1.2.2] – 2026-05-10
 
 ### Fixed
 - `setup-connections.sh`: refactored SF detection into helper functions (`_sf_in_config`, `_find_sf`, `_sf_auth_ok`) for more robust Salesforce CLI and MCP presence checking
@@ -539,7 +545,7 @@
 - SF auth check now reads credential files directly without requiring Node on PATH
 - Banner string corrected back to `aise-leadership` (had been overwritten with `aise-assistant`)
 
-## [1.2.1] — 2026-05-10
+## [1.2.1] – 2026-05-10
 
 ### Fixed
 - `setup-connections.sh --check`: now reads `~/.claude/claude_desktop_config.json` for the Salesforce MCP presence check
@@ -547,47 +553,47 @@
 - MCP-missing message in `--check` mode now prints the correct `claude mcp add` install command
 - Banner string corrected from `aise-assistant` to `aise-leadership`
 
-## [1.2.0] — 2026-05-10
+## [1.2.0] – 2026-05-10
 
 ### Added
-- Proactive improvement nudge — after any skill run where efficiency gaps are observed (redundant tool calls, missing pre-loadable context, sub-optimal routing, mid-run corrections), Claude surfaces a one-line prompt suggesting the user run `/assistant-improvement` and send the output to the plugin admin
+- Proactive improvement nudge – after any skill run where efficiency gaps are observed (redundant tool calls, missing pre-loadable context, sub-optimal routing, mid-run corrections), Claude surfaces a one-line prompt suggesting the user run `/assistant-improvement` and send the output to the plugin admin
 
-## [1.1.0] — 2026-05-10
-
-### Added
-- `/assistant-help --whatsnew` flag — reads `CHANGELOG.md` and surfaces the latest version changes (latest MAJOR/MINOR entry + any subsequent patches) instead of the full command reference; also triggered by natural language phrases like "what's new", "what changed", "latest changes"
-
-## [1.0.3] — 2026-05-10
+## [1.1.0] – 2026-05-10
 
 ### Added
-- Ported `/assistant-improvement` from aise-assistant — analyze a previous skill run for issues and output a copyable coding-agent prompt with exact plugin, files, and fixes
+- `/assistant-help --whatsnew` flag – reads `CHANGELOG.md` and surfaces the latest version changes (latest MAJOR/MINOR entry + any subsequent patches) instead of the full command reference; also triggered by natural language phrases like "what's new", "what changed", "latest changes"
+
+## [1.0.3] – 2026-05-10
+
+### Added
+- Ported `/assistant-improvement` from aise-assistant – analyze a previous skill run for issues and output a copyable coding-agent prompt with exact plugin, files, and fixes
 - Updated `port-to-leadership.md`: version bump is now confirm-gated (PATCH default, no auto-MAJOR)
 
-## [1.0.2] — 2026-05-10
+## [1.0.2] – 2026-05-10
 
 ### Fixed
 - Replace stale `brew install sf-mcp-server` Salesforce install instructions with the correct three-step flow: `npm install -g @salesforce/cli`, `sf org login web`, `claude mcp add salesforce -- npx -y @salesforce/mcp`
 - `setup-connections.sh`: check for `sf` CLI instead of the old binary; mcp.json entry now uses `npx -y @salesforce/mcp`; removed email-lookup block; downgraded missing-CLI from a hard exit to a warning
 - Added a friendly easter egg when Salesforce is already installed
 
-## [1.0.1] — 2026-05-10
+## [1.0.1] – 2026-05-10
 
 ### Fixed
 - Set executable bit on `scripts/session-start.sh` and `scripts/sync-context.sh`
 
-## [1.0.0] — 2026-05-10
+## [1.0.0] – 2026-05-10
 
 ### Added
 - Initial release of the aise-leadership plugin
-- `/report --aise` — portfolio summary across all accounts owned by an AISE (attention queue, health table, velocity, renewals)
-- `/report --customer` — single-account snapshot (program health, credit burn, sessions, risks, next step)
-- `/notion-check [--fix]` — Customer Tracker integrity audit (ownership drift, missing packages, stale data)
-- `/notion-sync --sf [--apply]` — Salesforce ARR and contract date sync into Active Packages
-- `/notion-sync --renewals [--dry-run]` — flag upcoming renewals not yet marked
-- `/notion-ask` — natural language Q&A on the Customer Tracker schema
-- `/assistant-setup` — onboarding flow (Notion identity, voice, workspace preferences)
-- `/assistant-help` — full command reference
-- `/assistant-remember` — context-keeper invocation for corrections and new rules
-- `/aise-context` — operating context loader
-- `/commit` — version-bumping commit skill that syncs `context/` from aise-assistant before committing
+- `/report --aise` – portfolio summary across all accounts owned by an AISE (attention queue, health table, velocity, renewals)
+- `/report --customer` – single-account snapshot (program health, credit burn, sessions, risks, next step)
+- `/notion-check [--fix]` – Customer Tracker integrity audit (ownership drift, missing packages, stale data)
+- `/notion-sync --sf [--apply]` – Salesforce ARR and contract date sync into Active Packages
+- `/notion-sync --renewals [--dry-run]` – flag upcoming renewals not yet marked
+- `/notion-ask` – natural language Q&A on the Customer Tracker schema
+- `/assistant-setup` – onboarding flow (Notion identity, voice, workspace preferences)
+- `/assistant-help` – full command reference
+- `/assistant-remember` – context-keeper invocation for corrections and new rules
+- `/aise-context` – operating context loader
+- `/commit` – version-bumping commit skill that syncs `context/` from aise-assistant before committing
 - `context/` shared with [aise-assistant](https://github.com/kmtz3/aise-toolkit) via `scripts/sync-context.sh`

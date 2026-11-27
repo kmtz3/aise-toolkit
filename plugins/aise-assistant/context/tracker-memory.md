@@ -1,4 +1,4 @@
-# Cross-Customer Observations — moved
+# Cross-Customer Observations – moved
 
 This file has moved to the per-user data directory so observations stay private to the installer and survive plugin updates.
 

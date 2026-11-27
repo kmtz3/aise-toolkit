@@ -1,0 +1,13 @@
+name: No em dashes
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Fail on any em dash (house rule – spaced en dashes only)
+        run: bash scripts/check-no-em-dash.sh

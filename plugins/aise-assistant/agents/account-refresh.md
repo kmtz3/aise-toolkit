@@ -80,7 +80,7 @@ From the sweep, establish – citing a source for each:
 3. **Open items**, split customer-side and PB-side, each with owner and since-when.
 4. **Tickets and escalations** – open, recently closed, and anything that changes the relationship.
 5. **Stakeholders** – who actually does what. **Verify every title against End User `position` before writing it anywhere.** Session notes and Slack posts get titles wrong; Planhat `position` is Salesforce-synced and is the tiebreaker. (2026-10-02: a "CPO" in internal notes was Head of Engineering per `position`.)
-6. **Spark state** – enabled / engaged, any AI asks. Read `custom.Spark Exemption Context` first (newest dated entry is current state); see `context/planhat-schema.md` § Spark fields — Company.
+6. **Spark state** – enabled / engaged, any AI asks. Read `custom.Spark Exemption Context` first (newest dated entry is current state); see `context/planhat-schema.md` § Spark fields – Company.
 7. **Risks** – momentum gap since last session, credit sensitivity, escalation pattern, single-threaded champion, time zone.
 8. **Tools** – every tool the customer runs, with what it's used for, the team, whether it's connected to Productboard, and the source. Tickets and email signatures count; industry guesses don't.
 9. **Staleness in existing fields.** Compare each current field value against the sweep. A Next Step that still says to send something already sent, or an Engagement Plan whose "next session" was delivered months ago, is stale and must be called out by name.

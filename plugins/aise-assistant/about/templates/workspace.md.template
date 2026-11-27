@@ -1,22 +1,22 @@
-# Workspace — environment specifics
+# Workspace – environment specifics
 
 > Workspace-specific context that varies per user. Internal coordinators, default conferencing tool, Slack channel patterns, customer access notes. Read by agents when constructing communications or scheduling.
 
 ## Conferencing
 
-- **Default tool:** `<TBD — Microsoft Teams / Zoom / Google Meet / Other>`
+- **Default tool:** `<TBD – Microsoft Teams / Zoom / Google Meet / Other>`
 - **Secondary:** `<TBD>`
 - **Tertiary:** `<TBD>`
-- **Customer Company records in Planhat** carry a `Preferred Conferencing` custom field — always honor that over the default.
+- **Customer Company records in Planhat** carry a `Preferred Conferencing` custom field – always honor that over the default.
 
 ## Calendly link patterns
 
 - **Office Hours / Ad-Hoc Sync** (flexible): `<TBD>`
 - **Architecting Session** (60 min): `<TBD>`
 - **Enablement / Training Session**: `<TBD>`
-- `<TBD — add other recurring event types as needed>`
+- `<TBD – add other recurring event types as needed>`
 
-## Internal Slack channels — coordination
+## Internal Slack channels – coordination
 
 | Channel | Use |
 |---|---|
@@ -25,7 +25,7 @@
 
 ## Customer Slack channel naming
 
-Productboard-wide convention — same for all AISEs, never user-specific:
+Productboard-wide convention – same for all AISEs, never user-specific:
 
 - **External shared channel with customer (client-facing):** `#ext-{customer}`
 - **Internal channel about the customer:** `#accounts-{customer}`
@@ -33,19 +33,19 @@ Productboard-wide convention — same for all AISEs, never user-specific:
 
 ## Internal coordinators (recurring people the user works with)
 
-- **AE pool the user works with most often:** `<TBD — names>`
-- **Renewal Manager:** `<TBD — varies by account / your default>`
+- **AE pool the user works with most often:** `<TBD – names>`
+- **Renewal Manager:** `<TBD – varies by account / your default>`
 - **Direct manager:** `<TBD>`
 
 ## Preferred customer follow-up patterns
 
-- **After every delivered session:** `<TBD — e.g. Gmail draft per universal style guide; saved to drafts, never sent automatically>`
+- **After every delivered session:** `<TBD – e.g. Gmail draft per universal style guide; saved to drafts, never sent automatically>`
 - **Architecting sessions specifically:** `<TBD>`
 
 ## Calendar conventions
 
-- **Prep blocks:** `<TBD — naming pattern, e.g. "Prep <Customer>" or "[PREP] <Customer> <Session>">`
-- **Customer sessions:** `<TBD — title format>`
+- **Prep blocks:** `<TBD – naming pattern, e.g. "Prep <Customer>" or "[PREP] <Customer> <Session>">`
+- **Customer sessions:** `<TBD – title format>`
 - **Internal focus:** `<TBD>`
 
 ## Planhat writing conventions
@@ -53,7 +53,7 @@ Productboard-wide convention — same for all AISEs, never user-specific:
 - **Company Comments** = source of truth for per-customer working notes and account state.
 - **Prep briefs** go into `custom.Prep Notes` on the session's Planhat Task/Conversation.
 - **KDD docs** (architecting sessions only) are published to Google Drive and attached to the session's Planhat Conversation as an Attachment record.
-- **Tasks** — every Task must have `companyId` set. For internal/non-customer-specific tasks, point to the Productboard customer Company record.
+- **Tasks** – every Task must have `companyId` set. For internal/non-customer-specific tasks, point to the Productboard customer Company record.
 
 ## Accounts the user has explicit context about
 

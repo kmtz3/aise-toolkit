@@ -41,7 +41,7 @@ Per thread that will get a draft:
 
 - **Planhat Company** – `list_model_records(MODEL:"Company", FILTER:{"name[contains]":"<name>"})`, then read `phase`,
   `custom.Spark Visibility (Account)`, `custom.Spark Enabled – SNF`, `custom.[SIP] Tier`, `custom.Spark Exemption – SF`, `custom.Spark Exemption Context`, `custom.Next Step`, `custom.⚡️ AI Consent`.
-  The existing Next Step tells you what was already promised. **Spark Exemption Context – read first.** Whenever the work touches Spark (outreach, a draft that mentions Spark, prep, status), also read `custom.Spark Exemption – SF` and `custom.Spark Exemption Context` and treat the newest dated entry as current state. See `context/planhat-schema.md` § Spark fields — Company.
+  The existing Next Step tells you what was already promised. **Spark Exemption Context – read first.** Whenever the work touches Spark (outreach, a draft that mentions Spark, prep, status), also read `custom.Spark Exemption – SF` and `custom.Spark Exemption Context` and treat the newest dated entry as current state. See `context/planhat-schema.md` § Spark fields – Company.
 - **Initiatives** – read `context/initiatives/README.md`, then any file with `Status: Active`. **An active initiative
   overrides the default shape of what you propose.** Under `spark-in-practice.md`, an in-scope account must never be
   offered a Spark demo, overview or features walkthrough – the sequence is scoping call, then working session on

@@ -6,8 +6,8 @@ Personal Claude Code marketplace bundling the Productboard AISE plugin suite.
 
 | Plugin | Description |
 |---|---|
-| [aise-assistant](plugins/aise-assistant/) | End-to-end customer onboarding co-pilot — prep, summarize, follow up, plan, Planhat sync |
-| [aise-leadership](plugins/aise-leadership/) | Portfolio visibility and account health — reports, session-audit, Planhat sync |
+| [aise-assistant](plugins/aise-assistant/) | End-to-end customer onboarding co-pilot – prep, summarize, follow up, plan, Planhat sync |
+| [aise-leadership](plugins/aise-leadership/) | Portfolio visibility and account health – reports, session-audit, Planhat sync |
 
 ## Installation
 
@@ -41,3 +41,13 @@ Open this directory as your project root. The `.claude/` folder contains dev-onl
 ## Maintainer
 
 Klara Martinez · Productboard AI Success Engineering
+
+## Contributing: no em dashes
+
+Every dash in this repo is a spaced en dash ( – ). Enable the tracked pre-commit check once per clone:
+
+```bash
+git config core.hooksPath .githooks
+```
+
+`scripts/check-no-em-dash.sh` runs in that hook and in the `No em dashes` GitHub Action on every push and PR. Auto-fix with `bash scripts/check-no-em-dash.sh --fix`.

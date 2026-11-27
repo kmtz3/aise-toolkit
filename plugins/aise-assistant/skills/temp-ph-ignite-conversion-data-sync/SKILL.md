@@ -11,31 +11,31 @@ or name a recently uploaded file. Run the steps below in order.
 
 ## Args
 
-- `file` (optional) — path or name of the CSV file. If omitted, use the most recently
+- `file` (optional) – path or name of the CSV file. If omitted, use the most recently
   uploaded file in the conversation.
-- `--dry-run` (optional) — validate and report what would be written, but do not call
+- `--dry-run` (optional) – validate and report what would be written, but do not call
   `update_model_record`. Useful for spot-checking before committing.
-- `--accounts <name,...>` (optional) — comma-separated account names to limit the sync
+- `--accounts <name,...>` (optional) – comma-separated account names to limit the sync
   to a subset. If omitted, process all rows in the CSV.
 
 ---
 
-## Phase 1 — Parse and validate the CSV
+## Phase 1 – Parse and validate the CSV
 
 Read the CSV (uploaded file or path provided). Extract the following columns for each row:
 
 | CSV column | Required? |
 |---|---|
-| `Salesforce ID` | Yes — match key |
+| `Salesforce ID` | Yes – match key |
 | `AI consent` | Yes |
 | `Enabled` | Yes (`Yes` / `No`) |
 | `Enabled date` | No (ISO date or blank) |
-| `Activated visibility` | No (`Everyone` / `Admins only` / `Mixed` / `Off` / blank) — anything else, see Phase 3 |
+| `Activated visibility` | No (`Everyone` / `Admins only` / `Mixed` / `Off` / blank) – anything else, see Phase 3 |
 | `Activated visibility date` | No (ISO date or blank) |
 | `Engaged` | Yes (`Yes` / `No` / blank → treat blank as No) |
 | `Engaged date` | No (ISO date or blank) |
 
-**Pre-flight checks — flag and skip any row that fails:**
+**Pre-flight checks – flag and skip any row that fails:**
 - `Salesforce ID` is blank or malformed (must start with `001` or `0015G`)
 - `Enabled` is not `Yes` or `No`
 - Any date field is present but not parseable as YYYY-MM-DD
@@ -46,7 +46,7 @@ Report: total rows, rows passing validation, rows skipped with reasons.
 
 ---
 
-## Phase 2 — Match all Salesforce IDs to Planhat companies
+## Phase 2 – Match all Salesforce IDs to Planhat companies
 
 For each validated row, call `list_model_records` filtered by `sourceId`:
 
@@ -64,25 +64,25 @@ Run all lookups in parallel (batch the tool calls together).
 - 2+ results → flag as ambiguous, skip
 
 Report: N matched, N unmatched (list them), N ambiguous (list them). Do not proceed if
-more than 20% of rows are unmatched — ask the user to investigate before continuing.
+more than 20% of rows are unmatched – ask the user to investigate before continuing.
 
 ---
 
-## Phase 3 — Build the update payload for each matched account
+## Phase 3 – Build the update payload for each matched account
 
 Map CSV values to Planhat field IDs:
 
 | CSV column | Planhat field ID | Type | Conversion |
 |---|---|---|---|
 | `AI consent` | `custom.⚡️ AI Consent` | text | pass through verbatim |
-| `Enabled` | — | — | **SKIP — do not write.** The former target `custom.⚡️ Spark Enabled` was removed from the Company model; its successor `custom.Spark Enabled – SNF` is Snowflake-sourced and must never be written. |
+| `Enabled` | – | – | **SKIP – do not write.** The former target `custom.⚡️ Spark Enabled` was removed from the Company model; its successor `custom.Spark Enabled – SNF` is Snowflake-sourced and must never be written. |
 | `Enabled date` | `custom.⚡️ Spark Enabled Date` | date | ISO string or omit if blank |
 | `Activated visibility` | `custom.⚡️ Spark Stage` | list | see mapping below; omit if blank |
 | `Activated visibility date` | `custom.⚡️ Spark Active For Since` | date | ISO string or omit if blank |
-| `Engaged` | — | — | **SKIP — do not write.** The former target `custom.⚡️ Spark Engaged` was removed; its successor `custom.Spark Engaged – SNF` is Snowflake-sourced and must never be written. |
+| `Engaged` | – | – | **SKIP – do not write.** The former target `custom.⚡️ Spark Engaged` was removed; its successor `custom.Spark Engaged – SNF` is Snowflake-sourced and must never be written. |
 | `Engaged date` | `custom.⚡️ Spark Engaged Date` | date | ISO string or omit if blank |
 
-> **Why two columns are skipped (2026-09-12).** Spark enabled/engaged state now arrives live from Snowflake. This skill stays on because the rest of the CSV has no live source yet, but it must not write the two columns Snowflake owns — a weekly CSV value fighting a live pipeline produces a field that is wrong between syncs and right afterwards, which is worse than blank. Fill the other five, skip these two, and revisit when the remaining columns are plugged into Snowflake.
+> **Why two columns are skipped (2026-09-12).** Spark enabled/engaged state now arrives live from Snowflake. This skill stays on because the rest of the CSV has no live source yet, but it must not write the two columns Snowflake owns – a weekly CSV value fighting a live pipeline produces a field that is wrong between syncs and right afterwards, which is worse than blank. Fill the other five, skip these two, and revisit when the remaining columns are plugged into Snowflake.
 
 **Spark Stage value mapping (CSV → Planhat):**
 
@@ -92,16 +92,16 @@ Map CSV values to Planhat field IDs:
 | `Admins only` | `Admins only` |
 | `Mixed` | `Mixed` |
 | `Off` | `Off` |
-| _(blank)_ | omit field entirely — do not write null |
+| _(blank)_ | omit field entirely – do not write null |
 
 The full option list on the Planhat field is
 `Off | AI Terms Review | Admins only | Everyone | Icebox | Mixed`.
 `AI Terms Review` and `Icebox` are set manually in Planhat and are **not** produced by
-the CSV export — never write them from this skill. If a row's `Activated visibility`
+the CSV export – never write them from this skill. If a row's `Activated visibility`
 value is not in the mapping table above, omit the field for that row and flag it in the
 Phase 5 report rather than guessing at a match.
 
-**Do NOT touch** `custom.⚡️ Igniting?` — this is managed manually by AISE and must
+**Do NOT touch** `custom.⚡️ Igniting?` – this is managed manually by AISE and must
 never be overwritten by this skill.
 
 **Omit vs null:** for date fields and Spark Stage, omit the key entirely when the CSV
@@ -110,12 +110,12 @@ value is blank. Do not send `null`. For boolean fields, always include the value
 
 ---
 
-## Phase 4 — Write to Planhat
+## Phase 4 – Write to Planhat
 
 If `--dry-run` is set: print a table of what would be written per account and stop.
 
 Otherwise, call `update_model_record` for each matched account. Run all updates in
-parallel (batch the tool calls together — do not serialize):
+parallel (batch the tool calls together – do not serialize):
 
 ```
 MODEL: Company
@@ -127,17 +127,17 @@ SELECT: ["name", "custom.⚡️ AI Consent", "custom.⚡️ Spark Enabled",
          "custom.⚡️ Spark Active For Since"]
 ```
 
-**Verify every write — do not treat a 200 as confirmation.** Planhat accepts unknown
+**Verify every write – do not treat a 200 as confirmation.** Planhat accepts unknown
 `custom.*` keys with a success response and silently drops them, so a mistyped field ID
 fails invisibly. Read the SELECT payload back on each response: every field the CSV had
 a value for must appear with the expected value. `custom.⚡️ Spark Stage` does read
-back like any other field — if it is missing or empty on a row where the CSV had a
+back like any other field – if it is missing or empty on a row where the CSV had a
 visibility value, that write failed. Re-check the field ID against
 `get_model_action_parameters` for `Company` and report the row as an error.
 
 ---
 
-## Phase 5 — Report results
+## Phase 5 – Report results
 
 Print a summary table:
 
@@ -145,8 +145,8 @@ Print a summary table:
 | Account | Spark Enabled | Spark Stage | Engaged | Result |
 |---|---|---|---|---|
 | SAP SE | true | Everyone | true | ✅ written |
-| Qonto | false | — | false | ✅ written |
-| Acme Corp | — | — | — | ⚠️ unmatched (no sourceId) |
+| Qonto | false | – | false | ✅ written |
+| Acme Corp | – | – | – | ⚠️ unmatched (no sourceId) |
 ```
 
 Then print totals:

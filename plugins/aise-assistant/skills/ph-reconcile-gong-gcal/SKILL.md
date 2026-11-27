@@ -6,11 +6,11 @@ argument-hint: "[--customer <name>] [--since YYYY-MM-DD] [--apply] [--window-hou
 
 Reconcile Gong Call Conversations into their GCal session records for $ARGUMENTS.
 
-Read the procedure in [`agents/ph-reconcile-gong-gcal.md`](../../agents/ph-reconcile-gong-gcal.md) and execute it inline as the main assistant — do not try to spawn `ph-reconcile-gong-gcal` as a subagent (agent files in this plugin are procedure documents, not registered subagent types).
+Read the procedure in [`agents/ph-reconcile-gong-gcal.md`](../../agents/ph-reconcile-gong-gcal.md) and execute it inline as the main assistant – do not try to spawn `ph-reconcile-gong-gcal` as a subagent (agent files in this plugin are procedure documents, not registered subagent types).
 
 ## Why this exists
 
-Gong's native sync into Planhat writes every call as its own standalone `👾 Gong Call` Conversation. Planhat's Google Calendar sync separately creates the real session Conversation for the same meeting. The two never get merged automatically today — this is a manual stopgap while the Planhat↔Gong integration is reworked to do that merge on write. Run this periodically (or ad hoc per customer) until that lands.
+Gong's native sync into Planhat writes every call as its own standalone `👾 Gong Call` Conversation. Planhat's Google Calendar sync separately creates the real session Conversation for the same meeting. The two never get merged automatically today – this is a manual stopgap while the Planhat↔Gong integration is reworked to do that merge on write. Run this periodically (or ad hoc per customer) until that lands.
 
 ## Flags
 
@@ -19,38 +19,38 @@ Gong's native sync into Planhat writes every call as its own standalone `👾 Go
 | `--customer <name>` | "reconcile Acme's Gong calls", "clean up Acme" | Scope to one customer. Default: whole workspace. |
 | `--since YYYY-MM-DD` | "since last week", "from Aug 1" | Only consider Gong Call Conversations dated on/after this date. **Recommended on a first run** to bound scope. |
 | `--apply` | "actually do it", "run it live", "apply the merges" | Write merges and delete Gong Call records. Still asks for one confirmation on the plan before executing. |
-| *(no `--apply`)* | "preview", "dry run", "show me what would happen" | **Default.** Shows the full match plan — no writes, no deletes. |
+| *(no `--apply`)* | "preview", "dry run", "show me what would happen" | **Default.** Shows the full match plan – no writes, no deletes. |
 | `--window-hours N` | "tighten the match window to 6 hours" | Half-width used to **score** date proximity when the day-level default is too coarse. It does not narrow the candidate query, which is always day-level: target `date` values are unreliable (Planhat stamps a converted calendar-event Conversation with the moment its Task was marked done, and older debriefs overwrote that with midnight), so a target on the *same UTC day* as its call can sit almost 24h from it and any hour-based query window drops correct pairs. |
 
 ## Matching is not ID-based
 
-Gong Call `externalId` is `{gongCallId}-{salesforceAccountId}` — it does not carry the Google Calendar event ID, Planhat's `Conversation` model has no `sourceId` field at all, and the connected Gong MCP tools don't expose a calendar event ID either (checked directly — see `agents/ph-reconcile-gong-gcal.md` § Matching is NOT ID-based). Matching instead uses a weighted score across three signals, all already present on the Conversation record with no extra Gong lookups needed:
+Gong Call `externalId` is `{gongCallId}-{salesforceAccountId}` – it does not carry the Google Calendar event ID, Planhat's `Conversation` model has no `sourceId` field at all, and the connected Gong MCP tools don't expose a calendar event ID either (checked directly – see `agents/ph-reconcile-gong-gcal.md` § Matching is NOT ID-based). Matching instead uses a weighted score across three signals, all already present on the Conversation record with no extra Gong lookups needed:
 
 | Signal | Weight | Source |
 |---|---|---|
-| Attendee overlap | 0.40 | `endusers`/`users` — Gong's native sync already resolves participants to Planhat `EndUser`/`User` IDs, so this is exact-ID overlap, not fuzzy text matching. |
+| Attendee overlap | 0.40 | `endusers`/`users` – Gong's native sync already resolves participants to Planhat `EndUser`/`User` IDs, so this is exact-ID overlap, not fuzzy text matching. |
 | Subject similarity | 0.35 | Normalized word-overlap after stripping punctuation/emoji and common session-title stopwords. |
-| Date proximity | 0.25 | Day granularity — same UTC day / adjacent day / neither — because target timestamps are unreliable. The raw Δ in hours is always reported next to the sub-score. |
+| Date proximity | 0.25 | Day granularity – same UTC day / adjacent day / neither – because target timestamps are unreliable. The raw Δ in hours is always reported next to the sub-score. |
 
-There is **one** ID-based signal, and it is checked before scoring: the Gong call id (the prefix of the source's `externalId`) against the `?id=` in a candidate's existing `custom.Call Recording`. An exact match is proof of the pairing and settles it as high confidence on its own — that is what rescues a correct pair whose title and attendees look weak.
+There is **one** ID-based signal, and it is checked before scoring: the Gong call id (the prefix of the source's `externalId`) against the `?id=` in a candidate's existing `custom.Call Recording`. An exact match is proof of the pairing and settles it as high confidence on its own – that is what rescues a correct pair whose title and attendees look weak.
 
-Every match is reported with its full score breakdown, not just a confidence label — see § What it does per matched pair.
+Every match is reported with its full score breakdown, not just a confidence label – see § What it does per matched pair.
 
 ## What it does per matched pair
 
-1. Finds the target session Conversation (GCal-synced, same company) — first by exact recording-id match, otherwise by weighted-scoring every candidate in the date window on attendee overlap, subject similarity, and date proximity, then taking the top scorer if it clears the confidence threshold and isn't within 0.05 of a runner-up. Non-session records (Slack threads, tasks, feedback logs, generic inbox types) are gated out of the candidate list entirely and reported as excluded.
-2. Writes the Gong URL onto the target's **`custom.Call Recording`** field (not `custom.Gong URL` — that field is retired for this purpose, see below) **only if that field is currently empty** — a different populated URL is treated as a conflict and reported, never overwritten. The `transcript` is never copied through MCP – Planhat's Gong transcript → session automation copies it server side, and the procedure ticks `custom.ReprocessGong` on the Gong Call record (when the field exists) to ask for it. A target already holding the *identical* recording URL is not a conflict; the field is simply skipped.
-3. **Corrects the target's session `date`.** Planhat stamps a converted calendar-event Conversation with the moment its Task was marked done rather than the session start, so the target's time is wrong by default. The coupled Task's `startTime` — or the Gong call time as fallback — is written back, with the before/after and the source shown in the report.
-4. Appends the Gong call summary (reformatted into Planhat's rich-text vocabulary) to the target's `description`, after a divider — additive, never replaces existing content, and skipped outright when the target already carries that summary from an earlier run.
+1. Finds the target session Conversation (GCal-synced, same company) – first by exact recording-id match, otherwise by weighted-scoring every candidate in the date window on attendee overlap, subject similarity, and date proximity, then taking the top scorer if it clears the confidence threshold and isn't within 0.05 of a runner-up. Non-session records (Slack threads, tasks, feedback logs, generic inbox types) are gated out of the candidate list entirely and reported as excluded.
+2. Writes the Gong URL onto the target's **`custom.Call Recording`** field (not `custom.Gong URL` – that field is retired for this purpose, see below) **only if that field is currently empty** – a different populated URL is treated as a conflict and reported, never overwritten. The `transcript` is never copied through MCP – Planhat's Gong transcript → session automation copies it server side, and the procedure ticks `custom.ReprocessGong` on the Gong Call record (when the field exists) to ask for it. A target already holding the *identical* recording URL is not a conflict; the field is simply skipped.
+3. **Corrects the target's session `date`.** Planhat stamps a converted calendar-event Conversation with the moment its Task was marked done rather than the session start, so the target's time is wrong by default. The coupled Task's `startTime` – or the Gong call time as fallback – is written back, with the before/after and the source shown in the report.
+4. Appends the Gong call summary (reformatted into Planhat's rich-text vocabulary) to the target's `description`, after a divider – additive, never replaces existing content, and skipped outright when the target already carries that summary from an earlier run.
 5. Reads the target back to confirm the write landed, then deletes the Gong Call Conversation – **only once** the target holds a `transcript`. When the Gong Call record holds the transcript and the target doesn't, it re-checks for Planhat's server copy; if it landed the pair is `merged_server_copy`, otherwise both records stay as `awaiting_planhat_copy` (expected until the Planhat automation is live), so the only Planhat copy of the transcript is never lost.
 
 ## What it never does
 
 - Never creates a Conversation or Task.
 - Never deletes a Gong Call record without a verified merge write-back.
-- Never overwrites a non-empty `custom.Call Recording` (an identical existing recording URL is skipped, not flagged). Never copies `transcript` through MCP (Planhat's automation does that server side), and never deletes a Gong Call record that still holds the only transcript copy. Never writes to `custom.Gong URL` on the target — that field is only ever read from the source Gong Call record (Gong's own sync writes it there; corrected 2026-08-27).
-- Never auto-resolves an ambiguous match (top score below threshold, or two-plus candidates scoring within 0.05 of each other) — always reported with full score breakdowns for manual review.
+- Never overwrites a non-empty `custom.Call Recording` (an identical existing recording URL is skipped, not flagged). Never copies `transcript` through MCP (Planhat's automation does that server side), and never deletes a Gong Call record that still holds the only transcript copy. Never writes to `custom.Gong URL` on the target – that field is only ever read from the source Gong Call record (Gong's own sync writes it there; corrected 2026-08-27).
+- Never auto-resolves an ambiguous match (top score below threshold, or two-plus candidates scoring within 0.05 of each other) – always reported with full score breakdowns for manual review.
 
 ## Safe to re-run
 
-Ambiguous matches, conflicts, and unmatched records are left untouched every run, so re-running after a manual fix picks up exactly where the last run left off. Checkpointed per record — an interrupted run resumes without re-processing already-resolved records (see `agents/ph-reconcile-gong-gcal.md` § Checkpoint & resumability).
+Ambiguous matches, conflicts, and unmatched records are left untouched every run, so re-running after a manual fix picks up exactly where the last run left off. Checkpointed per record – an interrupted run resumes without re-processing already-resolved records (see `agents/ph-reconcile-gong-gcal.md` § Checkpoint & resumability).

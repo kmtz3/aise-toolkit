@@ -2178,7 +2178,7 @@ F) Explicit confirmation from the customer on the plan and expectations.
 
 # 🗣️ Sync / Office Hours
 
-Use for `🗣️ Sync` sessions (recurring customer syncs, office hours, lightweight check-ins). Lower-ceremony than Architecting / QBR — the bar is responsiveness, momentum, and surfacing risk early, not formal framing.
+Use for `🗣️ Sync` sessions (recurring customer syncs, office hours, lightweight check-ins). Lower-ceremony than Architecting / QBR – the bar is responsiveness, momentum, and surfacing risk early, not formal framing.
 
 ## 1) Lightweight agenda framing and time check (0–5)
 
@@ -2194,7 +2194,7 @@ A) Time check (duration confirmed).
 B) Quick agenda or shape for the session (topics the AISE expects to cover, even if loose).
 C) Invitation for the customer to add or reorder topics.
 D) Connection to last sync or to any open items carried forward.
-E) Tone calibrated to "working session" not "formal review" — no over-structured deck for a 30-min sync.
+E) Tone calibrated to "working session" not "formal review" – no over-structured deck for a 30-min sync.
 
 **Scoring**
 
@@ -2221,7 +2221,7 @@ A) Let the customer speak at least as much as the AISE (rough talk-time parity o
 B) Use open questions rather than leading or yes/no questions for substantive topics.
 C) Reflect / paraphrase back to confirm understanding before responding.
 D) Resist jumping straight to a PB feature pitch when the customer raises a problem.
-E) Sit with silence when the customer is thinking — no rescue talking.
+E) Sit with silence when the customer is thinking – no rescue talking.
 
 **Scoring**
 
@@ -2238,7 +2238,7 @@ E) Sit with silence when the customer is thinking — no rescue talking.
 
 **Ask a question**
 
-"Were decisions reached during the sync named, confirmed, and captured in the moment — not deferred to a follow-up?"
+"Were decisions reached during the sync named, confirmed, and captured in the moment – not deferred to a follow-up?"
 
 **Instruction guide**
 
@@ -2265,7 +2265,7 @@ E) Distinguish decisions from open items / parking-lot topics.
 
 **Ask a question**
 
-"Did the AISE close out action items with a named owner and concrete timing before moving on — not after the call?"
+"Did the AISE close out action items with a named owner and concrete timing before moving on – not after the call?"
 
 **Instruction guide**
 
@@ -2273,16 +2273,16 @@ Definition. Each action item should have:
 
 A) A specific outcome (not "look into X").
 B) A named owner (PB-side or customer-side person, not "the team").
-C) A timing commitment (day, week, or "by next sync" — not "soon").
+C) A timing commitment (day, week, or "by next sync" – not "soon").
 D) Customer confirmation of customer-side ownership (not assumed).
-E) Written down live — visible to both sides during the call.
+E) Written down live – visible to both sides during the call.
 
 **Scoring**
 
 5 = Every action item covers A to E live on the call.
 4 = Most items cover A to D; written capture happens after the call.
 3 = Most items have owner + timing, but specificity or capture is uneven.
-2 = Owners assigned, timing vague — or vice versa.
+2 = Owners assigned, timing vague – or vice versa.
 1 = "We'll figure it out" placeholders only.
 0 = No action items closed.
 
@@ -2292,7 +2292,7 @@ E) Written down live — visible to both sides during the call.
 
 **Ask a question**
 
-"Did the AISE pick up on early-warning signals — quiet stakeholders, scope drift, adoption gaps, frustration cues — and surface them constructively?"
+"Did the AISE pick up on early-warning signals – quiet stakeholders, scope drift, adoption gaps, frustration cues – and surface them constructively?"
 
 **Instruction guide**
 
@@ -2302,7 +2302,7 @@ A) Notice quiet / disengaged participants and invite them in.
 B) Pick up on hedging language, dropped commitments, or vague answers about adoption.
 C) Name a risk explicitly when one is detected (not soft-pedal it).
 D) Ask diagnostic follow-up questions rather than accepting surface answers.
-E) Decide whether the risk needs immediate escalation, a follow-up session, or just a watch-flag — and act accordingly.
+E) Decide whether the risk needs immediate escalation, a follow-up session, or just a watch-flag – and act accordingly.
 
 **Scoring**
 
@@ -2319,7 +2319,7 @@ E) Decide whether the risk needs immediate escalation, a follow-up session, or j
 
 **Ask a question**
 
-"Did the AISE confirm or update the stakeholder picture — who's still engaged, who's new, who's missing — without making it feel like an interrogation?"
+"Did the AISE confirm or update the stakeholder picture – who's still engaged, who's new, who's missing – without making it feel like an interrogation?"
 
 **Instruction guide**
 
@@ -2346,7 +2346,7 @@ E) Decide whether re-engagement, intro session, or executive touch is needed.
 
 **Ask a question**
 
-"Did the sync end with concrete forward momentum — a named next step that the customer can act on, not a vague 'we'll regroup'?"
+"Did the sync end with concrete forward momentum – a named next step that the customer can act on, not a vague 'we'll regroup'?"
 
 **Instruction guide**
 
@@ -2363,7 +2363,7 @@ E) An explicit check that the customer feels the session was useful and the next
 5 = A to E explicit; momentum is concrete and confirmed.
 4 = A to D explicit; usefulness check skipped.
 3 = Next step exists but is loose, or next sync isn't booked.
-2 = Vague close — "we'll be in touch".
+2 = Vague close – "we'll be in touch".
 1 = No next step.
 0 = Sync ends mid-topic.
 
@@ -2382,7 +2382,7 @@ Definition. To score high, the AISE must:
 A) Keep an eye on the clock and surface time pressure before it becomes a problem.
 B) Park topics that won't fit rather than rushing them.
 C) Handle connectivity issues (audio, video, late joiners) without losing the thread.
-D) Adapt when the customer brings an unplanned urgent topic — without abandoning the agenda silently.
+D) Adapt when the customer brings an unplanned urgent topic – without abandoning the agenda silently.
 E) Close on time (or check explicitly before running over).
 
 **Scoring**

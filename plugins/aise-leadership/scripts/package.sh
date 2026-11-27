@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# package.sh — Build a clean, shareable plugin archive of the aise-assistant plugin.
+# package.sh – Build a clean, shareable plugin archive of the aise-assistant plugin.
 #
 # Strips personal about/ files and runtime output dirs; restores placeholder
 # templates so new users land in the /assistant-setup onboarding flow.
@@ -49,9 +49,9 @@ fi
 # ---------------------------------------------------------------------------
 # Auto-bump version based on git diff vs HEAD (or --bump override)
 # Rules (from .claude/DEVELOPMENT.md):
-#   MAJOR — any skill/command/agent ADDED or DELETED (capability roster changed)
-#   MINOR — functional tweak to existing capabilities → pass --bump minor
-#   PATCH — behavior fix → default when no roster change detected
+#   MAJOR – any skill/command/agent ADDED or DELETED (capability roster changed)
+#   MINOR – functional tweak to existing capabilities → pass --bump minor
+#   PATCH – behavior fix → default when no roster change detected
 # MINOR vs PATCH cannot be inferred from diff alone; default to PATCH and
 # use --bump minor when shipping new functionality within existing capabilities.
 # ---------------------------------------------------------------------------
@@ -63,7 +63,7 @@ if [[ -n "$BUMP_OVERRIDE" ]]; then
   BUMP_REASON="(manual override via --bump)"
 else
   BUMP="patch"
-  BUMP_REASON="(no capability roster changes detected — use --bump minor for functional tweaks)"
+  BUMP_REASON="(no capability roster changes detected – use --bump minor for functional tweaks)"
 
   # Collect changed files: git diff vs HEAD + untracked files
   DIFF_STATUS=$(git -C "$PLUGIN_DIR" diff HEAD --name-status 2>/dev/null || true)
@@ -164,7 +164,7 @@ echo ""
 
 # Zip from inside the staged folder so there is NO wrapping parent directory.
 # The ZIP root must contain .claude-plugin/, agents/, skills/, etc. directly.
-# Remove any prior ZIP first — zip -r updates in place and would keep stale entries.
+# Remove any prior ZIP first – zip -r updates in place and would keep stale entries.
 rm -f "$ZIP_PATH"
 (cd "$STAGED" && zip -r "$ZIP_PATH" . -x "*.DS_Store")
 

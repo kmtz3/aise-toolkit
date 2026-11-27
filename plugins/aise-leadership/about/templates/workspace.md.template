@@ -1,28 +1,28 @@
-# Workspace — environment specifics
+# Workspace – environment specifics
 
 > Leadership-specific config: report templates, team output preferences, Gong call scoping, and internal coordination. Read by agents when generating reports, querying across the AISE team, or filtering Gong calls.
 
 ## Report Output
 
-`/report` uses a single built-in Artifact layout, consistent across `--customer` and `--aise` modes — there is no external template to configure. It renders inline in chat and, by default, also publishes a designed HTML Artifact via the `Artifact` tool; pass `--chat-only` to suppress the Artifact.
+`/report` uses a single built-in Artifact layout, consistent across `--customer` and `--aise` modes – there is no external template to configure. It renders inline in chat and, by default, also publishes a designed HTML Artifact via the `Artifact` tool; pass `--chat-only` to suppress the Artifact.
 
 ### Per-cadence format preferences
 
 | Cadence | Output format |
 |---|---|
-| Weekly | `<TBD — chat summary / HTML Artifact>` |
-| Monthly | `<TBD — chat summary / HTML Artifact>` |
-| Quarterly | `<TBD — chat summary / HTML Artifact>` |
+| Weekly | `<TBD – chat summary / HTML Artifact>` |
+| Monthly | `<TBD – chat summary / HTML Artifact>` |
+| Quarterly | `<TBD – chat summary / HTML Artifact>` |
 
 ## Gong call scoping
 
 Calls are filtered by host (any email from `team-roster.md`) **and** any of the title keywords below (case-insensitive):
 
 ```
-<TBD — customise as needed, comma-separated>
+<TBD – customise as needed, comma-separated>
 ```
 
-Default (pre-populated by /assistant-setup — adjust freely):
+Default (pre-populated by /assistant-setup – adjust freely):
 `Onboarding, Architecture, Architecting, Enablement, Check-in, Check in, QBR, Workshop, Training`
 
 ## Internal Slack channels

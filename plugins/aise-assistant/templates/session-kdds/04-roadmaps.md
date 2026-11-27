@@ -1,4 +1,4 @@
-# Roadmap System Design — Session Template
+# Roadmap System Design – Session Template
 
 **Session ID:** Usually `A3` (after Foundations + Backlog)
 **Duration:** 60–90 min
@@ -10,7 +10,7 @@
 
 ## Purpose
 
-Design a small, persona-based portfolio of roadmap views — one per audience job. This is a **communication design** session, not a roadmap feature demo.
+Design a small, persona-based portfolio of roadmap views – one per audience job. This is a **communication design** session, not a roadmap feature demo.
 
 ---
 
@@ -33,7 +33,7 @@ By the close, the customer has decided:
 - Current roadmap artefacts (often in Miro, slides, spreadsheets)
 - Release/timeframe discipline status (are dates/releases populated?)
 - Named roadmap owner(s)
-- PM survey or usage data (if available) — primary use cases, biggest time sinks, AI interest signals. Search Gmail, Google Drive, and the account's Slack channels for `[customer] PM survey productboard` in the 14 days before the session. Surface findings as info boxes in D1–D5 decision panels in the facilitation guide.
+- PM survey or usage data (if available) – primary use cases, biggest time sinks, AI interest signals. Search Gmail, Google Drive, and the account's Slack channels for `[customer] PM survey productboard` in the 14 days before the session. Surface findings as info boxes in D1–D5 decision panels in the facilitation guide.
 
 ---
 
@@ -43,7 +43,7 @@ By the close, the customer has decided:
 
 **Questions to ask:**
 - Who actually needs a roadmap (C-suite/leadership, PMs, PMM/Marketing, Engineering, Sales/CS, customers)?
-- What job does each roadmap do — strategic alignment, delivery tracking, GTM prep, release comms, customer-facing?
+- What job does each roadmap do – strategic alignment, delivery tracking, GTM prep, release comms, customer-facing?
 - What level of detail does each audience need (strategy vs granular delivery)?
 - What questions does each audience need the roadmap to answer (why, what, when, status)?
 - Which audiences share a roadmap vs need their own view?
@@ -64,8 +64,8 @@ By the close, the customer has decided:
 ### 2. Board type selection
 
 **Questions to ask:**
-- For each persona, which board type fits — Grid (inputs/decisions), Timeline (when/time), or Column (status/release bucket)?
-- Where does the decision happen — are they looking at options (Grid) or communicating a plan (Timeline/Column)?
+- For each persona, which board type fits – Grid (inputs/decisions), Timeline (when/time), or Column (status/release bucket)?
+- Where does the decision happen – are they looking at options (Grid) or communicating a plan (Timeline/Column)?
 - Is "when" a hard date or a bucket (now/next/later)?
 
 **Key considerations:**
@@ -85,10 +85,10 @@ By the close, the customer has decided:
 ### 3. Schema design (per roadmap)
 
 **Questions to ask (per roadmap):**
-- What's the main item — Objectives, Initiatives, Features, Sub-features, Releases?
-- What's the grouping / swimlane — Strategic Pillar, Team, Product, Owner, Component?
+- What's the main item – Objectives, Initiatives, Features, Sub-features, Releases?
+- What's the grouping / swimlane – Strategic Pillar, Team, Product, Owner, Component?
 - Are milestones/events needed (launches, conferences, funding, releases)?
-- Structural convention — release groups, quarterly columns, now/next/later, timeline granularity?
+- Structural convention – release groups, quarterly columns, now/next/later, timeline granularity?
 
 **Key considerations:**
 - Main item ≠ automatically Features. Exec roadmaps often work better with Initiatives.
@@ -148,7 +148,7 @@ By the close, the customer has decided:
 - Where does each roadmap view live (General teamspace, Executive, Marketing, per-tribe)?
 - Which roadmap types should be in which teamspace?
 - Access considerations per audience (teamspace type, member access, sharing)?
-- Internal-only vs shareable broadly — including external via Portal?
+- Internal-only vs shareable broadly – including external via Portal?
 - Who governs roadmap maintenance per view?
 
 **Decision table:**
@@ -179,7 +179,7 @@ By the close, the customer has decided:
 **Questions to ask:**
 - What config must exist first (release groups, timeframe discipline, metadata fields)?
 - Any blocking gaps from prior sessions (Foundations, Prioritization)?
-- Sequencing — what must be built before roadmap views can work?
+- Sequencing – what must be built before roadmap views can work?
 - How do roadmap views stay updated automatically (process inputs vs manual)?
 
 **Decision table:**
@@ -203,20 +203,20 @@ By the close, the customer has decided:
 
 ---
 
-## Close — synthesis structure
+## Close – synthesis structure
 
-1. **Decisions summary** — personas, board types per persona, schemas, placement, portfolio
-2. **Open items** — missing metadata, named roadmap owners, release discipline
-3. **Configuration backlog** — roadmap views to build, release groups to create, sharing settings
-4. **Prerequisites flagged** — data dependencies that block launch
-5. **Next session objective** — usually Insights (`A4`) or integrations work
-6. **Customer confirmation** — each persona's roadmap answers their key question
+1. **Decisions summary** – personas, board types per persona, schemas, placement, portfolio
+2. **Open items** – missing metadata, named roadmap owners, release discipline
+3. **Configuration backlog** – roadmap views to build, release groups to create, sharing settings
+4. **Prerequisites flagged** – data dependencies that block launch
+5. **Next session objective** – usually Insights (`A4`) or integrations work
+6. **Customer confirmation** – each persona's roadmap answers their key question
 
 ---
 
 ## Tweak guidance
 
-- If release discipline is weak, lead with the Timeline vs Column decision — it often surfaces the prereq gap
+- If release discipline is weak, lead with the Timeline vs Column decision – it often surfaces the prereq gap
 - If the customer has a strong existing tool (Miro, slides), treat the cutover plan as a named decision
 - If execs aren't in the session, flag the executive roadmap as requiring a follow-up validation
-- Don't pre-fill personas with generic lists — pull from the customer's actual stakeholder map
+- Don't pre-fill personas with generic lists – pull from the customer's actual stakeholder map

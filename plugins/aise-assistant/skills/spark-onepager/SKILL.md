@@ -21,21 +21,21 @@ Use this skill when the user says any of:
 
 ## Inputs
 
-1. **Customer name** — as it should appear in the slide header (e.g. `Acme Corp`, `Stripe`, `Onfido · Entrust`). Collect via AskUserQuestion if not already provided in the request.
-2. **Booking link** — resolve the Planhat User `_id` (`list_model_records(MODEL:"User", FILTER:{"email[equal to]":"<user email>"})`, or the pre-resolved table in `context/planhat-schema.md` § Planhat User IDs), then `get_model_record(MODEL:"User", OBJECT_ID:"{_id}", SELECT:["custom.AISE Calendly Spark"])`. If it's set, use it directly — don't ask. If empty, ask via AskUserQuestion, and mention the user can run `/assistant-setup` to save it for next time.
+1. **Customer name** – as it should appear in the slide header (e.g. `Acme Corp`, `Stripe`, `Onfido · Entrust`). Collect via AskUserQuestion if not already provided in the request.
+2. **Booking link** – resolve the Planhat User `_id` (`list_model_records(MODEL:"User", FILTER:{"email[equal to]":"<user email>"})`, or the pre-resolved table in `context/planhat-schema.md` § Planhat User IDs), then `get_model_record(MODEL:"User", OBJECT_ID:"{_id}", SELECT:["custom.AISE Calendly Spark"])`. If it's set, use it directly – don't ask. If empty, ask via AskUserQuestion, and mention the user can run `/assistant-setup` to save it for next time.
 
 ## Steps
 
 1. If `customer_name` is missing from the request, ask for it using AskUserQuestion. Resolve `booking_link` per the Inputs section above (Planhat first, ask only on a miss).
 2. Generate the filename: lowercase the customer name, replace spaces and special characters with hyphens → `{slug}-spark-onepager.html` (e.g. `acme-corp-spark-onepager.html`, `onfido-entrust-spark-onepager.html`).
-3. Write the HTML file to the Cowork outputs folder by substituting `{{CUSTOMER_NAME}}` and `{{BOOKING_LINK}}` in the template below. Everything else in the template is fixed — do not alter it.
+3. Write the HTML file to the Cowork outputs folder by substituting `{{CUSTOMER_NAME}}` and `{{BOOKING_LINK}}` in the template below. Everything else in the template is fixed – do not alter it.
 4. Call `mcp__cowork__present_files` with the output path.
 5. Reply with one sentence confirming it's ready and reminding the user that Cmd+P prints it cleanly in landscape.
 
 ## Notes
 
-- The 5 sessions, all copy, stats, chips, PB logo, and CSS are fixed — never alter them.
-- The `@media print` block is finalized — do not modify it. See the comment in the template for the reasoning.
+- The 5 sessions, all copy, stats, chips, PB logo, and CSS are fixed – never alter them.
+- The `@media print` block is finalized – do not modify it. See the comment in the template for the reasoning.
 - The presenter block (Klara Martinez / AI Success Engineer · Productboard) is always fixed.
 - `zoom: 0.78` on `html` is the only Chrome-reliable way to scale a 1280px slide to fit landscape paper. Do not change it.
 
@@ -49,7 +49,7 @@ Replace only `{{CUSTOMER_NAME}}` and `{{BOOKING_LINK}}`. Write the entire file v
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Spark Adoption Program — {{CUSTOMER_NAME}}</title>
+<title>Spark Adoption Program – {{CUSTOMER_NAME}}</title>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
 
@@ -80,7 +80,7 @@ Replace only `{{CUSTOMER_NAME}}` and `{{BOOKING_LINK}}`. Write the entire file v
     color: var(--pb-text);
   }
 
-  /* === SLIDE WRAPPER — 16:9 === */
+  /* === SLIDE WRAPPER – 16:9 === */
   .slide {
     width: 1280px;
     min-height: 720px;
@@ -441,7 +441,7 @@ Replace only `{{CUSTOMER_NAME}}` and `{{BOOKING_LINK}}`. Write the entire file v
   }
 
   /* =====================================================
-     PRINT STYLES — DO NOT MODIFY
+     PRINT STYLES – DO NOT MODIFY
      zoom: 0.78 on html is the only Chrome-reliable way
      to scale a 1280px slide to fit landscape paper.
      transform: scale() does not affect layout dimensions.

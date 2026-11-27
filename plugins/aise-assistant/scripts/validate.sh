@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# validate.sh — Local pre-flight check for the aise-assistant plugin archive.
+# validate.sh – Local pre-flight check for the aise-assistant plugin archive.
 #
 # Usage:
 #   ./scripts/validate.sh <path-to-.plugin-or-.zip>
@@ -42,7 +42,7 @@ check() {
     echo "  [PASS] $label"
     PASS=$((PASS + 1))
   else
-    echo "  [FAIL] $label — $result"
+    echo "  [FAIL] $label – $result"
     FAIL=$((FAIL + 1))
   fi
 }
@@ -58,7 +58,7 @@ TOP_COUNT=$(echo "$TOP_ENTRIES" | wc -l | tr -d ' ')
 
 if [[ "$TOP_COUNT" -eq 1 && -d "$TMP/$TOP_ENTRIES" ]]; then
   check "ZIP root has NO wrapping parent folder" \
-    "FAIL — found single top-level directory: $TOP_ENTRIES (validator expects files directly at root)"
+    "FAIL – found single top-level directory: $TOP_ENTRIES (validator expects files directly at root)"
 else
   check "ZIP root has NO wrapping parent folder" "ok"
   ROOT="$TMP"
@@ -90,7 +90,7 @@ if [[ -f "$ROOT/.claude-plugin/plugin.json" ]]; then
   if [[ "$repo_type" == "str" ]]; then
     check "plugin.json 'repository' is a string (not object)" "ok"
   elif [[ "$repo_type" == "dict" ]]; then
-    check "plugin.json 'repository' is a string (not object)" "FAIL — must be a plain URL string, not an object"
+    check "plugin.json 'repository' is a string (not object)" "FAIL – must be a plain URL string, not an object"
   fi
 fi
 
@@ -124,10 +124,10 @@ for f in identity.md voice.md workspace.md; do
     if grep -q '<TBD' "$ROOT/about/$f" 2>/dev/null; then
       check "about/$f is placeholder (not personal)" "ok"
     else
-      check "about/$f is placeholder (not personal)" "WARNING — file exists but contains no <TBD markers; may be a personal file"
+      check "about/$f is placeholder (not personal)" "WARNING – file exists but contains no <TBD markers; may be a personal file"
     fi
   else
-    check "about/$f is placeholder (not personal)" "ok (file absent — acceptable)"
+    check "about/$f is placeholder (not personal)" "ok (file absent – acceptable)"
   fi
 done
 
@@ -138,7 +138,7 @@ if [[ -f "$ROOT/.claude-plugin/plugin.json" ]]; then
   if echo "$ZIP_BASENAME" | grep -q "v${PJ_VERSION}"; then
     check "Archive filename version matches plugin.json version ($PJ_VERSION)" "ok"
   else
-    check "Archive filename version matches plugin.json version ($PJ_VERSION)" "mismatch — archive: $ZIP_BASENAME"
+    check "Archive filename version matches plugin.json version ($PJ_VERSION)" "mismatch – archive: $ZIP_BASENAME"
   fi
 fi
 
@@ -153,7 +153,7 @@ if command -v claude &>/dev/null; then
     echo "  [FAIL] claude plugin validate"
   fi
 else
-  echo "  [SKIP] claude plugin validate — CLI not found in PATH"
+  echo "  [SKIP] claude plugin validate – CLI not found in PATH"
 fi
 
 # ── Summary ───────────────────────────────────────────────────────────────────

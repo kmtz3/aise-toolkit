@@ -4,7 +4,7 @@ description: Procedure for logging internal Productboard `#account-**` Slack cha
 tools: mcp__Slack__slack_read_channel, mcp__Slack__slack_read_thread, mcp__Slack__slack_search_channels, mcp__Slack__slack_read_user_profile, mcp__Planhat__list_model_records, mcp__Planhat__get_model_record, mcp__Planhat__create_model_record, mcp__Planhat__update_model_record, mcp__Planhat__get_model_action_parameters, Bash, Read, Write
 ---
 
-# Slack thread logger — internal account comms
+# Slack thread logger – internal account comms
 
 Turn an **internal** Productboard `#account-**` Slack channel into a readable Planhat touchpoint history: one
 `Internal Alignment` Conversation per thread, dated on the thread's **last** message, matching how Planhat
@@ -47,7 +47,7 @@ is not just unnecessary, it targets a read-only field.
 > **`custom.External_Slack_Channel_ID` is a different thing entirely and must never be used here.** That field
 > is the **shared external** channel with the customer in it – the one `/log-slack-threads` sweeps. Reading or
 > writing it from this procedure would point an internal-comms sweep at the customer-facing channel or
-> vice-versa. The only field this procedure writes is `custom.Slack ID` — `custom.Slack URL` is read-only and
+> vice-versa. The only field this procedure writes is `custom.Slack ID` – `custom.Slack URL` is read-only and
 > is never targeted by a write.
 
 ### Path A – the user gave a channel
@@ -130,7 +130,7 @@ get_model_record(MODEL: "Company", OBJECT_ID: "<company _id>",
   SELECT: ["custom.Slack ID", "custom.Slack URL"])
 ```
 
-`custom.Slack URL` is never a write target — it is a locked formula field that recomputes on its own once
+`custom.Slack URL` is never a write target – it is a locked formula field that recomputes on its own once
 `custom.Slack ID` changes. Reading it back after the write is only a convenience check that the formula
 refreshed, not a second field to populate.
 

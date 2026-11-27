@@ -1,4 +1,4 @@
-# Prioritization / Backlog / PDLC — Session Template
+# Prioritization / Backlog / PDLC – Session Template
 
 **Session ID:** Usually `A2` (directly after Foundations)
 **Duration:** 60–90 min
@@ -31,7 +31,7 @@ By the close, the customer has decided:
 ## Pre-read / inputs needed from customer
 
 - Foundations status set (from `A1`)
-- Current scoring approach (qualitative, RICE, custom — even if informal)
+- Current scoring approach (qualitative, RICE, custom – even if informal)
 - CRM sync status (Customer Importance depends on it)
 - Named prioritization owner(s) per product/tribe
 
@@ -45,7 +45,7 @@ By the close, the customer has decided:
 - What are your real lifecycle stages from intake to shipped?
 - Which PB status maps to which stage?
 - What decision/criteria moves a feature from one stage to the next?
-- Where does prioritization actually happen — at one stage or across multiple?
+- Where does prioritization actually happen – at one stage or across multiple?
 - Any stages where the decision is system-driven (e.g. auto-moves on CIS threshold) vs business-driven?
 
 **Key considerations:**
@@ -86,15 +86,15 @@ By the close, the customer has decided:
 ### 3. Prioritization methodology
 
 **Questions to ask:**
-- How do you prioritize today — value/effort, RICE, weighted scoring, gut?
-- What criteria matter most — business value, customer impact, effort, confidence, strategic alignment, dependencies?
+- How do you prioritize today – value/effort, RICE, weighted scoring, gut?
+- What criteria matter most – business value, customer impact, effort, confidence, strategic alignment, dependencies?
 - Do criteria differ by stage (triage vs evaluation vs planning)?
 - Should the model be standard across all teams, or per-tribe variation?
 
 **Key considerations:**
 - Start simpler than RICE unless the org has data maturity. Impact × Effort is often enough for Phase 1.
 - Confidence drops out of many customer scoring models because it's hard to calibrate consistently.
-- Don't standardize prematurely — some variation per tribe is fine for Phase 1, harmonize later.
+- Don't standardize prematurely – some variation per tribe is fine for Phase 1, harmonize later.
 
 **Decision table:**
 
@@ -109,7 +109,7 @@ By the close, the customer has decided:
 **Questions to ask:**
 - Which drivers will you track (business drivers, themes, generic criteria)?
 - How do you score each driver (scale, rubric)?
-- Which formula does the math — Value/Effort, RICE, custom?
+- Which formula does the math – Value/Effort, RICE, custom?
 - What custom number fields do you need to power it?
 - Is the scoring model global or board-specific?
 - What limitations/assumptions should be explicit (data quality, manual updates, CIS integrity)?
@@ -136,8 +136,8 @@ By the close, the customer has decided:
 ### 5. Prioritization fields (default + custom)
 
 **Questions to ask:**
-- Which default fields matter for your workflow — Customer Importance, Health, Owner, Dependencies, Timeframe, Teams, Tags, Value/Effort?
-- What additional custom fields — date, text, select, multi-select, member?
+- Which default fields matter for your workflow – Customer Importance, Health, Owner, Dependencies, Timeframe, Teams, Tags, Value/Effort?
+- What additional custom fields – date, text, select, multi-select, member?
 - Which fields matter at which stage (evaluation vs planning vs release management)?
 - Risk of duplicate/overlapping fields?
 
@@ -168,7 +168,7 @@ By the close, the customer has decided:
 ### 7. Grid board architecture
 
 **Questions to ask:**
-- Which boards do you need — New Ideas / Full Backlog, Evaluation, Planning, Release Management, Monitoring?
+- Which boards do you need – New Ideas / Full Backlog, Evaluation, Planning, Release Management, Monitoring?
 - What's the purpose of each (which decisions happen there)?
 - Filters + status scope for each?
 - Key columns (fields shown) for each?
@@ -190,7 +190,7 @@ By the close, the customer has decided:
 
 **Questions to ask:**
 - Do you want to track tasks in PB, or is delivery fully in Jira?
-- If yes — which tasks (pre-dev, release readiness, cross-functional)?
+- If yes – which tasks (pre-dev, release readiness, cross-functional)?
 - Task statuses + workflow?
 - How do tasks link to release management visibility?
 
@@ -219,13 +219,13 @@ By the close, the customer has decided:
 
 ---
 
-## Close — synthesis structure
+## Close – synthesis structure
 
-1. **Decisions summary** — PDLC stages, gates, formula, drivers, fields, boards, tasks decision
-2. **Open items** — missing data (CRM, named owners), deferred model refinement
-3. **Configuration backlog** — fields, drivers, formula, segments, boards to build
-4. **Next session objective** — usually Roadmaps (`A3`) or Insights (`A4`)
-5. **Customer confirmation** — explicit confirmation the scoring model matches their decision reality
+1. **Decisions summary** – PDLC stages, gates, formula, drivers, fields, boards, tasks decision
+2. **Open items** – missing data (CRM, named owners), deferred model refinement
+3. **Configuration backlog** – fields, drivers, formula, segments, boards to build
+4. **Next session objective** – usually Roadmaps (`A3`) or Insights (`A4`)
+5. **Customer confirmation** – explicit confirmation the scoring model matches their decision reality
 
 ---
 
@@ -234,4 +234,4 @@ By the close, the customer has decided:
 - If Foundations isn't fully locked, flag which prior decisions are assumed before proceeding
 - If the customer has no prioritization practice today, anchor on "what's a realistic starting scoring model" rather than methodology theory
 - If CIS / CRM integration isn't ready, defer CIS-dependent fields and flag as open item
-- Don't pre-fill driver names — the customer's drivers must reflect their business, not generic templates
+- Don't pre-fill driver names – the customer's drivers must reflect their business, not generic templates

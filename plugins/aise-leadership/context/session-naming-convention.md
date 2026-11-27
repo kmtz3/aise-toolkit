@@ -15,7 +15,7 @@
 - `[S21] Q&A Roadmaps`
 - `[S32] Program sync`
 
-**Do not include the customer name** — it is already captured as the `Customers` relation property on the Session record.
+**Do not include the customer name** – it is already captured as the `Customers` relation property on the Session record.
 
 ---
 
@@ -27,7 +27,7 @@
 | `A` | Architecting | `🏗️ Architecting` |
 | `S` | Sync | `🗣️ Sync` |
 
-Other session types (`👟 Kick off`, `🔎 Discovery`, `📦 Other`, `🫥 Internal`) do not use the `[TYPE][N]` prefix. Name them descriptively — e.g. `Kick off`, `Discovery — Tooling Landscape`.
+Other session types (`👟 Kick off`, `🔎 Discovery`, `📦 Other`, `🫥 Internal`) do not use the `[TYPE][N]` prefix. Name them descriptively – e.g. `Kick off`, `Discovery – Tooling Landscape`.
 
 ---
 
@@ -54,11 +54,11 @@ If the session does not yet have `Consumed Package` set (new session being creat
 1. Identify the session type (from calendar event, user input, or Notion record).
 2. Look up the next sequential number for that type within the Active Package (see above).
 3. Derive the topic from the calendar event title, session prep context, or user input. Keep it short: 2–5 words, title case.
-4. Assemble: `[<TYPE><N>] <Topic>` — e.g. `[A3] Stakeholder Alignment`, `[E2] Roadmap Prioritization`.
+4. Assemble: `[<TYPE><N>] <Topic>` – e.g. `[A3] Stakeholder Alignment`, `[E2] Roadmap Prioritization`.
 
 ---
 
-## Duplicate detection — name-resilient approach
+## Duplicate detection – name-resilient approach
 
 Session pages created before this convention may have names that don't follow the `[TYPE][N]` format. **Never rely on the `Name` field alone to detect or match sessions.** The canonical dedup key is the triple:
 
@@ -66,6 +66,6 @@ Session pages created before this convention may have names that don't follow th
 - `date:Call Date:start` = session date
 - `Type` = Notion session type value (e.g. `🎓 Training`)
 
-If a record matches all three fields, it IS the same session — treat it as an existing page regardless of its current name.
+If a record matches all three fields, it IS the same session – treat it as an existing page regardless of its current name.
 
-**On finding an existing session with a non-conforming name:** surface the rename alongside other updates — `"Found [old name] — rename to [new name]?"` — and apply on confirmation. Never silently rename.
+**On finding an existing session with a non-conforming name:** surface the rename alongside other updates – `"Found [old name] – rename to [new name]?"` – and apply on confirmation. Never silently rename.

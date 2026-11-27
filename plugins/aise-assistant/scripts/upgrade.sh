@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# upgrade.sh — Safe upgrade script for aise-assistant plugin.
+# upgrade.sh – Safe upgrade script for aise-assistant plugin.
 #
 # Copies plugin-owned files from a new version. Personal about/ files live at
 # $CLAUDE_PLUGIN_DATA/about/ and are never touched by this script (except for the
@@ -72,11 +72,11 @@ if [[ "$CHECK_ONLY" == true ]]; then
   for f in "${PERSONAL_FILES[@]}"; do
     target="$ABOUT_DIR/$f"
     if is_populated "$target"; then
-      echo "  ✓ $f — populated (safe — lives outside plugin, survives updates)"
+      echo "  ✓ $f – populated (safe – lives outside plugin, survives updates)"
     elif [[ -f "$target" ]]; then
-      echo "  ○ $f — exists but unpopulated (run /assistant-setup to fill in)"
+      echo "  ○ $f – exists but unpopulated (run /assistant-setup to fill in)"
     else
-      echo "  ✗ $f — missing (run /assistant-setup to create)"
+      echo "  ✗ $f – missing (run /assistant-setup to create)"
     fi
   done
   exit 0
@@ -87,7 +87,7 @@ PRESERVED=()
 RESTORED=()
 CREATED=()
 
-echo "aise-assistant upgrade — source: $SOURCE_DIR"
+echo "aise-assistant upgrade – source: $SOURCE_DIR"
 echo ""
 
 # 1. Migrate personal files from legacy paths (one-time, idempotent).
@@ -106,17 +106,17 @@ if [[ ! -f "$ABOUT_DIR/identity.md" ]]; then
   done
 fi
 
-# 2. Personal files live at $ABOUT_DIR — never touched by upgrade beyond migration above
-echo "  Personal files ($ABOUT_DIR) — skipped (outside plugin, always safe)"
+# 2. Personal files live at $ABOUT_DIR – never touched by upgrade beyond migration above
+echo "  Personal files ($ABOUT_DIR) – skipped (outside plugin, always safe)"
 for f in "${PERSONAL_FILES[@]}"; do
   target="$ABOUT_DIR/$f"
   if is_populated "$target"; then
     PRESERVED+=("$f")
-    echo "    ✓ $f — populated"
+    echo "    ✓ $f – populated"
   elif [[ -f "$target" ]]; then
-    echo "    ○ $f — exists but unpopulated (run /assistant-setup to fill in)"
+    echo "    ○ $f – exists but unpopulated (run /assistant-setup to fill in)"
   else
-    echo "    ✗ $f — missing (run /assistant-setup to create)"
+    echo "    ✗ $f – missing (run /assistant-setup to create)"
   fi
 done
 
@@ -128,14 +128,14 @@ echo "  Updating plugin-owned files..."
 # about/README.md
 if [[ -f "$SOURCE_DIR/about/README.md" ]]; then
   cp "$SOURCE_DIR/about/README.md" "$ABOUT_DIR/README.md"
-  echo "  ↺ about/README.md — updated"
+  echo "  ↺ about/README.md – updated"
 fi
 
-# about/templates/ — replace entirely
+# about/templates/ – replace entirely
 if [[ -d "$SOURCE_DIR/about/templates" ]]; then
   rm -rf "$ABOUT_DIR/templates"
   cp -r "$SOURCE_DIR/about/templates" "$ABOUT_DIR/templates"
-  echo "  ↺ about/templates/ — updated"
+  echo "  ↺ about/templates/ – updated"
 fi
 
 # All other top-level plugin files (agents/, commands/, context/, scripts/, CLAUDE.md, etc.)
@@ -145,7 +145,7 @@ for item in CLAUDE.md README.md agents commands context scripts templates; do
   if [[ -e "$src" ]]; then
     rm -rf "$dst"
     cp -r "$src" "$dst"
-    echo "  ↺ $item — updated"
+    echo "  ↺ $item – updated"
   fi
 done
 

@@ -1,4 +1,4 @@
-# Workspace Settings & Governance — Session Template
+# Workspace Settings & Governance – Session Template
 
 **Session ID:** Often `S0` (informal scoping) or part of admin stream
 **Duration:** 45–60 min
@@ -40,14 +40,14 @@ By the close, the customer has decided:
 ### 1. Workspace decision
 
 **Questions to ask:**
-- Which workspace do we use — trial (clean and keep), fresh (new setup), or migrate (selective carryover)?
+- Which workspace do we use – trial (clean and keep), fresh (new setup), or migrate (selective carryover)?
 - If trial: what's worth keeping vs starting fresh?
 - If fresh: what content do we need to migrate from trial/legacy?
 - What's the cutover plan?
 
 **Key considerations:**
 - SSO already configured on a workspace is a strong argument for keeping it, even if content is messy.
-- "Burn down and rebuild" is often faster than cleaning a cluttered workspace — but only with a disciplined migration scope.
+- "Burn down and rebuild" is often faster than cleaning a cluttered workspace – but only with a disciplined migration scope.
 - Multiple workspaces create licensing + governance complexity. Consolidate to one.
 
 **Decision table:**
@@ -115,7 +115,7 @@ By the close, the customer has decided:
 - Feature naming guidance?
 
 **Key considerations:**
-- BU/tribe prefix on Products often creates more confusion than value — cross-BU products break the convention. Use a BU/Tribe custom field instead.
+- BU/tribe prefix on Products often creates more confusion than value – cross-BU products break the convention. Use a BU/Tribe custom field instead.
 - Team prefixes (e.g. `[CM]`, `[PL]`) are useful because flat team lists need a single search axis.
 - Tag naming rules prevent the biggest long-term maintenance problem (tag sprawl).
 
@@ -135,7 +135,7 @@ By the close, the customer has decided:
 ### 5. General teamspace purpose
 
 **Questions to ask:**
-- What's General for in this workspace — shared views, cross-team roadmaps, exec visibility?
+- What's General for in this workspace – shared views, cross-team roadmaps, exec visibility?
 - What belongs in General vs a specific teamspace?
 - Who can add to General?
 - Any guardrails to prevent misuse (e.g. using General as a team's workspace)?
@@ -152,7 +152,7 @@ By the close, the customer has decided:
 
 **Questions to ask:**
 - If migrating: what artefacts are worth carrying over (features, notes, roadmaps, integrations, users)?
-- What's the quality bar — migrate everything, or curated subset?
+- What's the quality bar – migrate everything, or curated subset?
 - Who executes the migration (SA + customer lead)?
 - Cutover date?
 
@@ -171,7 +171,7 @@ By the close, the customer has decided:
 ### 7. Workspace-wide settings
 
 **Questions to ask:**
-- Default roles for new users — Maker, Contributor, Viewer?
+- Default roles for new users – Maker, Contributor, Viewer?
 - Auto-assignment on domain (if applicable)?
 - Feedback portal defaults?
 - Notification defaults?
@@ -198,19 +198,19 @@ By the close, the customer has decided:
 
 ---
 
-## Close — synthesis structure
+## Close – synthesis structure
 
-1. **Decisions summary** — workspace decision, admin roster, governance ownership, naming, General purpose, migration scope
-2. **Open items** — SSO/SCIM status, missing admin, migration details
-3. **Configuration backlog** — workspace provisioning, admin assignments, governance doc
-4. **Parallel streams flagged** — SSO/SCIM timeline, integration prereqs
-5. **Customer confirmation** — tech lead confirms they can execute the admin model
+1. **Decisions summary** – workspace decision, admin roster, governance ownership, naming, General purpose, migration scope
+2. **Open items** – SSO/SCIM status, missing admin, migration details
+3. **Configuration backlog** – workspace provisioning, admin assignments, governance doc
+4. **Parallel streams flagged** – SSO/SCIM timeline, integration prereqs
+5. **Customer confirmation** – tech lead confirms they can execute the admin model
 
 ---
 
 ## Tweak guidance
 
-- For smaller customers, most governance sits with one person — don't force multi-owner tables
+- For smaller customers, most governance sits with one person – don't force multi-owner tables
 - If SSO/SCIM is already live, this session is lighter (admin model is mostly confirmation, not design)
-- If migrating from a legacy tool (not a trial workspace), migration scope needs its own dedicated working session — don't try to close it here
-- For regulated industries, add a compliance section — data residency, audit log, export controls
+- If migrating from a legacy tool (not a trial workspace), migration scope needs its own dedicated working session – don't try to close it here
+- For regulated industries, add a compliance section – data residency, audit log, export controls

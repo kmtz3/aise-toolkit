@@ -1,4 +1,4 @@
-# Foundations Architecture — Session Template
+# Foundations Architecture – Session Template
 
 **Session ID:** Usually `A1` (first architecting session after discovery)
 **Duration:** 90 min
@@ -10,7 +10,7 @@
 
 ## Purpose
 
-Decide the data model and workspace structure so Productboard can be configured correctly. This is an architecture decision workshop — **not** a feature demo.
+Decide the data model and workspace structure so Productboard can be configured correctly. This is an architecture decision workshop – **not** a feature demo.
 
 ---
 
@@ -20,7 +20,7 @@ By the close, the customer has decided:
 - Product hierarchy (levels and definitions in their language)
 - Strategic hierarchy (or explicit deferral)
 - Teamspace organization + types
-- Teams vs teamspaces — what crews/squads map to
+- Teams vs teamspaces – what crews/squads map to
 - Role assignments (Admin Maker / Maker / Contributor / Viewer)
 - Feature statuses aligned to their real PDLC
 - Naming conventions
@@ -30,7 +30,7 @@ By the close, the customer has decided:
 
 ## Pre-read / inputs needed from customer
 
-- Org chart — tribes / BUs / crews / squads (or equivalent)
+- Org chart – tribes / BUs / crews / squads (or equivalent)
 - Current product taxonomy (even if informal)
 - Current lifecycle/status language in their delivery tool
 - Named admin(s)
@@ -43,7 +43,7 @@ By the close, the customer has decided:
 ### 1. Product hierarchy
 
 **Questions to ask:**
-- What does a "Product" represent in your business — a customer-facing marketable product, an internal capability area, a team, something else?
+- What does a "Product" represent in your business – a customer-facing marketable product, an internal capability area, a team, something else?
 - How many levels deep do you actually need? (Default: Product → Component → Feature → Sub-feature.)
 - Is Component structural (sub-product area) or organizational (capability grouping)?
 - Do you have cross-BU products? If yes, how should they be attributed?
@@ -89,10 +89,10 @@ By the close, the customer has decided:
 ### 3. Teamspaces + folders
 
 **Questions to ask:**
-- What's the right teamspace grain — tribe/vertical, BU, crew, functional?
+- What's the right teamspace grain – tribe/vertical, BU, crew, functional?
 - Will you use Open, Closed, or Private teamspaces? Under what conditions?
 - What purpose does the General teamspace serve here?
-- Folder structure inside a teamspace — what's the default?
+- Folder structure inside a teamspace – what's the default?
 
 **Key considerations:**
 - Crew-level teamspaces create scaling problems (30+ teamspaces at full rollout).
@@ -112,7 +112,7 @@ By the close, the customer has decided:
 
 **Questions to ask:**
 - What's the smallest delivery unit in your org? (Crew, squad, pod, feature team.)
-- What do you need to use Teams for — ownership, filtering, @mentions, all of the above?
+- What do you need to use Teams for – ownership, filtering, @mentions, all of the above?
 - Naming convention for teams?
 - Handle convention for @mentions?
 
@@ -140,7 +140,7 @@ By the close, the customer has decided:
 
 **Key considerations:**
 - Admin count should be small and intentional. "Give everyone admin" is a red flag.
-- Contributor is often underused — PMs default to Maker even when Contributor fits.
+- Contributor is often underused – PMs default to Maker even when Contributor fits.
 
 **Decision table:**
 
@@ -176,7 +176,7 @@ By the close, the customer has decided:
 **Questions to ask:**
 - Do we need BU/Tribe as a field? At which hierarchy levels?
 - Any product-specific classification (e.g. commodity type, geography, tier)?
-- Visibility toggles (e.g. GTM / internal-only) — needed?
+- Visibility toggles (e.g. GTM / internal-only) – needed?
 - Who governs field values?
 
 **Key considerations:**
@@ -210,9 +210,9 @@ By the close, the customer has decided:
 ### 9. Naming conventions
 
 **Questions to ask:**
-- Products — plain name or prefix?
-- Teams — prefix convention?
-- Tags — naming rules?
+- Products – plain name or prefix?
+- Teams – prefix convention?
+- Tags – naming rules?
 - Any glossary of reserved terms?
 
 **Decision table:**
@@ -239,15 +239,15 @@ By the close, the customer has decided:
 
 ---
 
-## Close — synthesis structure
+## Close – synthesis structure
 
 End the session with:
 
-1. **Decisions summary** — walk through each KDD and confirm the decision out loud
-2. **Open items** — anything deferred, with named owner and when it's needed
-3. **Configuration backlog** — what SA will build before the next session
-4. **Next session objective** — what this unlocks (usually Backlog Architecture)
-5. **Customer confirmation** — explicit "does this capture it?" and wait for the "yes"
+1. **Decisions summary** – walk through each KDD and confirm the decision out loud
+2. **Open items** – anything deferred, with named owner and when it's needed
+3. **Configuration backlog** – what SA will build before the next session
+4. **Next session objective** – what this unlocks (usually Backlog Architecture)
+5. **Customer confirmation** – explicit "does this capture it?" and wait for the "yes"
 
 Log decisions in the numbered register continuing from the last entry (e.g. `D17`, `D18`, `D19`…).
 
@@ -260,4 +260,4 @@ When customizing this template for a specific customer:
 - Pre-populate decision tables with anything already decided in discovery (cite the D-number)
 - Remove KDD sections that are genuinely out of scope (e.g. OKR if they have no goal-setting practice)
 - Add customer-specific examples in the "Questions to ask" where useful
-- Do **not** pre-fill decision values — leave tables blank for live facilitation
+- Do **not** pre-fill decision values – leave tables blank for live facilitation

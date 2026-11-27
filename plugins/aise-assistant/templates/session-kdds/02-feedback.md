@@ -1,4 +1,4 @@
-# Insights / Feedback Architecture — Session Template
+# Insights / Feedback Architecture – Session Template
 
 **Session ID:** Usually `A4` (after Foundations and Backlog are locked)
 **Duration:** 90 min
@@ -10,7 +10,7 @@
 
 ## Purpose
 
-Design the feedback pipeline end-to-end — sources, triage, note standards, segmentation, portal. This is a **process design** session, not a feature walkthrough.
+Design the feedback pipeline end-to-end – sources, triage, note standards, segmentation, portal. This is a **process design** session, not a feature walkthrough.
 
 ---
 
@@ -31,7 +31,7 @@ By the close, the customer has decided:
 
 - Current feedback sources (tools, channels, inflows)
 - Volume estimates per source (rough order of magnitude)
-- Current triage owner(s) — or confirmation there isn't one
+- Current triage owner(s) – or confirmation there isn't one
 - Current segmentation logic from CRM
 - Any portal experience (previous tool or attempts)
 
@@ -65,9 +65,9 @@ By the close, the customer has decided:
 
 **Questions to ask:**
 - Who triages incoming notes, how often, where?
-- What does "processed" mean — linked to a feature, tagged, owner assigned, or all three?
+- What does "processed" mean – linked to a feature, tagged, owner assigned, or all three?
 - When does a triager @mention a contributor for more context?
-- What's the cadence — daily, weekly, per source?
+- What's the cadence – daily, weekly, per source?
 - Who owns which notes (by product area, by source, by team)?
 
 **Key considerations:**
@@ -106,9 +106,9 @@ By the close, the customer has decided:
 ### 4. Note anatomy + tagging
 
 **Questions to ask:**
-- How will tags be used — topic, theme, product area, source, other?
+- How will tags be used – topic, theme, product area, source, other?
 - What tagging conventions prevent sprawl (casing, singular/plural, hierarchy)?
-- Topics vs tags — when to use which?
+- Topics vs tags – when to use which?
 - Who owns the tag library?
 
 **Key considerations:**
@@ -128,7 +128,7 @@ By the close, the customer has decided:
 
 **Questions to ask:**
 - What patterns exist in incoming notes by source (title patterns, submitter type, content keywords)?
-- Which automations would deliver the most value first — auto-owner assignment, auto-tagging, routing, source-based handling?
+- Which automations would deliver the most value first – auto-owner assignment, auto-tagging, routing, source-based handling?
 - Which automations are low-risk, high-impact?
 - Who monitors automation performance and tunes rules?
 
@@ -143,7 +143,7 @@ By the close, the customer has decided:
 ### 6. Company data + segments
 
 **Questions to ask:**
-- What's the source of company data — CRM, other?
+- What's the source of company data – CRM, other?
 - Sync cadence + ownership?
 - Which customer attributes drive product decisions (segment, tier, region, industry, plan, ARR)?
 - What segments will PMs use in prioritization?
@@ -165,9 +165,9 @@ By the close, the customer has decided:
 
 **Questions to ask:**
 - Do you want a portal, and for what purpose (feedback, roadmap share, launch comms, validation)?
-- How many portals — internal, by product, by segment?
+- How many portals – internal, by product, by segment?
 - What structure (tabs, subsections, cards)?
-- Sharing settings — hidden, company-only, private link, public link?
+- Sharing settings – hidden, company-only, private link, public link?
 - How does feedback submitted via Portal route into insights?
 - How do you close the loop with submitters (updates, notifications)?
 
@@ -206,23 +206,23 @@ By the close, the customer has decided:
 | "We don't need a 'good feedback' standard" | Without it, CS and Sales submit one-line gripes and PMs can't act. The standard is the quality floor. |
 | "Everyone gets an auto-owner" | Auto-owner quality depends on tag/source quality. Design the inputs first. |
 | "Let's skip segmentation for now" | Without segment data, prioritization becomes opinion-based. Even a rough segment field beats none. |
-| "We'll figure out the portal later" | Fine — but document the deferral decision and the condition that unlocks it. Don't leave it vague. |
+| "We'll figure out the portal later" | Fine – but document the deferral decision and the condition that unlocks it. Don't leave it vague. |
 
 ---
 
-## Close — synthesis structure
+## Close – synthesis structure
 
-1. **Decisions summary** — sources, triage owners, tag strategy, automations, segments, portal decision
-2. **Open items** — missing inputs (CRM access, feedback migration scope, portal stakeholder)
-3. **Configuration backlog** — what SA will build (insights views, automations, segments, note templates)
-4. **Next activity** — usually Harvester/legacy migration scoping or prioritization session
-5. **Customer confirmation** — explicit confirmation the pipeline design matches their process
+1. **Decisions summary** – sources, triage owners, tag strategy, automations, segments, portal decision
+2. **Open items** – missing inputs (CRM access, feedback migration scope, portal stakeholder)
+3. **Configuration backlog** – what SA will build (insights views, automations, segments, note templates)
+4. **Next activity** – usually Harvester/legacy migration scoping or prioritization session
+5. **Customer confirmation** – explicit confirmation the pipeline design matches their process
 
 ---
 
 ## Tweak guidance
 
-- If they have no current feedback tool, simplify — focus on triage + "good feedback" standard first
+- If they have no current feedback tool, simplify – focus on triage + "good feedback" standard first
 - If they're replacing a feedback tool, Portal decision should explicitly address whether it replaces the old tool's public surface
 - If Sales/CS aren't in the session, flag source ownership as an open item, don't assume
-- Match the segment taxonomy to the CRM's actual field list — don't invent
+- Match the segment taxonomy to the CRM's actual field list – don't invent

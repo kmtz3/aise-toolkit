@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# setup-connections.sh — Configure local MCP servers for aise-assistant.
+# setup-connections.sh – Configure local MCP servers for aise-assistant.
 #
 # Safe to re-run: skips anything already configured.
 # Restart Claude Code after running.
@@ -22,17 +22,17 @@ miss() { echo "  ✗  $1"; }
 note() { echo "     $1"; }
 
 echo ""
-echo "aise-assistant — connection setup"
+echo "aise-assistant – connection setup"
 echo "══════════════════════════════════"
 echo ""
 
 # ── PART 1: claude.ai integrations ─────────────────────────────────────────
-# These are per-user account settings — cannot be configured by a script.
+# These are per-user account settings – cannot be configured by a script.
 # Print the checklist so a new teammate knows exactly what to enable.
-echo "1. claude.ai integrations (account-level — configure in your browser)"
+echo "1. claude.ai integrations (account-level – configure in your browser)"
 echo "   Sign in → claude.ai → Settings → Integrations → enable each:"
 echo ""
-echo "   □  Planhat          personal profile + Customer Tracker reads/writes — required for /assistant-setup"
+echo "   □  Planhat          personal profile + Customer Tracker reads/writes – required for /assistant-setup"
 echo "   □  Gmail            draft creation, email history"
 echo "   □  Google Calendar  session lookup, prep scheduling"
 echo "   □  Google Drive     diagram uploads, document access"
@@ -41,7 +41,7 @@ echo "   □  Slack            account-channel search, debrief drafts, external 
 echo "   □  Figma            architecture diagram creation"
 echo "   □  Atlassian        Jira/Confluence cross-reference (optional)"
 echo ""
-echo "   Each teammate sets these up in their own account — they cannot be"
+echo "   Each teammate sets these up in their own account – they cannot be"
 echo "   bundled in the plugin."
 echo ""
 
@@ -83,7 +83,7 @@ _find_sf() {
 }
 
 # Helper: check if sf has at least one authenticated org.
-# Reads credential files directly — avoids needing Node on PATH.
+# Reads credential files directly – avoids needing Node on PATH.
 # Checks ~/.sfdx/*.json (sfdx/sf v1) and ~/.sf/credentials.json (sf v2+).
 _sf_auth_ok() {
   python3 - << 'PYEOF'
@@ -128,13 +128,13 @@ if [[ "$CHECK_ONLY" == true ]]; then
       ok "Salesforce CLI: installed + authenticated ($SF_BIN)"
     else
       skip "Salesforce CLI: installed at $SF_BIN (not authenticated)"
-      miss "Salesforce not authenticated — run: sf org login web"
+      miss "Salesforce not authenticated – run: sf org login web"
     fi
   else
     miss "Salesforce CLI not found. Run: npm install -g @salesforce/cli && sf org login web"
   fi
 
-  # 2b. Salesforce MCP entry — check all known config locations
+  # 2b. Salesforce MCP entry – check all known config locations
   SF_MCP_OK=false
   SF_MCP_LOCATION=""
   for cfg in "$HOME/.claude.json" "$HOME/.claude/mcp.json" "$HOME/.claude/claude_desktop_config.json"; do
@@ -170,7 +170,7 @@ else
     miss "Salesforce CLI not installed"
     note "Install it: npm install -g @salesforce/cli"
     note "Then authenticate: sf org login web"
-    note "The MCP entry will still be added below — install sf before first use."
+    note "The MCP entry will still be added below – install sf before first use."
     echo ""
   fi
 

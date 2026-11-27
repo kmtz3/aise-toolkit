@@ -1,4 +1,4 @@
-# AI + Spark Workshop — Session Template
+# AI + Spark Workshop – Session Template
 
 **Session ID:** Usually `A5` (after Foundations + Backlog + Roadmaps, once content is in PB)
 **Duration:** 60–90 min
@@ -31,8 +31,8 @@ By the close, the customer has:
 
 - Top PM pain points Spark could address
 - Named pilot users (PMs or Product Ops)
-- One real scenario to run live (a real initiative, brief, or feedback batch — not hypothetical)
-- Current AI tool landscape (Claude, Gemini, OpenAI, custom agents) — for positioning
+- One real scenario to run live (a real initiative, brief, or feedback batch – not hypothetical)
+- Current AI tool landscape (Claude, Gemini, OpenAI, custom agents) – for positioning
 
 ---
 
@@ -41,9 +41,9 @@ By the close, the customer has:
 ### 1. Use case prioritization
 
 **Questions to ask:**
-- What are your biggest PM pain points — feedback overload, PRD/brief creation, competitor research, context fragmentation, stakeholder comms?
-- Which Spark use cases fit best — Feedback Analysis, Product Brief, Competitor Analysis, others?
-- What's your time-to-value priority — which unlocks fastest?
+- What are your biggest PM pain points – feedback overload, PRD/brief creation, competitor research, context fragmentation, stakeholder comms?
+- Which Spark use cases fit best – Feedback Analysis, Product Brief, Competitor Analysis, others?
+- What's your time-to-value priority – which unlocks fastest?
 - What are you explicitly deferring today?
 
 **Key considerations:**
@@ -65,14 +65,14 @@ By the close, the customer has:
 ### 2. Positioning vs existing AI tools
 
 **Questions to ask:**
-- What's your current AI tool landscape — Claude, Gemini, OpenAI, custom agents?
+- What's your current AI tool landscape – Claude, Gemini, OpenAI, custom agents?
 - Where does Spark differentiate (persistent PM context, guided workflows, PB-grounded output)?
 - Where does Spark NOT replace existing tools (general research, code, non-PM tasks)?
 - What's Spark's beta/limitations framing you want teams to have?
 
 **Key considerations:**
 - Overhyping Spark kills credibility. Be honest about current state + beta limitations.
-- Spark complements other AI tools — it doesn't replace them for non-PM work.
+- Spark complements other AI tools – it doesn't replace them for non-PM work.
 
 **Decision table:**
 
@@ -87,8 +87,8 @@ By the close, the customer has:
 ### 3. Context strategy
 
 **Questions to ask:**
-- What's evergreen shared context — company strategy, personas, product background, templates, recurring references?
-- What's per-job / per-chat context — initiative docs, current research, temporary inputs?
+- What's evergreen shared context – company strategy, personas, product background, templates, recurring references?
+- What's per-job / per-chat context – initiative docs, current research, temporary inputs?
 - Which high-signal context sources come first?
 - Naming / organization standards for context assets?
 - Who owns context upkeep?
@@ -112,7 +112,7 @@ By the close, the customer has:
 - Which repeatable workflows should become custom Skills?
 - Are there prompt templates worth standardizing (brief structure, synthesis format, competitive analysis framework)?
 - Who owns the skills library + prompt library?
-- Quality bar for adding a new skill — avoid one-off clutter?
+- Quality bar for adding a new skill – avoid one-off clutter?
 
 **Decision table:**
 
@@ -148,7 +148,7 @@ By the close, the customer has:
 - How do they spot weak assumptions, missing evidence, generic content?
 - What level of human review is required before sharing / using outputs?
 - How do they iterate (better inputs, more context, refined instructions)?
-- Responsible use framing — Spark accelerates PM work, doesn't replace PM judgment.
+- Responsible use framing – Spark accelerates PM work, doesn't replace PM judgment.
 
 **Decision table:**
 
@@ -180,10 +180,10 @@ By the close, the customer has:
 ### 8. Pilot + rollout
 
 **Questions to ask:**
-- Named pilot users — who's first?
+- Named pilot users – who's first?
 - Success criteria for the pilot (what "working" looks like)?
 - Check-in cadence for the pilot?
-- Rollout trigger — what proves it's ready for broader use?
+- Rollout trigger – what proves it's ready for broader use?
 
 **Decision table:**
 
@@ -222,21 +222,21 @@ By the close, the customer has:
 
 ---
 
-## Close — synthesis structure
+## Close – synthesis structure
 
-1. **Decisions summary** — prioritized use cases, context plan, pilot users, review standards
-2. **Open items** — context assets to gather, pilot check-in timing
-3. **Configuration backlog** — context setup, skills/prompts to create, access provisioning
-4. **Next activity** — first pilot workflow runs + check-in schedule
-5. **Success criteria for next checkpoint** — what progress looks like
-6. **Customer confirmation** — pilot user list + first workflow commitment
+1. **Decisions summary** – prioritized use cases, context plan, pilot users, review standards
+2. **Open items** – context assets to gather, pilot check-in timing
+3. **Configuration backlog** – context setup, skills/prompts to create, access provisioning
+4. **Next activity** – first pilot workflow runs + check-in schedule
+5. **Success criteria for next checkpoint** – what progress looks like
+6. **Customer confirmation** – pilot user list + first workflow commitment
 
 ---
 
 ## Tweak guidance
 
 - If the customer has heavy existing AI tooling, spend more time on positioning (when to use Spark vs other tools)
-- If their AI maturity is low, anchor on one use case only — don't overwhelm
-- If PB content is thin (early in the program), this session should move later — Spark value depends on populated content
+- If their AI maturity is low, anchor on one use case only – don't overwhelm
+- If PB content is thin (early in the program), this session should move later – Spark value depends on populated content
 - Pick the live scenario before the session. Nothing kills momentum like picking a scenario live and realizing inputs aren't ready.
-- If Product Ops is in the room, they often become the natural context + skills owner — call this out as a decision
+- If Product Ops is in the room, they often become the natural context + skills owner – call this out as a decision

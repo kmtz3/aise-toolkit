@@ -1,8 +1,8 @@
-# `about/` — Per-user profile
+# `about/` – Per-user profile
 
-This folder holds **templates only**. The actual personal files written by `/assistant-setup` live in the plugin's persistent data directory — **not** inside the plugin itself.
+This folder holds **templates only**. The actual personal files written by `/assistant-setup` live in the plugin's persistent data directory – **not** inside the plugin itself.
 
-The rest of the assistant (agents, commands, schemas, templates, methodology) is universal — anyone in the same role can use it as-is.
+The rest of the assistant (agents, commands, schemas, templates, methodology) is universal – anyone in the same role can use it as-is.
 
 ## Where personal files actually live
 
@@ -23,7 +23,7 @@ Universal communication methodology (PB-AISE comms patterns, customer-vs-interna
 
 ## How agents use these files
 
-Every agent that needs a personal value (e.g. your Planhat user ID for filtering queries) reads `${CLAUDE_PLUGIN_DATA}/about/identity.md` at the start of its run. Don't hardcode personal values in agent specs — always reference these files.
+Every agent that needs a personal value (e.g. your Planhat user ID for filtering queries) reads `${CLAUDE_PLUGIN_DATA}/about/identity.md` at the start of its run. Don't hardcode personal values in agent specs – always reference these files.
 
 For voice/style decisions, agents read `${CLAUDE_PLUGIN_DATA}/about/voice.md` alongside `context/communication-style-guide.md` and treat `voice.md` as the override.
 
@@ -33,19 +33,19 @@ For voice/style decisions, agents read `${CLAUDE_PLUGIN_DATA}/about/voice.md` al
 1. Auto-resolve your Planhat User identity via the Planhat MCP.
 2. Ask you a short series of questions about identity, voice preferences, and workspace.
 3. Optionally scrape recent Gmail and Slack to draft your `voice.md` from how you actually write (distinguishing internal vs client-facing tone).
-4. Write all three files to `${CLAUDE_PLUGIN_DATA}/about/` with your real values — no manual file copy needed.
+4. Write all three files to `${CLAUDE_PLUGIN_DATA}/about/` with your real values – no manual file copy needed.
 
 **Modes:**
-- **Default** (no flag) — fill gaps only. Preserves existing values, only asks about fields still set to `<TBD>`.
-- **`--update`** — drift check. Re-resolves Planhat User identity (catches user ID changes, role changes), surfaces any fields that look stale, asks you to confirm or update each one.
-- **`--reset`** — wipe everything. Deletes `identity.md`, `voice.md`, `workspace.md` from `${CLAUDE_PLUGIN_DATA}/about/` and re-runs the full onboarding flow from scratch. Use when handing off the assistant to a teammate, or starting clean after a major role/preference shift.
-- **`--scrape-voice`** — skip the opt-in question and go straight to Gmail+Slack scraping for the voice draft.
+- **Default** (no flag) – fill gaps only. Preserves existing values, only asks about fields still set to `<TBD>`.
+- **`--update`** – drift check. Re-resolves Planhat User identity (catches user ID changes, role changes), surfaces any fields that look stale, asks you to confirm or update each one.
+- **`--reset`** – wipe everything. Deletes `identity.md`, `voice.md`, `workspace.md` from `${CLAUDE_PLUGIN_DATA}/about/` and re-runs the full onboarding flow from scratch. Use when handing off the assistant to a teammate, or starting clean after a major role/preference shift.
+- **`--scrape-voice`** – skip the opt-in question and go straight to Gmail+Slack scraping for the voice draft.
 
 **Continuous updates.** The `context-keeper` agent also proposes updates here whenever you correct it on a personal preference (style nit, sign-off change, voice rule).
 
 ## Templates
 
-The `about/templates/` subfolder holds the placeholder versions that ship with the plugin (`identity.md.template`, `voice.md.template`, `workspace.md.template`). Don't edit these unless you're changing the plugin's onboarding scaffold for everyone — they're plugin-owned and replaced on upgrade. Your personal files at `${CLAUDE_PLUGIN_DATA}/about/` are never touched by an upgrade.
+The `about/templates/` subfolder holds the placeholder versions that ship with the plugin (`identity.md.template`, `voice.md.template`, `workspace.md.template`). Don't edit these unless you're changing the plugin's onboarding scaffold for everyone – they're plugin-owned and replaced on upgrade. Your personal files at `${CLAUDE_PLUGIN_DATA}/about/` are never touched by an upgrade.
 
 ## Migration from older installs
 

@@ -16,24 +16,24 @@ description: Quick reference of all available commands grouped by workflow stage
 2. Find the most recent MAJOR or MINOR version entry. If there are PATCH entries dated after it, include those too.
 3. Output in chat (do not output the full command reference):
 
-   > **What's new in aise-assistant [version]** — [date]
+   > **What's new in aise-assistant [version]** – [date]
    > [bullet points from that entry, preserving the Added / Changed / Fixed grouping]
    >
    > _(If PATCH entries exist after the latest MINOR/MAJOR, list them below under a "Also fixed" heading.)_
    >
    > _Run `/assistant-help` for the full command reference._
 
-4. Stop — do not continue to the help reference below.
+4. Stop – do not continue to the help reference below.
 
 ---
 
-**Otherwise (default — no flag, or help-intent phrasing):**
+**Otherwise (default – no flag, or help-intent phrasing):**
 
 Output the help reference below verbatim, formatted as inline markdown in chat. Address the user by their `Display name` from `custom.AISE Identity` on their Planhat User record if available; otherwise use a generic greeting.
 
 ---
 
-# 🧭 AISE Assistant — Quick Reference
+# 🧭 AISE Assistant – Quick Reference
 
 Commands are grouped by family. Type `/<family>` (or `/<family>-`) in autocomplete to see siblings.
 
@@ -43,7 +43,7 @@ Commands are grouped by family. Type `/<family>` (or `/<family>-`) in autocomple
 |---|---|
 | **Get up to speed on a customer** before a meeting | `/customer-whats-new <customer>` |
 | **Prepare for a customer session** | `/session-prep <customer> [session-type]` |
-| **Generate a facilitation guide only** | `/session-facilitation <customer> [session-id]` — interactive HTML with timer, decision panels, open items, action capture |
+| **Generate a facilitation guide only** | `/session-facilitation <customer> [session-id]` – interactive HTML with timer, decision panels, open items, action capture |
 | **Run a full post-session debrief in one shot** | `/session-debrief <customer> [session-id]` |
 | **Just summarize a delivered call** | `/session-summary [customer or session]` |
 | **Draft a follow-up email** | `/draft-email <who/what>` or `/draft-followup <customer>` (saves to Gmail Drafts, or a Slack draft in the external channel – never sends) |
@@ -55,36 +55,36 @@ Commands are grouped by family. Type `/<family>` (or `/<family>-`) in autocomple
 | **Set up a brand-new or inherited account** | `/customer-setup <customer>` |
 | **Re-engage a quiet account and bring Planhat current** | `/customer-refresh <customer> [--dry-run]` (four Company fields + contact reads + check-in email draft + internal Slack draft, never sends) |
 | **Score a delivered session against the rubric** | `/session-score <session-type>` |
-| **Audit logged sessions / tasks for drift** | `/session-audit [--fix] [--tasks]` — reconciles Planhat session history against Calendar + Gong, or audits task completion drift |
+| **Audit logged sessions / tasks for drift** | `/session-audit [--fix] [--tasks]` – reconciles Planhat session history against Calendar + Gong, or audits task completion drift |
 | **Answer a customer question with PB docs** | `/support-hub <query>` |
 | **Build a customer-facing diagram** | `/draft-diagram <customer> <type> [description]` |
 | **Log a shared Slack channel into Planhat** | `/log-slack-threads --channel <url> [--customer <name>] [--dry-run]` – one Conversation per thread, plus a reply-backfill over the last 365 days |
 
 ## Suggested order around a customer session
 
-1. **Day before:** `/customer-whats-new <customer>` — surface what's changed since the last touch.
-2. **Day before / morning of:** `/session-prep <customer>` — pulls context, drafts brief, writes it to `custom.Prep Notes` on the session's Planhat Task/Conversation. For A/Discovery/Kickoff sessions, also creates a customer-facing KDD doc + interactive facilitation HTML guide, published to the `Customer Session Artifacts` Drive folder and linked back onto the session's Planhat record.
+1. **Day before:** `/customer-whats-new <customer>` – surface what's changed since the last touch.
+2. **Day before / morning of:** `/session-prep <customer>` – pulls context, drafts brief, writes it to `custom.Prep Notes` on the session's Planhat Task/Conversation. For A/Discovery/Kickoff sessions, also creates a customer-facing KDD doc + interactive facilitation HTML guide, published to the `Customer Session Artifacts` Drive folder and linked back onto the session's Planhat record.
 3. **Same day after the call:** `/session-debrief <customer>` – runs summary + Planhat Conversation write + Tasks + follow-up draft + Slack debrief draft + scorecard eval, all in one go. Send the recap the same day: Productboard's open items go in as dated commitments, and the deliverables follow later with `/draft-followup <customer> --delivery`.
 4. **Every morning:** `/inbox-triage` (replies + drafts review) or `/draft-followup --sweep` – re-dates waiting drafts so they read right today, and lists what's still owed.
 5. **Optional:** `/session-score <session-type>` if you want a focused scorecard review.
 
 ## Command families at a glance
 
-- **`customer-*`** — account lifecycle (`-setup [--force-new]`, `-whats-new`, `-refresh`)
-- **`customer-plan`** — program planning (`--next` for 2–4 sessions, `--full` for a complete program)
-- **`session-*`** — per-session workflows (`-prep`, `-kdds`, `-facilitation`, `-summary`, `-score`, `-debrief`)
-- **`bulk`** — run a session workflow across multiple meetings at once (`--debrief`, `--prep`)
-- **`bulk-account-setup`** — admin/reorg task: set up all accounts owned by a user
+- **`customer-*`** – account lifecycle (`-setup [--force-new]`, `-whats-new`, `-refresh`)
+- **`customer-plan`** – program planning (`--next` for 2–4 sessions, `--full` for a complete program)
+- **`session-*`** – per-session workflows (`-prep`, `-kdds`, `-facilitation`, `-summary`, `-score`, `-debrief`)
+- **`bulk`** – run a session workflow across multiple meetings at once (`--debrief`, `--prep`)
+- **`bulk-account-setup`** – admin/reorg task: set up all accounts owned by a user
 - **`draft-*`** – message / artifact drafts (`-email`, `-followup [--delivery \| --sweep]`, `-diagram`)
-- **`log-*`** — log customer touchpoints into Planhat (`log-feedback`, `log-slack-threads`, `log-slack-threads-internal`)
-- **`ph-*`** — Planhat/Gong integration stopgaps (`ph-reconcile-gong-gcal`)
-- **`planhat-*`** — build/debug Planhat's own automation layer (`planhat-automations`, `planhat-formula-builder`)
-- **`assistant-*`** — meta / configure the assistant (`-setup`, `-help`, `-remember`, `-automate`)
-- **Standalone** — `/support-hub`, `/daily-brief`, `/log-slack-threads`, `/session-audit`
+- **`log-*`** – log customer touchpoints into Planhat (`log-feedback`, `log-slack-threads`, `log-slack-threads-internal`)
+- **`ph-*`** – Planhat/Gong integration stopgaps (`ph-reconcile-gong-gcal`)
+- **`planhat-*`** – build/debug Planhat's own automation layer (`planhat-automations`, `planhat-formula-builder`)
+- **`assistant-*`** – meta / configure the assistant (`-setup`, `-help`, `-remember`, `-automate`)
+- **Standalone** – `/support-hub`, `/daily-brief`, `/log-slack-threads`, `/session-audit`
 
-## Flag reference — multi-mode commands
+## Flag reference – multi-mode commands
 
-### `/bulk` — two modes, one command
+### `/bulk` – two modes, one command
 
 | Mode | What it does | Key flags |
 |---|---|---|
@@ -102,7 +102,7 @@ Commands are grouped by family. Type `/<family>` (or `/<family>-`) in autocomple
 /bulk --prep --backfill-facilitation       # generate missing facilitation guides for prepped A/Discovery/Kick off sessions
 ```
 
-### `/customer-plan` — two modes, one command
+### `/customer-plan` – two modes, one command
 
 | Mode | What it does |
 |---|---|
@@ -127,7 +127,7 @@ Commands are grouped by family. Type `/<family>` (or `/<family>-`) in autocomple
 
 | Mode | What it does |
 |---|---|
-| (no flag) | Baseline — creates Customer page, Active Package, backfills sessions |
+| (no flag) | Baseline – creates Customer page, Active Package, backfills sessions |
 | `--research` | Baseline + deep company research (web, SF, Gong) |
 | `--refresh` | Re-runs research on an existing Customer page |
 
@@ -137,7 +137,7 @@ Commands are grouped by family. Type `/<family>` (or `/<family>-`) in autocomple
 |---|---|
 | **Correct the assistant** (style nit, new rule, fact change) | `/assistant-remember <correction>` (invokes context-keeper) |
 | **Automate a new recurring task** | `/assistant-automate <task description>` (drafts a new agent + command) |
-| **Generate a fix prompt after a bad skill run** | `/assistant-improvement` — analyzes what went wrong and outputs a copyable coding-agent prompt |
+| **Generate a fix prompt after a bad skill run** | `/assistant-improvement` – analyzes what went wrong and outputs a copyable coding-agent prompt |
 | **(Re-)onboard yourself or a teammate** to this assistant | `/assistant-setup [--update \| --reset \| --scrape-voice]` |
 | **This help reference** | `/assistant-help` |
 
@@ -145,10 +145,10 @@ Commands are grouped by family. Type `/<family>` (or `/<family>-`) in autocomple
 
 Your identity, voice preferences, and workspace specifics live directly on `custom.AISE *` fields on your Planhat User record:
 
-- **`custom.AISE Identity`** — name, role, time zone, manager
-- **`custom.AISE Profile preferences`** — sign-offs, language quirks, casual register
-- **`custom.AISE Workspace`** — conferencing tool, Slack channel, manager
-- **`custom.AISE Calendly Sync` / `Architecting` / `Enablement` / `Discovery` / `Kickoff` / `Spark`** — booking links per session type
+- **`custom.AISE Identity`** – name, role, time zone, manager
+- **`custom.AISE Profile preferences`** – sign-offs, language quirks, casual register
+- **`custom.AISE Workspace`** – conferencing tool, Slack channel, manager
+- **`custom.AISE Calendly Sync` / `Architecting` / `Enablement` / `Discovery` / `Kickoff` / `Spark`** – booking links per session type
 
 To change them: run `/assistant-setup` for a guided re-onboarding, or edit the fields directly in Planhat.
 
@@ -159,14 +159,14 @@ To change them: run `/assistant-setup` for a guided re-onboarding, or edit the f
 | **Planhat** | Source of truth for active engagements, per-customer state, sessions, tasks, working notes (Company Comments) |
 | **`context/planhat-schema.md`** | Model schemas, field formats, query patterns |
 | **`context/score-cards.md`** | Per-session scorecards (Discovery, Foundations, Insights, Prioritization, Roadmaps, Spark, Success Planning, QBR) |
-| **`context/pb-aise-reference-guide.md`** | Session methodology — "what good looks like" per session type |
+| **`context/pb-aise-reference-guide.md`** | Session methodology – "what good looks like" per session type |
 | **`context/communication-style-guide.md`** | Universal AISE comms patterns; `custom.AISE Profile preferences` on your Planhat User record overrides |
 | **`templates/session-kdds/`** | Customer-facing KDD anchor templates per A-session type |
-| **`custom.AISE Tracker Memory`** (Planhat User field) | Cross-customer observations only — per-user, written by `context-keeper` (Planhat is SSOT for everything else) |
+| **`custom.AISE Tracker Memory`** (Planhat User field) | Cross-customer observations only – per-user, written by `context-keeper` (Planhat is SSOT for everything else) |
 
 ## Tips
 
-- **Don't paste context** the assistant can retrieve. Just name the customer or session — agents pull from Planhat, Gmail, Calendar, Gong, Slack automatically.
+- **Don't paste context** the assistant can retrieve. Just name the customer or session – agents pull from Planhat, Gmail, Calendar, Gong, Slack automatically.
 - **Confirm before destructive writes.** Planhat updates ask before applying unless explicitly told otherwise.
 - **Customer-side actions don't go in the Tasks DB.** Only PB-side actions assigned to you. Customer commitments live in summaries / follow-ups.
 - **Internal tasks** (no specific customer) point at the **Productboard** customer record automatically.
