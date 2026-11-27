@@ -9,6 +9,20 @@ Use this skill whenever the user wants to build, debug, or extend a Planhat auto
 
 > **Writing a formula field?** Use the `planhat-formula-builder` skill — it covers `FIND` / `COUNT` / `SUM` / `MAX` / `MIN`, the `filters` / `sort` / `limit` / `through` options object, operator and date-function reference, and a debugging checklist. Come back here when the logic can't be expressed as a formula and needs real automation steps.
 
+**When syntax is uncertain, check the source, not Fin.** Search help.planhat.com first – "Get steps" (11162604), "Webhooks in Automations" (11432236) and "Workflow permissions" (10398687) are authoritative – and check a real Run log for payload shapes. Offer a Fin prompt only as a last resort.
+
+---
+
+## Design order: native first, simplest wins
+
+Before proposing a design, work down this list and stop at the first option that does the job:
+
+1. **Formula fields + a single per-record trigger** (the self-triggering record pattern below)
+2. **Native steps with a small Execute Function**
+3. **The bulk webhook pattern**
+
+Use the fewest new fields and automations possible. **Present one recommended design**, not several stacked alternatives – mention a fallback in one line only if the recommendation depends on something unverified.
+
 ---
 
 ## Core Limitations to Know Upfront
@@ -21,6 +35,7 @@ Before building anything, understand these hard constraints:
 | Typed field inputs in Update steps | Date fields show a date picker; boolean fields show a toggle. Neither accepts variable/replacement code input — only static values. |
 | Date fields in Branch conditions | Same as above — date comparison operators show a calendar picker, not a variable input. |
 | Execute Function return | Must use a **top-level `return`** statement. No `function main()` wrapper. |
+| No loops, no bulk update | There is **no Loop / For each step** and **no Update multiple step**. The Update step takes **one `_id`** – an array or comma-separated list fails with `id must be the Planhat _id or "<keyable>-<value>"`. `<<step[0]._id>>` is only the first record. To act on many records use the self-triggering record pattern, or the bulk webhook pattern. |
 
 ---
 
@@ -29,7 +44,13 @@ Before building anything, understand these hard constraints:
 ### Trigger
 Standard Planhat triggers: `Conversation created or updated`, `Conversation manual action`, `Company created or updated`, etc.
 
-The triggering object is always accessible via `<<object>>` or field-level as `<<object.fieldName>>`.
+The triggering object is accessible via `<<object>>` or field-level as `<<object.fieldName>>` – **but the payload shape depends on the trigger, so check a Run log's event details before writing references, rather than guessing.**
+
+**`<Model> updated` payload has no top-level `_id`.** Its keys are `companyId`, `entityId`, `update` (only the changed fields), `oldDoc` (the full prior record), `operation`, `actor` and `model`. On a Company updated trigger, `<<object._id>>` resolves empty – reference the company as `<<object.companyId>>` or `<<object.entityId>>`.
+
+**Formula recalculation fires `<Model> updated` triggers.** The Run log shows `actor: System`; recalculation runs roughly hourly. This is useful (see the self-triggering record pattern) but also means a formula change can set off any automation listening on that model.
+
+**Scheduled trigger** lives under **Other → Scheduled** in the trigger picker. It needs the **Automation Events – Scheduled** workflow permission (Settings → Users & Roles → Roles → Workflow tab). A scheduled run fires **once per run with no trigger record**, so acting on many records from it requires the bulk webhook pattern.
 
 ### Get Step
 Fetches a related record. The step's output is referenced downstream using the **step ID** (e.g. `get-object-y80`) or the **step name** if renamed.
@@ -99,6 +120,55 @@ Writes fields on a record. Boolean and date fields only accept **static values**
 
 ## Common Automation Patterns
 
+### Pattern: Self-triggering record (preferred way to act per record)
+**Use case:** Change many records of one model when a condition becomes true, with no loop, flag field or webhook.
+
+1. **Toggle formula** on the model – on when the record needs action. It switches off by itself once the automation changes the record (e.g. `planhat-formula-builder` Pattern H).
+2. **Counter formula** on the same model – a Number that changes on a schedule while the toggle is on (e.g. days since a date, `planhat-formula-builder` Pattern I). Because formula recalculation fires `updated` triggers, this re-fires the automation daily until the record is resolved.
+3. **Trigger:** `<Model> updated`, conditions:
+   ```
+   Match all
+     <toggle> is true
+     Group – Match any
+       <toggle> is true
+       <counter> more than -1
+   ```
+4. **Steps:** native Branch / Update. With this trigger, `<<object._id>>` works in Update steps.
+
+Name the two fields as a pair (e.g. `Needs Status Review` + `Needs Status Review Days`).
+
+---
+
+### Pattern: Bulk update via webhook (when per-record triggering isn't possible)
+**Use case:** A scheduled or one-off run that must update many records at once.
+
+```
+Get multiple (step: Get Records)
+  ↓
+Execute Function (step: Build Body)
+  ↓
+Call a webhook
+  Method:  PUT
+  URL:     https://api.planhat.com/<model>        // e.g. lineitems
+  Header:  Content-Type: application/json
+  Body:    <<Build Body.body>>
+```
+
+**Build Body:**
+
+```javascript
+let recs = <<Get Records>>;
+if (typeof recs === "string") recs = JSON.parse(recs);
+if (!Array.isArray(recs)) recs = recs ? [recs] : [];
+const body = recs.filter(r => r._id).map(r => ({ _id: r._id, custom: { "Field Name": true } }));
+return { count: body.length, body: JSON.stringify(body) };
+```
+
+- The PUT is Planhat's bulk upsert: matched on `_id`, **max 5,000 items** per call.
+- Calls to `api.planhat.com` from an Automation are **authenticated automatically – no token needed** (confirmed by Planhat Support).
+
+---
+
 ### Pattern: Dynamic "In Active Contract" flag on Conversation (preferred)
 **Use case:** Flag a conversation as occurring within its linked deal's contract period. Fully dynamic — recalculates automatically, renewal-proof.
 
@@ -108,10 +178,11 @@ Writes fields on a record. Boolean and date fields only accept **static values**
 2. Add two **Association pull** custom fields on Conversation, both pulling from `Linked Contract`:
    - `Start Date` → Deal.`startDate`
    - `End Date` → Deal.`endDate`
-3. Add a **Formula** boolean custom field on Conversation:
+3. Add a **Formula** custom field of type **Toggle** on Conversation, named `In Active Contract`:
    ```
-   AND(date >= "Start Date", date <= "End Date")
+   IF(IS_EMPTY(<<custom.Start Date>>) || IS_EMPTY(<<custom.End Date>>), false, IF(DAYS_DIFF(<<date>>, <<custom.Start Date>>) >= 0 && DAYS_DIFF(<<custom.End Date>>, <<date>>) >= 0, true, false))
    ```
+   `AND()` is not a supported function – use `&&`. `DAYS_DIFF(a, b)` is `a − b`, so both diffs are ≥ 0 only when the date falls inside the window. `true` / `false` are unquoted. Built from functions verified in `planhat-formula-builder`, but this exact formula hasn't been tested yet – check it on one record inside and one outside the window before relying on it.
 
 **Why this is better than the automation approach:**
 - Recalculates live — no stamping, no staleness
@@ -153,10 +224,12 @@ Create numeric formula fields on the **Company** model (not Conversation) — on
 ```
 COUNT(Conversation & {"filters": [
   {"field": {"id": "type"}, "op": "equal to", "value": "🏗️ Architecting"},
-  {"field": {"id": "date"}, "op": "more than", "value": <<customerFrom>>},
-  {"field": {"id": "date"}, "op": "less than", "value": <<renewalDate>>}
+  {"field": {"id": "date"}, "op": "more than", "value": "<<customerFrom>>"},
+  {"field": {"id": "date"}, "op": "less than", "value": "<<renewalDate>>"}
 ]})
 ```
+
+Date `<<field>>` values in a filter must be quoted – unquoted, the formula fails to save with a JSON syntax error (`planhat-formula-builder` gotcha #13).
 
 Repeat for each type: Kick off, Sync, Discovery, Audit/Setup Review, Enablement, etc.
 
@@ -215,6 +288,13 @@ FIND(Product.custom.Default Project Plan – SF & {
 | Product | SKU | `custom.SKU – SF` | Text, Salesforce-synced, readonly |
 | Product | Plan Name | `custom.Plan Name – SF` | Text, Salesforce-synced, readonly |
 
+**Line Item status and Salesforce import:**
+
+- `status` values: `ongoing`, `renewed`, `lost`.
+- Planhat imports Closed Won opportunities and all their line items. Keep the Line Item import limited to Closed Won (planned import filter: `PH_Opportunity_Import__c = true`).
+- Line Item start/end dates come from the Salesforce formulas `PH_Service_Start_Date__c` / `PH_Service_End_Date__c`, which inherit the **opportunity's** service dates because line-level dates weren't consistently filled.
+- Salesforce Customer Status and `Churning__c` follow live workspace subscription and provisioned-order ARR, not opportunities – an account can show `5.0 Churn` while a Closed Won term is still running. Don't use them to decide a Line Item's status.
+
 Several LineItem custom fields mirror the same-named Product fields (`SKU – SF`, `Plan Name – SF`, `Plan Version – SF`, `Duration – SF`, `Product Type – SF`, `Unit Price – SF`, `Default Project Plan – SF`) and are all marked readonly — these are intended to be formula/pull fields sourced from the linked Product via `productId`, not manually-entered values. If one is blank on a Line Item that has `productId` set, check whether its formula uses the `FIND` + `through` pattern above (or an Association pull field) before assuming the underlying Product data is missing.
 
 ---
@@ -234,6 +314,8 @@ Go to **Runs** tab → click the specific run → expand each step.
 | Both Branch conditions `resultCondition: false` | The property reference is wrong — check step name spelling and dot notation path |
 | `"property": {}` in Branch log | The replacement code resolved to empty — step name mismatch or the function didn't return the expected key |
 
+**Auditing what an automation changed:** use the automation's **Runs** tab or the record's **Logs** (`···` menu on the record). Never use `updatedAt` – every record's `updatedAt` moves when formulas recalculate.
+
 ### Step 2 — Verify replacement code resolution
 In the Run log, click the Execute Function step and check **Code** — the replacement codes should be fully substituted with real values. If you see `<<object.date>>` still unresolved, the replacement code syntax is wrong.
 
@@ -246,7 +328,7 @@ The most common cause of `property: {}` in the Branch is a step name mismatch. C
 - No spaces vs underscores, no capitalisation differences
 
 ### Step 5 — Trigger a manual test run
-Use **Conversation manual action** as the trigger so you can test against a specific known record (e.g. a CFC Underwriting conversation with a known date inside the contract window).
+Use **Conversation manual action** as the trigger so you can test against a specific known record (e.g. an ACME Solutions conversation with a known date inside the contract window).
 
 ---
 
@@ -264,7 +346,21 @@ When asked to design or extend an automation, follow this sequence:
 
 5. **Name steps clearly** — Step names become part of replacement code references. Use descriptive names like `Get Company`, `Check Contract`, `Calculate Score` from the start.
 
-6. **Test on a known record first** — Use a customer where you know the expected outcome (e.g. CFC Underwriting: `customerFrom` 30 Jun 2026, `renewalDate` 30 Jun 2027 — any conversation dated July 2026 should return `inContract: true`).
+6. **Test on a known record first** — Use a customer where you know the expected outcome (e.g. ACME Solutions: `customerFrom` 30 Jun 2026, `renewalDate` 30 Jun 2027 — any conversation dated July 2026 should return `inContract: true`).
+
+7. **Pre-flight downstream side effects** — For any automation that changes revenue records (Line Items, Deals, Licenses), list the other automations and derived fields that react to Company `renewalDate`, `phase`, `status` or `mrr`/`arr`, and tell the user which side effects to expect **before** running in bulk. Example: resolving expired Line Items moves Company `renewalDate`, which fires the Company phase automation (`3. Renewal` when days till renewal < 90; `0. Preparation` when > 179 and phase is Renewal) on every affected company.
+
+8. **Verify against live data after each change** — After a field is created or an automation runs, query 2–3 known records through the Planhat MCP and confirm the values before moving on. New formula fields can lag in the API; if the API shows nothing, ask the user to check the UI.
+
+---
+
+## Large data changes (more than ~50 records)
+
+1. **Size the job** and split it into buckets by outcome (e.g. renewed / lost / leave as is).
+2. **Have the user export a backup** of the affected records first.
+3. **Test on 1–3 records per bucket.**
+4. **Run batches of 100–200**, grouped by company so no company is left half-done.
+5. **Keep the automation disabled while testing.** Run batches from a **Manual action** copy: Data Explorer → select records → Run automation.
 
 ---
 

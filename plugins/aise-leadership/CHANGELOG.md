@@ -1,5 +1,10 @@
 # Changelog — aise-leadership
 
+## [1.16.11] — 2026-11-27
+
+### Changed
+- Synced `context/` from aise-assistant 2.80.0: `planhat-schema.md` gains § Field description standard (labelled Source / Write / Values / Blank / Format / Use lines for Planhat field descriptions), and `communication-style-guide.md` § 4 gains Slack thread-reply and API-draft rules.
+
 ## [1.16.10] — 2026-11-25
 
 ### Changed

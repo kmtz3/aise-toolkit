@@ -92,13 +92,53 @@ Rules for any agent that renders or ranks open Tasks (`/daily-brief` step 6).
 
 A field the assistant should read or write has to clear four gates. Skipping any one produces a failure that looks like success.
 
-**1. Create it in Planhat with a description that says how to use it.** `get_model_action_parameters` returns each field's description verbatim, so the description is the only channel that tells an agent what a field means without a doc edit. Write it as an instruction, not a label — what it holds, who sets it, what each option means, and what blank means. `custom.Debrief Status` and `custom.PM Reach-Out Status` are the models to copy. A field with an empty description is effectively invisible to reasoning: the agent sees a name and guesses from it.
+**1. Create it in Planhat with a description that says how to use it.** `get_model_action_parameters` returns each field's description verbatim, so the description is the only channel that tells an agent what a field means without a doc edit. Write it to § Field description standard below. A field with an empty description is effectively invisible to reasoning: the agent sees a name and guesses from it.
 
 **2. Number the options if it is a list you will group or sort by.** Planhat orders picklists alphabetically otherwise. Numbering makes `1. Key contact` sort above `2. Engaged`, and renaming an option remaps every record already holding it, so numbering can be added after the fact with no migration. The cost: **every write must then pass the full numbered string verbatim.**
 
 **3. Reconnect the Planhat connector.** New fields do not reach MCP metadata until the connector re-reads the schema. Until then the field sits in the partial state below.
 
 **4. Document it in this file.** A field that exists but is not here will be missed by every agent that does not stumble onto it.
+
+### Field description standard
+
+Planhat field descriptions are the source of truth for what a single field means. This file keeps only what a description cannot hold: cross-field rules, write procedures, MCP quirks and traversal patterns. The dev command `/planhat-schema-sync` lints every live description against this standard and proposes rewrites.
+
+**Who reads it.** Agents read it headless through `get_model_action_parameters`; people read it in Planhat. So the first sentence is plain English for a person, and everything after it is labelled lines an agent can parse. Line breaks are preserved.
+
+**Shape – labelled lines, in this order, omit any that do not apply:**
+
+```
+{One sentence: what the field holds, in plain words. No jargon the field name does not already use.}
+Source: {Salesforce sync | Snowflake sync | Formula | Automation – <name> | AISE assistant – <command(s)> | Manual – <role>}
+Write: {Never – <why> | AISE only – <when> | Manual only | Anyone}
+Values: {option} = {meaning}; {option} = {meaning}
+Blank: {what an empty value means – "not yet set", "none", "unknown", "not applicable"}
+Format: {exact shape for free text – "Rich text HTML", "Slack channel ID, upper case (C0AKKLJCB5E), never a name or URL", "Date YYYY-MM-DD"}
+Use: {when to read it, what to read it with, the one pitfall – "Read with Latest Renewal Risk As Of – SF; months old = not current." "Not the external channel – see External_Slack_Channel_ID."}
+```
+
+**Rules**
+
+- **Source and Write are mandatory on every custom field.** They answer the two questions agents get wrong most often: can I write this, and who else does.
+- **Blank is mandatory on every writable field.** An agent cannot otherwise tell "not set yet" from "deliberately none".
+- **Values lists every option whose meaning is not obvious from its label.** Numbered or emoji options are written exactly as stored, so the line doubles as the verbatim value to pass.
+- **Name other fields by their field ID without the `custom.` prefix**, exactly as the UI shows them, so both readers can find them.
+- **No agent internals.** Command names in `Source` are fine; step numbers, file paths and run history are not. They go stale and mean nothing to a person.
+- **Keep it under about 600 characters.** If it needs more, the extra is a procedure and belongs in this file, with `Use:` pointing here (`Use: format rules in the AISE Planhat schema guide, § Customer Toolstack`).
+- **Deprecated fields** get one line: `Deprecated – do not read or write. Replaced by <field>.` (or `No replacement.`). Then they get deleted.
+- **No em dashes.** Use an en dash or a hyphen.
+
+**Example – `custom.External_Slack_Channel_ID`:**
+
+```
+The shared Slack channel with the customer in it (Slack Connect or guest channel).
+Source: AISE assistant – /log-slack-threads
+Write: AISE only – when empty, or when the user has just corrected it. A different resolved channel is a conflict to surface, not overwrite.
+Blank: no shared channel resolved yet.
+Format: Slack channel ID, upper case (C0AKKLJCB5E). Never a #name or URL.
+Use: the customer-facing channel. Slack ID / Slack URL are the internal #account- channel and never a substitute.
+```
 
 ### The partial state — writable before filterable
 

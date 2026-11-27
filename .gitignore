@@ -21,3 +21,4 @@ plugins/*/dist/
 # Personal working docs at repo root (prep notes, playbooks, etc.)
 /*.html
 /Planhat — Spark Adoption Program Workflow.md
+/Claude outputs/

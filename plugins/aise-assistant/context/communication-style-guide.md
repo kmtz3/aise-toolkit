@@ -151,6 +151,16 @@ Every date word in a customer draft is computed against the day it will be sent,
 - OK to use shorthand (`qq`, `tbh`, `lol`) and light humor.
 - When discussing complex work, still organize: `**Context**` / `**My take**` / `**What I'm proposing**`.
 
+**Thread replies**
+
+- A Slack thread reply is not an email: no name sign-off (no "Thanks, {name}"). End with `Thank you 🙏`.
+- Mention people as `<@USERID>` so the tag resolves – a plain `@Name` stays plain text. Look up the ID with the Slack user search.
+
+**Slack drafts created through the API**
+
+- They land in **Drafts & Sent**, not in the thread's composer. Tell the user where to find them.
+- They can't be replaced or updated. When re-drafting, remind the user to delete the older draft.
+
 ---
 
 ## 5. Handling Uncertainty & Questions
