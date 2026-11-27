@@ -76,7 +76,7 @@ Per the help center ("How to build Formula Fields", 9587026). **Never suggest a 
 | `PERIOD_DIFF(a, b, unit)` | `unit` = `day` \| `month` \| `quarter` \| `year` \| `fiscal quarter` \| `fiscal year`. No `week`. |
 | `DATE_ADD_DAYS(date, n)` / `DATE_SUBTRACT_DAYS(date, n)` | |
 | `DATES_MAXOF(d1, d2)` / `DATES_MINOF(d1, d2)` | Blank if either side is empty – see gotcha #15 |
-| `@today` | Dynamic current date — re-evaluates, safe in live formulas. **Only valid inside date functions** – never as a cross-model filter `value` (gotcha #19). |
+| `@today` | Dynamic current date – re-evaluates, safe in live formulas. **Only valid inside date functions** – never as a cross-model filter `value` (gotcha #19). |
 
 Verified "end date has passed" check:
 
@@ -261,19 +261,19 @@ Same applies to any `<<A>> - <<B>> > n` or `<<A>> * <<B>> == n` shape in a condi
 
 Plain math on field references in the formula *body* (not inside a condition) is documented as working — e.g. `(<<custom.ARR – SF>> - <<custom.Target ARR>>) / <<custom.Target ARR>>`. The failure is specific to arithmetic being compared.
 
-**19. `@today` as a cross-model filter value fails silently — confirmed in production 2026-11-03.** `{"op": "more than", "field": {"id": "endDate"}, "value": "@today"}` inside a `COUNT` saved without error and rendered `-` on every record. Date comparisons inside cross-model filters must use the date operators: `{"op": "after (days ago)", "value": 0}` for "after today", `{"op": "before (days ago)", "value": 0}` for "before today". `@today` only works inside date functions (`DAYS_DIFF`, `PERIOD_DIFF`, etc.).
+**19. `@today` as a cross-model filter value fails silently – confirmed in production 2026-11-03.** `{"op": "more than", "field": {"id": "endDate"}, "value": "@today"}` inside a `COUNT` saved without error and rendered `-` on every record. Date comparisons inside cross-model filters must use the date operators: `{"op": "after (days ago)", "value": 0}` for "after today", `{"op": "before (days ago)", "value": 0}` for "before today". `@today` only works inside date functions (`DAYS_DIFF`, `PERIOD_DIFF`, etc.).
 
-**20. `MAX` / `MIN` don't work on dates — confirmed in production 2026-11-03.** `MAX(LineItem.toDate)` returned nothing. Use `FIND` with `sort` descending and `limit: 1`, **plus a `has value` filter** – without it, records with a blank date sort first and the result is blank. See Pattern G.
+**20. `MAX` / `MIN` don't work on dates – confirmed in production 2026-11-03.** `MAX(LineItem.toDate)` returned nothing. Use `FIND` with `sort` descending and `limit: 1`, **plus a `has value` filter** – without it, records with a blank date sort first and the result is blank. See Pattern G.
 
-**21. Arithmetic on a function result inside `IF` returns empty — confirmed in production 2026-11-03.** `IF(cond, DAYS_DIFF(@today, <<toDate>>) / 7)` returned empty, as did every rounding wrapper (`ROUNDDOWN`, `FLOOR`, `TRUNC` – none are supported). Don't suggest it. Return the raw function result (e.g. days) and let the reader do the conversion.
+**21. Arithmetic on a function result inside `IF` returns empty – confirmed in production 2026-11-03.** `IF(cond, DAYS_DIFF(@today, <<toDate>>) / 7)` returned empty, as did every rounding wrapper (`ROUNDDOWN`, `FLOOR`, `TRUNC` – none are supported). Don't suggest it. Return the raw function result (e.g. days) and let the reader do the conversion.
 
-**22. Never return `""` from a Number formula — confirmed in production 2026-11-03.** `IF(cond, value, "")` in a Number field returned empty on every record, including those where `cond` was true. To leave a Number formula empty when the condition is false, use the **two-argument `IF`** with the else part omitted:
+**22. Never return `""` from a Number formula – confirmed in production 2026-11-03.** `IF(cond, value, "")` in a Number field returned empty on every record, including those where `cond` was true. To leave a Number formula empty when the condition is false, use the **two-argument `IF`** with the else part omitted:
 
 ```
 IF(<<status>> == ongoing, IF(DAYS_DIFF(@today, <<toDate>>) > 0, DAYS_DIFF(@today, <<toDate>>)))
 ```
 
-**23. Toggle formulas return unquoted `true` / `false` — confirmed in production 2026-11-03.** Quoting them (`"true"`) makes them text and the Toggle won't read them. Picklist/status comparisons in the formula body are also unquoted (`<<status>> == ongoing`), consistent with gotcha #16. See Pattern H.
+**23. Toggle formulas return unquoted `true` / `false` – confirmed in production 2026-11-03.** Quoting them (`"true"`) makes them text and the Toggle won't read them. Picklist/status comparisons in the formula body are also unquoted (`<<status>> == ongoing`), consistent with gotcha #16. See Pattern H.
 
 **24. Line Item formulas can't read Company fields.** Same rule as #5, worth restating because it comes up on Line Item work: anything needing both Line Item and Company data has to live on Company as a cross-model formula, or go through an automation Get step.
 
@@ -435,20 +435,20 @@ Work this in order — the causes are roughly ordered by how often they're the c
 3. **A condition that should fire never fires, and the fields it reads look correct?** Check for `+` or other arithmetic between `<<field>>` refs inside the condition — gotcha #18. Rewrite with `||` / `&&`.
 4. **Field data type matches the return value?** Text formula in a Number field renders blank with no error — check `fieldType` in `get_model_action_parameters` against what the formula actually returns (see gotcha #14). This has been the root cause more than once; check it before re-reading the formula text.
 5. **Using a function off the supported list, arithmetic on a function result, or `""` in a Number formula?** Gotchas #21 and #22.
-6. **Cross-model filter showing `-` on every record?** Look for `@today` as a filter value — gotcha #19.
+6. **Cross-model filter showing `-` on every record?** Look for `@today` as a filter value – gotcha #19.
 7. **`DAYS_DIFF` giving the opposite sign?** It's `a − b`; days since a past date is `DAYS_DIFF(@today, <<date>>)`.
 8. **Direction legal?** Confirm the formula lives on the parent model, not the child.
-9. **Does the field exist on this model at all?** Check Manage Fields. A non-existent field returns empty with no error — this is the single fastest thing to rule out.
+9. **Does the field exist on this model at all?** Check Manage Fields. A non-existent field returns empty with no error – this is the single fastest thing to rule out.
 10. **Prefix is `custom.`?** Not `custom_fields.` (REST API form) and not `customFields.`.
 11. **Filter field IDs stripped of the model name?** `{"id": "status"}`, not `{"id": "LineItem.status"}`.
 12. **Filter values the right type and case?** Unquoted booleans, exact-case picklist strings.
-13. **`SyntaxError: Unexpected token '<' ... is not valid JSON` on save?** A `<<field>>` replacement code in a filter `value` needs quotes — see gotcha #13. This is a save-time JSON parse failure, not a runtime formula bug.
-14. **Blank result — no match, or blank field?** Add a temporary `COUNT()` with identical filters to tell them apart.
+13. **`SyntaxError: Unexpected token '<' ... is not valid JSON` on save?** A `<<field>>` replacement code in a filter `value` needs quotes – see gotcha #13. This is a save-time JSON parse failure, not a runtime formula bug.
+14. **Blank result – no match, or blank field?** Add a temporary `COUNT()` with identical filters to tell them apart.
 15. **Wrong record returned?** You have `"limit": 1` without `"sort"`, or your sort field ties. Check whether the account has overlapping active child records. For dates, check for the missing `has value` filter (Pattern G).
-16. **Repeated lookups drifted?** Diff the options blocks character by character — a stray filter in one branch is the classic cause of a formula that works on most records and fails on a few.
+16. **Repeated lookups drifted?** Diff the options blocks character by character – a stray filter in one branch is the classic cause of a formula that works on most records and fails on a few.
 17. **Custom model root key bare?** `subscription_line_item.field`, not `custom.subscription_line_item.field`.
 18. **Still stuck?** Narrow to a single `FIND()` with one filter, confirm it returns anything at all on a record you know should match, then add filters back one at a time.
-19. **Combining two formula fields with `MAX`/`MIN`/`DATES_MAXOF` and it's blank whenever one input is empty?** That's expected behavior, not a bug — see gotcha #15 for the `IF(IS_EMPTY(...))` guard.
+19. **Combining two formula fields with `MAX`/`MIN`/`DATES_MAXOF` and it's blank whenever one input is empty?** That's expected behavior, not a bug – see gotcha #15 for the `IF(IS_EMPTY(...))` guard.
 
 ---
 

@@ -1,11 +1,16 @@
 # Changelog
 
 All notable changes to aise-assistant are documented here.
-Format: `## [version] — YYYY-MM-DD` followed by bullet points grouped by type.
+Format: `## [version] – YYYY-MM-DD` followed by bullet points grouped by type.
 
 ---
 
-## [2.80.0] — 2026-11-27
+## [2.80.1] – 2026-11-27
+
+### Fixed
+- Em dashes in the lines added in 2.80.0 (`/planhat-automations`, `/planhat-formula-builder`, this changelog) are now spaced en dashes. The changelog header format uses an en dash from here on.
+
+## [2.80.0] – 2026-11-27
 
 ### Added
 - **`/planhat-automations`: native-first design order and two bulk patterns.** Work down formula fields + a per-record trigger → native steps with a small Execute Function → bulk webhook, and present one recommended design. New **self-triggering record** pattern (toggle formula + counter formula re-fire a `<Model> updated` trigger daily, no loop or flag field) and **bulk update via webhook** pattern (Get multiple → Build Body → `PUT https://api.planhat.com/<model>`, max 5,000 items, auto-authenticated). Documents that `<Model> updated` payloads have no top-level `_id` (use `companyId`/`entityId`), that formula recalculation fires `updated` triggers, where the Scheduled trigger lives, a pre-flight for downstream side effects on revenue records, a large-data-change runbook (backup, test per bucket, batches of 100–200), Line Item status/Salesforce import notes, and auditing via Runs/Logs, never `updatedAt`.

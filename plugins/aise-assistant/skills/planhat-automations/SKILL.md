@@ -346,11 +346,11 @@ When asked to design or extend an automation, follow this sequence:
 
 5. **Name steps clearly** — Step names become part of replacement code references. Use descriptive names like `Get Company`, `Check Contract`, `Calculate Score` from the start.
 
-6. **Test on a known record first** — Use a customer where you know the expected outcome (e.g. ACME Solutions: `customerFrom` 30 Jun 2026, `renewalDate` 30 Jun 2027 — any conversation dated July 2026 should return `inContract: true`).
+6. **Test on a known record first** – Use a customer where you know the expected outcome (e.g. ACME Solutions: `customerFrom` 30 Jun 2026, `renewalDate` 30 Jun 2027 – any conversation dated July 2026 should return `inContract: true`).
 
-7. **Pre-flight downstream side effects** — For any automation that changes revenue records (Line Items, Deals, Licenses), list the other automations and derived fields that react to Company `renewalDate`, `phase`, `status` or `mrr`/`arr`, and tell the user which side effects to expect **before** running in bulk. Example: resolving expired Line Items moves Company `renewalDate`, which fires the Company phase automation (`3. Renewal` when days till renewal < 90; `0. Preparation` when > 179 and phase is Renewal) on every affected company.
+7. **Pre-flight downstream side effects** – For any automation that changes revenue records (Line Items, Deals, Licenses), list the other automations and derived fields that react to Company `renewalDate`, `phase`, `status` or `mrr`/`arr`, and tell the user which side effects to expect **before** running in bulk. Example: resolving expired Line Items moves Company `renewalDate`, which fires the Company phase automation (`3. Renewal` when days till renewal < 90; `0. Preparation` when > 179 and phase is Renewal) on every affected company.
 
-8. **Verify against live data after each change** — After a field is created or an automation runs, query 2–3 known records through the Planhat MCP and confirm the values before moving on. New formula fields can lag in the API; if the API shows nothing, ask the user to check the UI.
+8. **Verify against live data after each change** – After a field is created or an automation runs, query 2–3 known records through the Planhat MCP and confirm the values before moving on. New formula fields can lag in the API; if the API shows nothing, ask the user to check the UI.
 
 ---
 

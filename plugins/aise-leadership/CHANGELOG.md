@@ -1,6 +1,11 @@
-# Changelog — aise-leadership
+# Changelog – aise-leadership
 
-## [1.16.11] — 2026-11-27
+## [1.16.12] – 2026-11-27
+
+### Fixed
+- Changelog headers use a spaced en dash instead of an em dash from here on.
+
+## [1.16.11] – 2026-11-27
 
 ### Changed
 - Synced `context/` from aise-assistant 2.80.0: `planhat-schema.md` gains § Field description standard (labelled Source / Write / Values / Blank / Format / Use lines for Planhat field descriptions), and `communication-style-guide.md` § 4 gains Slack thread-reply and API-draft rules.
